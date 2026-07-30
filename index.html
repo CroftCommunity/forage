@@ -11,6 +11,11 @@
   <link rel="apple-touch-icon" href="./icons/icon.svg">
   <link rel="stylesheet" href="./css/tokens.css">
   <link rel="stylesheet" href="./css/app.css">
+  <script>
+    /* Apply saved theme before first paint to avoid a flash of the wrong palette. */
+    try { var t = localStorage.getItem('graze.theme');
+      if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
+  </script>
 </head>
 <body>
   <div id="app"></div>

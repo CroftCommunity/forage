@@ -1,83 +1,138 @@
-/* Graze design tokens — spec §3. No webfonts; system stacks only. */
+/* Graze design tokens — spec §3, revised into two deliberate, WCAG-validated
+   palettes anchored to the Graze brand green. Every text/background pair below
+   passes AA (body >= 4.5, large/UI >= 3.0); verified in the accessibility pass.
+
+   Two roles are split so the brand reads on both themes:
+     --brand-ink   brand green for TEXT (wordmark, active tab, gutter, accents)
+     --brand-fill  brand green for BUTTON fills (paired with --on-brand text)
+   In light both are deep green; in dark, -ink lifts to a legible leaf green
+   while -fill stays a deep green so white button text still passes.           */
+
 :root {
-  /* Brand green ramp */
+  /* Raw brand ramp (theme-independent) */
   --green-950: #0F2314;
   --green-900: #1A3A22;
-  --green-700: #2D5A34;   /* BRAND. Wordmark, primary buttons, boost-active */
-  --green-600: #3A6E43;   /* hover, links */
+  --green-700: #2D5A34;
+  --green-600: #3A6E43;
   --green-500: #4C8656;
-  --green-300: #A3C9AB;   /* subtle borders on green surfaces */
-  --green-100: #E9F2EB;   /* tint backgrounds, joined-chip fill */
+  --green-300: #A3C9AB;
 
-  /* Warm neutrals */
-  --paper:     #FBFAF7;   /* app background */
-  --surface:   #FFFFFF;   /* cards */
-  --ink:       #20261F;   /* primary text, green-tinted near-black */
-  --ink-soft:  #5C665C;   /* metadata, timestamps */
-  --line:      #E3E1DA;   /* borders, the collapse gutter at rest */
+  /* ---------- LIGHT palette (default) ---------- */
+  --bg:          #FBFAF7;   /* app background (warm paper) */
+  --card:        #FFFFFF;   /* cards */
+  --card-2:      #F2F4EF;   /* hover / elevated */
+  --text:        #20261F;   /* primary text */
+  --muted:       #586257;   /* metadata, timestamps (AA on bg) */
+  --border:      #E3E1DA;   /* borders, collapse gutter at rest */
 
-  /* Complement + accents */
-  --clay-600:  #A24D2C;   /* bury-active, controversial badge */
-  --gold-500:  #C99A3C;   /* pinned posts, steward badge, tag default */
-  --danger:    #9E2F26;   /* removals, ban states, destructive confirm */
+  --link:        #2F6B3A;
+  --brand-ink:   #245029;   /* brand green as TEXT */
+  --brand-fill:  #2D5A34;   /* brand green as button FILL */
+  --brand-fill-hover: #3A6E43;
+  --on-brand:    #FFFFFF;   /* text on brand-fill */
 
-  /* Dark theme anchors */
-  --dk-bg:      #121A14;
-  --dk-surface: #1A241C;
-  --dk-ink:     #E7EDE7;
-  --dk-line:    #2A362C;
+  --boost:       #2D5A34;   /* boost-active */
+  --bury:        #A24D2C;   /* bury-active, controversial, limits */
+  --tint:        #E9F2EB;   /* green tint: joined chip, active-tab bg */
 
-  /* Semantic aliases (resolve per theme) */
-  --bg:        var(--paper);
-  --card:      var(--surface);
-  --text:      var(--ink);
-  --muted:     var(--ink-soft);
-  --border:    var(--line);
-  --link:      var(--green-600);
-  --brand:     var(--green-700);
-  --boost:     var(--green-700);
-  --bury:      var(--clay-600);
+  --gold-500:    #C99A3C;   /* gold for fills/borders (pins, steward, tags) */
+  --gold-strong: #8A6A1E;   /* gold as readable TEXT */
+
+  --danger:      #9E2F26;   /* removals, ban, destructive */
+  --danger-ink:  #8F2A22;   /* danger text on danger tint */
+  --danger-tint: #F8ECEA;   /* danger surface */
+
+  --clay-600:    #A24D2C;   /* stable clay for the unread pill (white text) */
+  --stripe:      rgba(0,0,0,.03); /* dev-bar hatch */
+
+  /* Back-compat aliases (older rules reference these names) */
+  --paper:    var(--bg);
+  --surface:  var(--card);
+  --ink:      var(--text);
+  --ink-soft: var(--muted);
+  --line:     var(--border);
+  --brand:    var(--brand-ink);   /* text/accent brand by default */
+  --green-100: var(--tint);
 
   /* Space — 8pt scale */
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px;
-
   /* Type scale 13/14/16/20/26 */
   --t-xs: 13px; --t-sm: 14px; --t-md: 16px; --t-lg: 20px; --t-xl: 26px;
 
   --radius-card: 6px;
   --radius-chip: 999px;
-
   --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-display: ui-serif, Georgia, "Times New Roman", serif;
-
   --gutter-rule: 2px;
   --gutter-hit: 24px;
+
+  color-scheme: light;
 }
 
+/* ---------- DARK palette ----------
+   Applied when explicitly toggled (data-theme="dark") OR when the OS prefers
+   dark and the user hasn't overridden to light. Values are shared via a single
+   custom-property list; kept in sync between the two selectors below.        */
 :root[data-theme="dark"] {
-  --bg:     var(--dk-bg);
-  --card:   var(--dk-surface);
-  --text:   var(--dk-ink);
-  --muted:  #93A394;
-  --border: var(--dk-line);
-  --paper:  var(--dk-bg);
-  --surface:var(--dk-surface);
-  --ink:    var(--dk-ink);
-  --link:   var(--green-300);
-  --green-100: #21311F;
+  --bg:          #141911;
+  --card:        #222B1E;
+  --card-2:      #2C351F;
+  --text:        #E9EEE6;
+  --muted:       #A2B2A1;
+  --border:      #39432F;
+
+  --link:        #8FC79A;
+  --brand-ink:   #88C393;
+  --brand-fill:  #3A6E43;
+  --brand-fill-hover: #4C8656;
+  --on-brand:    #FFFFFF;
+
+  --boost:       #7FBF8A;
+  --bury:        #DE8E66;
+  --tint:        #243021;
+
+  --gold-500:    #D4A94E;
+  --gold-strong: #E2BC64;
+
+  --danger:      #F0938A;
+  --danger-ink:  #F0938A;
+  --danger-tint: #3A211E;
+
+  --clay-600:    #A24D2C;
+  --stripe:      rgba(255,255,255,.04);
+
+  color-scheme: dark;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg:     var(--dk-bg);
-    --card:   var(--dk-surface);
-    --text:   var(--dk-ink);
-    --muted:  #93A394;
-    --border: var(--dk-line);
-    --paper:  var(--dk-bg);
-    --surface:var(--dk-surface);
-    --ink:    var(--dk-ink);
-    --link:   var(--green-300);
-    --green-100: #21311F;
+    --bg:          #141911;
+    --card:        #222B1E;
+    --card-2:      #2C351F;
+    --text:        #E9EEE6;
+    --muted:       #A2B2A1;
+    --border:      #39432F;
+
+    --link:        #8FC79A;
+    --brand-ink:   #88C393;
+    --brand-fill:  #3A6E43;
+    --brand-fill-hover: #4C8656;
+    --on-brand:    #FFFFFF;
+
+    --boost:       #7FBF8A;
+    --bury:        #DE8E66;
+    --tint:        #243021;
+
+    --gold-500:    #D4A94E;
+    --gold-strong: #E2BC64;
+
+    --danger:      #F0938A;
+    --danger-ink:  #F0938A;
+    --danger-tint: #3A211E;
+
+    --clay-600:    #A24D2C;
+    --stripe:      rgba(255,255,255,.04);
+
+    color-scheme: dark;
   }
 }

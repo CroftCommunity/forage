@@ -9,6 +9,7 @@ import { devBar } from './devbar.js';
 import { toast } from './ui/components.js';
 import { setToaster } from './actions.js';
 import * as views from './ui/views.js';
+import * as theme from './theme.js';
 
 setToaster(toast);
 
@@ -28,6 +29,10 @@ function masthead() {
   const search = el('input', { type: 'text', placeholder: 'Search Graze…', 'aria-label': 'Search' });
   search.addEventListener('keydown', (e) => { if (e.key === 'Enter' && search.value.trim()) router.go(`/search?q=${encodeURIComponent(search.value.trim())}`); });
   const who = store.getState().users[viewer];
+  const dark = theme.resolvedDark();
+  const themeBtn = el('button', { class: 'themetoggle', title: dark ? 'Switch to light' : 'Switch to dark',
+    'aria-label': dark ? 'Switch to light mode' : 'Switch to dark mode' }, dark ? '☀' : '☾');
+  themeBtn.addEventListener('click', () => theme.toggle());
   return el('header', { class: 'masthead' },
     el('a', { class: 'wordmark', href: '#/popular' }, 'Graze'),
     el('nav', { class: 'row', style: 'gap:12px' },
@@ -36,6 +41,7 @@ function masthead() {
       el('a', { href: '#/all', class: 'small' }, 'All')),
     el('div', { class: 'search' }, search),
     el('div', { class: 'who' },
+      themeBtn,
       viewer ? el('a', { class: 'bell small', href: '#/notifications', title: 'Notifications' }, '🔔',
         unread ? el('span', { class: 'badge' }, unread) : null) : null,
       viewer ? el('a', { class: 'small', href: `#/u/${who?.handle}` }, who?.handle || 'me')
@@ -86,11 +92,8 @@ store.subscribe(render);
 window.addEventListener('hashchange', render);
 
 // ---------- theme ----------
-function syncTheme() {
-  const prefs = store.getState().users[store.getPersonaId()]?.prefs;
-  views.applyTheme(prefs?.theme || 'auto');
-}
-store.subscribe(syncTheme);
+theme.apply();
+theme.onChange(render); // re-render so the toggle icon flips
 
 // ---------- boot ----------
 const hadState = store.hydrate();
@@ -100,7 +103,6 @@ if (!hadState) {
   // #/popular. After Delete All the app shows the genuine cleared/empty state.
   import('../data/seed.js').then(({ buildSeed }) => { store.loadEvents(buildSeed()); });
 }
-syncTheme();
 render();
 
 // ---------- service worker (PWA layer last; ?nosw bypasses) ----------

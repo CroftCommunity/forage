@@ -8,6 +8,7 @@ import * as actions from '../actions.js';
 import { go } from '../router.js';
 import { FRONTIERS } from '../frontier.js';
 import { humanWait } from '../engines/limits.js';
+import * as themeCtl from '../theme.js';
 import { postRow, commentNode, voteBox, emptyState, gate, errorState, toast } from './components.js';
 
 const V = () => store.getPersonaId();
@@ -506,23 +507,27 @@ export function fieldSettingsView(params) {
 
 // ---------- settings / prefs ----------
 export function settingsView() {
-  if (!V()) return { main: gate('Log in to change preferences.'), side: null };
+  // Theme is a global setting (works logged out); the rest are per-account prefs.
+  const themeSel = el('select', { class: 'form' }, ...['auto', 'light', 'dark'].map((t) =>
+    el('option', { value: t, selected: themeCtl.getTheme() === t || false }, t === 'auto' ? 'Auto (match system)' : t)));
+  themeSel.addEventListener('change', () => themeCtl.setTheme(themeSel.value));
+  const themeCard = el('div', { class: 'card' },
+    el('div', { class: 'field-row' }, el('label', {}, 'Theme'), themeSel));
+
+  if (!V()) {
+    return { main: el('div', {}, el('h1', {}, 'Preferences'), themeCard,
+      el('p', { class: 'muted small', style: 'margin-top:12px' }, 'Log in to set comment and feed preferences.')), side: null };
+  }
   const prefs = S().users[V()].prefs;
-  const theme = el('select', { class: 'form' }, ...['auto', 'light', 'dark'].map((t) => el('option', { value: t, selected: prefs.theme === t || false }, t)));
-  theme.addEventListener('change', async () => { await actions.updatePrefs({ theme: theme.value }); applyTheme(theme.value); });
   const thr = el('input', { type: 'number', value: prefs.commentThreshold });
   thr.addEventListener('change', async () => { await actions.updatePrefs({ commentThreshold: parseInt(thr.value, 10) || 0 }); });
   const sort = el('select', { class: 'form' }, ...['hot', 'new', 'top', 'best'].map((s) => el('option', { value: s, selected: prefs.defaultSort === s || false }, s)));
   sort.addEventListener('change', async () => { await actions.updatePrefs({ defaultSort: sort.value }); });
   return { main: el('div', {}, el('h1', {}, 'Preferences'),
-    el('div', { class: 'card' },
-      el('div', { class: 'field-row' }, el('label', {}, 'Theme'), theme),
+    themeCard,
+    el('div', { class: 'card', style: 'margin-top:12px' },
       el('div', { class: 'field-row' }, el('label', {}, 'Auto-collapse comments below score'), thr),
       el('div', { class: 'field-row' }, el('label', {}, 'Default feed sort'), sort))), side: null };
-}
-export function applyTheme(t) {
-  if (t === 'auto') document.documentElement.removeAttribute('data-theme');
-  else document.documentElement.setAttribute('data-theme', t);
 }
 
 // ---------- frontiers ----------
