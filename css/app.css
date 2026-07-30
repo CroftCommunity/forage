@@ -39,6 +39,11 @@ kbd { background: var(--green-100); border: 1px solid var(--border); border-radi
 .devbar button:hover { background: var(--green-100); }
 .devbar button.armed { border-color: var(--danger); color: var(--danger); font-weight: 600; }
 .devbar .sep { width: 1px; align-self: stretch; background: var(--border); }
+.devbar a.about {
+  font-size: var(--t-xs); padding: 3px 8px; border: 1px solid var(--border);
+  border-radius: 4px; color: var(--brand-ink); background: var(--card); white-space: nowrap;
+}
+.devbar a.about:hover { background: var(--tint); text-decoration: none; border-color: var(--green-300); }
 
 /* ---- Header ---- */
 .masthead {

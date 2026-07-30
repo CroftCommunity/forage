@@ -66,6 +66,7 @@ router.route('/submit', views.submitView);
 router.route('/create-field', views.createFieldView);
 router.route('/settings', views.settingsView);
 router.route('/frontiers', views.frontiersView);
+router.route('/about', views.aboutView);
 router.route('/signup', views.signupView);
 router.setNotFound(() => ({ main: el('div', { class: 'empty' }, el('h2', {}, 'Lost in the pasture'), el('p', { class: 'muted' }, 'No such page.'), el('a', { class: 'btn', href: '#/popular' }, 'Go home')), side: null }));
 
