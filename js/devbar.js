@@ -52,6 +52,12 @@ export function devBar() {
   bar.append(fr);
   bar.append(mkBtn('SW unregister', unregisterSW));
 
+  bar.append(sep());
+
+  // Meta: what every control above does, and when to use it.
+  const about = el('a', { class: 'about', href: '#/about', title: 'What do these controls do?' }, '? About this demo');
+  bar.append(about);
+
   return bar;
 }
 

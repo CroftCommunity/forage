@@ -8,6 +8,7 @@ import * as actions from '../actions.js';
 import { go } from '../router.js';
 import { FRONTIERS } from '../frontier.js';
 import { humanWait } from '../engines/limits.js';
+import * as themeCtl from '../theme.js';
 import { postRow, commentNode, voteBox, emptyState, gate, errorState, toast } from './components.js';
 
 const V = () => store.getPersonaId();
@@ -506,23 +507,99 @@ export function fieldSettingsView(params) {
 
 // ---------- settings / prefs ----------
 export function settingsView() {
-  if (!V()) return { main: gate('Log in to change preferences.'), side: null };
+  // Theme is a global setting (works logged out); the rest are per-account prefs.
+  const themeSel = el('select', { class: 'form' }, ...['auto', 'light', 'dark'].map((t) =>
+    el('option', { value: t, selected: themeCtl.getTheme() === t || false }, t === 'auto' ? 'Auto (match system)' : t)));
+  themeSel.addEventListener('change', () => themeCtl.setTheme(themeSel.value));
+  const themeCard = el('div', { class: 'card' },
+    el('div', { class: 'field-row' }, el('label', {}, 'Theme'), themeSel));
+
+  if (!V()) {
+    return { main: el('div', {}, el('h1', {}, 'Preferences'), themeCard,
+      el('p', { class: 'muted small', style: 'margin-top:12px' }, 'Log in to set comment and feed preferences.')), side: null };
+  }
   const prefs = S().users[V()].prefs;
-  const theme = el('select', { class: 'form' }, ...['auto', 'light', 'dark'].map((t) => el('option', { value: t, selected: prefs.theme === t || false }, t)));
-  theme.addEventListener('change', async () => { await actions.updatePrefs({ theme: theme.value }); applyTheme(theme.value); });
   const thr = el('input', { type: 'number', value: prefs.commentThreshold });
   thr.addEventListener('change', async () => { await actions.updatePrefs({ commentThreshold: parseInt(thr.value, 10) || 0 }); });
   const sort = el('select', { class: 'form' }, ...['hot', 'new', 'top', 'best'].map((s) => el('option', { value: s, selected: prefs.defaultSort === s || false }, s)));
   sort.addEventListener('change', async () => { await actions.updatePrefs({ defaultSort: sort.value }); });
   return { main: el('div', {}, el('h1', {}, 'Preferences'),
-    el('div', { class: 'card' },
-      el('div', { class: 'field-row' }, el('label', {}, 'Theme'), theme),
+    themeCard,
+    el('div', { class: 'card', style: 'margin-top:12px' },
       el('div', { class: 'field-row' }, el('label', {}, 'Auto-collapse comments below score'), thr),
       el('div', { class: 'field-row' }, el('label', {}, 'Default feed sort'), sort))), side: null };
 }
-export function applyTheme(t) {
-  if (t === 'auto') document.documentElement.removeAttribute('data-theme');
-  else document.documentElement.setAttribute('data-theme', t);
+
+// ---------- about the dev bar (meta) ----------
+const DEVBAR_DOCS = [
+  { name: 'Persona', kind: 'the dropdown',
+    what: 'Switches which “seat” you are browsing as. Graze has no login in this prototype — identity is this dropdown. Switching re-derives every viewer-dependent view at once: permissions, vote state, unread counts, what is masked or gated.',
+    when: 'Whenever you want to see the app from another vantage. Each seat is chosen to cover a different slice of the product.',
+    seats: [
+      ['Logged out', 'Public reads only; every write shows an auth gate.'],
+      ['admin.wren', 'Site admin — can suspend accounts and act sitewide.'],
+      ['owner.sage', 'Owner of f/gardening — Field settings, rules, held-post review.'],
+      ['steward.briar', 'Steward of f/gardening, plain member elsewhere — the dual-hat mod experience.'],
+      ['member.fern', 'Established member — the default reader seat.'],
+      ['newbie.moss', 'On probation — rate-limited, cannot create Fields, low report weight.'],
+      ['banned.thorn', 'Banned in f/gardening (read-only there), active elsewhere.'],
+      ['heavy.aspen', 'High reputation, sitting at the post rate limit, saved items populated.'],
+      ['pristine.dove', 'Never seeded — the permanent first-run / empty-state seat.'],
+    ] },
+  { name: 'Seed', kind: 'button',
+    what: 'Loads the scripted demo scenario: five Fields, varied posts (long/link/duplicate/NSFW/spoiler/pinned/locked/removed/held), a public audit log, in-flight moderation states, and a generated ~1,000-comment stress thread.',
+    when: 'To get the populated demo back after clearing, or to reset to a known-good starting state. Deterministic — you get the same world every time.' },
+  { name: 'Delete All', kind: 'button',
+    what: 'Wipes all local data (the entire event log in your browser) back to the genuine first-run state — no Fields, no posts, logged out.',
+    when: 'To see cold-start and empty states as a brand-new visitor would, or to start over. Nothing leaves your browser; this only clears local storage.' },
+  { name: 'Export', kind: 'button',
+    what: 'Downloads the whole event log as a JSON file (graze-export.json). Because state is a pure fold over that log, the file is a complete, portable snapshot.',
+    when: 'To capture a specific state — a bug repro, a demo setup — so you or someone else can reload it exactly.' },
+  { name: 'Import', kind: 'button',
+    what: 'Loads a previously exported JSON file and replays it, replacing current state.',
+    when: 'To restore a snapshot, or to hand a precise state between machines. Pair it with Export.' },
+  { name: 'Latency', kind: 'the dropdown (0 / 250 / 600 ms)',
+    what: 'Injects an artificial delay into every write (posting, voting, moderating) so you can watch the loading path instead of instant local writes.',
+    when: 'Set 250 or 600 ms to see skeleton/loading states and to make optimistic UI visible — e.g. a vote fills immediately, then settles when the “server” responds.' },
+  { name: 'Fail Next', kind: 'toggle button',
+    what: 'Arms a one-shot failure: the very next write is rejected, then the switch disarms itself.',
+    when: 'To exercise error handling and optimistic rollback. Arm it, then boost a post (ideally with Latency at 600 ms): the arrow fills green, then reverts with an error toast when the write fails.' },
+  { name: 'Frontiers', kind: 'toggle button',
+    what: 'Shows or hides the dashed “frontier” markers — features deliberately deferred to the scaled backend (media upload, search facets, vote-ring detection, and so on).',
+    when: 'Hide them for a cleaner demo; show them to talk through what v1 intentionally leaves for later. The full list lives at the Frontiers page.' },
+  { name: 'SW unregister', kind: 'button',
+    what: 'Unregisters the service worker — the PWA layer that caches the app shell for offline use.',
+    when: 'If a stale cached build is being served after a deploy, or you want to force a fully network-only load. You can also append ?nosw to the URL to bypass the worker entirely.' },
+];
+
+export function aboutView() {
+  const main = el('div', {}, el('h1', {}, 'About this demo'),
+    el('div', { class: 'card' },
+      el('p', { class: 'small' }, 'The dashed strip across the top is the ',
+        el('strong', {}, 'dev bar'), ' — the control surface for this behavioral-twin prototype. Graze v1 runs entirely in your browser on an in-memory event log, with no backend yet. There is no login; instead you switch ',
+        el('strong', {}, 'personas'), ' and drive the app through states that a real deployment would reach through many accounts and network conditions.'),
+      el('p', { class: 'small muted' }, 'It is dashed on purpose: it is scaffolding, not product chrome, and would not ship in a production build. Everything it does is local to your browser — nothing is sent anywhere.')));
+
+  for (const d of DEVBAR_DOCS) {
+    const card = el('div', { class: 'card', style: 'margin-top:12px' },
+      el('div', { class: 'row spread wrap', style: 'align-items:baseline' },
+        el('h2', { style: 'margin:0' }, d.name),
+        el('span', { class: 'xs muted' }, d.kind)),
+      el('div', { class: 'small', style: 'margin-top:6px' }, el('strong', {}, 'What it does. '), d.what),
+      el('div', { class: 'small', style: 'margin-top:4px' }, el('strong', {}, 'When to use it. '), d.when));
+    if (d.seats) {
+      const list = el('div', { class: 'stack', style: 'margin-top:8px' });
+      for (const [seat, note] of d.seats)
+        list.append(el('div', { class: 'row', style: 'gap:8px;align-items:baseline' },
+          el('span', { class: 'chip', style: 'flex:none' }, seat), el('span', { class: 'xs muted' }, note)));
+      card.append(list);
+    }
+    main.append(card);
+  }
+  main.append(el('p', { class: 'small muted', style: 'margin-top:16px' },
+    'Related: ', el('a', { href: '#/frontiers' }, 'Frontiers'), ' (what v1 defers) and ',
+    el('a', { href: '#/settings' }, 'Preferences'), ' (theme, comment threshold, default sort).'));
+  return { main, side: null };
 }
 
 // ---------- frontiers ----------
