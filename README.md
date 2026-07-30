@@ -20,8 +20,9 @@ python3 -m http.server 8000
 # then open http://localhost:8000/
 ```
 
-Deployed on GitHub Pages, it lives under a subpath and is installable as a PWA. Append
-`?nosw` to bypass the service worker.
+Deployed on GitHub Pages at [graze.ing](https://graze.ing/) and installable as a PWA. All
+asset paths are relative, so it works equally under a project subpath. Append `?nosw` to
+bypass the service worker.
 
 ## How it works
 
