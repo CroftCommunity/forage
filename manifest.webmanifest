@@ -1,0 +1,13 @@
+{
+  "name": "Graze",
+  "short_name": "Graze",
+  "description": "Roam the open web. A topic-driven aggregation prototype.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#FBFAF7",
+  "theme_color": "#2D5A34",
+  "icons": [
+    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
