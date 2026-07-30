@@ -1,0 +1,83 @@
+/* Graze design tokens — spec §3. No webfonts; system stacks only. */
+:root {
+  /* Brand green ramp */
+  --green-950: #0F2314;
+  --green-900: #1A3A22;
+  --green-700: #2D5A34;   /* BRAND. Wordmark, primary buttons, boost-active */
+  --green-600: #3A6E43;   /* hover, links */
+  --green-500: #4C8656;
+  --green-300: #A3C9AB;   /* subtle borders on green surfaces */
+  --green-100: #E9F2EB;   /* tint backgrounds, joined-chip fill */
+
+  /* Warm neutrals */
+  --paper:     #FBFAF7;   /* app background */
+  --surface:   #FFFFFF;   /* cards */
+  --ink:       #20261F;   /* primary text, green-tinted near-black */
+  --ink-soft:  #5C665C;   /* metadata, timestamps */
+  --line:      #E3E1DA;   /* borders, the collapse gutter at rest */
+
+  /* Complement + accents */
+  --clay-600:  #A24D2C;   /* bury-active, controversial badge */
+  --gold-500:  #C99A3C;   /* pinned posts, steward badge, tag default */
+  --danger:    #9E2F26;   /* removals, ban states, destructive confirm */
+
+  /* Dark theme anchors */
+  --dk-bg:      #121A14;
+  --dk-surface: #1A241C;
+  --dk-ink:     #E7EDE7;
+  --dk-line:    #2A362C;
+
+  /* Semantic aliases (resolve per theme) */
+  --bg:        var(--paper);
+  --card:      var(--surface);
+  --text:      var(--ink);
+  --muted:     var(--ink-soft);
+  --border:    var(--line);
+  --link:      var(--green-600);
+  --brand:     var(--green-700);
+  --boost:     var(--green-700);
+  --bury:      var(--clay-600);
+
+  /* Space — 8pt scale */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px;
+
+  /* Type scale 13/14/16/20/26 */
+  --t-xs: 13px; --t-sm: 14px; --t-md: 16px; --t-lg: 20px; --t-xl: 26px;
+
+  --radius-card: 6px;
+  --radius-chip: 999px;
+
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: ui-serif, Georgia, "Times New Roman", serif;
+
+  --gutter-rule: 2px;
+  --gutter-hit: 24px;
+}
+
+:root[data-theme="dark"] {
+  --bg:     var(--dk-bg);
+  --card:   var(--dk-surface);
+  --text:   var(--dk-ink);
+  --muted:  #93A394;
+  --border: var(--dk-line);
+  --paper:  var(--dk-bg);
+  --surface:var(--dk-surface);
+  --ink:    var(--dk-ink);
+  --link:   var(--green-300);
+  --green-100: #21311F;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:     var(--dk-bg);
+    --card:   var(--dk-surface);
+    --text:   var(--dk-ink);
+    --muted:  #93A394;
+    --border: var(--dk-line);
+    --paper:  var(--dk-bg);
+    --surface:var(--dk-surface);
+    --ink:    var(--dk-ink);
+    --link:   var(--green-300);
+    --green-100: #21311F;
+  }
+}
