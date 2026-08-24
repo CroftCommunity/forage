@@ -9,6 +9,7 @@ import { devBar } from './devbar.js';
 import { toast } from './ui/components.js';
 import { setToaster } from './actions.js';
 import * as views from './ui/views.js';
+import * as lensViews from './ui/lens-views.js';
 import * as theme from './theme.js';
 
 setToaster(toast);
@@ -39,7 +40,8 @@ function masthead() {
     el('nav', { class: 'row', style: 'gap:12px' },
       el('a', { href: '#/home', class: 'small' }, 'Home'),
       el('a', { href: '#/popular', class: 'small' }, 'Popular'),
-      el('a', { href: '#/all', class: 'small' }, 'All')),
+      el('a', { href: '#/all', class: 'small' }, 'All'),
+      el('a', { href: '#/lens', class: 'small' }, 'Lens')),
     el('div', { class: 'search' }, search),
     el('div', { class: 'who' },
       themeBtn,
@@ -67,6 +69,9 @@ router.route('/submit', views.submitView);
 router.route('/create-field', views.createFieldView);
 router.route('/settings', views.settingsView);
 router.route('/frontiers', views.frontiersView);
+router.route('/lens', lensViews.lensHomeView);
+router.route('/lens/f/:slug', lensViews.lensFieldView);
+router.route('/lens/p', lensViews.lensThreadView);
 router.route('/about', views.aboutView);
 router.route('/signup', views.signupView);
 router.setNotFound(() => ({ main: el('div', { class: 'empty' }, el('h2', {}, 'Lost in the pasture'), el('p', { class: 'muted' }, 'No such page.'), el('a', { class: 'btn', href: '#/popular' }, 'Go home')), side: null }));
