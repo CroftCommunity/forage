@@ -30,6 +30,7 @@ const SHELL = [
   './scenarios/report-resolve-notify.js',
   './scenarios/save-and-profile.js',
   './scenarios/search-visibility.js',
+  './ledger/divergence.js',
   './manifest.webmanifest', './icons/favicon-32.png', './icons/icon-192.png',
 ];
 
