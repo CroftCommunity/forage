@@ -30,14 +30,14 @@ export function buildSeed() {
   };
 
   // ---------- accounts (spec §7) ----------
-  ev('account.registered', { handle: 'admin.wren',    email: 'wren@graze.ing' },   U.wren,  dayAgo(400));
-  ev('account.registered', { handle: 'owner.sage',    email: 'sage@graze.ing' },   U.sage,  dayAgo(360));
-  ev('account.registered', { handle: 'steward.briar', email: 'briar@graze.ing' },  U.briar, dayAgo(300));
-  ev('account.registered', { handle: 'member.fern',   email: 'fern@graze.ing' },   U.fern,  dayAgo(210));
-  ev('account.registered', { handle: 'heavy.aspen',   email: 'aspen@graze.ing' },  U.aspen, dayAgo(280));
-  ev('account.registered', { handle: 'banned.thorn',  email: 'thorn@graze.ing' },  U.thorn, dayAgo(150));
-  ev('account.registered', { handle: 'pristine.dove', email: 'dove@graze.ing' },   U.dove,  dayAgo(90));
-  ev('account.registered', { handle: 'newbie.moss',   email: 'moss@graze.ing' },   U.moss,  dayAgo(3)); // probation by age
+  ev('account.registered', { handle: 'admin.wren',    email: 'wren@forage.fyi' },   U.wren,  dayAgo(400));
+  ev('account.registered', { handle: 'owner.sage',    email: 'sage@forage.fyi' },   U.sage,  dayAgo(360));
+  ev('account.registered', { handle: 'steward.briar', email: 'briar@forage.fyi' },  U.briar, dayAgo(300));
+  ev('account.registered', { handle: 'member.fern',   email: 'fern@forage.fyi' },   U.fern,  dayAgo(210));
+  ev('account.registered', { handle: 'heavy.aspen',   email: 'aspen@forage.fyi' },  U.aspen, dayAgo(280));
+  ev('account.registered', { handle: 'banned.thorn',  email: 'thorn@forage.fyi' },  U.thorn, dayAgo(150));
+  ev('account.registered', { handle: 'pristine.dove', email: 'dove@forage.fyi' },   U.dove,  dayAgo(90));
+  ev('account.registered', { handle: 'newbie.moss',   email: 'moss@forage.fyi' },   U.moss,  dayAgo(3)); // probation by age
 
   // ---------- fields ----------
   const F = { gardening: 'f_gardening', urbanism: 'f_urbanism', retro: 'f_retro', slow: 'f_slow', meta: 'f_meta' };
@@ -55,7 +55,7 @@ export function buildSeed() {
   ev('field.created', { id: F.slow, slug: 'slowcooking', title: 'Slow Cooking',
     description: 'Low, slow, and worth the wait.' }, U.fern, dayAgo(120));
   ev('field.created', { id: F.meta, slug: 'meta', title: 'Meta',
-    description: 'Site announcements from the Graze team.' }, U.wren, dayAgo(400));
+    description: 'Site announcements from the Forage team.' }, U.wren, dayAgo(400));
 
   // ---------- stewardship + memberships ----------
   ev('mod.stewardAdded', { fieldId: F.gardening, userId: U.briar, reason: 'Trusted contributor' }, U.sage, dayAgo(120));
@@ -129,7 +129,7 @@ export function buildSeed() {
 
   // meta announcement (admin-posted)
   const pMeta = 'p_meta';
-  ev('post.created', { id: pMeta, fieldId: F.meta, format: 'text', title: 'Graze is in prototype. Here is what works.',
+  ev('post.created', { id: pMeta, fieldId: F.meta, format: 'text', title: 'Forage is in prototype. Here is what works.',
     nsfw: false, spoiler: false, bodyMd: 'Roam the open web. This build runs entirely in your browser.' }, U.wren, minAgo(60 * 50));
   votes('post', pMeta, 30, 0);
 

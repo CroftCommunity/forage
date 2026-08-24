@@ -1,8 +1,8 @@
-# Graze
+# Forage
 
-**Roam the open web.**
+**Forage the open web.**
 
-Graze is a topic-driven aggregation site in the Reddit structural family — three-column
+Forage is a topic-driven aggregation site in the Reddit structural family — three-column
 layout, community-scoped posting, universal boost/bury rating, hot ranking with time
 decay, deeply nested collapsible comments, volunteer stewards with a public audit log.
 
@@ -20,7 +20,7 @@ python3 -m http.server 8000
 # then open http://localhost:8000/
 ```
 
-Deployed on GitHub Pages at [graze.ing](https://graze.ing/) and installable as a PWA. All
+Deployed on GitHub Pages at [forage.fyi](https://forage.fyi/) and installable as a PWA. All
 asset paths are relative, so it works equally under a project subpath. Append `?nosw` to
 bypass the service worker.
 
@@ -67,7 +67,7 @@ Above the header, dashed to mark it as scaffolding:
 
 ## Nomenclature
 
-| Concept | Graze term |
+| Concept | Forage term |
 |---|---|
 | Community node | **Field** (`/f/:slug`) |
 | Rating | **Boost / Bury** |
@@ -84,4 +84,4 @@ divergence ledger starts from the frontier list at `#/frontiers`.
 
 ---
 
-*Feed your curiosity.* · [graze.ing](https://graze.ing)
+*Find the good stuff.* · [forage.fyi](https://forage.fyi)

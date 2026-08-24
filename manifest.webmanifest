@@ -1,7 +1,7 @@
 {
-  "name": "Graze",
-  "short_name": "Graze",
-  "description": "Roam the open web. A topic-driven aggregation prototype.",
+  "name": "Forage",
+  "short_name": "Forage",
+  "description": "Forage the open web. A topic-driven aggregation prototype.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

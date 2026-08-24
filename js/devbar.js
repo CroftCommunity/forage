@@ -67,9 +67,9 @@ function mkBtn(label, fn) { const b = el('button', {}, label); b.addEventListene
 function exportData() {
   const text = storage.exportJson();
   const blob = new Blob([text], { type: 'application/json' });
-  const a = el('a', { href: URL.createObjectURL(blob), download: 'graze-export.json' });
+  const a = el('a', { href: URL.createObjectURL(blob), download: 'forage-export.json' });
   document.body.append(a); a.click(); a.remove();
-  toast('Exported graze-export.json', 'ok');
+  toast('Exported forage-export.json', 'ok');
 }
 
 function importData() {

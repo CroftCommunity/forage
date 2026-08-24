@@ -3,7 +3,7 @@
 // apply also happens inline in index.html <head> to avoid a flash of the wrong
 // theme before this module loads.
 
-const KEY = 'graze.theme';
+const KEY = 'forage.theme';
 const mql = window.matchMedia('(prefers-color-scheme: dark)');
 
 export function getTheme() {

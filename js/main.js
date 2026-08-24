@@ -26,7 +26,7 @@ if (!document.getElementById('toasts')) document.body.append(el('div', { id: 'to
 function masthead() {
   const viewer = store.getPersonaId();
   const unread = sel.unreadCount(store.getState(), viewer);
-  const search = el('input', { type: 'text', placeholder: 'Search Graze…', 'aria-label': 'Search' });
+  const search = el('input', { type: 'text', placeholder: 'Search Forage…', 'aria-label': 'Search' });
   search.addEventListener('keydown', (e) => { if (e.key === 'Enter' && search.value.trim()) router.go(`/search?q=${encodeURIComponent(search.value.trim())}`); });
   const who = store.getState().users[viewer];
   const dark = theme.resolvedDark();
@@ -34,7 +34,7 @@ function masthead() {
     'aria-label': dark ? 'Switch to light mode' : 'Switch to dark mode' }, dark ? '☀' : '☾');
   themeBtn.addEventListener('click', () => theme.toggle());
   return el('header', { class: 'masthead' },
-    el('a', { class: 'wordmark', href: '#/popular' }, 'Graze'),
+    el('a', { class: 'wordmark', href: '#/popular' }, 'Forage'),
     el('nav', { class: 'row', style: 'gap:12px' },
       el('a', { href: '#/home', class: 'small' }, 'Home'),
       el('a', { href: '#/popular', class: 'small' }, 'Popular'),

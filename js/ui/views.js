@@ -533,7 +533,7 @@ export function settingsView() {
 // ---------- about the dev bar (meta) ----------
 const DEVBAR_DOCS = [
   { name: 'Persona', kind: 'the dropdown',
-    what: 'Switches which “seat” you are browsing as. Graze has no login in this prototype — identity is this dropdown. Switching re-derives every viewer-dependent view at once: permissions, vote state, unread counts, what is masked or gated.',
+    what: 'Switches which “seat” you are browsing as. Forage has no login in this prototype — identity is this dropdown. Switching re-derives every viewer-dependent view at once: permissions, vote state, unread counts, what is masked or gated.',
     when: 'Whenever you want to see the app from another vantage. Each seat is chosen to cover a different slice of the product.',
     seats: [
       ['Logged out', 'Public reads only; every write shows an auth gate.'],
@@ -553,7 +553,7 @@ const DEVBAR_DOCS = [
     what: 'Wipes all local data (the entire event log in your browser) back to the genuine first-run state — no Fields, no posts, logged out.',
     when: 'To see cold-start and empty states as a brand-new visitor would, or to start over. Nothing leaves your browser; this only clears local storage.' },
   { name: 'Export', kind: 'button',
-    what: 'Downloads the whole event log as a JSON file (graze-export.json). Because state is a pure fold over that log, the file is a complete, portable snapshot.',
+    what: 'Downloads the whole event log as a JSON file (forage-export.json). Because state is a pure fold over that log, the file is a complete, portable snapshot.',
     when: 'To capture a specific state — a bug repro, a demo setup — so you or someone else can reload it exactly.' },
   { name: 'Import', kind: 'button',
     what: 'Loads a previously exported JSON file and replays it, replacing current state.',
@@ -576,7 +576,7 @@ export function aboutView() {
   const main = el('div', {}, el('h1', {}, 'About this demo'),
     el('div', { class: 'card' },
       el('p', { class: 'small' }, 'The dashed strip across the top is the ',
-        el('strong', {}, 'dev bar'), ' — the control surface for this behavioral-twin prototype. Graze v1 runs entirely in your browser on an in-memory event log, with no backend yet. There is no login; instead you switch ',
+        el('strong', {}, 'dev bar'), ' — the control surface for this behavioral-twin prototype. Forage v1 runs entirely in your browser on an in-memory event log, with no backend yet. There is no login; instead you switch ',
         el('strong', {}, 'personas'), ' and drive the app through states that a real deployment would reach through many accounts and network conditions.'),
       el('p', { class: 'small muted' }, 'It is dashed on purpose: it is scaffolding, not product chrome, and would not ship in a production build. Everything it does is local to your browser — nothing is sent anywhere.')));
 
@@ -616,7 +616,7 @@ export function frontiersView() {
 export function signupView() {
   const handle = el('input', { type: 'text', placeholder: 'handle' });
   const email = el('input', { type: 'email', placeholder: 'email (optional)' });
-  return { main: el('div', {}, el('h1', {}, 'Join Graze'),
+  return { main: el('div', {}, el('h1', {}, 'Join Forage'),
     el('p', { class: 'muted' }, 'Roam the open web.'),
     el('div', { class: 'card' },
       el('div', { class: 'field-row' }, el('label', {}, 'Handle'), handle),
