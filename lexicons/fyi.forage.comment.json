@@ -1,0 +1,45 @@
+{
+  "lexicon": 1,
+  "id": "fyi.forage.comment",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "A Forage comment; nesting via parent. Author-deleted = record deleted.",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": [
+          "subject",
+          "bodyMd",
+          "createdAt"
+        ],
+        "properties": {
+          "subject": {
+            "type": "string",
+            "format": "at-uri",
+            "description": "The fyi.forage.post this comment is on"
+          },
+          "parent": {
+            "type": "string",
+            "format": "at-uri",
+            "description": "The parent fyi.forage.comment for nested replies"
+          },
+          "bodyMd": {
+            "type": "string",
+            "maxLength": 100000
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime",
+            "description": "Authoring time"
+          },
+          "editedAt": {
+            "type": "string",
+            "format": "datetime",
+            "description": "Present iff edited"
+          }
+        }
+      }
+    }
+  }
+}
