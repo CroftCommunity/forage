@@ -5,7 +5,7 @@
 // The session is in-memory only, page-lifetime — scaffolding like the dev bar,
 // until a real OAuth flow arrives.
 
-import { el, esc, timeAgo, fmtScore } from '../util.js';
+import { el, timeAgo, fmtScore } from '../util.js';
 import { postRow, commentNode, skeleton, emptyState, toast } from './components.js';
 import { createLens, LENS_PERMS } from '../substrates/lens.js';
 
@@ -57,7 +57,7 @@ function lensSidebar() {
           el('a', { href: `#/lens/f/${f.slug}` }, `f/${f.slug}`),
           el('span', { class: 'xs muted' }, `${f.kind}${f.pinned ? ' · pinned' : ''}`));
       }));
-    }).catch((e) => list.replaceChildren(el('div', { class: 'xs muted' }, 'Fields failed: ' + esc(e.message))));
+    }).catch((e) => list.replaceChildren(el('div', { class: 'xs muted' }, 'Fields failed: ' + e.message)));
   }
   return fieldsCard;
 }
@@ -65,7 +65,7 @@ function lensSidebar() {
 function sessionCard() {
   if (session) {
     return el('div', { class: 'card' },
-      el('div', { class: 'small' }, `Signed in as ${esc(session.handle)}`),
+      el('div', { class: 'small' }, `Signed in as ${session.handle}`),
       el('div', { class: 'xs muted' }, 'Session lives in memory only; reload signs out.'));
   }
   const id = el('input', { type: 'text', placeholder: 'handle (e.g. you.bsky.social)' });
@@ -125,7 +125,7 @@ export function lensFieldView(params) {
       const m = href.match(/\/p\/(at:.+)$/);
       if (m) a.setAttribute('href', `#/lens/p?uri=${encodeURIComponent(m[1])}&from=${entry.slug}`);
     }
-  }).catch((e) => main.replaceChildren(emptyState('Lens fetch failed', esc(e.message))));
+  }).catch((e) => main.replaceChildren(emptyState('Lens fetch failed', e.message)));
   return { main, side: el('div', { class: 'side' }, sessionCard(), lensSidebar()) };
 }
 
@@ -142,9 +142,9 @@ export function lensThreadView(params, query) {
       el('div', { class: 'row wrap', style: 'gap:6px' },
         el('a', { href: `#/lens/f/${src.fieldSlug}`, class: 'xs' }, `f/${src.fieldSlug}`),
         p.nsfw ? el('span', { class: 'chip badge-nsfw' }, 'NSFW') : null),
-      el('h1', {}, p.maskedRemoved ? p.title : esc(p.title.slice(0, 300))),
+      el('h1', {}, p.title.slice(0, 300)),
       el('div', { class: 'postmeta' },
-        p.author ? el('a', { href: `https://bsky.app/profile/${p.author}`, target: '_blank', rel: 'noopener noreferrer' }, esc(p.author)) : '[muted]',
+        p.author ? el('a', { href: `https://bsky.app/profile/${p.author}`, target: '_blank', rel: 'noopener noreferrer' }, p.author) : '[muted]',
         ` · ${fmtScore(p.score)} likes · ${timeAgo(p.createdTs)} ago · ${p.commentCount} replies`),
       el('div', { class: 'row', style: 'gap:6px;margin-top:6px' },
         chip('boost = like: deferred (DL-013)')));
@@ -152,6 +152,6 @@ export function lensThreadView(params, query) {
     const commentsCard = el('div', { class: 'card' });
     for (const node of t.comments) commentsCard.append(commentNode(node, ctx));
     main.replaceChildren(head, t.comments.length ? commentsCard : emptyState('No replies', 'Nothing below this post yet.'));
-  }).catch((e) => main.replaceChildren(emptyState('Lens fetch failed', esc(e.message))));
+  }).catch((e) => main.replaceChildren(emptyState('Lens fetch failed', e.message)));
   return { main, side: el('div', { class: 'side' }, sessionCard(), lensSidebar()) };
 }

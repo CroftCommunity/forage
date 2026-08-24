@@ -82,6 +82,22 @@ test('a muted author masks through the SAME masked shape the memory tier uses', 
   assert.notEqual(shaped.title, undefined);
 });
 
+test('every lens chip has its ledger entry: DL-010..015 present with the right kinds', async () => {
+  const { LEDGER } = await import('../ledger/divergence.js');
+  const byId = Object.fromEntries(LEDGER.map((e) => [e.id, e]));
+  for (const [id, kind] of [['DL-010', 'tolerance'], ['DL-011', 'tolerance'], ['DL-012', 'tolerance'],
+    ['DL-013', 'frontier'], ['DL-014', 'frontier'], ['DL-015', 'frontier']]) {
+    assert.equal(byId[id]?.kind, kind, id);
+    assert.equal(byId[id]?.tier, 'wide', id);
+  }
+  // and the chips actually reference them (invariant 7's two halves stay joined)
+  const { readFileSync: rf } = await import('node:fs');
+  const ui = rf(join(root, 'js/ui/lens-views.js'), 'utf8');
+  for (const id of ['DL-010', 'DL-011', 'DL-013', 'DL-014', 'DL-015']) {
+    assert.ok(ui.includes(id), `lens-views chips reference ${id}`);
+  }
+});
+
 test('link embeds shape as link posts; plain text shapes as text', () => {
   const post = structuredClone(fixture('wide-getFeed').feed[0].post);
   post.embed = { $type: 'app.bsky.embed.external#view', external: { uri: 'https://example.com/x', title: 'Ext' } };
