@@ -31,12 +31,26 @@ test('store.commit is called only from js/substrates/memory.js', () => {
   }
 });
 
-test('the UI layer never imports a substrate or the routing config', () => {
+// The lens is the one named exception: a READ-ONLY shaping module with no
+// commit path — the wide-tier analogue of views importing the store for
+// reads (reads were never routed; invariants 1/4 govern WRITES and
+// substrate selection). Anything else added here needs the same argument.
+const UI_SUBSTRATE_EXCEPTIONS = new Set(['../substrates/lens.js']);
+
+test('the UI layer never imports a substrate or the routing config (lens read-only excepted)', () => {
   for (const file of ALL_JS.filter((f) => f.startsWith('js/ui/'))) {
     const src = readFileSync(join(root, file), 'utf8');
-    assert.ok(!/substrates\//.test(src), `${file} imports a substrate`);
+    const substrateImports = [...src.matchAll(/from\s+'([^']*substrates\/[^']*)'/g)].map((m) => m[1]);
+    const illegal = substrateImports.filter((s) => !UI_SUBSTRATE_EXCEPTIONS.has(s));
+    assert.deepStrictEqual(illegal, [], `${file} imports substrates: ${illegal}`);
     assert.ok(!/config\/routing/.test(src), `${file} resolves substrates itself`);
   }
+});
+
+test('the lens exception holds: lens.js has no commit path', () => {
+  const src = readFileSync(join(root, 'js/substrates/lens.js'), 'utf8');
+  assert.ok(!/\bcommit\s*\(/.test(src), 'lens.js must stay read-only');
+  assert.ok(!/createRecord|putRecord|deleteRecord/.test(src), 'lens.js must not write to the network');
 });
 
 // ---- behavioral: the probation gate finally binds at write time ----
