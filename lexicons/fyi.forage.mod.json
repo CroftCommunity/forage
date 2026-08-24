@@ -1,0 +1,64 @@
+{
+  "lexicon": 1,
+  "id": "fyi.forage.mod",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "A steward action, in the STEWARD's repo. Nobody deletes another member's records: moderation is applied as masking at fold time by every reader.",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": [
+          "action",
+          "field",
+          "createdAt"
+        ],
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "removed",
+              "approved",
+              "locked",
+              "unlocked",
+              "pinned",
+              "unpinned",
+              "banned",
+              "unbanned",
+              "stewardAdded",
+              "stewardRemoved"
+            ]
+          },
+          "field": {
+            "type": "string",
+            "format": "at-uri",
+            "description": "The Field this action applies to"
+          },
+          "subject": {
+            "type": "string",
+            "format": "at-uri",
+            "description": "The post/comment acted on (subject actions)"
+          },
+          "targetDid": {
+            "type": "string",
+            "format": "did",
+            "description": "The member acted on (ban/steward actions)"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 3000
+          },
+          "duration": {
+            "type": "integer",
+            "description": "Ban duration in days; absent = indefinite"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime",
+            "description": "Action time"
+          }
+        }
+      }
+    }
+  }
+}

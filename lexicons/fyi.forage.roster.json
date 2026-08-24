@@ -1,0 +1,46 @@
+{
+  "lexicon": 1,
+  "id": "fyi.forage.roster",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "THE scoped deployment: a self-keyed singleton in the founding DID's repo. The member list is the aperture \u2014 records outside these DIDs do not exist to this tier.",
+      "key": "literal:self",
+      "record": {
+        "type": "object",
+        "required": [
+          "members",
+          "updatedAt"
+        ],
+        "properties": {
+          "members": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "did"
+            },
+            "description": "The deployment's member DIDs; intake is scoped to exactly these repos"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "at-uri"
+            },
+            "description": "The deployment's Field records, for slug resolution without a crawl"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Deployment display name"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "datetime",
+            "description": "Last roster change"
+          }
+        }
+      }
+    }
+  }
+}

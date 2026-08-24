@@ -1,0 +1,49 @@
+{
+  "lexicon": 1,
+  "id": "fyi.forage.report",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "A report, in the reporter's repo; stewards read the roster's repos to build the queue.",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": [
+          "subject",
+          "field",
+          "reason",
+          "createdAt"
+        ],
+        "properties": {
+          "subject": {
+            "type": "string",
+            "format": "at-uri",
+            "description": "The reported post or comment"
+          },
+          "field": {
+            "type": "string",
+            "format": "at-uri",
+            "description": "The Field it was reported in"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 3000
+          },
+          "ruleId": {
+            "type": "string",
+            "description": "The Field rule invoked, if any"
+          },
+          "detail": {
+            "type": "string",
+            "maxLength": 10000
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime",
+            "description": "Report time"
+          }
+        }
+      }
+    }
+  }
+}
