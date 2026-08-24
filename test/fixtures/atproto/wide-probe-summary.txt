@@ -1,0 +1,13 @@
+W1 resolveHandle unauth: 200 in 226ms did=did:plc:z72i7hdynmk6r22z27h6tvur
+W2 getFeed unauth (whats-hot): 200 in 235ms posts=10
+   counts on post[0]: reply=2 repost=346 like=2058 quote=0
+W3 getPostThread unauth depth=10: 200 in 134ms replies=2
+W4 getAuthorFeed unauth: 200 in 196ms items=5
+W5 getFollows unauth: 200 in 129ms follows=5
+W6 searchPosts UNAUTH: 403 (2026-07 probe said 403 — guest boards stay feed/author/list)
+W7 createSession: 200 did=did:plc:xyfhcaweaeyew3zrgk6jaln7
+W8 searchPosts AUTHED via PDS proxy: 200 results=5
+W9 getPreferences AUTHED: 200 savedFeeds pref present=true (Fields = pinned/saved feeds)
+W10 getMutes AUTHED: 200 (mute rails reachable for masking)
+W11 v2 planSnapshot (no token): 401 {"error":"invalid bearer credential"}
+W12 v2 live tail (filtered, no auth): first event in 2439ms kind=commit

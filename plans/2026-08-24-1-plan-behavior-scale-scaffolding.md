@@ -674,6 +674,22 @@ Probe run live against bsky.social with the standing test account (creds from
 PDS pull (tail is an enhancement), roster = `fyi.forage.roster` in the founding DID's
 repo (recommended, reversible), IndexedDB deferred.
 
+### Phase-6 probe + split — 2026-08-25
+Read-surface probes re-run live against today's AppView (fixtures
+`test/fixtures/atproto/wide-*`): unauth-200 for resolveHandle / getFeed (counts
+precomputed on every post) / getPostThread(depth=10) / getAuthorFeed / getFollows;
+`searchPosts` **403 unauth, 200 authed** via the PDS proxy — every 2026-07-27 fact
+holds. Signed-in: `savedFeedsPref` present (Fields = pinned/saved feeds is real);
+`getMutes` 200 (masking rails reachable). **Jetstream v2, real endpoints found**
+(`/xrpc/network.bsky.jetstream.*` on `jetstream.us-{west,east}.bsky.network`; the
+earlier 404s were v1-era hosts): live tail open (first filtered event 2.4s);
+`planSnapshot` **401 invalid bearer credential** — replay is token-gated.
+**OQ4 → ADR-002** (`adr/ADR-002-wide-lens-intake.md`): wide-lens intake = AppView pull —
+no token, and structurally a DID-filtered stream cannot compute other users' engagement
+(like counts need whole-network ingestion, the AppView's job). **OQ1 closed**: slug =
+feed/list rkey, title = displayName, `~<n>` on collision. Split 6a–6e recorded in the
+Phase 6 section; writes stay memory, boost-as-like deferred behind a frontier chip.
+
 #### 4a: Scenario format + first scenarios
 **Changes:**
 - [ ] `scenarios/format.js` — scenario shape + offset-timestamp resolver + replay helper
@@ -853,6 +869,41 @@ against the roster + masking built here, and write its own plan.
 
 Coarse here; split before execution, after the probe re-run. Read-first; every gap a
 frontier, never a dead button.
+
+**SPLIT 2026-08-25 (probe re-run complete — fixtures `test/fixtures/atproto/wide-*`;
+OQ4 closed by ADR-002; Review Log entry "Phase-6 probe + split"):**
+
+- **6a — probe fixtures + ADR-002 + this split** (done with this commit). Every
+  2026-07-27 fact re-verified live; v2 replay 401-token-gated; **intake = AppView pull**
+  (ADR-002 carries the two reasons: no token, and a DID-filtered stream cannot compute
+  other users' engagement).
+- **6b — lens shaping**: `js/substrates/lens.js` — pure shapers from bsky views to our
+  selector result shapes (`shapeLensPost`, `shapeLensThread`, `shapeLensFeed`): score =
+  likeCount, myVote from `viewer.like`, masking honors `viewer.muted`/blocked/labels
+  through the same masked-shape our selectors emit; tested against the wide fixtures,
+  hermetic.
+- **6c — lens intake**: `lens.js` grows transport-injected readers — `lensFeed(source,
+  {session?})` for feed-URI / author / list sources, `lensThread(uri)`,
+  `lensFields({session})` from `savedFeedsPref` (Fields = pinned/saved feeds),
+  guest-vs-session paths, search only with session; hermetic over fixtures.
+- **6d — the lens UI**: `#/lens…` routes render the SAME views over lens data (guest:
+  zero-setup demo path browsing public feeds as a forum; signed-in via app password in
+  a dev-bar-style seam until OAuth arrives); bury/search-as-guest/compose render as
+  frontier chips (invariant 7: chip + ledger same commit); `sw.js` SHELL + bump.
+- **6e — tolerances + shape conformance + live smoke + README**: DL-01x tolerance
+  entries (lens ranking is the generator's order; scores are likes-only; membership =
+  saved-feed prefs); a shape-contract conformance test (lens outputs satisfy the same
+  structural contract memory selector results do, fixture-driven); live smoke rendering
+  a real feed as a Field; README wide-tier paragraph confirmed.
+
+**Split decisions (probe-evidenced):**
+- **OQ1 CLOSED: Field slug = the feed generator/list rkey** (probe: rkeys like
+  `whats-hot` are URL-safe and human-readable), display title = the generator's
+  `displayName`; collision disambiguation by appending `~<n>`; no alias table.
+- **OQ4 CLOSED: ADR-002** (AppView pull). Jetstream v2 live tail stays a scoped-tier
+  freshness option; replay revisited only if a token + a real archive need appear.
+- Writes stay `memory` throughout; boost-as-like is a WRITE (like record) — deferred
+  behind a frontier chip in 6d (read-first plan scope), promoted post-plan.
 
 **Prior art — do not re-derive.** `discovery/alpha/plans/2026-07-27-read-first-forum-mvp.md`
 (see Verified Assumptions): unauth-200 read surface, `searchPosts` 403 unauth ⇒ guest
