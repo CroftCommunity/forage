@@ -19,7 +19,7 @@ for all passes.
 | 2 Determinism/purity | ✅ SHIPPED | `a113a8d`…`5ff84d8` | fold replay-stable; hardened schema (ids+actor, load-path); actor-scoped ids (ADR-001); read layer store-free (purity gate); browser smoke 10/10; mutation audit 60.9%→94.85%, schema 100% |
 | 3 Adapter + routing | ✅ SHIPPED | `a730461`…`01bcbbb` | seam live: UI→actions→adapter→routing→memory; createField exists (probation gate binds at write time); invariants 1+4 mechanical; SHELL registry mechanized, offline reload verified |
 | 4 Scenarios + harness | ✅ SHIPPED | `2a73426`…`3a40e89` | 10-scenario library covers all 27 mutation types; seed = library replay; ledger live (frontiers folded in, DL-008 tolerance); harness proven (fails, tolerates with DL id, stays bounded); gate = test + conformance, bite observed |
-| 5 Scoped atproto | pending | | |
+| 5 Scoped atproto | ✅ SHIPPED | `b4d940f`…`ea375bf` | probe firsthand; 9 lexicons; pure codec; roster-scoped intake + writer; conformance memory↔scoped green (harness's first real catch: `held`); LIVE two-DID rehearsal 8/8 on the real PDS |
 | 6 Wide lens | pending | | |
 
 ## Problem Statement
@@ -732,7 +732,28 @@ ledger+frontier+views; sw.js; proof test).
 **Depends on:** 4d. **Write-set:** the workflow, `README.md`.
 **Done when:** a PR breaking conformance is blocked (observed once, like 1d's bite test).
 
-### Phase 5 — Scoped tier: atproto at small aperture (all public)
+### Phase 5 — Scoped tier: atproto at small aperture (all public) — ✅ SHIPPED (5a `b4d940f`; 5b `35b5334`,`349ce87`,`4ee252b`,`fd11646`; 5c `46aa888`; 5d `aedd369`; 5e `52f47db`,`9fa44f1`; 5f `ea375bf`)
+
+**Delivered notes (2026-08-25):**
+- **The harness's first real catch:** the initial memory↔scoped conformance run flagged
+  a held post leaking into scoped search/feeds — the automod verdict wasn't on the wire.
+  `held` joined the post lexicon + codec + writer (5e(1)). Exactly what the
+  memory-vs-memory bootstrap was for.
+- **Codec decisions:** retractions are record deletes (absence folds identically);
+  author-deletes are TOMBSTONE puts (content really leaves the wire, `[deleted]`
+  semantics survive); edits are puts with `editedAt`; local-only events (identity,
+  prefs, read-state) bypass the codec verbatim. DL-009 (proposal) records the one known
+  unprobed divergence (deleted-post title retention).
+- **Live rehearsal (Broad validation), 8/8 on bsky.social:** founder DID wrote
+  roster/field/post, second DID joined/commented/boosted — all through
+  `createScopedWriter`; **unauthenticated** `fetchRoster`+`fetchScopedEvents` pulled
+  both repos (3.1s, 2 DIDs × 8 collections, 6 events), folded, and the standing
+  selectors browsed it (memberCount 2, cross-DID comment, boost tallied, feed
+  rendered). All 7 live records deleted afterward; the test accounts hold no residue.
+- **Routing-flip demonstration** = conformance worldB through the `substrateFor` table
+  override; registering a session-bound live atproto substrate in the routing table is
+  deployment work (the "ten friends" instance), out of plan scope by design.
+- **IndexedDB not needed** at this scale; localStorage stands.
 
 **Restructured 2026-08-24 (user direction, all-in on atproto; Spaces backburnered — see
 OQ3).** Coarse here; split into ≤3-file units via plan update + Review Log before
