@@ -88,3 +88,81 @@ export function shapeLensFeed(feedResponse, src, { sort = 'lens', timeframe = 'a
     cursor: feedResponse.cursor,
   };
 }
+
+// ---- intake (6c): AppView readers, guest or session (ADR-002) ----
+
+const GUEST_APPVIEW = 'https://public.api.bsky.app';
+
+// OQ1: a lens Field's slug is the feed/list rkey (or the author handle).
+const slugForSource = (source) => {
+  if (source.kind === 'author') return source.actor;
+  if (source.kind === 'timeline') return 'following';
+  return source.uri.split('/').pop();
+};
+
+// A lens over the AppView. Guest (no session): the unauth-200 surface only.
+// With a session {service, did, accessJwt}: reads route through the PDS proxy
+// and the personal surfaces (fields, search, timeline) open up.
+export function createLens({ session = null, transport = fetch } = {}) {
+  const base = session ? session.service : GUEST_APPVIEW;
+  const headers = session ? { authorization: `Bearer ${session.accessJwt}` } : {};
+
+  async function get(path, params = {}) {
+    const url = new URL(`${base}/xrpc/${path}`);
+    for (const [k, v] of Object.entries(params)) if (v !== undefined) url.searchParams.set(k, v);
+    const res = await transport(url.toString(), { headers });
+    if (!res.ok) throw new Error(`lens: ${path} failed HTTP ${res.status}`);
+    return res.json();
+  }
+
+  const srcCtx = (source, title) => {
+    const slug = slugForSource(source);
+    return { fieldId: `lens:${slug}`, fieldSlug: slug, fieldTitle: title || slug };
+  };
+
+  return {
+    // source: {kind:'feed'|'list', uri} | {kind:'author', actor} | {kind:'timeline'}
+    async feed(source, { cursor, title } = {}) {
+      let data;
+      if (source.kind === 'author') data = await get('app.bsky.feed.getAuthorFeed', { actor: source.actor, limit: 30, cursor });
+      else if (source.kind === 'list') data = await get('app.bsky.feed.getListFeed', { list: source.uri, limit: 30, cursor });
+      else if (source.kind === 'timeline') {
+        if (!session) throw new Error('lens: the Following timeline needs a session');
+        data = await get('app.bsky.feed.getTimeline', { limit: 30, cursor });
+      } else data = await get('app.bsky.feed.getFeed', { feed: source.uri, limit: 30, cursor });
+      const src = srcCtx(source, title);
+      return { ...shapeLensFeed(data, src), ...src };
+    },
+
+    async thread(uri, src) {
+      const data = await get('app.bsky.feed.getPostThread', { uri, depth: 10 });
+      return shapeLensThread(data, src || { fieldId: 'lens:thread', fieldSlug: 'thread', fieldTitle: 'Thread' });
+    },
+
+    // The lens Fields list: pinned/saved feeds + lists from preferences,
+    // display names resolved through getFeedGenerators. Session-only.
+    async fields() {
+      if (!session) throw new Error('lens: Fields come from your saved feeds — needs a session');
+      const prefs = await get('app.bsky.actor.getPreferences');
+      const saved = (prefs.preferences || []).find((p) => (p.$type || '').includes('savedFeedsPref'));
+      const items = saved?.items || [];
+      const feedUris = items.filter((i) => i.type === 'feed').map((i) => i.value);
+      const gens = feedUris.length
+        ? (await get('app.bsky.feed.getFeedGenerators', Object.fromEntries(feedUris.map((u, i) => [`feeds[${i}]`, u])))).feeds || []
+        : [];
+      const titleOf = new Map(gens.map((g) => [g.uri, g.displayName]));
+      return items.map((i) => ({
+        id: i.value, kind: i.type, pinned: !!i.pinned,
+        slug: slugForSource(i.type === 'author' ? { kind: 'author', actor: i.value } : i.type === 'timeline' ? { kind: 'timeline' } : { kind: i.type, uri: i.value }),
+        title: i.type === 'timeline' ? 'Following' : titleOf.get(i.value) || i.value.split('/').pop(),
+      }));
+    },
+
+    async search(q) {
+      if (!session) throw new Error('lens: search needs a session (403 unauth — probe-verified)');
+      const data = await get('app.bsky.feed.searchPosts', { q, limit: 30 });
+      const src = { fieldId: 'lens:search', fieldSlug: 'search', fieldTitle: `Search: ${q}` };
+      return { posts: (data.posts || []).map((p) => shapeLensPost(p, src)) };
+    },
+  };
+}
