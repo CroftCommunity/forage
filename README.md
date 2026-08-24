@@ -22,6 +22,15 @@ python3 -m http.server 8000
 # then open http://localhost:8000/
 ```
 
+Tests run on the pinned Node (`.nvmrc`, enforced by `engine-strict`; `fnm install` reads
+the pin) with zero dependencies:
+
+```sh
+npm test
+```
+
+CI runs the same command as a gate on every PR and push to `main`.
+
 Deployed on GitHub Pages at [forage.fyi](https://forage.fyi/) and installable as a PWA. All
 asset paths are relative, so it works equally under a project subpath. Append `?nosw` to
 bypass the service worker. Domain, DNS, certificate, and brand-asset operations:
