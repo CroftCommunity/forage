@@ -48,8 +48,17 @@ export function commit(type, payload, opts = {}) {
   return ev;
 }
 
-// Bulk load (seed / import): replace log, fold once.
+// Bulk load (seed / import): replace log, fold once. Every event validates
+// like dispatch does — a single bad event refuses the WHOLE load (fail loud,
+// load nothing), with words naming the offender for the toast/console.
 export function loadEvents(events) {
+  events.forEach((ev, i) => {
+    try {
+      validateEvent(ev);
+    } catch (e) {
+      throw new Error(`load refused: event ${i} (${ev && ev.type}): ${e.message}`);
+    }
+  });
   store.events = events.slice();
   store._seq = events.length;
   rebuild();

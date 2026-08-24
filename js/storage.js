@@ -3,7 +3,9 @@
 // reset. This is the single storage seam the future adapter layer replaces.
 
 const KEY = 'forage.state';
-export const SCHEMA_VERSION = 1;
+// v2 (2026-08-24): hardened schema — ids required on entity events, actor
+// presence required. Pre-1.0: old logs are discarded, never migrated.
+export const SCHEMA_VERSION = 2;
 
 export function load() {
   try {
@@ -43,6 +45,11 @@ export function exportJson() {
 export function importJson(text) {
   const data = JSON.parse(text);
   if (typeof data !== 'object' || !Array.isArray(data.events)) throw new Error('invalid import: missing events[]');
-  localStorage.setItem(KEY, JSON.stringify({ ...data, version: SCHEMA_VERSION }));
+  // Refuse a mismatched version with words — never stamp the current version
+  // over an unknown document (that would defeat the discard-on-mismatch seam).
+  if (data.version !== SCHEMA_VERSION) {
+    throw new Error(`invalid import: schema v${data.version} != v${SCHEMA_VERSION}`);
+  }
+  localStorage.setItem(KEY, JSON.stringify(data));
   return data;
 }
