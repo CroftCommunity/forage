@@ -18,7 +18,7 @@ for all passes.
 | 1 Test rig, CI, law | ✅ SHIPPED | `3ed7a31`…`46f92d4` | 61 pass + 6 todo; gate bites (red 32782423150, green 32782491189); dispatch hatch pending main push |
 | 2 Determinism/purity | ✅ SHIPPED | `a113a8d`…`5ff84d8` | fold replay-stable; hardened schema (ids+actor, load-path); actor-scoped ids (ADR-001); read layer store-free (purity gate); browser smoke 10/10; mutation audit 60.9%→94.85%, schema 100% |
 | 3 Adapter + routing | ✅ SHIPPED | `a730461`…`01bcbbb` | seam live: UI→actions→adapter→routing→memory; createField exists (probation gate binds at write time); invariants 1+4 mechanical; SHELL registry mechanized, offline reload verified |
-| 4 Scenarios + harness | pending | | |
+| 4 Scenarios + harness | ✅ SHIPPED | `2a73426`…`3a40e89` | 10-scenario library covers all 27 mutation types; seed = library replay; ledger live (frontiers folded in, DL-008 tolerance); harness proven (fails, tolerates with DL id, stays bounded); gate = test + conformance, bite observed |
 | 5 Scoped atproto | pending | | |
 | 6 Wide lens | pending | | |
 
@@ -628,7 +628,30 @@ explicit exclusion list, so exclusions are visible, not implicit.
 forever after.
 **Done when:** offline reload green with the new modules cached; registry test green.
 
-### Phase 4 — Scenario library, conformance harness, divergence ledger (finding 4)
+### Phase 4 — Scenario library, conformance harness, divergence ledger (finding 4) — ✅ SHIPPED (4a `2a73426`; 4b `e24d2d9`,`e4a3963`,`d4fb0ff`,`b5b54ea`,`5cf0c41`,`ae776e6`; 4c `04edea4`,`1d458e7`,`025b16b`,`35d1482`; 4d `ed43e27`,`89e072a`,`8a9f3f7`,`e568a83`; 4e `3a40e89`)
+
+**Delivered notes (2026-08-24/25):**
+- **Scenario format:** offset timestamps against a caller base (negative reaches the
+  past), position-derived ids, probe registry returning JSON-able observables; probes
+  grew to 12 (perm/tally/unread/fieldInfo/auditTypes/feedIds/threadNode/threadInfo/
+  postInfo/searchIds/savedIds/limitsInfo/prefValue). `runAssertions` carries a
+  `probeOverrides` seam — the engine-variant A/B hook BSM's change-engine procedure
+  needs, and what the harness proof drives.
+- **Library:** 10 scenarios (the 8 planned + demo-extras). demo-extras reconstructs the
+  gardening world with every persona seat in its README-documented state; kept last so
+  the seed's staggered bases land it freshest.
+- **4c:** `buildSeed(baseSec = call moment)` — time enters at the dispatch boundary
+  (invariant-3-legal); tests pass a fixed base for byte-identical logs. Combined world
+  has 11 users (8 personas + 3 scenario-only seats). Browser-validated (Seed toast,
+  gardening browses, stress thread renders). Scenarios + ledger joined SHELL (v7, v8).
+- **4d:** ledger entries carry DL ids; the 7 frontiers folded in as DL-001..007
+  (`js/frontier.js` deleted — its `isLocked` had no callers); DL-008 = the feed-ranking
+  set-equality tolerance, comparator registered beside the entry. Harness proof observed
+  red→tolerated→bounded: variant refused without tolerance, tolerated with DL-008,
+  membership drift and non-feed probes never ride it. CLI baseline: 88/88 observables.
+- **4e bite observed:** PR #9 — run 32786724554 red at the gate step with `npm test`
+  green and the conformance report printed before the deliberate exit 1; revert run
+  32786787902 green. Closed unmerged.
 
 #### 4a: Scenario format + first scenarios
 **Changes:**
