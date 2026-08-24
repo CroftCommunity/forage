@@ -130,7 +130,7 @@ export function buildSeed() {
   // meta announcement (admin-posted)
   const pMeta = 'p_meta';
   ev('post.created', { id: pMeta, fieldId: F.meta, format: 'text', title: 'Forage is in prototype. Here is what works.',
-    nsfw: false, spoiler: false, bodyMd: 'Roam the open web. This build runs entirely in your browser.' }, U.wren, minAgo(60 * 50));
+    nsfw: false, spoiler: false, bodyMd: 'Forage the open web. This build runs entirely in your browser.' }, U.wren, minAgo(60 * 50));
   votes('post', pMeta, 30, 0);
 
   // a LOCKED thread
