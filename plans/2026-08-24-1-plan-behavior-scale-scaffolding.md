@@ -1,8 +1,9 @@
 # Plan: behavior-scale scaffolding — the seam, the law, and the two substrates
 
 date: 2026-08-24
-status: READY FOR EXECUTION — all three passes complete (2026-08-24); no BLOCKING
-questions; OQ1/OQ4 phase-gated, OQ5 advisory
+status: CLOSED 2026-08-25 — all six phases shipped (0 skipped); every open question
+resolved (OQ1/OQ4 closed by probe evidence + ADR-002 during execution); deferred
+follow-ons in TODO.md
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `f5639a2` (clean tree)
 method: `discovery/alpha/thinking/behavior-scale/behavior-scale-methodology.md` (invariants §8,
@@ -20,7 +21,7 @@ for all passes.
 | 3 Adapter + routing | ✅ SHIPPED | `a730461`…`01bcbbb` | seam live: UI→actions→adapter→routing→memory; createField exists (probation gate binds at write time); invariants 1+4 mechanical; SHELL registry mechanized, offline reload verified |
 | 4 Scenarios + harness | ✅ SHIPPED | `2a73426`…`3a40e89` | 10-scenario library covers all 27 mutation types; seed = library replay; ledger live (frontiers folded in, DL-008 tolerance); harness proven (fails, tolerates with DL id, stays bounded); gate = test + conformance, bite observed |
 | 5 Scoped atproto | ✅ SHIPPED | `b4d940f`…`ea375bf` | probe firsthand; 9 lexicons; pure codec; roster-scoped intake + writer; conformance memory↔scoped green (harness's first real catch: `held`); LIVE two-DID rehearsal 8/8 on the real PDS |
-| 6 Wide lens | pending | | |
+| 6 Wide lens | ✅ SHIPPED | `db30491`…`60753f6` | probe re-run live; ADR-002 (AppView pull); lens shapers satisfy the memory shape contract; guest+session intake; #/lens UI with chip-per-ledger-entry; LIVE smoke: real feed + real thread rendered |
 
 ## Problem Statement
 
@@ -690,6 +691,36 @@ no token, and structurally a DID-filtered stream cannot compute other users' eng
 feed/list rkey, title = displayName, `~<n>` on collision. Split 6a–6e recorded in the
 Phase 6 section; writes stay memory, boost-as-like deferred behind a frontier chip.
 
+### Plan close-out — 2026-08-25
+**Shipped:** ~50 commits, `716358e`…`60753f6`, all local (main not pushed — deploys
+forage.fyi; owner's call). The scaffolding debt (findings 1–6) is paid with teeth: a
+172-test suite + conformance harness as the CI gate (bitten and observed red at the
+right step, twice), a hardened schema enforced at dispatch AND load, a pure store-free
+read layer (mechanical scan), actor-scoped ids (ADR-001), the routing/adapter seam with
+store.commit callable only from the memory substrate (mechanical), a 10-scenario
+library covering all 27 mutation types that IS the seed, and a divergence ledger
+(frontiers folded in) gating the harness. On that scaffolding, both tiers: the SCOPED
+tier (9 fyi.forage.* lexicons, pure event↔record codec, roster-aperture intake,
+session writer — conformant with memory across the whole library, and live-proven on
+bsky.social with two DIDs, 8/8, cleaned up), and the WIDE lens (ADR-002 AppView pull;
+shapers satisfying the memory-derived shape contract; guest + session intake; #/lens
+UI rendering real Bluesky feeds and threads through the standing components, live-
+observed; every deferral a chip tied mechanically to its ledger entry). Mutation audit:
+60.9%→94.85%, schema 100%.
+**Stopped or skipped:** nothing skipped. Deferred (TODO.md): main push + dispatch-hatch
+pull (owner), CI-PATTERN row (on request), Spaces feasibility (user-named post-plan),
+lens writes/OAuth/pagination polish, scoped-tier deployment plumbing, DL-009/013/014/015.
+**Discoveries:** the harness earned its keep immediately — its first scoped run caught
+`held` missing from the wire (a real leak: held posts visible in scoped search); the
+schema walker taught the pinned-table lesson (a test that reads the constant it guards
+kills nothing — schema went 66%→100% only after the test carried its own copy); v2
+replay is token-gated (401) and a DID-filtered stream structurally cannot compute other
+users' engagement, which decided ADR-002 more firmly than the token issue; the PDS
+accepted every custom lexicon unauthenticated-readable, making the guest scoped forum
+free; `node --test test/` resolves as a module path on v22.23.2 (bare auto-discovery is
+the working form); and reducers carried an uncalled function (`subjectField`) that only
+the mutation audit noticed.
+
 #### 4a: Scenario format + first scenarios
 **Changes:**
 - [ ] `scenarios/format.js` — scenario shape + offset-timestamp resolver + replay helper
@@ -865,7 +896,7 @@ not encrypted) — is a named follow-on after this plan completes: probe the ATP
 alpha (or its full release, expected "later this year"), diff its membership semantics
 against the roster + masking built here, and write its own plan.
 
-### Phase 6 — Big-world tier: the atproto lens (`hybrid`)
+### Phase 6 — Big-world tier: the atproto lens (`hybrid`) — ✅ SHIPPED (6a `db30491`; 6b `951d944`; 6c `5582894`; 6d `df8c890`,`a2b9ea3`; 6e `60753f6`)
 
 Coarse here; split before execution, after the probe re-run. Read-first; every gap a
 frontier, never a dead button.
