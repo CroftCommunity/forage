@@ -13,7 +13,6 @@ const store = {
   state: emptyState(),
   personaId: DEFAULT_PERSONA_ID,
   dev: { latency: 0, failNext: false, frontiers: true },
-  _seq: 0,
 };
 
 export function subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); }
@@ -35,9 +34,10 @@ export function nowSec() { return Math.floor(Date.now() / 1000); }
 
 // Append a validated event and re-derive. Returns the event.
 export function commit(type, payload, opts = {}) {
+  const actor = opts.actor !== undefined ? opts.actor : store.personaId;
   const ev = {
-    id: opts.id || `ev_${store._seq++}_${store.events.length}`,
-    type, actor: opts.actor !== undefined ? opts.actor : store.personaId,
+    id: opts.id || genId('ev', actor),
+    type, actor,
     ts: opts.ts || Date.now(), payload,
   };
   validateEvent(ev);
@@ -60,7 +60,6 @@ export function loadEvents(events) {
     }
   });
   store.events = events.slice();
-  store._seq = events.length;
   rebuild();
   persist();
   notify();
@@ -81,7 +80,6 @@ export function setDev(patch) {
 export function reset() {
   store.events = [];
   store.state = emptyState();
-  store._seq = 0;
   storage.clearAll();
   notify();
 }
@@ -95,11 +93,19 @@ export function hydrate() {
   const data = storage.load();
   if (!data) return false;
   store.events = data.events || [];
-  store._seq = store.events.length;
   store.personaId = data.persona ?? DEFAULT_PERSONA_ID;
   store.dev = { latency: 0, failNext: false, frontiers: true, ...(data.dev || {}) };
   rebuild();
   return true;
 }
 
-export function genId(prefix) { return `${prefix}_${store._seq++}_${store.events.length}`; }
+// Actor-scoped ids (ADR-001): <prefix>_<actorId>_<perActorSeq>. Deterministic —
+// the sequence is derived from the log, no mutable counter, no randomness — and
+// collision-free across actors by construction (the actor is embedded). Known
+// limitation: one actor writing from two devices concurrently can still collide;
+// accepted for the memory tier, revisited when ids meet atproto rkeys (phase 5).
+export function genId(prefix, actor = store.personaId) {
+  let n = 0;
+  for (const e of store.events) if (e.actor === actor) n++;
+  return `${prefix}_${actor}_${n}`;
+}

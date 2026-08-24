@@ -52,6 +52,36 @@ test('importJson refuses a document without events[]', () => {
   assert.throws(() => storage.importJson('{"version":2}'), /events/);
 });
 
+// ---- 2d: actor-scoped ids (ADR-001) ----
+
+test('genId is <prefix>_<actorId>_<perActorSeq>, derived from the log', () => {
+  store.loadEvents([valid('a1', 1), valid('a2', 2)].map((e, i) => ({ ...e, actor: i === 0 ? 'u_a' : 'u_b' })));
+  // u_a has 1 event in the log, u_b has 1
+  assert.equal(store.genId('p', 'u_a'), 'p_u_a_1');
+  assert.equal(store.genId('p', 'u_b'), 'p_u_b_1');
+  assert.equal(store.genId('p', 'u_a'), 'p_u_a_1'); // pure until a commit lands
+});
+
+test('ids from different actors can never collide (actor is embedded)', () => {
+  store.loadEvents([]);
+  const a = store.genId('c', 'u_alice');
+  const b = store.genId('c', 'u_bob');
+  assert.notEqual(a, b);
+  assert.match(a, /^c_u_alice_\d+$/);
+  assert.match(b, /^c_u_bob_\d+$/);
+});
+
+test('commit stamps actor-scoped event ids that advance with the actor log', () => {
+  store.loadEvents([]);
+  const e1 = store.commit('account.registered', { handle: 'a' }, { actor: 'u_a' });
+  const e2 = store.commit('field.created', { id: store.genId('f', 'u_a'), slug: 'g', title: 'G' }, { actor: 'u_a' });
+  const e3 = store.commit('account.registered', { handle: 'b' }, { actor: 'u_b' });
+  assert.equal(e1.id, 'ev_u_a_0');
+  assert.equal(e2.id, 'ev_u_a_1');
+  assert.equal(e2.payload.id, 'f_u_a_1'); // same per-actor seq, distinct prefix
+  assert.equal(e3.id, 'ev_u_b_0');
+});
+
 test('importJson no longer stamps the current version over its input', () => {
   const doc = { version: 2, events: [valid('w', 1)], persona: null, dev: {} };
   storage.importJson(JSON.stringify(doc));
