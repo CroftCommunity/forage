@@ -25,7 +25,7 @@ export function devBar() {
 
   // seed / delete / export / import
   bar.append(el('span', { class: 'grp' },
-    mkBtn('Seed', () => { store.loadEvents(buildSeed()); toast('Seeded.', 'ok'); }),
+    mkBtn('Seed', () => { store.loadEvents(buildSeed()); toast('Seeded (scenario library replay).', 'ok'); }),
     mkBtn('Delete All', () => { if (confirm('Delete all local data?')) { store.reset(); toast('Cleared.', ''); } }),
     mkBtn('Export', exportData),
     mkBtn('Import', importData)));

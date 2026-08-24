@@ -60,7 +60,9 @@ Identity is a **dev-bar dropdown**, not a login. Every UX path is walkable from 
 Above the header, dashed to mark it as scaffolding:
 
 - **Persona** — switch seats; re-derives every viewer-dependent view in one place.
-- **Seed / Delete All** — load the scripted scenario, or clear to the genuine empty state.
+- **Seed / Delete All** — replay the scenario library (`scenarios/` — the same
+  deterministic, assertion-carrying scenarios the test suite and conformance harness
+  run), or clear to the genuine empty state.
 - **Export / Import** — round-trip the whole event log as JSON.
 - **Latency** — 0 / 250 / 600 ms simulated write latency.
 - **Fail Next** — arm a one-shot write failure to watch optimistic UI roll back.
