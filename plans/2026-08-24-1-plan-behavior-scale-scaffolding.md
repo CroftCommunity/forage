@@ -16,7 +16,7 @@ for all passes.
 |---|---|---|---|
 | 0 Discovery | ✅ resolved in planning | — | D1 answered during Pass 3; probe deleted |
 | 1 Test rig, CI, law | ✅ SHIPPED | `3ed7a31`…`46f92d4` | 61 pass + 6 todo; gate bites (red 32782423150, green 32782491189); dispatch hatch pending main push |
-| 2 Determinism/purity | pending | | |
+| 2 Determinism/purity | ✅ SHIPPED | `a113a8d`…`5ff84d8` | fold replay-stable; hardened schema (ids+actor, load-path); actor-scoped ids (ADR-001); read layer store-free (purity gate); browser smoke 10/10; mutation audit 60.9%→94.85%, schema 100% |
 | 3 Adapter + routing | pending | | |
 | 4 Scenarios + harness | pending | | |
 | 5 Scoped atproto | pending | | |
@@ -394,7 +394,22 @@ commands, checked against `package.json` scripts.
 (verification) commands named in AGENTS.md all execute.
 **Validation:** Narrow.
 
-### Phase 2 — Determinism, purity, schema hardening (findings 3, 5)
+### Phase 2 — Determinism, purity, schema hardening (findings 3, 5) — ✅ SHIPPED (`a113a8d` 2a, `d9c363d` 2b, `763f1ae` 2c, `4c16323` 2d, `f2f41cb` 2e, `60db865` 2f, `0092deb` 2g, `d34a969` 2h, `5ff84d8` 2i)
+
+**Delivered notes (2026-08-24):**
+- **2g count correction:** devbar's two grep-counted `sel.` hits are a local DOM
+  `<select>` variable, and main.js's `unreadCount` takes no clock — actions.js (7 sites)
+  was the entire real migration.
+- **2h beyond spec:** viewerCtx/limits gained fail-loud guards (`now`/`events` required) —
+  without them a missing clock silently mis-derived age-probation through NaN. The purity
+  scan deliberately permits bare `nowSec` as a *parameter name* (engines take time as an
+  input — that is the invariant, not a violation).
+- **Browser smoke (2c/2f/2g batched, one Playwright session): 10/10** — seed toast, feed
+  26 post links, thread, field about, persona switch, profile h1, optimistic boost under
+  600ms latency, Fail-Next rollback, both refusal toasts verbatim ("schema v1 != v2";
+  "load refused: event 0 (post.created): … missing required field: id").
+- **2i (see Review Log entry):** score 60.9% → 94.85%; schema.js 100%; reducers'
+  uncalled `subjectField` deleted (the audit's one production touch).
 
 #### 2a: Reducer determinism
 **Goal:** Replaying the same log at different wall-clock times yields identical state.
@@ -895,3 +910,43 @@ only); every cited file:line re-verified (`reducers.js:193`, `selectors.js:8,16,
 **Confirmed ready:** yes — no BLOCKING questions. Phase-gates: OQ1 before phase 6's
 mapping work; OQ4's ADR before phase 6's split (evidence from phase 5's probe). OQ5
 advisory, applied (2d creates `adr/`).
+
+### 2i mutation audit — 2026-08-24
+Stryker `10.0.0` (commandRunner over `npm test`), mutating `js/reducers.js`,
+`js/schema.js`, `js/engines/*`; 711 mutants total; six measured runs.
+**Arc:** 60.90% (433 killed, 278 survived) → 94.85% (663 killed, 36 survived);
+schema.js 100.00%, limits.js 98.94%, rank.js 94.29%, reducers.js 92.10%.
+**Real gaps found and closed (tests only):**
+- The EVENT_TYPES walker was **self-referential** — it read the mutated constant as its
+  own spec, so every required-list mutant survived. Fixed with a full pinned second copy
+  of the table in the test (`REQUIRED`), which is the point for data constants: the test
+  must BE the second source. Took schema.js from ~66% to 100% on its own.
+- Untested reducer semantics: exact default shapes (post/comment/field/report), prefs
+  defaults + merge, account.suspended, settingsUpdated title/description routing +
+  partial patches, field.left, edits, save retraction, mod flags both directions, ban
+  info defaults+values, steward remove, post-author removal notification, self-mod
+  no-notify, resolveReports first-resolver-sticks.
+- **Dangling references**: schema validates shape, not referential integrity — a new
+  test pins "unknown targets fold to a no-op, never a crash" across 13 event types.
+- Engines: rising's two gates tested independently (the original boundary pair straddled
+  both at once); `votes = ups + downs` needed a downs-bearing fixture; sortItems dispatch
+  needed fixtures whose per-sort orders differ from hot AND from input order; limits'
+  post-side budget was wholly untested (wait arithmetic, penalty, comment-doesn't-consume).
+- **Dead code:** reducers' `subjectField` had no callers (actions has its own) — deleted;
+  the audit's one production change.
+**Survivors dispositioned (36):**
+- *Equivalent* (~14): `sign` boundary mutants (the log-order factor is 0 exactly where
+  the sign differs); `balance` at ups==downs (both ratios are 1); the `case 'hot'` label
+  (default duplicates hot); limits' `e.type==='vote.set'` (only vote.set carries
+  `payload.value` in the schema); vote-0 stored-as-zero vs deleted-key (invisible
+  through tally/myVote — the entire read API).
+- *Unreachable past validation* (~15): actorless Set branches in field.created, save.set
+  actor guard, report-id fallback — 2b/2c guarantee actor and id presence on every
+  dispatch and load path; `reduce()` called raw can still reach them, and the
+  dangling-ref test pins the no-crash contract that keeps the guards honest.
+- *Trivial residuals* (~7): guard-variant residue in ghost-reference handling
+  (subjectAuthor/setSubject variants) and the rising-dispatch fixture whose input order
+  coincides with its expected order. Killing these would pin implementation detail — the
+  documented anti-pattern; declined.
+**Config:** `stryker.config.json` committed; `.gitignore` added (node_modules,
+.stryker-tmp, reports); the audit is re-runnable with `npx stryker run`.
