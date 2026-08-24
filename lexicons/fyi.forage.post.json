@@ -63,6 +63,11 @@
             "type": "string",
             "format": "datetime",
             "description": "Present iff the record was edited after creation"
+          },
+          "held": {
+            "type": "boolean",
+            "default": false,
+            "description": "Automod verdict at write time: held for steward review; cleared by a mod approved action"
           }
         }
       }
