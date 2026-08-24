@@ -11,6 +11,7 @@ import { rateLimitProbation } from './rate-limit-probation.js';
 import { reportResolveNotify } from './report-resolve-notify.js';
 import { saveAndProfile } from './save-and-profile.js';
 import { searchVisibility } from './search-visibility.js';
+import { demoExtras } from './demo-extras.js';
 
 export const SCENARIOS = [
   fieldLifecycle,
@@ -22,4 +23,5 @@ export const SCENARIOS = [
   reportResolveNotify,
   saveAndProfile,
   searchVisibility,
+  demoExtras, // keep LAST: the seed staggers bases and this world must be freshest
 ];
