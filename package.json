@@ -9,5 +9,8 @@
   },
   "scripts": {
     "test": "node --test"
+  },
+  "devDependencies": {
+    "@stryker-mutator/core": "^10.0.0"
   }
 }

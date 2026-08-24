@@ -139,11 +139,6 @@ export function reduce(state, ev) {
   return s;
 }
 
-function subjectField(s, type, id) {
-  if (type === 'post') return s.posts[id]?.fieldId;
-  if (type === 'comment') { const c = s.comments[id]; return c ? s.posts[c.postId]?.fieldId : null; }
-  return null;
-}
 function subjectAuthor(s, type, id) {
   if (type === 'post') return s.posts[id]?.authorId;
   if (type === 'comment') return s.comments[id]?.authorId;

@@ -1,0 +1,10 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "mutate": ["js/reducers.js", "js/schema.js", "js/engines/*.js"],
+  "testRunner": "command",
+  "commandRunner": { "command": "npm test" },
+  "reporters": ["clear-text", "progress"],
+  "ignoreStatic": true,
+  "incremental": false,
+  "tempDirName": ".stryker-tmp"
+}

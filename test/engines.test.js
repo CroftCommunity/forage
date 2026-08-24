@@ -85,11 +85,23 @@ test('sortItems: unknown sort falls back to hot', () => {
 
 const evAt = (type, sec, extra = {}) => ({ type, actor: 'u_x', ts: sec * 1000, payload: {}, ...extra });
 
-test('limits: logged-out can do nothing, with words', () => {
-  const l = limits(null, [], 0, false, 1000);
-  assert.equal(l.canComment, false);
-  assert.equal(l.canPost, false);
-  assert.equal(l.reason, 'logged-out');
+test('limits: logged-out can do nothing, with words (exact shape)', () => {
+  assert.deepStrictEqual(limits(null, [], 0, false, 1000), {
+    canComment: false, canPost: false, commentWaitSec: 0, postWaitSec: 0,
+    probation: false, reason: 'logged-out', coolOff: false,
+  });
+});
+
+test('limits: POST wait arithmetic at its window edge (299s blocked, 300s free)', () => {
+  const events = [evAt('post.created', 100)];
+  const at399 = limits('u_x', events, 0, false, 399);
+  assert.equal(at399.canPost, false);
+  assert.equal(at399.postWaitSec, 1);
+  const at400 = limits('u_x', events, 0, false, 400);
+  assert.equal(at400.canPost, true);
+  assert.equal(at400.postWaitSec, 0);
+  // a comment does not consume the post budget
+  assert.equal(limits('u_x', [evAt('comment.created', 399)], 0, false, 400).canPost, true);
 });
 
 test('limits: cooldown factor — probation 2x, rep at threshold 0.5x, one under threshold 1x', () => {
@@ -131,10 +143,13 @@ test('limits: rapid-bury cool-off at exactly 5 buries in the window; 4 does not 
   const five = [1, 2, 3, 4, 5].map((i) => bury(now - i));
   // a comment exactly at the normal free point (60s ago) stays blocked by the penalty
   const events = [evAt('comment.created', now - 60), ...five];
+  // a post exactly at ITS normal free point (300s) is likewise penalty-blocked
+  events.push(evAt('post.created', now - 300));
   const tripped = limits('u_x', events, 0, false, now);
   assert.equal(tripped.coolOff, true);
   assert.equal(tripped.canComment, false);
   assert.equal(tripped.commentWaitSec, RAPID_BURY_PENALTY); // 60 + 30 - 60
+  assert.equal(tripped.postWaitSec, RAPID_BURY_PENALTY);    // 300 + 30 - 300
   const four = five.slice(0, RAPID_BURY_COUNT - 1);
   assert.equal(limits('u_x', four, 0, false, now).coolOff, false);
 });
@@ -146,6 +161,60 @@ test('limits: bury window edge — a bury exactly 60s old counts, 61s does not',
   assert.equal(atEdge.coolOff, true);
   const pastEdge = limits('u_x', [...fourRecent, bury(now - RAPID_BURY_WINDOW - 1)], 0, false, now);
   assert.equal(pastEdge.coolOff, false);
+});
+
+// ---- 2i gap-closers ----
+
+test('rising: gates are independent — old-but-fast dies to AGE, downs count toward velocity', () => {
+  // 100 votes at 7h would pass the velocity gate (14.3/h): only the age gate kills it.
+  assert.equal(rising(100, 0, EPOCH, EPOCH + 7 * 3600), -Infinity);
+  // votes = ups + downs: 6 up + 6 down at 1h is velocity 12, finite (score 0 changes nothing).
+  assert.ok(Number.isFinite(rising(6, 6, EPOCH, EPOCH + 3600)));
+});
+
+test('sortItems: each sort key dispatches to ITS ranking (orders differ from hot)', () => {
+  const now = EPOCH + 200000;
+  // top vs hot: newer low-score beats older high-score on hot, reverses on top
+  const t = [
+    { id: 'lowNew', ups: 1, downs: 0, createdSec: EPOCH + 90000 },
+    { id: 'highOld', ups: 100, downs: 0, createdSec: EPOCH },
+  ];
+  assert.deepStrictEqual(sortItems(t, 'hot', now).map((i) => i.id), ['lowNew', 'highOld']);
+  assert.deepStrictEqual(sortItems(t, 'top', now).map((i) => i.id), ['highOld', 'lowNew']);
+  // controversial vs hot — input order deliberately differs from BOTH outputs,
+  // so a comparator degraded to undefined (stable no-op sort) also dies
+  const c = [
+    { id: 'skewed', ups: 9, downs: 1, createdSec: EPOCH + 45000 }, // controversy ~1.29, hot ~1.9
+    { id: 'split', ups: 5, downs: 5, createdSec: EPOCH },          // controversy 10, hot 0
+  ];
+  assert.deepStrictEqual(sortItems(c, 'hot', now).map((i) => i.id), ['skewed', 'split']);
+  assert.deepStrictEqual(sortItems(c, 'controversial', now).map((i) => i.id), ['split', 'skewed']);
+  // best vs top: Wilson favors volume at the same-ish ratio over a single vote
+  const b = [
+    { id: 'one', ups: 1, downs: 0, createdSec: EPOCH },     // confidence .378
+    { id: 'many', ups: 50, downs: 50, createdSec: EPOCH },  // confidence ~.44
+  ];
+  assert.deepStrictEqual(sortItems(b, 'best', now).map((i) => i.id), ['many', 'one']);
+  assert.deepStrictEqual(sortItems(b, 'top', now).map((i) => i.id), ['one', 'many']);
+  // rising vs hot: the old high-scorer is age-gated out of rising
+  const r = [
+    { id: 'slowNew', ups: 2, downs: 0, createdSec: now - 3600 },
+    { id: 'fastOld', ups: 100, downs: 0, createdSec: now - 7 * 3600 },
+  ];
+  assert.deepStrictEqual(sortItems(r, 'hot', now).map((i) => i.id), ['fastOld', 'slowNew']);
+  assert.deepStrictEqual(sortItems(r, 'rising', now).map((i) => i.id), ['slowNew', 'fastOld']);
+});
+
+test('limits: only BURIES trip the cool-off — boosts and comments in the window do not', () => {
+  const now = 1000;
+  const noise = [
+    evAt('vote.set', now - 6, { payload: { value: 1 } }),
+    evAt('vote.set', now - 7, { payload: { value: 1 } }),
+    evAt('comment.created', now - 200), // outside nothing — just not a bury
+  ];
+  const fourBuries = [1, 2, 3, 4].map((i) => bury(now - i));
+  const l = limits('u_x', [...noise, ...fourBuries], 0, false, now);
+  assert.equal(l.coolOff, false); // 4 buries + noise stays under the 5-bury trigger
 });
 
 test('humanWait: now / seconds / minutes', () => {

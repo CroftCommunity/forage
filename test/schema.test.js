@@ -101,6 +101,69 @@ test('store.commit refuses an id-less post.created (validation wired at dispatch
   );
 });
 
+// ---- 2i gap-closers: every required-field list is load-bearing ----
+
+// The pinned vocabulary. Deliberately a full second copy: a test that reads
+// EVENT_TYPES as its own spec is self-referential and kills nothing (a lesson
+// this file learned from mutation survivors — the mutated list mutates the
+// walker's expectations with it).
+const REQUIRED = {
+  'account.registered':      ['handle'],
+  'account.suspended':       ['userId', 'reason'],
+  'prefs.updated':           ['patch'],
+  'field.created':           ['id', 'slug', 'title'],
+  'field.settingsUpdated':   ['fieldId', 'patch'],
+  'field.joined':            ['fieldId'],
+  'field.left':              ['fieldId'],
+  'post.created':            ['id', 'fieldId', 'format', 'title'],
+  'post.edited':             ['postId', 'patch'],
+  'post.deletedByAuthor':    ['postId'],
+  'comment.created':         ['id', 'postId', 'bodyMd'],
+  'comment.edited':          ['commentId', 'patch'],
+  'comment.deletedByAuthor': ['commentId'],
+  'vote.set':                ['subjectType', 'subjectId', 'value'],
+  'save.set':                ['subjectType', 'subjectId', 'saved'],
+  'report.filed':            ['id', 'subjectType', 'subjectId', 'fieldId', 'reason'],
+  'mod.removed':             ['subjectType', 'subjectId'],
+  'mod.approved':            ['subjectType', 'subjectId'],
+  'mod.locked':              ['subjectType', 'subjectId'],
+  'mod.unlocked':            ['subjectType', 'subjectId'],
+  'mod.pinned':              ['subjectType', 'subjectId'],
+  'mod.unpinned':            ['subjectType', 'subjectId'],
+  'mod.banned':              ['fieldId', 'userId'],
+  'mod.unbanned':            ['fieldId', 'userId'],
+  'mod.stewardAdded':        ['fieldId', 'userId'],
+  'mod.stewardRemoved':      ['fieldId', 'userId'],
+  'notification.read':       ['notificationIds'],
+};
+
+// A minimal valid payload value for any required key.
+const sampleValue = (type, key) => (key === 'value' ? 1 : key === 'patch' ? {} : key === 'notificationIds' ? [] : 'x');
+
+test('EVENT_TYPES matches the pinned vocabulary exactly', () => {
+  assert.deepStrictEqual(EVENT_TYPES, REQUIRED);
+});
+
+test('every pinned entry: minimal event validates; dropping ANY required field throws naming it', () => {
+  for (const [type, required] of Object.entries(REQUIRED)) {
+    const payload = Object.fromEntries(required.map((k) => [k, sampleValue(type, k)]));
+    assert.equal(validateEvent(ev(type, payload)), true, `${type} minimal accept`);
+    for (const key of required) {
+      const broken = { ...payload };
+      delete broken[key];
+      assert.throws(() => validateEvent(ev(type, broken)),
+        new RegExp(`missing required field: ${key}`), `${type} must require ${key}`);
+    }
+  }
+});
+
+test('MOD_TYPES is exactly the ten mod.* types', async () => {
+  const { MOD_TYPES } = await import('../js/schema.js');
+  const expected = Object.keys(EVENT_TYPES).filter((t) => t.startsWith('mod.'));
+  assert.equal(expected.length, 10);
+  assert.deepStrictEqual([...MOD_TYPES].sort(), expected.sort());
+});
+
 // ---- vocabulary shape ----
 
 test('EVENT_TYPES is the complete mutation vocabulary (27 types, all with required lists)', () => {

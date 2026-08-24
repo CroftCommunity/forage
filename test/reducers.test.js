@@ -135,6 +135,195 @@ test('self-replies and quiet comments do not notify', () => {
   assert.ok(!s.notifications.u_a.some((n) => n.subjectId === 'c3' || n.subjectId === 'c4'));
 });
 
+// ---- 2i gap-closers: full-shape pins and the untested mutation types ----
+
+test('post.created: exact default shape when optional fields are omitted', () => {
+  const s = fold([
+    ev('account.registered', { handle: 'a' }, 'u_a', 100),
+    ev('field.created', { id: 'f1', slug: 'g', title: 'G' }, 'u_a', 110),
+    ev('post.created', { id: 'p1', fieldId: 'f1', format: 'text', title: 'T' }, 'u_a', 120),
+  ]);
+  assert.deepStrictEqual(s.posts.p1, {
+    id: 'p1', fieldId: 'f1', authorId: 'u_a', format: 'text',
+    title: 'T', bodyMd: '', url: '', tagId: null,
+    nsfw: false, spoiler: false, createdTs: 120,
+    deleted: false, removed: false, removedReason: '', locked: false, pinned: false,
+    held: false, edited: false,
+  });
+});
+
+test('field.created: exact default shape, creator becomes steward and member', () => {
+  const s = fold([ev('field.created', { id: 'f1', slug: 'g', title: 'G' }, 'u_a', 100)]);
+  const f = s.fields.f1;
+  assert.deepStrictEqual(f.settings, { requireTags: false, nsfwAllowed: true, automod: [], rules: [] });
+  assert.equal(f.description, '');
+  assert.equal(f.ownerId, 'u_a');
+  assert.deepStrictEqual([...f.stewards], ['u_a']);
+  assert.deepStrictEqual([...f.members], ['u_a']);
+  assert.deepStrictEqual(f.banned, {});
+  assert.equal(f.createdTs, 100);
+});
+
+test('account.registered defaults + prefs.updated merge + account.suspended', () => {
+  const s = fold([
+    ev('account.registered', { handle: 'a' }, 'u_a', 100),
+    ev('prefs.updated', { patch: { theme: 'dark' } }, 'u_a', 110),
+    ev('account.suspended', { userId: 'u_a', reason: 'spam' }, 'u_admin', 120),
+  ]);
+  assert.equal(s.users.u_a.email, '');
+  assert.deepStrictEqual(s.users.u_a.prefs,
+    { theme: 'dark', commentThreshold: -4, defaultSort: 'hot', defaultFeed: 'home' });
+  assert.deepStrictEqual(s.users.u_a.suspended, { reason: 'spam', ts: 120 });
+});
+
+test('field.settingsUpdated routes title/description out of settings; field.left removes membership', () => {
+  const s = fold([
+    ev('account.registered', { handle: 'a' }, 'u_a', 100),
+    ev('account.registered', { handle: 'b' }, 'u_b', 101),
+    ev('field.created', { id: 'f1', slug: 'g', title: 'G' }, 'u_a', 110),
+    ev('field.joined', { fieldId: 'f1' }, 'u_b', 120),
+    ev('field.settingsUpdated', { fieldId: 'f1', patch: { title: 'G2', description: 'd', requireTags: true } }, 'u_a', 130),
+    // a partial patch must not clobber the fields it omits
+    ev('field.settingsUpdated', { fieldId: 'f1', patch: { nsfwAllowed: false } }, 'u_a', 135),
+    ev('field.left', { fieldId: 'f1' }, 'u_b', 140),
+  ]);
+  const f = s.fields.f1;
+  assert.equal(f.title, 'G2');
+  assert.equal(f.description, 'd');
+  assert.equal(f.settings.nsfwAllowed, false);
+  assert.equal(f.settings.requireTags, true);
+  assert.ok(!('title' in f.settings) && !('description' in f.settings));
+  assert.ok(!f.members.has('u_b'));
+});
+
+test('edits patch and flag; author deletes mark deleted; save.set retracts', () => {
+  const log = sampleLog();
+  log.push(ev('post.edited', { postId: 'p1', patch: { title: 'New' } }, 'u_a', 300));
+  log.push(ev('comment.edited', { commentId: 'c1', patch: { bodyMd: 'edited' } }, 'u_b', 310));
+  log.push(ev('comment.deletedByAuthor', { commentId: 'c2' }, 'u_a', 320));
+  log.push(ev('save.set', { subjectType: 'post', subjectId: 'p1', saved: false }, 'u_b', 330));
+  const s = fold(log);
+  assert.equal(s.posts.p1.title, 'New');
+  assert.equal(s.posts.p1.edited, true);
+  assert.equal(s.comments.c1.bodyMd, 'edited');
+  assert.equal(s.comments.c1.edited, true);
+  assert.equal(s.comments.c2.deleted, true);
+  assert.ok(!s.saves.u_b.has('post:p1'));
+});
+
+test('report.filed: exact stored shape, optional fields defaulted', () => {
+  const log = sampleLog();
+  log.push(ev('report.filed', { id: 'r9', subjectType: 'post', subjectId: 'p1', fieldId: 'f1', reason: 'spam' }, 'u_b', 300));
+  const [r] = fold(log).reports;
+  assert.deepStrictEqual(r, {
+    id: 'r9', subjectType: 'post', subjectId: 'p1', fieldId: 'f1', reason: 'spam',
+    ruleId: null, detail: '', reporterId: 'u_b', ts: 300, resolvedBy: null, resolution: null,
+  });
+});
+
+test('mod flags set and clear both ways; ban info stored and cleared; steward add/remove', () => {
+  const log = sampleLog(); // ends with mod.locked on p1
+  assert.equal(fold(log).posts.p1.locked, true);
+  log.push(ev('mod.unlocked', { subjectType: 'post', subjectId: 'p1' }, 'u_a', 300));
+  log.push(ev('mod.pinned', { subjectType: 'post', subjectId: 'p1' }, 'u_a', 310));
+  let s = fold(log);
+  assert.equal(s.posts.p1.locked, false);
+  assert.equal(s.posts.p1.pinned, true);
+  log.push(ev('mod.unpinned', { subjectType: 'post', subjectId: 'p1' }, 'u_a', 320));
+  log.push(ev('mod.banned', { fieldId: 'f1', userId: 'u_b', reason: 'r', duration: 7 }, 'u_a', 330));
+  log.push(ev('mod.stewardAdded', { fieldId: 'f1', userId: 'u_b' }, 'u_a', 340));
+  s = fold(log);
+  assert.equal(s.posts.p1.pinned, false);
+  assert.deepStrictEqual(s.fields.f1.banned.u_b, { ts: 330, reason: 'r', duration: 7 });
+  assert.ok(s.fields.f1.stewards.has('u_b'));
+  log.push(ev('mod.banned', { fieldId: 'f1', userId: 'u_a' }, 'u_a', 350)); // defaults
+  log.push(ev('mod.unbanned', { fieldId: 'f1', userId: 'u_b' }, 'u_a', 360));
+  log.push(ev('mod.stewardRemoved', { fieldId: 'f1', userId: 'u_b' }, 'u_a', 370));
+  s = fold(log);
+  assert.deepStrictEqual(s.fields.f1.banned.u_a, { ts: 350, reason: '', duration: null });
+  assert.equal(s.fields.f1.banned.u_b, undefined);
+  assert.ok(!s.fields.f1.stewards.has('u_b'));
+});
+
+test('mod.removed on a POST notifies its author; self-moderation does not notify', () => {
+  const log = sampleLog();
+  log.push(ev('mod.removed', { subjectType: 'post', subjectId: 'p1', reason: 'x' }, 'u_b', 300));
+  let s = fold(log);
+  const n = s.notifications.u_a.find((x) => x.kind === 'removed');
+  assert.equal(n.subjectId, 'p1');
+  assert.equal(n.fromId, 'u_b');
+  // self-mod: author removes their own — no notification
+  const log2 = sampleLog();
+  log2.push(ev('mod.removed', { subjectType: 'post', subjectId: 'p1', reason: 'x' }, 'u_a', 300));
+  s = fold(log2);
+  assert.ok(!s.notifications.u_a?.some((x) => x.kind === 'removed'));
+});
+
+test('resolveReports touches only matching, still-open reports', () => {
+  const log = sampleLog();
+  log.push(ev('report.filed', { id: 'r1', subjectType: 'comment', subjectId: 'c1', fieldId: 'f1', reason: 'a' }, 'u_a', 300));
+  log.push(ev('report.filed', { id: 'r2', subjectType: 'comment', subjectId: 'c2', fieldId: 'f1', reason: 'b' }, 'u_a', 301));
+  log.push(ev('mod.removed', { subjectType: 'comment', subjectId: 'c1' }, 'u_a', 310));
+  log.push(ev('mod.approved', { subjectType: 'comment', subjectId: 'c1' }, 'u_b', 320)); // r1 already resolved
+  const s = fold(log);
+  const r1 = s.reports.find((r) => r.id === 'r1');
+  const r2 = s.reports.find((r) => r.id === 'r2');
+  assert.equal(r1.resolvedBy, 'u_a'); // the FIRST resolver sticks
+  assert.equal(r1.resolution, 'removed');
+  assert.equal(r2.resolvedBy, null); // different subject — untouched
+});
+
+test('comment.created: exact default shape', () => {
+  const s = fold([
+    ev('account.registered', { handle: 'a' }, 'u_a', 100),
+    ev('field.created', { id: 'f1', slug: 'g', title: 'G' }, 'u_a', 105),
+    ev('post.created', { id: 'p1', fieldId: 'f1', format: 'text', title: 'T' }, 'u_a', 110),
+    ev('comment.created', { id: 'c1', postId: 'p1', bodyMd: 'B' }, 'u_a', 120),
+  ]);
+  assert.deepStrictEqual(s.comments.c1, {
+    id: 'c1', postId: 'p1', parentId: null, authorId: 'u_a',
+    bodyMd: 'B', createdTs: 120, deleted: false, removed: false,
+    removedReason: '', edited: false,
+  });
+});
+
+test('a fresh account carries the exact default prefs', () => {
+  const s = fold([ev('account.registered', { handle: 'a' }, 'u_a', 100)]);
+  assert.deepStrictEqual(s.users.u_a.prefs,
+    { theme: 'auto', commentThreshold: -4, defaultSort: 'hot', defaultFeed: 'home' });
+});
+
+test('field.created merges caller-supplied settings over the defaults', () => {
+  const s = fold([ev('field.created',
+    { id: 'f1', slug: 'g', title: 'G', settings: { requireTags: true, rules: [{ title: 'r1' }] } }, 'u_a', 100)]);
+  assert.deepStrictEqual(s.fields.f1.settings,
+    { requireTags: true, nsfwAllowed: true, automod: [], rules: [{ title: 'r1' }] });
+});
+
+test('events referencing unknown targets are IGNORED, never a crash', () => {
+  // Schema validates shape, not referential integrity — a dangling reference
+  // must fold to a no-op (the guards exist for exactly this).
+  const base = [ev('account.registered', { handle: 'a' }, 'u_a', 100)];
+  const danglers = [
+    ev('account.suspended', { userId: 'u_ghost', reason: 'x' }, 'u_a', 200),
+    ev('prefs.updated', { patch: { theme: 'dark' } }, 'u_ghost', 201),
+    ev('field.settingsUpdated', { fieldId: 'f_ghost', patch: { title: 'X' } }, 'u_a', 202),
+    ev('field.joined', { fieldId: 'f_ghost' }, 'u_a', 203),
+    ev('field.left', { fieldId: 'f_ghost' }, 'u_a', 204),
+    ev('post.edited', { postId: 'p_ghost', patch: { title: 'X' } }, 'u_a', 205),
+    ev('post.deletedByAuthor', { postId: 'p_ghost' }, 'u_a', 206),
+    ev('comment.edited', { commentId: 'c_ghost', patch: { bodyMd: 'X' } }, 'u_a', 207),
+    ev('comment.deletedByAuthor', { commentId: 'c_ghost' }, 'u_a', 208),
+    ev('mod.banned', { fieldId: 'f_ghost', userId: 'u_a' }, 'u_a', 209),
+    ev('mod.stewardAdded', { fieldId: 'f_ghost', userId: 'u_a' }, 'u_a', 210),
+    ev('mod.removed', { subjectType: 'post', subjectId: 'p_ghost' }, 'u_a', 211),
+    ev('mod.locked', { subjectType: 'comment', subjectId: 'c_ghost' }, 'u_a', 212),
+  ];
+  const s = fold([...base, ...danglers]);           // must not throw
+  assert.deepStrictEqual(s.users, fold(base).users); // and must change nothing user-visible
+  assert.deepStrictEqual(s.fields, {});
+});
+
 test('notification.read flips read on the named ids only', () => {
   const s = fold(sampleLog());
   const target = s.notifications.u_b[0];
