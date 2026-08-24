@@ -8,12 +8,12 @@ import { personaById } from './personas.js';
 import { nowSec, getEvents } from './store.js';
 
 // ---- viewer context ----
-export function viewerCtx(state, viewerId) {
+export function viewerCtx(state, viewerId, now = nowSec()) {
   const persona = personaById(viewerId);
   const user = viewerId ? state.users[viewerId] : null;
   const rep = viewerId ? reputation(state, viewerId) : { post: 0, comment: 0, total: 0 };
   // probation: explicit persona flag, or account younger than 7 days.
-  const ageDays = user ? (Date.now() - user.registeredTs) / 86400000 : Infinity;
+  const ageDays = user ? (now * 1000 - user.registeredTs) / 86400000 : Infinity;
   const probation = !!persona.probation || (!!user && ageDays < 7);
   return {
     id: viewerId, handle: persona.handle, admin: !!persona.admin, probation,
@@ -22,8 +22,8 @@ export function viewerCtx(state, viewerId) {
 }
 
 // ---- permissions: the §10.1 matrix as a function ----
-export function permissions(state, viewerId, fieldId) {
-  const v = viewerCtx(state, viewerId);
+export function permissions(state, viewerId, fieldId, now = nowSec()) {
+  const v = viewerCtx(state, viewerId, now);
   const field = fieldId ? state.fields[fieldId] : null;
   const bannedHere = !!(field && v.id && field.banned[v.id]);
   const isSteward = !!(field && v.id && field.stewards.has(v.id)) || v.admin;
@@ -102,8 +102,8 @@ function countComments(state, postId) {
 }
 
 // ---- feed ----
-export function feed(state, viewerId, scope, sort = 'hot', timeframe = 'all') {
-  const perms = permissions(state, viewerId);
+export function feed(state, viewerId, scope, sort = 'hot', timeframe = 'all', now = nowSec()) {
+  const perms = permissions(state, viewerId, undefined, now);
   let posts = Object.values(state.posts);
 
   if (scope.startsWith('field:')) {
@@ -120,25 +120,25 @@ export function feed(state, viewerId, scope, sort = 'hot', timeframe = 'all') {
   // visibility: drop deleted always; drop held & removed from non-mods.
   posts = posts.filter((p) => {
     if (p.deleted) return false;
-    const canSee = permissions(state, viewerId, p.fieldId).canModerate;
+    const canSee = permissions(state, viewerId, p.fieldId, now).canModerate;
     if (p.held && !canSee) return false;
     if (p.removed && !canSee) return false;
     return true;
   });
 
   if (timeframe !== 'all' && (sort === 'top' || sort === 'controversial')) {
-    const cutoff = Date.now() - timeframeMs(timeframe);
+    const cutoff = now * 1000 - timeframeMs(timeframe);
     posts = posts.filter((p) => p.createdTs >= cutoff);
   }
 
   const items = posts.map((p) => ({ ...p, ups: tally(state, 'post', p.id).ups, downs: tally(state, 'post', p.id).downs, createdSec: Math.floor(p.createdTs / 1000) }));
-  const sorted = sortItems(items, sort, nowSec());
+  const sorted = sortItems(items, sort, now);
   // pinned to the top within a single field view
   if (scope.startsWith('field:')) {
     sorted.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
   }
   return { scope, sort, timeframe, perms,
-    posts: sorted.map((p) => shapePost(state, viewerId, state.posts[p.id], permissions(state, viewerId, p.fieldId))) };
+    posts: sorted.map((p) => shapePost(state, viewerId, state.posts[p.id], permissions(state, viewerId, p.fieldId, now))) };
 }
 
 function timeframeMs(tf) {
@@ -146,10 +146,10 @@ function timeframeMs(tf) {
 }
 
 // ---- thread (post + comment tree) ----
-export function thread(state, viewerId, postId, sort = 'best') {
+export function thread(state, viewerId, postId, sort = 'best', now = nowSec()) {
   const post = state.posts[postId];
   if (!post) return null;
-  const perms = permissions(state, viewerId, post.fieldId);
+  const perms = permissions(state, viewerId, post.fieldId, now);
   const all = Object.values(state.comments).filter((c) => c.postId === postId);
   // hide held/removed from non-mods by masking (keeps tree shape / stubs)
   const childrenOf = {};
@@ -162,7 +162,7 @@ export function thread(state, viewerId, postId, sort = 'best') {
       c, ups: tally(state, 'comment', c.id).ups, downs: tally(state, 'comment', c.id).downs,
       createdSec: Math.floor(c.createdTs / 1000),
     }));
-    const sorted = sortItems(kids, sort, nowSec());
+    const sorted = sortItems(kids, sort, now);
     return sorted.map(({ c }) => {
       const shaped = shapeComment(state, viewerId, c, perms);
       const node = { ...shaped, depth,
@@ -184,10 +184,10 @@ export function thread(state, viewerId, postId, sort = 'best') {
 }
 
 // ---- field about ----
-export function field(state, viewerId, slug) {
+export function field(state, viewerId, slug, now = nowSec()) {
   const f = Object.values(state.fields).find((x) => x.slug === slug);
   if (!f) return null;
-  const perms = permissions(state, viewerId, f.id);
+  const perms = permissions(state, viewerId, f.id, now);
   return {
     id: f.id, slug: f.slug, title: f.title, description: f.description,
     settings: f.settings, createdTs: f.createdTs,
@@ -225,10 +225,10 @@ function modEventField(state, ev) {
 }
 
 // ---- mod queue (steward-gated) ----
-export function modQueue(state, viewerId, slug) {
+export function modQueue(state, viewerId, slug, now = nowSec()) {
   const f = Object.values(state.fields).find((x) => x.slug === slug);
   if (!f) return null;
-  const perms = permissions(state, viewerId, f.id);
+  const perms = permissions(state, viewerId, f.id, now);
   if (!perms.canModerate) return { gated: true, slug };
   const open = state.reports.filter((r) => r.fieldId === f.id && !r.resolvedBy).map((r) => shapeReport(state, viewerId, r, perms));
   const held = Object.values(state.posts).filter((p) => p.fieldId === f.id && p.held && !p.removed)
@@ -245,24 +245,24 @@ function shapeReport(state, viewerId, r, perms) {
 }
 
 // ---- profile ----
-export function profile(state, viewerId, handle, tab = 'overview') {
+export function profile(state, viewerId, handle, tab = 'overview', now = nowSec()) {
   const user = Object.values(state.users).find((u) => u.handle === handle);
   if (!user) return null;
-  const perms = permissions(state, viewerId);
+  const perms = permissions(state, viewerId, undefined, now);
   const rep = reputation(state, user.id);
   const self = viewerId === user.id;
   const posts = Object.values(state.posts).filter((p) => p.authorId === user.id && !p.deleted)
     .sort((a, b) => b.createdTs - a.createdTs)
-    .map((p) => shapePost(state, viewerId, p, permissions(state, viewerId, p.fieldId)));
+    .map((p) => shapePost(state, viewerId, p, permissions(state, viewerId, p.fieldId, now)));
   const comments = Object.values(state.comments).filter((c) => c.authorId === user.id && !c.deleted)
     .sort((a, b) => b.createdTs - a.createdTs)
-    .map((c) => ({ ...shapeComment(state, viewerId, c, permissions(state, viewerId, state.posts[c.postId]?.fieldId)),
+    .map((c) => ({ ...shapeComment(state, viewerId, c, permissions(state, viewerId, state.posts[c.postId]?.fieldId, now)),
       postTitle: state.posts[c.postId]?.title }));
   let saved = [];
   if (self && state.saves[user.id]) {
     saved = [...state.saves[user.id]].map((k) => {
       const [t, id] = k.split(':');
-      if (t === 'post' && state.posts[id]) return { type: 'post', item: shapePost(state, viewerId, state.posts[id], permissions(state, viewerId, state.posts[id].fieldId)) };
+      if (t === 'post' && state.posts[id]) return { type: 'post', item: shapePost(state, viewerId, state.posts[id], permissions(state, viewerId, state.posts[id].fieldId, now)) };
       if (t === 'comment' && state.comments[id]) return { type: 'comment', item: shapeComment(state, viewerId, state.comments[id], perms) };
       return null;
     }).filter(Boolean);
@@ -285,7 +285,7 @@ export function unreadCount(state, viewerId) {
 }
 
 // ---- search ----
-export function search(state, viewerId, q, scope = 'all', type = 'post') {
+export function search(state, viewerId, q, scope = 'all', type = 'post', now = nowSec()) {
   const needle = (q || '').toLowerCase().trim();
   if (!needle) return { q, results: [] };
   let results = [];
@@ -294,23 +294,23 @@ export function search(state, viewerId, q, scope = 'all', type = 'post') {
       if (p.deleted || p.removed || p.held) continue;
       if (scope.startsWith('field:') && state.fields[p.fieldId]?.slug !== scope.slice(6)) continue;
       const hay = `${p.title} ${p.bodyMd} ${p.url}`.toLowerCase();
-      if (hay.includes(needle)) results.push({ type: 'post', item: shapePost(state, viewerId, p, permissions(state, viewerId, p.fieldId)) });
+      if (hay.includes(needle)) results.push({ type: 'post', item: shapePost(state, viewerId, p, permissions(state, viewerId, p.fieldId, now)) });
     }
   }
   if (type === 'comment' || type === 'all') {
     for (const c of Object.values(state.comments)) {
       if (c.deleted || c.removed) continue;
       if (c.bodyMd.toLowerCase().includes(needle))
-        results.push({ type: 'comment', item: { ...shapeComment(state, viewerId, c, permissions(state, viewerId, state.posts[c.postId]?.fieldId)), postTitle: state.posts[c.postId]?.title } });
+        results.push({ type: 'comment', item: { ...shapeComment(state, viewerId, c, permissions(state, viewerId, state.posts[c.postId]?.fieldId, now)), postTitle: state.posts[c.postId]?.title } });
     }
   }
   return { q, scope, type, results: results.slice(0, 50) };
 }
 
 // ---- limits ----
-export function limits(state, viewerId) {
-  const v = viewerCtx(state, viewerId);
-  return limitsEngine(viewerId, getEvents(), v.rep.total, v.probation, nowSec());
+export function limits(state, viewerId, now = nowSec(), events = getEvents()) {
+  const v = viewerCtx(state, viewerId, now);
+  return limitsEngine(viewerId, events, v.rep.total, v.probation, now);
 }
 
 // ---- fields list (for sidebars / discovery) ----

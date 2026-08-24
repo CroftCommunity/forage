@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { emptyState, reduce } from '../js/reducers.js';
-import { permissions, feed, thread, field, notifications } from '../js/selectors.js';
+import { permissions, feed, thread, field, notifications, viewerCtx, limits } from '../js/selectors.js';
 
 let seq = 0;
 const ev = (type, payload, actor, ts = 1000 + seq) => ({ id: `t_${seq++}`, type, actor, ts, payload });
@@ -192,4 +192,47 @@ test('field: membership, stewards, and joined flag resolve', () => {
 
 test('notifications: logged-out gets the empty shape', () => {
   assert.deepStrictEqual(notifications(fold(baseLog()), null), { items: [], unread: 0 });
+});
+
+// ---- 2e: selectors evaluate against a caller-supplied clock and events ----
+
+const DAY = 86400;
+
+test('viewerCtx: age-probation derives from the supplied now, not the wall clock', () => {
+  const now = 1_000_000_000; // an explicit replay clock (sec)
+  const log = [{ id: 'e1', type: 'account.registered', actor: 'u_new', ts: (now - 3 * DAY) * 1000, payload: { handle: 'new' } }];
+  const s = fold(log);
+  assert.equal(viewerCtx(s, 'u_new', now).probation, true);           // 3 days old at `now`
+  assert.equal(viewerCtx(s, 'u_new', now + 10 * DAY).probation, false); // 13 days old
+});
+
+test('limits: computes over the supplied events, not the store singleton', () => {
+  const now = 1_000_000_000;
+  const s = fold(baseLog());
+  const events = [{ id: 'e1', type: 'comment.created', actor: 'u_fern', ts: (now - 30) * 1000, payload: { id: 'c9', postId: 'p_x', bodyMd: 'x' } }];
+  const l = limits(s, 'u_fern', now, events);
+  assert.equal(l.canComment, false); // 30s since their comment — cooldown holds
+  assert.equal(l.commentWaitSec, 30);
+  assert.equal(limits(s, 'u_fern', now + 60, events).canComment, true);
+});
+
+test('feed: timeframe cutoff measures from the supplied now', () => {
+  const now = 1_000_000_000;
+  const log = baseLog();
+  log.push(ev('post.created', { id: 'p_fresh', fieldId: 'f1', format: 'text', title: 'Fresh' }, 'u_fern', (now - DAY / 2) * 1000));
+  log.push(ev('post.created', { id: 'p_stale', fieldId: 'f1', format: 'text', title: 'Stale' }, 'u_fern', (now - 3 * DAY) * 1000));
+  const s = fold(log);
+  const ids = feed(s, 'u_fern', 'field:gardening', 'top', 'day', now).posts.map((p) => p.id);
+  assert.ok(ids.includes('p_fresh'));
+  assert.ok(!ids.includes('p_stale'));
+});
+
+test('same state + same now => identical feed and thread output (pure evaluation)', () => {
+  const now = 1_000_000_000;
+  const s = fold(maskingLog());
+  assert.deepStrictEqual(
+    feed(s, 'u_fern', 'field:gardening', 'hot', 'all', now),
+    feed(s, 'u_fern', 'field:gardening', 'hot', 'all', now),
+  );
+  assert.deepStrictEqual(thread(s, 'u_fern', 'p_norm', 'best', now), thread(s, 'u_fern', 'p_norm', 'best', now));
 });
