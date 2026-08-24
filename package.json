@@ -8,7 +8,8 @@
     "node": ">=22 <23"
   },
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "conformance": "node conformance/run.js"
   },
   "devDependencies": {
     "@stryker-mutator/core": "^10.0.0"

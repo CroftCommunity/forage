@@ -120,13 +120,17 @@ export function assertionNow(scenario, baseSec) {
 // Evaluate every assertion; returns [{seat, probe, expect, got, pass}].
 // ctx carries what selectors need beyond folded state (the event log, for
 // limits) — resolved from the scenario itself, so it stays deterministic.
-export function runAssertions(scenario, state, baseSec) {
+// `probeOverrides` is the engine-variant seam (BSM change-engine step 2):
+// a variant under evaluation answers selected probes its own way; an override
+// receives the base PROBES as its last argument so it can wrap rather than
+// reimplement. The conformance harness compares base vs variant observables.
+export function runAssertions(scenario, state, baseSec, { probeOverrides = {} } = {}) {
   const now = assertionNow(scenario, baseSec);
   const ctx = { events: resolveEvents(scenario, baseSec) };
   return scenario.assertions.map((a) => {
-    const probe = PROBES[a.probe];
+    const probe = probeOverrides[a.probe] || PROBES[a.probe];
     if (!probe) throw new Error(`scenario ${scenario.id}: unknown probe ${a.probe} (known: ${Object.keys(PROBES).join(', ')})`);
-    const got = probe(state, a.seat, a.args || {}, now, ctx);
+    const got = probe(state, a.seat, a.args || {}, now, ctx, PROBES);
     return { seat: a.seat, probe: a.probe, args: a.args, expect: a.expect, got, pass: deepEq(got, a.expect) };
   });
 }
