@@ -13,6 +13,7 @@ import { postRow, commentNode, voteBox, emptyState, gate, errorState, toast } fr
 
 const V = () => store.getPersonaId();
 const S = () => store.getState();
+const NOW = () => store.nowSec(); // the one place views resolve the clock
 
 function tabs(items, active) {
   return el('div', { class: 'tabs' }, ...items.map(([label, href]) =>
@@ -35,7 +36,7 @@ function fieldsSidebar() {
 
 function limitsSidebar() {
   const v = V(); if (!v) return null;
-  const lim = sel.limits(S(), v);
+  const lim = sel.limits(S(), v, NOW(), store.getEvents());
   if (lim.canPost && lim.canComment && !lim.probation && !lim.coolOff) return null;
   const notes = [];
   if (lim.probation) notes.push('On probation: cooldowns are doubled and report weight is reduced.');
@@ -49,7 +50,7 @@ function limitsSidebar() {
 const SORTS = ['hot', 'new', 'top', 'controversial', 'rising'];
 export function feedView(scope, title, query) {
   const sort = query.sort || (S().users[V()]?.prefs?.defaultSort ?? 'hot');
-  const data = sel.feed(S(), V(), scope, sort);
+  const data = sel.feed(S(), V(), scope, sort, 'all', NOW());
   const main = el('div', {});
 
   // Logged-out banner with the primary tagline (acceptance §12).
@@ -86,7 +87,7 @@ export function feedView(scope, title, query) {
 
 // ---------- field (about + feed) ----------
 export function fieldView(params, query) {
-  const f = sel.field(S(), V(), params.slug);
+  const f = sel.field(S(), V(), params.slug, NOW());
   if (!f) return { main: emptyState('No such Field', 'This Field does not exist.'), side: el('div', {}, fieldsSidebar()) };
   const feed = feedView(`field:${params.slug}`, f.title, query);
 
@@ -123,7 +124,7 @@ export function fieldView(params, query) {
 
 // ---------- thread ----------
 export function threadView(params, query) {
-  const t = sel.thread(S(), V(), params.id);
+  const t = sel.thread(S(), V(), params.id, 'best', NOW());
   if (!t) return { main: emptyState('No such post', 'This post does not exist.'), side: null };
   const p = t.post;
   const main = el('div', {});
@@ -227,7 +228,7 @@ export function auditView(params) {
 
 // ---------- mod queue ----------
 export function queueView(params) {
-  const q = sel.modQueue(S(), V(), params.slug);
+  const q = sel.modQueue(S(), V(), params.slug, NOW());
   if (!q) return { main: emptyState('No such Field', ''), side: null };
   if (q.gated) return { main: gate('Only stewards can see the mod queue.'), side: null };
   const main = el('div', {}, el('h1', {}, `Mod queue — f/${q.slug}`),
@@ -294,7 +295,7 @@ function btn(label, cls, fn) { const b = el('button', { class: 'btn ' + cls }, l
 // ---------- profile ----------
 export function profileView(params, query) {
   const tab = query.tab || 'overview';
-  const pr = sel.profile(S(), V(), params.handle, tab);
+  const pr = sel.profile(S(), V(), params.handle, tab, NOW());
   if (!pr) return { main: emptyState('No such user', ''), side: null };
   const main = el('div', {}, el('h1', {}, `u/${pr.handle}`),
     pr.suspended ? el('div', { class: 'notice ban' }, 'This account is suspended.') : null,
@@ -348,7 +349,7 @@ export function notificationsView() {
 export function searchView(params, query) {
   const q = query.q || '';
   const type = query.type || 'post';
-  const res = sel.search(S(), V(), q, query.scope || 'all', type);
+  const res = sel.search(S(), V(), q, query.scope || 'all', type, NOW());
   const main = el('div', {}, el('h1', {}, 'Search'));
   const input = el('input', { type: 'text', value: q, placeholder: 'Search posts and comments…' });
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(`/search?q=${encodeURIComponent(input.value)}&type=${type}`); });
@@ -402,7 +403,7 @@ export function submitView(params, query) {
   }
   function step3() {
     const field = fields.find((f) => f.slug === state.fieldSlug);
-    const fdata = sel.field(S(), V(), state.fieldSlug);
+    const fdata = sel.field(S(), V(), state.fieldSlug, NOW());
     const title = el('input', { type: 'text', value: state.title, placeholder: 'Title' });
     title.addEventListener('input', () => (state.title = title.value));
     host.append(el('div', { class: 'field-row' }, el('label', {}, 'Title'), title));
@@ -440,7 +441,7 @@ export function submitView(params, query) {
         } }, 'Review →')));
   }
   function step4() {
-    const fdata = sel.field(S(), V(), state.fieldSlug);
+    const fdata = sel.field(S(), V(), state.fieldSlug, NOW());
     const wouldHold = (fdata?.settings.automod || []).some((r) => `${state.title} ${state.body}`.toLowerCase().includes((r.match || '').toLowerCase()));
     host.append(el('div', { class: 'stack' },
       el('div', { class: 'muted xs' }, `Posting to f/${state.fieldSlug} as ${state.format}`),
@@ -453,7 +454,7 @@ export function submitView(params, query) {
         el('button', { class: 'btn primary', onclick: submit }, 'Submit'))));
   }
   async function submit() {
-    const field = sel.field(S(), V(), state.fieldSlug);
+    const field = sel.field(S(), V(), state.fieldSlug, NOW());
     try {
       const ev = await actions.createPost({ fieldId: field.id, format: state.format, title: state.title.trim(),
         bodyMd: state.body, url: state.url.trim(), tagId: state.tagId.trim() || null, nsfw: state.nsfw, spoiler: state.spoiler });
@@ -468,7 +469,7 @@ export function submitView(params, query) {
 
 // ---------- create field ----------
 export function createFieldView() {
-  const perms = sel.permissions(S(), V());
+  const perms = sel.permissions(S(), V(), undefined, NOW());
   if (!perms.canCreateField) return { main: gate(perms.probation ? 'Probation accounts cannot create Fields yet.' : 'Log in to create a Field.'), side: null };
   const slug = el('input', { type: 'text', placeholder: 'slug (lowercase, no spaces)' });
   const title = el('input', { type: 'text', placeholder: 'Title' });
@@ -491,7 +492,7 @@ export function createFieldView() {
 
 // ---------- field settings (owner) ----------
 export function fieldSettingsView(params) {
-  const f = sel.field(S(), V(), params.slug);
+  const f = sel.field(S(), V(), params.slug, NOW());
   if (!f) return { main: emptyState('No such Field', ''), side: null };
   if (!f.perms.canManageField) return { main: gate('Only the owner can change Field settings.'), side: null };
   const desc = el('textarea', {}); desc.value = f.description;
