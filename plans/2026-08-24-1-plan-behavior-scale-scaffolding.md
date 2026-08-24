@@ -10,6 +10,18 @@ procedures §9, roadmap §13, skeletons Appendix A/B). Cited below as **BSM**.
 planning workflow: `phase-plan` skill (three-pass). This file is the single plan artifact
 for all passes.
 
+## Outcome Summary
+
+| Phase | Outcome | Commits | Note |
+|---|---|---|---|
+| 0 Discovery | ✅ resolved in planning | — | D1 answered during Pass 3; probe deleted |
+| 1 Test rig, CI, law | ✅ SHIPPED | `3ed7a31`…`46f92d4` | 61 pass + 6 todo; gate bites (red 32782423150, green 32782491189); dispatch hatch pending main push |
+| 2 Determinism/purity | pending | | |
+| 3 Adapter + routing | pending | | |
+| 4 Scenarios + harness | pending | | |
+| 5 Scoped atproto | pending | | |
+| 6 Wide lens | pending | | |
+
 ## Problem Statement
 
 Forage is a behavior-scale build whose **contract layer is real** (event vocabulary with
@@ -265,7 +277,20 @@ characterization units (1b, 1c) and prose/config-only units (1a, 1e, 4e's workfl
 **Done when:** ~~Verified Assumptions updated with D1's evidence; phase 1 unblocked or the
 runner decision revisited~~ — done at Pass 3; phase 1 is unblocked.
 
-### Phase 1 — Test rig, CI gate, agent law (findings 4-infra, 6)
+### Phase 1 — Test rig, CI gate, agent law (findings 4-infra, 6) — ✅ SHIPPED (`3ed7a31` 1a, `3640bcf` 1b, `46a7a57` 1c, `94fdb80` 1d, `46f92d4` 1e)
+
+**Delivered notes (2026-08-24):**
+- **1a deviation:** `scripts.test` is bare `node --test` (auto-discovery), not
+  `node --test test/` — on v22.23.2 the path form resolves `test/` as a CJS module and
+  dies MODULE_NOT_FOUND. Discovered when 1b's suite first ran; fixed in `3640bcf`.
+- **1d bite test observed:** deliberate tally sign swap on throwaway branch/PR #8 →
+  run 32782423150 **failure at the `npm test` step**; revert → run 32782491189
+  **success**. PR closed unmerged, branch deleted.
+- **1d pending:** the `workflow_dispatch` hatch cannot be pulled until `main` is pushed
+  (the workflow must exist on the remote default branch). Pull it once at the first
+  main push.
+- Wrong-node refusal recorded untested: only v22.23.2 + the known-broken system node
+  are installed locally.
 
 #### 1a: Toolchain pin
 **Goal:** Node pinned and enforced; `npm test` exists and invokes the runner.
