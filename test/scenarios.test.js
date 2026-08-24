@@ -61,6 +61,26 @@ test('substrate replay and pure replay converge on identical observables', () =>
   assert.deepStrictEqual(viaSubstrate.map((r) => r.got), viaPure.map((r) => r.got));
 });
 
+// ---- 4c: the seed is a scenario replay ----
+
+test('buildSeed(base) is deterministic and equals the scenario replays it composes', async () => {
+  const { buildSeed } = await import('../data/seed.js');
+  const a = buildSeed(BASE);
+  assert.deepStrictEqual(a, buildSeed(BASE));
+  const scenarioEventIds = new Set(SCENARIOS.flatMap((s) => s.events.map((_, i) => `${s.id}_${i}`)));
+  assert.ok(a.every((ev) => scenarioEventIds.has(ev.id)), 'every seed event comes from a scenario');
+  assert.equal(a.length, [...scenarioEventIds].length, 'and every scenario event is in the seed');
+});
+
+test('the seed round-trips through JSON (export/import) to an identical fold', async () => {
+  const { buildSeed } = await import('../data/seed.js');
+  const { emptyState, reduce } = await import('../js/reducers.js');
+  const events = buildSeed(BASE);
+  const viaJson = JSON.parse(JSON.stringify(events));
+  const fold = (log) => log.reduce((s, e) => reduce(s, e), emptyState());
+  assert.deepStrictEqual(fold(viaJson), fold(events));
+});
+
 test('a scenario event that violates the schema refuses at replay with words', () => {
   const bad = { id: 'bad-sc', description: 'x', events: [{ t: 0, actor: 'u_a', type: 'post.created', payload: { fieldId: 'f', format: 'text', title: 'no id' } }], assertions: [] };
   assert.throws(() => replayPure(bad, BASE), /missing required field: id/);

@@ -35,7 +35,8 @@ test('loadEvents refuses an invalid event, naming its index and type, and loads 
 
 test('the full seed loads green end to end (buildSeed -> loadEvents -> fold)', () => {
   store.loadEvents(buildSeed());
-  assert.equal(Object.keys(store.getState().users).length, 8);
+  // 8 persona seats + the scenario-only seats (u_newt, u_alder, u_dell)
+  assert.equal(Object.keys(store.getState().users).length, 11);
 });
 
 test('SCHEMA_VERSION is 2 — pre-hardening stored logs are discarded', () => {
