@@ -6,8 +6,21 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { resolveEvents, capabilityFor, replayPure, replayOnMemory, runAssertions } from '../scenarios/format.js';
 import { fieldLifecycle } from '../scenarios/field-lifecycle.js';
+import { SCENARIOS } from '../scenarios/index.js';
 
 const BASE = 1_800_000_000; // replay clock (sec), an explicit input
+
+// Every scenario in the library: both replay paths satisfy its assertions
+// and converge on identical observables.
+for (const sc of SCENARIOS) {
+  test(`scenario ${sc.id}: pure and substrate replays both satisfy every assertion`, () => {
+    const pure = runAssertions(sc, replayPure(sc, BASE), BASE);
+    for (const r of pure) assert.ok(r.pass, `[pure] ${r.seat} ${r.probe} ${JSON.stringify(r.args)}: expected ${JSON.stringify(r.expect)}, got ${JSON.stringify(r.got)}`);
+    const viaSub = runAssertions(sc, replayOnMemory(sc, BASE), BASE);
+    for (const r of viaSub) assert.ok(r.pass, `[substrate] ${r.seat} ${r.probe}: got ${JSON.stringify(r.got)}`);
+    assert.deepStrictEqual(viaSub.map((r) => r.got), pure.map((r) => r.got));
+  });
+}
 
 test('resolveEvents is deterministic: same base -> identical events, ids derived from the scenario', () => {
   const a = resolveEvents(fieldLifecycle, BASE);
