@@ -17,7 +17,7 @@ for all passes.
 | 0 Discovery | ✅ resolved in planning | — | D1 answered during Pass 3; probe deleted |
 | 1 Test rig, CI, law | ✅ SHIPPED | `3ed7a31`…`46f92d4` | 61 pass + 6 todo; gate bites (red 32782423150, green 32782491189); dispatch hatch pending main push |
 | 2 Determinism/purity | ✅ SHIPPED | `a113a8d`…`5ff84d8` | fold replay-stable; hardened schema (ids+actor, load-path); actor-scoped ids (ADR-001); read layer store-free (purity gate); browser smoke 10/10; mutation audit 60.9%→94.85%, schema 100% |
-| 3 Adapter + routing | pending | | |
+| 3 Adapter + routing | ✅ SHIPPED | `a730461`…`01bcbbb` | seam live: UI→actions→adapter→routing→memory; createField exists (probation gate binds at write time); invariants 1+4 mechanical; SHELL registry mechanized, offline reload verified |
 | 4 Scenarios + harness | pending | | |
 | 5 Scoped atproto | pending | | |
 | 6 Wide lens | pending | | |
@@ -555,7 +555,17 @@ triaged equivalent-vs-gap; gap-closing tests added to the existing test files.
 **Done when:** every survivor is dispositioned in the write-up.
 **Validation:** the audit is the validation.
 
-### Phase 3 — Adapter + routing table (findings 1, 2)
+### Phase 3 — Adapter + routing table (findings 1, 2) — ✅ SHIPPED (`a730461` 3a, `76b3f4e` 3b, `7ae36b0` 3c, `01bcbbb` 3d)
+
+**Delivered notes (2026-08-24):**
+- **3a:** the adapter's resolve (`substrateFor`) lives in `js/config/routing.js` itself —
+  substrate selection stays literally in the routing config (invariant 4); it takes an
+  optional table override, the seam phase 4's harness uses to pit substrate A against B.
+- **3c beyond spec:** the old view code committed a redundant `field.joined` after
+  `field.created` (the reducer already makes the creator a member); `createField` drops
+  it — one event, same state.
+- **3d:** the registry test scans both directions (module-on-disk-missing-from-SHELL and
+  SHELL-entry-missing-on-disk); offline reload observed with 28 precached entries.
 
 #### 3a: Routing config + memory substrate
 **Changes:**
