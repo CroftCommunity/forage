@@ -105,6 +105,7 @@ const PROBES = {
   savedIds: (state, seat, { handle }, now) =>
     sel.profile(state, seat, handle, 'saved', now)?.saved.map((s) => s.item.id) ?? null,
   limitsInfo: (state, seat, { key }, now, ctx) => sel.limits(state, seat, now, ctx.events)[key],
+  prefValue: (state, seat, { key }) => state.users[seat]?.prefs?.[key] ?? null,
 };
 
 function deepEq(a, b) {
