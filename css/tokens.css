@@ -1,6 +1,8 @@
 /* Forage design tokens — spec §3, revised into two deliberate, WCAG-validated
-   palettes anchored to the Forage brand green. Every text/background pair below
-   passes AA (body >= 4.5, large/UI >= 3.0); verified in the accessibility pass.
+   palettes anchored to the Forage brand green, warmed toward the rook-and-wreath
+   illustration (paper, twig browns, moss) in the 2026-08 brand pass. Every
+   text/background pair below passes AA (body >= 4.5, large/UI >= 3.0);
+   re-verified for the warmed values.
 
    Two roles are split so the brand reads on both themes:
      --brand-ink   brand green for TEXT (wordmark, active tab, gutter, accents)
@@ -10,30 +12,32 @@
 
 :root {
   /* Raw brand ramp (theme-independent) */
-  --green-950: #0F2314;
-  --green-900: #1A3A22;
-  --green-700: #2D5A34;
-  --green-600: #3A6E43;
-  --green-500: #4C8656;
-  --green-300: #A3C9AB;
+  --green-950: #14251A;
+  --green-900: #23492C;
+  --green-700: #33623A;
+  --green-600: #41724A;
+  --green-500: #578A61;
+  --green-300: #AFC9A8;
+  --brown-600: #7A5B3E;   /* twig — accents, art borders */
+  --brown-300: #B99B7B;
 
   /* ---------- LIGHT palette (default) ---------- */
-  --bg:          #FBFAF7;   /* app background (warm paper) */
+  --bg:          #F8F4EC;   /* app background (illustration paper) */
   --card:        #FFFFFF;   /* cards */
-  --card-2:      #F2F4EF;   /* hover / elevated */
-  --text:        #20261F;   /* primary text */
-  --muted:       #586257;   /* metadata, timestamps (AA on bg) */
-  --border:      #E3E1DA;   /* borders, collapse gutter at rest */
+  --card-2:      #F2EDE2;   /* hover / elevated (warm) */
+  --text:        #2B251C;   /* primary text (warm ink) */
+  --muted:       #68604F;   /* metadata, timestamps (AA on bg) */
+  --border:      #E3DCCD;   /* borders, collapse gutter at rest (twig-warm) */
 
-  --link:        #2F6B3A;
-  --brand-ink:   #245029;   /* brand green as TEXT */
-  --brand-fill:  #2D5A34;   /* brand green as button FILL */
-  --brand-fill-hover: #3A6E43;
+  --link:        #38683F;
+  --brand-ink:   #33623A;   /* brand moss as TEXT (lightened from #245029) */
+  --brand-fill:  #41724A;   /* brand moss as button FILL (lightened) */
+  --brand-fill-hover: #4A7F54;
   --on-brand:    #FFFFFF;   /* text on brand-fill */
 
-  --boost:       #2D5A34;   /* boost-active */
+  --boost:       #41724A;   /* boost-active */
   --bury:        #A24D2C;   /* bury-active, controversial, limits */
-  --tint:        #E9F2EB;   /* green tint: joined chip, active-tab bg */
+  --tint:        #EAEFDF;   /* moss tint: joined chip, active-tab bg */
 
   --gold-500:    #C99A3C;   /* gold for fills/borders (pins, steward, tags) */
   --gold-strong: #8A6A1E;   /* gold as readable TEXT */
@@ -74,29 +78,29 @@
    dark and the user hasn't overridden to light. Values are shared via a single
    custom-property list; kept in sync between the two selectors below.        */
 :root[data-theme="dark"] {
-  --bg:          #141911;
-  --card:        #222B1E;
-  --card-2:      #2C351F;
-  --text:        #E9EEE6;
-  --muted:       #A2B2A1;
-  --border:      #39432F;
+  --bg:          #262019;   /* warm umber, lifted from near-black */
+  --card:        #31291F;
+  --card-2:      #3B3226;
+  --text:        #EFE7D9;   /* warm paper */
+  --muted:       #B5A88F;
+  --border:      #4C4232;   /* twig */
 
-  --link:        #8FC79A;
-  --brand-ink:   #88C393;
-  --brand-fill:  #3A6E43;
-  --brand-fill-hover: #4C8656;
+  --link:        #A5CD98;
+  --brand-ink:   #A5CD98;
+  --brand-fill:  #41724A;
+  --brand-fill-hover: #4A7F54;
   --on-brand:    #FFFFFF;
 
-  --boost:       #7FBF8A;
-  --bury:        #DE8E66;
-  --tint:        #243021;
+  --boost:       #8FC48A;
+  --bury:        #DE9A6E;
+  --tint:        #3A392A;
 
   --gold-500:    #D4A94E;
   --gold-strong: #E2BC64;
 
   --danger:      #F0938A;
   --danger-ink:  #F0938A;
-  --danger-tint: #3A211E;
+  --danger-tint: #42251F;
 
   --clay-600:    #A24D2C;
   --stripe:      rgba(255,255,255,.04);
@@ -106,29 +110,29 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg:          #141911;
-    --card:        #222B1E;
-    --card-2:      #2C351F;
-    --text:        #E9EEE6;
-    --muted:       #A2B2A1;
-    --border:      #39432F;
+    --bg:          #262019;   /* warm umber, lifted from near-black */
+    --card:        #31291F;
+    --card-2:      #3B3226;
+    --text:        #EFE7D9;   /* warm paper */
+    --muted:       #B5A88F;
+    --border:      #4C4232;   /* twig */
 
-    --link:        #8FC79A;
-    --brand-ink:   #88C393;
-    --brand-fill:  #3A6E43;
-    --brand-fill-hover: #4C8656;
+    --link:        #A5CD98;
+    --brand-ink:   #A5CD98;
+    --brand-fill:  #41724A;
+    --brand-fill-hover: #4A7F54;
     --on-brand:    #FFFFFF;
 
-    --boost:       #7FBF8A;
-    --bury:        #DE8E66;
-    --tint:        #243021;
+    --boost:       #8FC48A;
+    --bury:        #DE9A6E;
+    --tint:        #3A392A;
 
     --gold-500:    #D4A94E;
     --gold-strong: #E2BC64;
 
     --danger:      #F0938A;
     --danger-ink:  #F0938A;
-    --danger-tint: #3A211E;
+    --danger-tint: #42251F;
 
     --clay-600:    #A24D2C;
     --stripe:      rgba(255,255,255,.04);
