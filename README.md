@@ -1,5 +1,7 @@
 # Forage
 
+<img src="assets/logo-wordmark.jpg" alt="Forage — wordmark with a rook in a wreath as the O" width="640">
+
 **Forage the open web.**
 
 Forage is a topic-driven aggregation site in the Reddit structural family — three-column

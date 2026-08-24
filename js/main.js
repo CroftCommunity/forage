@@ -34,7 +34,8 @@ function masthead() {
     'aria-label': dark ? 'Switch to light mode' : 'Switch to dark mode' }, dark ? '☀' : '☾');
   themeBtn.addEventListener('click', () => theme.toggle());
   return el('header', { class: 'masthead' },
-    el('a', { class: 'wordmark', href: '#/popular' }, 'Forage'),
+    el('a', { class: 'wordmark', href: '#/popular' },
+      el('img', { class: 'wordmark-glyph', src: './icons/icon-192.png', alt: '' }), 'Forage'),
     el('nav', { class: 'row', style: 'gap:12px' },
       el('a', { href: '#/home', class: 'small' }, 'Home'),
       el('a', { href: '#/popular', class: 'small' }, 'Popular'),

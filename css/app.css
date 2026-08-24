@@ -54,6 +54,7 @@ kbd { background: var(--green-100); border: 1px solid var(--border); border-radi
 }
 .wordmark { font-family: var(--font-display); font-size: var(--t-lg); color: var(--brand); font-weight: 700; }
 .wordmark:hover { text-decoration: none; }
+.wordmark-glyph { width: 28px; height: 28px; border-radius: 50%; vertical-align: -7px; margin-right: 8px; }
 .masthead .search { flex: 1; max-width: 520px; }
 .masthead .search input {
   width: 100%; padding: 6px 12px; border: 1px solid var(--border);

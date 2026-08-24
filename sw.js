@@ -7,7 +7,7 @@
 // Bump CACHE whenever you want to force a clean re-cache on the very next load
 // (asset URLs are hashless, so the name is the version).
 
-const CACHE = 'forage-v3';
+const CACHE = 'forage-v4';
 const SHELL = [
   './', './index.html',
   './css/tokens.css', './css/app.css',
@@ -17,7 +17,7 @@ const SHELL = [
   './js/theme.js', './js/engines/rank.js', './js/engines/limits.js',
   './js/ui/components.js', './js/ui/views.js',
   './data/seed.js',
-  './manifest.webmanifest', './icons/icon.svg',
+  './manifest.webmanifest', './icons/favicon-32.png', './icons/icon-192.png',
 ];
 
 self.addEventListener('install', (e) => {

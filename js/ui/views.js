@@ -55,7 +55,7 @@ export function feedView(scope, title, query) {
   // Logged-out banner with the primary tagline (acceptance §12).
   if (!V()) {
     main.append(el('div', { class: 'notice gate', style: 'display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap' },
-      el('div', {}, el('strong', { style: 'font-family:var(--font-display);font-size:18px' }, 'Roam the open web.'),
+      el('div', {}, el('strong', { style: 'font-family:var(--font-display);font-size:18px' }, 'Forage the open web.'),
         el('div', { class: 'xs muted' }, 'You are browsing logged out. Join a Field to start posting.')),
       el('a', { class: 'btn primary sm', href: '#/signup' }, 'Sign up')));
   }
@@ -617,7 +617,7 @@ export function signupView() {
   const handle = el('input', { type: 'text', placeholder: 'handle' });
   const email = el('input', { type: 'email', placeholder: 'email (optional)' });
   return { main: el('div', {}, el('h1', {}, 'Join Forage'),
-    el('p', { class: 'muted' }, 'Roam the open web.'),
+    el('p', { class: 'muted' }, 'Forage the open web.'),
     el('div', { class: 'card' },
       el('div', { class: 'field-row' }, el('label', {}, 'Handle'), handle),
       el('div', { class: 'field-row' }, el('label', {}, 'Email'), email),
