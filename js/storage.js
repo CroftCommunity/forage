@@ -2,7 +2,7 @@
 // substrate persists the event log + dev state; a version bump can migrate or
 // reset. This is the single storage seam the future adapter layer replaces.
 
-const KEY = 'graze.state';
+const KEY = 'forage.state';
 export const SCHEMA_VERSION = 1;
 
 export function load() {
@@ -12,12 +12,12 @@ export function load() {
     const data = JSON.parse(raw);
     if (data.version !== SCHEMA_VERSION) {
       // No migrations yet; a mismatched version is discarded rather than crash.
-      console.warn(`graze: discarding storage (v${data.version} != v${SCHEMA_VERSION})`);
+      console.warn(`forage: discarding storage (v${data.version} != v${SCHEMA_VERSION})`);
       return null;
     }
     return data;
   } catch (e) {
-    console.warn('graze: storage read failed', e);
+    console.warn('forage: storage read failed', e);
     return null;
   }
 }
@@ -28,7 +28,7 @@ export function save(partial) {
     const next = { ...cur, ...partial, version: SCHEMA_VERSION };
     localStorage.setItem(KEY, JSON.stringify(next));
   } catch (e) {
-    console.warn('graze: storage write failed', e);
+    console.warn('forage: storage write failed', e);
   }
 }
 

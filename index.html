@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Graze — Roam the open web.</title>
-  <meta name="description" content="Graze is a topic-driven aggregation site. Roam the open web. Feed your curiosity.">
+  <title>Forage — Find the good stuff.</title>
+  <meta name="description" content="Forage is a topic-driven aggregation site. Forage the open web. Find the good stuff.">
   <meta name="theme-color" content="#2D5A34">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
@@ -13,14 +13,14 @@
   <link rel="stylesheet" href="./css/app.css">
   <script>
     /* Apply saved theme before first paint to avoid a flash of the wrong palette. */
-    try { var t = localStorage.getItem('graze.theme');
+    try { var t = localStorage.getItem('forage.theme');
       if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
   </script>
 </head>
 <body>
   <div id="app"></div>
   <div id="toasts"></div>
-  <noscript style="display:block;padding:24px;font-family:system-ui">Graze is a client-side prototype and needs JavaScript enabled.</noscript>
+  <noscript style="display:block;padding:24px;font-family:system-ui">Forage is a client-side prototype and needs JavaScript enabled.</noscript>
   <script type="module" src="./js/main.js"></script>
 </body>
 </html>
