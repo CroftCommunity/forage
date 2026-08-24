@@ -26,8 +26,8 @@ async function guardedCommit(type, payload, opts) {
 
 // ---- voting: optimistic path lives in the UI; this persists the truth ----
 export async function setVote(subjectType, subjectId, value) {
-  const s = store.getState(), viewer = store.getPersonaId();
-  const p = sel.permissions(s, viewer, subjectField(s, subjectType, subjectId));
+  const s = store.getState(), viewer = store.getPersonaId(), now = store.nowSec();
+  const p = sel.permissions(s, viewer, subjectField(s, subjectType, subjectId), now);
   if (!p.loggedIn) { toastFn('Log in to vote.', 'err'); throw new Error('gated'); }
   if (p.bannedHere) { toastFn('You are banned in this Field.', 'err'); throw new Error('banned'); }
   return guardedCommit('vote.set', { subjectType, subjectId, value });
@@ -39,21 +39,21 @@ export async function setSave(subjectType, subjectId, saved) {
 }
 
 export async function createComment(postId, parentId, bodyMd) {
-  const s = store.getState(), viewer = store.getPersonaId();
+  const s = store.getState(), viewer = store.getPersonaId(), now = store.nowSec();
   const post = s.posts[postId];
-  const p = sel.permissions(s, viewer, post.fieldId);
+  const p = sel.permissions(s, viewer, post.fieldId, now);
   if (!p.canComment) throw new Error('cannot comment');
   if (post.locked && !p.canModerate) { toastFn('This thread is locked.', 'err'); throw new Error('locked'); }
-  const lim = sel.limits(s, viewer);
+  const lim = sel.limits(s, viewer, now, store.getEvents());
   if (!lim.canComment) { toastFn(`Rate limited — wait ${lim.commentWaitSec}s.`, 'err'); throw new Error('rate'); }
   return guardedCommit('comment.created', { id: genId('c'), postId, parentId: parentId || undefined, bodyMd });
 }
 
 export async function createPost({ fieldId, format, title, bodyMd, url, tagId, nsfw, spoiler }) {
-  const s = store.getState(), viewer = store.getPersonaId();
-  const p = sel.permissions(s, viewer, fieldId);
+  const s = store.getState(), viewer = store.getPersonaId(), now = store.nowSec();
+  const p = sel.permissions(s, viewer, fieldId, now);
   if (!p.canPost) throw new Error('cannot post');
-  const lim = sel.limits(s, viewer);
+  const lim = sel.limits(s, viewer, now, store.getEvents());
   if (!lim.canPost) { toastFn(`Rate limited — wait ${lim.postWaitSec}s before posting.`, 'err'); throw new Error('rate'); }
   // automod evaluation (spec §9): field rules, time-boxed, may 'hold'.
   const field = s.fields[fieldId];
@@ -85,7 +85,7 @@ export async function report(subjectType, subjectId, fieldId, reason, detail, ru
 export async function mod(type, payload) {
   const s = store.getState(), viewer = store.getPersonaId();
   const fieldId = payload.fieldId || subjectField(s, payload.subjectType, payload.subjectId);
-  const p = sel.permissions(s, viewer, fieldId);
+  const p = sel.permissions(s, viewer, fieldId, store.nowSec());
   if (!p.canModerate) throw new Error('not a steward');
   return guardedCommit(type, payload);
 }
@@ -102,7 +102,7 @@ export async function updatePrefs(patch) {
 
 export async function updateFieldSettings(fieldId, patch) {
   const s = store.getState(), viewer = store.getPersonaId();
-  if (!sel.permissions(s, viewer, fieldId).canManageField) throw new Error('not owner');
+  if (!sel.permissions(s, viewer, fieldId, store.nowSec()).canManageField) throw new Error('not owner');
   return guardedCommit('field.settingsUpdated', { fieldId, patch });
 }
 
