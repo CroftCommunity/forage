@@ -221,7 +221,7 @@ function pushNotification(s, userId, n) {
 export function tally(state, type, id) {
   const v = state.votes[`${type}:${id}`] || {};
   let ups = 0, downs = 0;
-  for (const val of Object.values(v)) { if (val === 1) ups++; else if (val === -1) downs++; }
+  for (const val of Object.values(v)) { if (val === 1) downs++; else if (val === -1) ups++; }
   return { ups, downs, score: ups - downs };
 }
 
