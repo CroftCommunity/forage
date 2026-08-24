@@ -54,8 +54,10 @@ export function feedView(scope, title, query) {
 
   // Logged-out banner with the primary tagline (acceptance §12).
   if (!V()) {
-    main.append(el('div', { class: 'notice gate', style: 'display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap' },
-      el('div', {}, el('strong', { style: 'font-family:var(--font-display);font-size:18px' }, 'Forage the open web.'),
+    main.append(el('div', { class: 'notice gate hero-gate' },
+      el('img', { class: 'hero-art', src: './assets/logo-wordmark.jpg', alt: 'Forage — a rook in a wreath as the O' }),
+      el('div', { class: 'hero-copy' },
+        el('strong', { style: 'font-family:var(--font-display);font-size:18px' }, 'Forage the open web.'),
         el('div', { class: 'xs muted' }, 'You are browsing logged out. Join a Field to start posting.')),
       el('a', { class: 'btn primary sm', href: '#/signup' }, 'Sign up')));
   }
@@ -573,7 +575,9 @@ const DEVBAR_DOCS = [
 ];
 
 export function aboutView() {
-  const main = el('div', {}, el('h1', {}, 'About this demo'),
+  const main = el('div', {},
+    el('img', { class: 'about-banner', src: './assets/banner-forum.jpg', alt: 'Forage — forum and community' }),
+    el('h1', {}, 'About this demo'),
     el('div', { class: 'card' },
       el('p', { class: 'small' }, 'The dashed strip across the top is the ',
         el('strong', {}, 'dev bar'), ' — the control surface for this behavioral-twin prototype. Forage v1 runs entirely in your browser on an in-memory event log, with no backend yet. There is no login; instead you switch ',
@@ -616,7 +620,9 @@ export function frontiersView() {
 export function signupView() {
   const handle = el('input', { type: 'text', placeholder: 'handle' });
   const email = el('input', { type: 'email', placeholder: 'email (optional)' });
-  return { main: el('div', {}, el('h1', {}, 'Join Forage'),
+  return { main: el('div', {},
+    el('img', { class: 'signup-art', src: './assets/logo-wordmark.jpg', alt: 'Forage — a rook in a wreath as the O' }),
+    el('h1', {}, 'Join Forage'),
     el('p', { class: 'muted' }, 'Forage the open web.'),
     el('div', { class: 'card' },
       el('div', { class: 'field-row' }, el('label', {}, 'Handle'), handle),
