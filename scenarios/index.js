@@ -5,9 +5,13 @@
 import { fieldLifecycle } from './field-lifecycle.js';
 import { postVoteRank } from './post-vote-rank.js';
 import { commentTreeCollapse } from './comment-tree-collapse.js';
+import { modRemoveMask } from './mod-remove-mask.js';
+import { banReadonly } from './ban-readonly.js';
 
 export const SCENARIOS = [
   fieldLifecycle,
   postVoteRank,
   commentTreeCollapse,
+  modRemoveMask,
+  banReadonly,
 ];
