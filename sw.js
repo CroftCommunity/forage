@@ -7,7 +7,7 @@
 // Bump CACHE whenever you want to force a clean re-cache on the very next load
 // (asset URLs are hashless, so the name is the version).
 
-const CACHE = 'forage-v6';
+const CACHE = 'forage-v7';
 const SHELL = [
   './', './index.html',
   './css/tokens.css', './css/app.css',
@@ -18,6 +18,18 @@ const SHELL = [
   './js/config/routing.js', './js/substrates/memory.js',
   './js/ui/components.js', './js/ui/views.js',
   './data/seed.js',
+  './scenarios/ban-readonly.js',
+  './scenarios/comment-tree-collapse.js',
+  './scenarios/demo-extras.js',
+  './scenarios/field-lifecycle.js',
+  './scenarios/format.js',
+  './scenarios/index.js',
+  './scenarios/mod-remove-mask.js',
+  './scenarios/post-vote-rank.js',
+  './scenarios/rate-limit-probation.js',
+  './scenarios/report-resolve-notify.js',
+  './scenarios/save-and-profile.js',
+  './scenarios/search-visibility.js',
   './manifest.webmanifest', './icons/favicon-32.png', './icons/icon-192.png',
 ];
 

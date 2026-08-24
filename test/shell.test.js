@@ -24,7 +24,8 @@ function jsFilesUnder(dir) {
   return out;
 }
 
-const RUNTIME = [...jsFilesUnder('js'), 'data/seed.js'].filter((f) => !EXCLUDED.has(f));
+const RUNTIME = [...jsFilesUnder('js'), ...jsFilesUnder('scenarios'), 'data/seed.js']
+  .filter((f) => !EXCLUDED.has(f));
 
 test('every runtime module on disk is precached in sw.js SHELL', () => {
   const sw = readFileSync(join(root, 'sw.js'), 'utf8');
