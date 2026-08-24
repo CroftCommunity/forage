@@ -82,6 +82,29 @@ const PROBES = {
   auditTypes: (state, seat, { slug }) => sel.auditLog(state, seat, slug)?.entries.map((e) => e.type) ?? null,
   feedIds: (state, seat, { scope, sort = 'hot', timeframe = 'all' }, now) =>
     sel.feed(state, seat, scope, sort, timeframe, now).posts.map((p) => p.id),
+  // one key of one node in the rendered comment tree (depth-first search by id)
+  threadNode: (state, seat, { postId, id, key, sort = 'best' }, now) => {
+    const t = sel.thread(state, seat, postId, sort, now);
+    const find = (nodes) => {
+      for (const n of nodes) {
+        if (n.id === id) return n;
+        const hit = find(n.children);
+        if (hit) return hit;
+      }
+      return null;
+    };
+    const node = t ? find(t.comments) : null;
+    return node ? node[key] ?? null : null;
+  },
+  threadInfo: (state, seat, { postId, key, sort = 'best' }, now) =>
+    sel.thread(state, seat, postId, sort, now)?.[key] ?? null,
+  postInfo: (state, seat, { id, key }, now) =>
+    sel.thread(state, seat, id, 'best', now)?.post?.[key] ?? null,
+  searchIds: (state, seat, { q, scope = 'all', type = 'post' }, now) =>
+    sel.search(state, seat, q, scope, type, now).results.map((r) => r.item.id),
+  savedIds: (state, seat, { handle }, now) =>
+    sel.profile(state, seat, handle, 'saved', now)?.saved.map((s) => s.item.id) ?? null,
+  limitsInfo: (state, seat, { key }, now, ctx) => sel.limits(state, seat, now, ctx.events)[key],
 };
 
 function deepEq(a, b) {
@@ -94,12 +117,15 @@ export function assertionNow(scenario, baseSec) {
 }
 
 // Evaluate every assertion; returns [{seat, probe, expect, got, pass}].
+// ctx carries what selectors need beyond folded state (the event log, for
+// limits) — resolved from the scenario itself, so it stays deterministic.
 export function runAssertions(scenario, state, baseSec) {
   const now = assertionNow(scenario, baseSec);
+  const ctx = { events: resolveEvents(scenario, baseSec) };
   return scenario.assertions.map((a) => {
     const probe = PROBES[a.probe];
     if (!probe) throw new Error(`scenario ${scenario.id}: unknown probe ${a.probe} (known: ${Object.keys(PROBES).join(', ')})`);
-    const got = probe(state, a.seat, a.args || {}, now);
+    const got = probe(state, a.seat, a.args || {}, now, ctx);
     return { seat: a.seat, probe: a.probe, args: a.args, expect: a.expect, got, pass: deepEq(got, a.expect) };
   });
 }
