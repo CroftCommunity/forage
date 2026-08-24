@@ -6,7 +6,7 @@ import * as store from '../store.js';
 import * as sel from '../selectors.js';
 import * as actions from '../actions.js';
 import { go } from '../router.js';
-import { FRONTIERS } from '../frontier.js';
+import { frontiers } from '../../ledger/divergence.js';
 import { humanWait } from '../engines/limits.js';
 import * as themeCtl from '../theme.js';
 import { postRow, commentNode, voteBox, emptyState, gate, errorState, toast } from './components.js';
@@ -610,10 +610,10 @@ export function aboutView() {
 // ---------- frontiers ----------
 export function frontiersView() {
   const main = el('div', {}, el('h1', {}, 'Frontiers'),
-    el('p', { class: 'muted small' }, 'What this prototype deliberately defers. Each becomes a divergence-ledger entry when the api substrate grows.'),
-    ...FRONTIERS.map((f) => el('div', { class: 'frontier-item' },
-      el('div', { class: 'row spread' }, el('strong', {}, f.label), el('span', { class: 'frontier-chip' }, 'deferred')),
-      el('div', { class: 'small muted' }, f.note))));
+    el('p', { class: 'muted small' }, 'What this prototype deliberately defers — the frontier entries of the divergence ledger (ledger/divergence.js). Conformance refuses any drift the ledger does not name.'),
+    ...frontiers().map((f) => el('div', { class: 'frontier-item' },
+      el('div', { class: 'row spread' }, el('strong', {}, f.label), el('span', { class: 'frontier-chip' }, f.id + ' · deferred')),
+      el('div', { class: 'small muted' }, f.description))));
   return { main, side: null };
 }
 
