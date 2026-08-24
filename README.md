@@ -92,13 +92,29 @@ Above the header, dashed to mark it as scaffolding:
 | Volunteer moderator | **Steward** |
 | Public mod log | **Audit log** |
 
-## Later layers
+## The tiers
 
-The adapter layer keeps `memory` as its sole substrate until the contract stabilizes; a
-conformance harness arrives when the first capability grows an `api` implementation (the
-build spec's Next.js + Postgres stack is that implementation's spec, already written). A
-community edition follows via a `sync` substrate with an honor-system identity model. The
-divergence ledger starts from the frontier list at `#/frontiers`.
+One behavioral contract, one atproto data plane — **scope is the tier dial**
+(`js/config/routing.js`):
+
+- **Mock** (`memory`, this deployment): the permanent in-browser instrument — hermetic
+  CI/CD, behavior and workflow testing, and the conformance baseline every other tier is
+  proven against.
+- **Scoped** (atproto, small aperture, all public): Forage's write vocabulary as
+  `fyi.forage.*` records (`lexicons/`) in members' own PDS repos; a `fyi.forage.roster`
+  record in the founding DID's repo is the aperture; intake is unauthenticated
+  `listRecords` over exactly the roster's DIDs; moderation is steward action records
+  applied as masking at fold time (nobody deletes another member's records). The
+  substrate (`js/substrates/atproto.js`) is a pure event↔record codec plus a
+  session-bound writer — proven by conformance against `memory` over the whole scenario
+  library, and live on a real PDS with two DIDs.
+- **Wide** (atproto, network aperture — next): the same UI as a lens over the owner's
+  own Bluesky: Fields are feeds, replies are the thread tree, boost rides likes,
+  moderation rides mutes/blocks/labelers through the same masking selectors.
+
+Differences between tiers are refused by the conformance harness
+(`npm run conformance`) unless the divergence ledger (`ledger/divergence.js`, rendered
+at `#/frontiers`) names them.
 
 ---
 
