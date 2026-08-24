@@ -24,7 +24,8 @@ python3 -m http.server 8000
 
 Deployed on GitHub Pages at [forage.fyi](https://forage.fyi/) and installable as a PWA. All
 asset paths are relative, so it works equally under a project subpath. Append `?nosw` to
-bypass the service worker.
+bypass the service worker. Domain, DNS, certificate, and brand-asset operations:
+[docs/HOSTING.md](docs/HOSTING.md).
 
 ## How it works
 

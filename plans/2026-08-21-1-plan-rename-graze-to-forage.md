@@ -344,3 +344,42 @@ the redirect recommendation — Phase 5 rewritten), OQ3 copy defaults accepted, 
 optimize-then-commit (as recommended — Phase 1.2b and Phase 6.3b added). No BLOCKING
 items. PHASE-GATED items are owner steps inside their phases (2 and 5), not
 preconditions to starting Phase 1.
+
+## Execution log (2026-08-23 → 08-24) — plan EXECUTED, all phases complete
+
+Executed by the planning session itself (owner present for OWNER STEPs). Outcome: the
+site serves at **https://forage.fyi** (HTTPS enforced, cert covers apex + www),
+**graze.ing retired dark**, repo renamed **CroftCommunity/forage**. PRs: #4 (Phase 1
+rename), #5 (Phase 3 CNAME cut). Follow-on brand work (beyond this plan's scope) landed
+as #6 (icon set / header glyph) and #7 (art integration + warmed palettes).
+
+Deviations from plan, recorded honestly:
+
+1. **The cert stalled twice, and the plan's DNS guidance was incomplete.** (a) The www
+   record — "optional but recommended" — is effectively REQUIRED: GitHub provisions one
+   cert covering apex + www, and its absence held issuance at "approved". (b) The
+   arecipe.app mirror pattern (www CNAME → apex) that was then added fails GitHub's
+   checker (`is_cname_to_github_user_domain: false`, reads as proxied) and looped the
+   cert at "dns_changed" for hours. Fix: www CNAME → `croftcommunity.github.io`.
+   Diagnostic that found it: `GET /repos/{o}/{r}/pages/health` (alt_domain block).
+   Full detail: `docs/HOSTING.md`.
+2. **The remove/re-add recovery, via API, deletes the whole Pages site** —
+   `PUT {"cname":null}` 307'd (repo had been renamed mid-flight) and the fallback
+   `DELETE /pages` removes the site, not just the domain. Recreating (POST + cname)
+   worked and doubled as the clean provisioning reset. GitHub auto-commits
+   Delete CNAME / Create CNAME to main when this happens.
+3. **Phase 4 partially happened out of order**: the owner renamed the GitHub repo during
+   the Phase 3 cert wait (harmless — custom domain made it URL-neutral, as Pass 2
+   verified it would be).
+4. **Local DNS verification was unreliable all session**: this machine's resolver is
+   OpenDNS and intercepts new domains (146.112.x.x block-page IPs, fake redirects).
+   All verification had to run against the authoritative NS (`@maceio.ns.porkbun.com`)
+   or with `curl --resolve <domain>:443:185.199.108.153`.
+5. **Phase 1.2b's asset kept growing**: two more owner art drops arrived mid-execution
+   (wreath logo + icon JPEGs); both archived byte-identical to discovery
+   `seeds/forage-brand/` alongside the banner original, per the same pattern.
+6. **OQ2 executed as confirmed**: retire dark (records removed, no forward,
+   registration kept).
+
+Phase 6 close-out landed in discovery `3362e11` + meta-repo `4a46295` (E73 closed,
+E122 stamped, NAMING executed-state, CI-PATTERN row, brand-art archive).
