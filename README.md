@@ -46,8 +46,11 @@ Identity is a **dev-bar dropdown**, not a login. Every UX path is walkable from 
 - **Selector contract** (`js/selectors.js`) — the read API of the future, expressed as pure
   functions now. Policy (the §10 permission matrix, removal masking, ban read-only, rate
   limits) lives here so it holds on every surface.
-- **Action contract** (`js/actions.js`) — the write side, wrapping the store with the dev
-  bar's latency toggle and Fail-Next so the optimistic-vote rollback path is observable.
+- **Action contract** (`js/actions.js`) — the write side. Every action resolves its
+  capability's substrate through the routing table (`js/config/routing.js`, all `memory`
+  today) and dispatches to it (`js/substrates/memory.js` is the only module that touches
+  the store's commit); the dev bar's latency toggle and Fail-Next wrap that dispatch, so
+  the optimistic-vote rollback path is observable on any substrate.
 - **Engines** (`js/engines/`) — the ranking math as pure, swappable functions. Hot, Best
   (Wilson), Controversial and Rising carry the build spec's formulas verbatim; the Limits
   engine runs rolling-window rate limits over the event log.
