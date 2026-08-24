@@ -1,0 +1,11 @@
+P1 createSession: 200 in 253ms, did=did:plc:xyfhcaweaeyew3zrgk6jaln7, handle=ngvalidation2112.bsky.social
+P2 createRecord fyi.forage.post: 200 in 134ms uri=at://did:plc:xyfhcaweaeyew3zrgk6jaln7/fyi.forage.post/3mtufm5bswr2t
+P3a getRecord: 200 in 199ms $type=fyi.forage.post
+P3b UNAUTH listRecords from PDS: 200 in 123ms records=1
+P4a putRecord update: 200 in 129ms
+P4b vote record create=200 delete=200 (second custom collection round-trips)
+P5 jetstream tail open (filtered to our did + fyi.forage.*); writing a record...
+P5 jetstream filtered tail: record arrived in 676ms end-to-end
+P6 v2 planSnapshot: 404 {"message":"Not Found"} 
+P6 v2 listSegments: 404 {"message":"Not Found"} 
+P7 cleanup: probe records deleted (post delete=200); fixtures in /private/tmp/claude-502/-Users-cpettet-git-chasemp-CroftC/7bb06e19-b2e8-4b6b-8732-9d99b40c42bd/scratchpad/atproto-fixtures

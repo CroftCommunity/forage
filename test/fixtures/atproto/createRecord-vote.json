@@ -1,0 +1,9 @@
+{
+  "uri": "at://did:plc:xyfhcaweaeyew3zrgk6jaln7/fyi.forage.vote/3mtufm5trya2s",
+  "cid": "bafyreics547gbtskbzdr4zt3hvibsfdjxt6ger4f7qdrmvmdchyj2wsahq",
+  "commit": {
+    "cid": "bafyreidbbnyzclr3qmukeunjl6k636xf6r3s6anwhhqoewq7uarlwpc77q",
+    "rev": "3mtufm5twui2s"
+  },
+  "validationStatus": "unknown"
+}

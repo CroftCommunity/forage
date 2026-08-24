@@ -653,6 +653,27 @@ forever after.
   green and the conformance report printed before the deliberate exit 1; revert run
   32786787902 green. Closed unmerged.
 
+### Phase-5 probe + split — 2026-08-25
+Probe run live against bsky.social with the standing test account (creds from
+`CroftC/.env`, never committed; fixtures JWT-redacted). **Findings, all firsthand:**
+- Custom-lexicon record CRUD on the real PDS: `fyi.forage.post` create 200 (134ms),
+  getRecord 200, putRecord update 200, second collection (`fyi.forage.vote`)
+  create+delete 200. The PDS accepts arbitrary custom collections.
+- **Unauth `com.atproto.repo.listRecords` direct from the PDS: 200 (123ms)** — the
+  scoped tier's read path needs no session; guests can read the forum.
+- **Filtered Jetstream live tail works**: `wantedDids` + `wantedCollections=
+  fyi.forage.*` server-side; a write arrived **676ms** end-to-end
+  (jetstream2.us-west).
+- Jetstream v2 Network Replay: `network.replay.planSnapshot`/`listSegments` **404**
+  at the guessed paths on that host — v2 replay access unverified; correct
+  endpoints/token to be researched at phase 6's split (OQ4 ADR still gates phase 6).
+- The PDS mints **TID rkeys** — identity at this tier is `(did, collection, rkey)`,
+  which dissolves ADR-001's stated same-actor-two-devices limitation here.
+- Probe records cleaned up (deletes 200); the test account holds no residue.
+**Split recorded in the Phase 5 section** (5a–5f) with the decisions: intake = direct
+PDS pull (tail is an enhancement), roster = `fyi.forage.roster` in the founding DID's
+repo (recommended, reversible), IndexedDB deferred.
+
 #### 4a: Scenario format + first scenarios
 **Changes:**
 - [ ] `scenarios/format.js` — scenario shape + offset-timestamp resolver + replay helper
@@ -716,6 +737,55 @@ ledger+frontier+views; sw.js; proof test).
 **Restructured 2026-08-24 (user direction, all-in on atproto; Spaces backburnered — see
 OQ3).** Coarse here; split into ≤3-file units via plan update + Review Log before
 execution, after the probe.
+
+**SPLIT 2026-08-25 (probe complete — evidence in `test/fixtures/atproto/`, Review Log
+entry "Phase-5 probe + split"):**
+
+- **5a — probe fixtures + this split** (done with this commit): raw PDS/Jetstream
+  responses (JWTs redacted) as `test/fixtures/atproto/*`; `probe-summary.txt` carries
+  the measured numbers.
+- **5b — lexicons** (multi-commit, ≤3 files each): `lexicons/fyi.forage.*.json` — one
+  schema per record collection: `post`, `comment`, `vote`, `save`, `field`,
+  `membership`, `mod`, `report`, plus `roster` (see decision below); `test/lexicons.test.js`
+  validates each is well-formed JSON with `lexicon: 1`, an `id` matching its filename,
+  and that the collection set maps onto the event vocabulary (walker, pinned second copy
+  style).
+- **5c — the codec**: `js/substrates/atproto.js` first cut — PURE `eventToRecord` /
+  `recordToEvent` (no network): every scenario event round-trips; event ids at this
+  tier derive `<collection>_<did>_<rkey>`; probe fixtures decode. Test-first against
+  fixtures; hermetic.
+- **5d — scoped intake + write path**: same file grows `fetchScopedEvents` (pull:
+  `com.atproto.repo.listRecords` per roster DID per collection — unauth, probe-proven)
+  and `write` (session + `createRecord` to the member's own repo); transport injected
+  (fetch-shaped) so tests stay hermetic over fixtures.
+- **5e — conformance memory↔scoped**: worldB replays scenarios through the codec
+  round-trip (events → records → events → fold) — the contract's proof at this tier,
+  network-free; routing-flip demonstrated with the table override; tolerances ledgered
+  if any observable legitimately differs.
+- **5f — live validation (Broad) + docs**: two-DID live session (write as account 1,
+  read unauth + as account 2), evidence recorded; README "Later layers" first rewrite;
+  `sw.js` SHELL (+ scan already covers `js/substrates/`); AGENTS.md untouched (sources
+  of truth already name routing/ledger).
+
+**Split decisions (probe-evidence-based):**
+- **Scoped intake = direct PDS pull** (unauth `listRecords`, measured 123ms/collection):
+  simplest, zero infra, guest-readable. The filtered Jetstream live tail (measured 676ms
+  write→event, server-side filtering works) is a named enhancement, not required for the
+  tier — recorded as ledger frontier when 5e lands if not built.
+- **Roster home = a `fyi.forage.roster` record in the founding DID's repo** (recommended
+  and proceeding; reversible pre-1.0): keeps the tier's membership IN the data plane —
+  config travels as records like everything else, unauth-readable; a client-config
+  override remains for dev/tests.
+- **Ids meet rkeys (ADR-001 revisit):** the PDS mints TID rkeys; at this tier identity
+  is `(did, collection, rkey)` — cross-device collisions impossible (the PDS is the
+  authority). ADR-001's stated limitation dissolves at this tier; noted there when the
+  codec lands.
+- **Jetstream v2 (OQ4):** replay endpoints NOT found at the guessed
+  `network.replay.*` paths (404 on jetstream2.us-west); live filtered tail is open and
+  works. The v2 replay exploration continues at phase 6's split with correct
+  endpoints/token research — the OQ4 ADR still gates phase 6.
+- **IndexedDB deferred**: the scoped cache is the fold over N friends' records;
+  localStorage suffices until measured otherwise.
 
 **Goal:** the "ten friends" deployment on the same atproto rails, everything public:
 Forage's write vocabulary as `fyi.forage.*` lexicon records in **members' own PDSes**;

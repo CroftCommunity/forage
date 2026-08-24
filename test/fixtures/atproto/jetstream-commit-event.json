@@ -1,0 +1,18 @@
+{
+  "did": "did:plc:xyfhcaweaeyew3zrgk6jaln7",
+  "time_us": 1787612168699185,
+  "kind": "commit",
+  "commit": {
+    "rev": "3mtufm6hutq2w",
+    "operation": "create",
+    "collection": "fyi.forage.comment",
+    "rkey": "3mtufm6hpxi2w",
+    "record": {
+      "$type": "fyi.forage.comment",
+      "bodyMd": "tail probe",
+      "createdAt": "2026-08-24T22:56:07.962Z",
+      "subject": "at://did:plc:xyfhcaweaeyew3zrgk6jaln7/fyi.forage.post/3mtufm5bswr2t"
+    },
+    "cid": "bafyreibahp73kshrpk7ocyoh6k7qmvntlj3zr7lzlaqhklba3m6rvkudj4"
+  }
+}

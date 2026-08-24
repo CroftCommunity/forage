@@ -1,0 +1,12 @@
+{
+  "uri": "at://did:plc:xyfhcaweaeyew3zrgk6jaln7/fyi.forage.post/3mtufm5bswr2t",
+  "cid": "bafyreiaoih33qo5tqzcc5zlnmnp6zjtukqwptos72cohhpsklenqgenszy",
+  "value": {
+    "$type": "fyi.forage.post",
+    "title": "Probe post from the behavior-scale phase-5 probe",
+    "bodyMd": "Written by the forage probe; safe to delete.",
+    "format": "text",
+    "createdAt": "2026-08-24T22:56:06.716Z",
+    "fieldSlug": "gardening"
+  }
+}
