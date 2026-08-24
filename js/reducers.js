@@ -154,12 +154,12 @@ function applyMod(s, ev, p) {
   switch (ev.type) {
     case 'mod.removed':
       setSubject(s, p, { removed: true, removedReason: p.reason || '' });
-      resolveReports(s, p, ev.actor, 'removed');
+      resolveReports(s, p, ev, 'removed');
       notifyAuthor(s, ev, p, 'removed');
       break;
     case 'mod.approved':
       setSubject(s, p, { removed: false, held: false });
-      resolveReports(s, p, ev.actor, 'approved');
+      resolveReports(s, p, ev, 'approved');
       break;
     case 'mod.locked':   setSubject(s, p, { locked: true }); break;
     case 'mod.unlocked': setSubject(s, p, { locked: false }); break;
@@ -185,12 +185,12 @@ function setSubject(s, p, patch) {
   if (bag[p.subjectId]) Object.assign(bag[p.subjectId], patch);
 }
 
-function resolveReports(s, p, by, resolution) {
+function resolveReports(s, p, ev, resolution) {
   for (const r of s.reports) {
     if (r.subjectType === p.subjectType && r.subjectId === p.subjectId && !r.resolvedBy) {
-      r.resolvedBy = by; r.resolution = resolution;
+      r.resolvedBy = ev.actor; r.resolution = resolution;
       if (r.reporterId) pushNotification(s, r.reporterId, {
-        kind: 'report-actioned', subjectType: r.subjectType, subjectId: r.subjectId, fromId: by, ts: Date.now(),
+        kind: 'report-actioned', subjectType: r.subjectType, subjectId: r.subjectId, fromId: ev.actor, ts: ev.ts,
       });
     }
   }

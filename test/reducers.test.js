@@ -105,18 +105,16 @@ test('every mod.* event lands in the audit log verbatim', () => {
   assert.deepStrictEqual(s.audit.map((e) => e.type), ['mod.locked', 'mod.removed']);
 });
 
-test('CURRENT: the report-actioned notification ts is wall-clock (nondeterministic)', () => {
-  // resolveReports stamps Date.now() — the one impurity in the fold.
-  const s = fold(reportedLog());
-  const actioned = s.notifications.u_a.find((n) => n.kind === 'report-actioned');
-  assert.equal(typeof actioned.ts, 'number');
-  assert.ok(actioned.ts > 1_000_000); // wall-clock scale, not the log's toy ts values
-});
-
-test('2a target: report-actioned notification ts equals the resolving event ts', { todo: true }, () => {
+test('report-actioned notification ts equals the resolving event ts (replay-stable)', () => {
+  // 2a: resolveReports formerly stamped Date.now() — the one impurity in the fold.
   const s = fold(reportedLog());
   const actioned = s.notifications.u_a.find((n) => n.kind === 'report-actioned');
   assert.equal(actioned.ts, 310);
+});
+
+test('a log with report resolution folds identically twice (full determinism)', () => {
+  const log = reportedLog();
+  assert.deepStrictEqual(fold(log), fold(log));
 });
 
 // ---- reply notifications ----
