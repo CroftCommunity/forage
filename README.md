@@ -26,10 +26,11 @@ Tests run on the pinned Node (`.nvmrc`, enforced by `engine-strict`; `fnm instal
 the pin) with zero dependencies:
 
 ```sh
-npm test
+npm test              # unit, characterization, purity + invariant scans, scenarios
+npm run conformance   # replay the scenario library on two substrates, compare observables
 ```
 
-CI runs the same command as a gate on every PR and push to `main`.
+CI runs both as the gate on every PR and push to `main`.
 
 Deployed on GitHub Pages at [forage.fyi](https://forage.fyi/) and installable as a PWA. All
 asset paths are relative, so it works equally under a project subpath. Append `?nosw` to

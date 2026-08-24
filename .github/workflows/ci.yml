@@ -32,6 +32,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
-      # The one gate command, identical locally and in CI. Zero dependencies:
-      # no lockfile, no npm ci, nothing to cache.
-      - run: npm test
+      # The gate, identical locally and in CI: the suite, then conformance
+      # (pure fold vs the memory substrate over the scenario library — BSM
+      # invariant 9's merge gate). Runtime deps: zero; devDependencies exist
+      # (Stryker) but the gate needs none of them, so still no npm ci.
+      - run: npm test && npm run conformance
