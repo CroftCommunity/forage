@@ -25,6 +25,12 @@ export const LEDGER = [
   { id: 'DL-007', kind: 'frontier', capability: 'moderation', label: 'ML spam filtering',
     description: 'Build spec §11 out-of-scope list. Requires the scaled side.' },
 
+  // ---- proposals ----
+  { id: 'DL-009', kind: 'proposal', capability: 'posting',
+    description: 'Deleted-post title retention differs by tier: memory keeps the original title on the tombstone ("[deleted]" body, real title); the scoped tier CLEARS the title from the wire record (content really leaves the repo). No scenario observes a deleted post\'s title yet — when one does, pick a side and promote this to a tolerance or unify.',
+    reason: 'Privacy leans toward clearing; continuity leans toward keeping. Deferred until a scenario cares.',
+    date: '2026-08-25', status: 'open' },
+
   // ---- tolerances ----
   { id: 'DL-008', kind: 'tolerance', capability: 'feed-ranking',
     appliesTo: { probe: 'feedIds' },
