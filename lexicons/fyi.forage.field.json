@@ -1,0 +1,49 @@
+{
+  "lexicon": 1,
+  "id": "fyi.forage.field",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "A Forage Field (community node), living in its creator's repo. Settings updates are putRecord.",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": [
+          "slug",
+          "title",
+          "createdAt"
+        ],
+        "properties": {
+          "slug": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "URL slug, unique within the deployment's roster"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 1000,
+            "maxGraphemes": 100
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 10000
+          },
+          "settings": {
+            "type": "unknown",
+            "description": "requireTags/nsfwAllowed/automod/rules bag; schema-light pre-1.0"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime",
+            "description": "Creation time"
+          },
+          "editedAt": {
+            "type": "string",
+            "format": "datetime",
+            "description": "Present iff settings were updated"
+          }
+        }
+      }
+    }
+  }
+}

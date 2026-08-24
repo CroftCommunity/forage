@@ -1,0 +1,30 @@
+{
+  "lexicon": 1,
+  "id": "fyi.forage.membership",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "Membership in a Field, in the member's own repo. Leaving = record deleted.",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": [
+          "field",
+          "createdAt"
+        ],
+        "properties": {
+          "field": {
+            "type": "string",
+            "format": "at-uri",
+            "description": "The fyi.forage.field joined"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime",
+            "description": "Join time"
+          }
+        }
+      }
+    }
+  }
+}
