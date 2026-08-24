@@ -68,5 +68,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     worldB: { name: 'memory-substrate', replay: replayOnMemory },
   });
   console.log(formatReport(report));
-  process.exit(report.some((r) => r.status === 'fail') ? 1 : 0);
+  console.log('conformance-bite: deliberate exit 1 (gate wiring check)');
+  process.exit(1);
 }
