@@ -5,10 +5,11 @@ import { tally, myVote, reputation } from './reducers.js';
 import { sortItems } from './engines/rank.js';
 import { limits as limitsEngine } from './engines/limits.js';
 import { personaById } from './personas.js';
-import { nowSec, getEvents } from './store.js';
 
 // ---- viewer context ----
-export function viewerCtx(state, viewerId, now = nowSec()) {
+export function viewerCtx(state, viewerId, now) {
+  // fail loud: a missing clock silently mis-derives age-probation (NaN < 7).
+  if (!Number.isFinite(now)) throw new Error('viewerCtx: now (sec) is required');
   const persona = personaById(viewerId);
   const user = viewerId ? state.users[viewerId] : null;
   const rep = viewerId ? reputation(state, viewerId) : { post: 0, comment: 0, total: 0 };
@@ -22,7 +23,7 @@ export function viewerCtx(state, viewerId, now = nowSec()) {
 }
 
 // ---- permissions: the §10.1 matrix as a function ----
-export function permissions(state, viewerId, fieldId, now = nowSec()) {
+export function permissions(state, viewerId, fieldId, now) {
   const v = viewerCtx(state, viewerId, now);
   const field = fieldId ? state.fields[fieldId] : null;
   const bannedHere = !!(field && v.id && field.banned[v.id]);
@@ -102,7 +103,7 @@ function countComments(state, postId) {
 }
 
 // ---- feed ----
-export function feed(state, viewerId, scope, sort = 'hot', timeframe = 'all', now = nowSec()) {
+export function feed(state, viewerId, scope, sort = 'hot', timeframe = 'all', now) {
   const perms = permissions(state, viewerId, undefined, now);
   let posts = Object.values(state.posts);
 
@@ -146,7 +147,7 @@ function timeframeMs(tf) {
 }
 
 // ---- thread (post + comment tree) ----
-export function thread(state, viewerId, postId, sort = 'best', now = nowSec()) {
+export function thread(state, viewerId, postId, sort = 'best', now) {
   const post = state.posts[postId];
   if (!post) return null;
   const perms = permissions(state, viewerId, post.fieldId, now);
@@ -184,7 +185,7 @@ export function thread(state, viewerId, postId, sort = 'best', now = nowSec()) {
 }
 
 // ---- field about ----
-export function field(state, viewerId, slug, now = nowSec()) {
+export function field(state, viewerId, slug, now) {
   const f = Object.values(state.fields).find((x) => x.slug === slug);
   if (!f) return null;
   const perms = permissions(state, viewerId, f.id, now);
@@ -225,7 +226,7 @@ function modEventField(state, ev) {
 }
 
 // ---- mod queue (steward-gated) ----
-export function modQueue(state, viewerId, slug, now = nowSec()) {
+export function modQueue(state, viewerId, slug, now) {
   const f = Object.values(state.fields).find((x) => x.slug === slug);
   if (!f) return null;
   const perms = permissions(state, viewerId, f.id, now);
@@ -245,7 +246,7 @@ function shapeReport(state, viewerId, r, perms) {
 }
 
 // ---- profile ----
-export function profile(state, viewerId, handle, tab = 'overview', now = nowSec()) {
+export function profile(state, viewerId, handle, tab = 'overview', now) {
   const user = Object.values(state.users).find((u) => u.handle === handle);
   if (!user) return null;
   const perms = permissions(state, viewerId, undefined, now);
@@ -285,7 +286,7 @@ export function unreadCount(state, viewerId) {
 }
 
 // ---- search ----
-export function search(state, viewerId, q, scope = 'all', type = 'post', now = nowSec()) {
+export function search(state, viewerId, q, scope = 'all', type = 'post', now) {
   const needle = (q || '').toLowerCase().trim();
   if (!needle) return { q, results: [] };
   let results = [];
@@ -308,7 +309,8 @@ export function search(state, viewerId, q, scope = 'all', type = 'post', now = n
 }
 
 // ---- limits ----
-export function limits(state, viewerId, now = nowSec(), events = getEvents()) {
+export function limits(state, viewerId, now, events) {
+  if (!Array.isArray(events)) throw new Error('limits: events[] is required');
   const v = viewerCtx(state, viewerId, now);
   return limitsEngine(viewerId, events, v.rep.total, v.probation, now);
 }
