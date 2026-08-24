@@ -101,6 +101,23 @@ export async function joinField(fieldId, join) {
   return substrateFor('fields').write(join ? 'field.joined' : 'field.left', { fieldId }); // no latency; instant UX
 }
 
+export async function createField({ slug, title, description }) {
+  const s = store.getState(), viewer = store.getPersonaId(), now = store.nowSec();
+  const p = sel.permissions(s, viewer, undefined, now);
+  if (!p.canCreateField) {
+    const msg = p.probation ? 'Probation accounts cannot create Fields yet.' : 'Log in to create a Field.';
+    toastFn(msg, 'err'); throw new Error(msg);
+  }
+  const id = genId('f');
+  // the reducer makes the creator steward + member; no separate join needed
+  return guardedWrite('fields', 'field.created', { id, slug, title, description: description || '' });
+}
+
+export async function markNotificationsRead(notificationIds) {
+  if (!store.getPersonaId()) throw new Error('gated');
+  return substrateFor('notifications').write('notification.read', { notificationIds }); // no latency; instant UX
+}
+
 export async function updatePrefs(patch) {
   if (!store.getPersonaId()) return;
   return substrateFor('prefs').write('prefs.updated', { patch });

@@ -331,7 +331,7 @@ export function notificationsView() {
   if (!V()) return { main: gate('Log in to see notifications.'), side: null };
   const n = sel.notifications(S(), V());
   const main = el('div', {}, el('div', { class: 'row spread' }, el('h1', {}, 'Notifications'),
-    n.unread ? btn('Mark all read', 'sm', async () => { await store.commit('notification.read', { notificationIds: n.items.map((x) => x.id) }); }) : null));
+    n.unread ? btn('Mark all read', 'sm', async () => { await actions.markNotificationsRead(n.items.map((x) => x.id)); }) : null));
   if (!n.items.length) { main.append(emptyState('Nothing growing here yet', 'You have no notifications.')); return { main, side: null }; }
   const card = el('div', { class: 'card' });
   for (const item of n.items) {
@@ -482,9 +482,9 @@ export function createFieldView() {
       const s = slug.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
       if (!s || !title.value.trim()) return toast('Slug and title required.', 'err');
       if (Object.values(S().fields).some((f) => f.slug === s)) return toast('That slug is taken.', 'err');
-      const id = store.genId('f');
-      await store.commit('field.created', { id, slug: s, title: title.value.trim(), description: desc.value.trim() });
-      await store.commit('field.joined', { fieldId: id });
+      try {
+        await actions.createField({ slug: s, title: title.value.trim(), description: desc.value.trim() });
+      } catch { return; } // the action already toasted the refusal
       toast('Field created.', 'ok'); go(`/f/${s}`);
     } }, 'Create Field'));
   return { main: el('div', {}, el('h1', {}, 'Create a Field'), host), side: null };
