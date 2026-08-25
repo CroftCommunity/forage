@@ -5,9 +5,9 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 
 ## Needs the owner
 
-- **Push `main`** — ~50 local commits; pushing deploys forage.fyi (Pages serves main).
-  On the first push, **pull the `workflow_dispatch` hatch once** (1d's pending item —
-  the workflow must be on the remote default branch first).
+- ~~Push `main` + pull the `workflow_dispatch` hatch once~~ — DONE 2026-08-25: pushed
+  `9f1cff4`; push-gate run 32792641974 and dispatched run 32792652759 both green;
+  forage.fyi verified serving the new modules (sw at forage-v11).
 - **`CroftC/.claude/CI-PATTERN.md`** — the forage row is stale (now: 2 workflows-worth
   of gate discipline in one workflow, all nine rules). Meta-repo commit, on request.
 - **ATProto Spaces feasibility** (user-named, post-plan): the privacy variant of the
