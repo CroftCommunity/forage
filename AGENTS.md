@@ -1,5 +1,12 @@
 # Agent Instructions: Forage
 
+## Identity (workspace architecture)
+
+**Scope:** The social forum (forage.fyi, /f/ convention, behavior-scale build; events per `docs/adr/`).
+**Not this repo:** generic atproto auth (workspace prior art — DECISIONS.md; OAuth pending).
+**Provides:** the forage site. **Consumes:** AppView pulls (ADR 0002).
+Card + altitudes: `CroftC/.claude/ARCHITECTURE.md`.
+
 Forage is a behavior-scale build (method: `discovery/alpha/thinking/behavior-scale/`
 in the workspace). One behavioral contract, substrates per capability, scope as the
 tier dial. This page is the law agents execute against; it is deliberately short.
