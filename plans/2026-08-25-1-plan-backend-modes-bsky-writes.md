@@ -215,11 +215,16 @@ As pre-redirect draft: `MODES` (now `{ memory, bbs }`), `setMode`/`currentMode`,
 `test/modes.test.js` RED-first incl. the stub-substrate wiring test through
 `actions.createPost`. **Write-set:** `js/config/routing.js`, `test/modes.test.js`.
 
-#### 1b: Mode-scoped storage — the memory tier is untouchable
-As pre-redirect draft: storage namespaces (`forage.state` verbatim for memory;
-`forage.bbs.<spaceId>` for BBS caches), ALL five storage entry points
-namespace-derived; `enterMode`/`exitMode` dataset swap (fresh namespace → empty, not
-a leak); **core invariant test**: memory round-trip byte-identical + fold deep-equal.
+#### 1b: Mode lifecycle — the memory tier is untouchable, network modes are RAM-only
+SIMPLIFIED by the 2026-08-24 user confirmation (peer plan OQ2/OQ3, imported): network
+modes do NOT persist — no second storage key, no session persistence; reload lands in
+memory mode; entering a network mode is a deliberate, re-enterable act.
+`enterMode`/`exitMode` hold the network dataset in RAM only: while a network mode is
+active, persistence to `forage.state` is SUSPENDED (structural no-clobber — the key is
+never written outside memory mode); `exitMode` restores the memory dataset from its
+untouched key. Seed/Import/Delete-All gated outside memory. **Core invariant test**:
+memory round-trip byte-identical + fold deep-equal; a BBS cache key is a named
+deferral "until entry cost is felt" (user's words, imported).
 **Write-set:** `js/store.js`, `js/storage.js`, `test/store-modes.test.js`.
 
 #### 1c: Mode control + docs
@@ -326,9 +331,12 @@ roster); mode `bbs` storage namespace per space; moderation stays masking;
 conformance memory↔bbs through the codec world; live rehearsal with two throwaway
 alpha accounts (the gated-read proof is the acceptance: an outsider sees NOTHING).
 **Depends on:** phases 1–4; D5; OQ7 posture confirmed.
+**Imported decisions (2026-08-24 confirmations):** live rehearsals are per-run with
+full teardown — a standing space/world is the owner's deploy act, out of plan; the
+mode flips ALL wire capabilities at once (no partial tier).
 **Risks:** alpha churn (pin every endpoint/SDK fact to D5 evidence; re-probe at
-split); sandbox resets (caches disposable by design); auth on the alpha PDS may
-differ from mainline OAuth (D5 records it; the split decides the session story).
+split); sandbox resets (RAM-only posture makes them harmless); auth on the alpha PDS
+may differ from mainline OAuth (D5 records it; the split decides the session story).
 
 ### Phase 6 — Close-out
 Docs truthful everywhere; final cross-mode browser smoke (memory untouched, ring
@@ -336,17 +344,24 @@ dial live, a boost, the BBS in its skin); TODO/ledger reconciled; plan close-out
 
 ## Open Questions
 
-- [RECOMMENDED: ADVISORY] **OQ1 — per-mode storage keys** (recommended) vs RAM-only
-  for BBS caches. *Same invariant either way; keys buy offline continuity; sandbox
-  resets make BBS caches disposable regardless.*
+- [RESOLVED 2026-08-24 — RAM-ONLY, imported from the peer plan's user-confirmed
+  OQ2/OQ3] **OQ1 — network-mode persistence:** none. Sessions and network-mode data
+  live in RAM; reload lands in memory mode; a cache key is deferred "until entry
+  cost is felt". 1b simplified accordingly.
 - [WITHDRAWN by redirect] ~~OQ2 — founder-DID source~~ — the roster connect flow is
   deferred with the scoped in-app wiring; the BBS equivalent (space selection UX) is
   decided at phase 5's split on D5 evidence.
-- [RECOMMENDED: PHASE-GATED (Phase 3c)] **OQ3 — lens likes are REAL writes** for
-  whoever signs in. *Validation on test accounts only, but the shipped button acts
-  for real users; confirm before 3c.*
-- [RECOMMENDED: ADVISORY] **OQ4 — mode/skin control surface:** dev bar (recommended)
-  vs masthead/settings page.
+- [CONFIRMED 2026-08-24 — imported from the peer plan's user-confirmed OQ1/OQ7]
+  **OQ3 — lens likes ship as real writes**, validated ONLY against a probe post
+  authored by our own test account (no third-party posts ever engaged). Gate
+  satisfied; 3c inherits the own-post-only validation constraint verbatim.
+- [RECOMMENDED: ADVISORY, reframed] **OQ4 — surface primacy + control placement:**
+  yesterday's confirmation (peer OQ1) made the lens a *surface swap* — primary
+  surface, masthead emphasis — for the pre-redirect scope. Under the redirect: does
+  the Bluesky view become forage.fyi's DEFAULT front door (memory demoted to a
+  demo/dev mode behind the dial), or does memory stay the front door for now
+  (recommended for this plan: memory stays default, dial in the dev bar + a
+  masthead entry point; primacy revisited when OAuth lands)?
 - [RECOMMENDED: ADVISORY] **OQ5 — lens author links:** external bsky.app profiles
   (recommended) vs in-app author boards.
 - [RECOMMENDED: PHASE-GATED (Phase 2)] **OQ6 — OAuth dependency posture:** vendor
@@ -392,3 +407,21 @@ accounts incl. the outsider-cannot-read proof), D6 (ring cost measurements). OQ2
 withdrawn; OQ6 (OAuth posture), OQ7 (sandbox-alpha posture), OQ8 (skin lineup)
 added. Also recorded: execution will run in `worktrees/forage/modes-bbs` per the
 new workspace COORDINATION.md, with main taking user-approved landings.
+
+### Peer-plan reconciliation — 2026-08-25
+The workspace audit surfaced `plans/2026-08-24-2-plan-backend-modes.md` — an
+UNTRACKED plan by a parallel session on the pre-redirect scope (mode dial, live
+scoped session, first lens write), Pass 1+2 complete with **7 open questions
+user-confirmed 2026-08-24**. Those confirmations are user signal and are imported
+here: (OQ2/OQ3) no persistence for sessions or network-mode data — reload lands in
+memory, cache keys deferred → 1b simplified to RAM-only with persistence suspended
+outside memory mode; (OQ1) the lens boost write was accepted → this plan's OQ3
+gate satisfied; (OQ7) live like-validation targets our own test post only;
+(OQ4) persona switcher yields to the signed-in identity (already this plan's
+design); (OQ5) per-run + teardown for live worlds, standing worlds are a deploy
+act; (OQ6) network modes flip all wire capabilities at once. The peer file itself
+is left untouched (uncommitted peer state per COORDINATION.md); its scoped-live
+core is superseded by the user's redirect, recorded here. Peers croftc-6d and
+croftc-10 messaged; execution will claim `worktrees/forage/modes-bbs`. OQ4
+reframed with the surface-swap data point; remaining walk-through: OQ4, OQ5,
+OQ6, OQ7, OQ8.
