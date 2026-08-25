@@ -89,3 +89,12 @@ Every task ends with:
 
 STOP and write an ADR to `adr/` when: schema conflict, tolerance ambiguity,
 procedure underdetermines the choice. Never invent a convention.
+
+## Concurrent sessions (workspace norm)
+
+Multiple agent sessions share the `CroftC/` workspace. Do multi-turn work in a dedicated
+worktree — `git -C forage worktree add ../worktrees/forage/<slug> -b claude/<slug>` — never in
+this checkout (peer sessions stage with `git add -A`; loose files get swept into unrelated
+commits). Contested surfaces here — claim in `CroftC/.coordination/claims/` before
+touching: **landing on `main`** (the Pages deploy at forage.fyi follows it). Full protocol
+and the reasons behind it: `CroftC/.claude/COORDINATION.md`.

@@ -1,5 +1,9 @@
 # TODO
 
+> Repo operations / deferred items only. The product/design backlog of record is
+> `discovery/alpha/ROADMAP_TODO.md`; the tracking scheme is `CroftC/.claude/TRACKING.md`.
+> Cross-reference E-numbers where an item here implements a backlog row.
+
 Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md`
 (closed 2026-08-25) — full context lives there and in the ledger.
 
