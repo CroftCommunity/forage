@@ -188,7 +188,11 @@ user-approved checkpoints.
   or documented refusal. **Disposition:** throwaway.
 - [ ] **D3: rkey colon legality.** createRecord with explicit rkey containing `:`;
   accept/refuse verbatim (BBS ids embed DIDs). **Disposition:** throwaway.
-- [ ] **D4: OAuth vendor feasibility.** One-off esbuild bundle of
+- [ ] **D4: OAuth vendor feasibility + workspace precedent survey.** FIRST read the
+  workspace's existing OAuth implementations end to end: arecipe `src/auth/` glue
+  (patterns: loopback vs prod metadata, session provider, callback page) and the
+  croft-stack OAuth broker (locate it; record what it hosts and whether forage can
+  lean on it). THEN the one-off esbuild bundle of
   `@atproto/oauth-client-browser` to a single browser ESM; record size; drive
   arecipe-style init + authorize redirect against the test account from a raw
   `python3 -m http.server` page (no build); confirm callback + DPoP-bound fetch +
@@ -379,11 +383,14 @@ dial live, a boost, the BBS in its skin); TODO/ledger reconciled; plan close-out
   one — and never hides that Bluesky is underneath; link out to the network's own
   surfaces wherever they are the better home (profiles first). Applies across
   phase 3; recorded in Reasoning.
-- [RECOMMENDED: PHASE-GATED (Phase 2)] **OQ6 — OAuth dependency posture:** vendor
-  the official `@atproto/oauth-client-browser` bundle with a CI drift check
-  (recommended; arecipe precedent + workspace vendoring rule) vs hand-rolled
-  PAR/DPoP/PKCE vs introducing a build step. *D4 tests feasibility; the posture is
-  yours to confirm before phase 2.*
+- [RESOLVED 2026-08-25 — VENDOR THE OFFICIAL CLIENT; SURVEY THE WORKSPACE FIRST]
+  **OQ6 — OAuth posture:** use the official client, vendored with a drift check;
+  never hand-roll ("no, don't create your own — look at what's being done"). The
+  user named TWO in-workspace precedents to study in D4 before phase 2 designs:
+  arecipe's browser-client glue (read 2026-08-25) and **croft-stack's own OAuth
+  broker** (not yet examined — D4 now includes reading it: if the workspace runs a
+  broker one layer up, forage may borrow hosted pieces, e.g. metadata or token
+  services, instead of reinventing them).
 - [RECOMMENDED: PHASE-GATED (Phase 5)] **OQ7 — BBS ships as a sandbox-alpha
   experience:** built against `spaces-alpha.host.bsky.net` with throwaway
   identities, labeled experimental in-app, caches disposable, GA hardening deferred
