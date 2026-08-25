@@ -355,13 +355,18 @@ dial live, a boost, the BBS in its skin); TODO/ledger reconciled; plan close-out
   **OQ3 — lens likes ship as real writes**, validated ONLY against a probe post
   authored by our own test account (no third-party posts ever engaged). Gate
   satisfied; 3c inherits the own-post-only validation constraint verbatim.
-- [RECOMMENDED: ADVISORY, reframed] **OQ4 — surface primacy + control placement:**
-  yesterday's confirmation (peer OQ1) made the lens a *surface swap* — primary
-  surface, masthead emphasis — for the pre-redirect scope. Under the redirect: does
-  the Bluesky view become forage.fyi's DEFAULT front door (memory demoted to a
-  demo/dev mode behind the dial), or does memory stay the front door for now
-  (recommended for this plan: memory stays default, dial in the dev bar + a
-  masthead entry point; primacy revisited when OAuth lands)?
+- [RESOLVED 2026-08-25 — FRONT DOOR = UNAUTH BLUESKY VIEW; MODE IS A SETTING]
+  **OQ4 — surface primacy + control placement:** user decision in the walk-through:
+  the unauthenticated Bluesky view becomes forage.fyi's front door (default route);
+  mode selection is a **device-local setting in the user profile/settings surface**
+  ("it's local to them") — a `/memory` route was considered and rejected by the
+  user. The dev bar may mirror the control as scaffolding, but Settings is
+  canonical. Consequences: `js/main.js` default route flips in phase 3; the
+  settings view gains the mode preference; 1c's dev-bar control is demoted to a
+  mirror. Persistence reconciliation: the 2026-08-24 no-persistence ruling covered
+  sessions and fetched data; the mode PREFERENCE is a persisted local setting, and
+  OAuth sessions persist properly via the official client (that is what "wait for
+  the OAuth plan" deferred to). Network-mode event data stays RAM-only.
 - [RECOMMENDED: ADVISORY] **OQ5 — lens author links:** external bsky.app profiles
   (recommended) vs in-app author boards.
 - [RECOMMENDED: PHASE-GATED (Phase 2)] **OQ6 — OAuth dependency posture:** vendor
