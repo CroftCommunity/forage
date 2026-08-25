@@ -1,8 +1,8 @@
 # Plan: three modes — memory, the Bluesky view with a ring dial, and the private BBS
 
 date: 2026-08-25
-status: PLANNING — Pass 1+2 + redirect + walk-through COMPLETE (2026-08-25); Pass 3
-pending in a fresh context, then execution in worktrees/forage/modes-bbs
+status: READY FOR EXECUTION — Pass 3 complete (2026-08-25); all open questions
+user-settled; execution in worktrees/forage/modes-bbs (branch claude/modes-bbs)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `10a8ade` (clean tree, pushed; forage.fyi deployed at forage-v11)
 prior plan: `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md` (CLOSED — built the
@@ -138,6 +138,25 @@ Firsthand, current tree (details in the prior plan where noted):
   happens in a worktree (`worktrees/forage/<slug>`), shared main takes doc commits +
   user-asked landings only; this plan file should be committed (doc commit) so it
   cannot be swept by a peer session.
+- Workspace OAuth prior art — `CroftC/.claude/DECISIONS.md` § Prior-art router,
+  grepped 2026-08-25 (Pass 3, resolving D4's survey half at planning time): the
+  registry's atproto-OAuth entry lists the lineages; the **official-library path** is
+  in production in `arecipe/src/auth/` and `greetings_site/src/auth-core.ts`, with
+  "hard-won loopback facts" in `arecipe/spike/d1-oauth/`. The **croft-stack broker**
+  (`croft-stack/broker/src/`) is a *confidential* client (RFC 7523 private_key_jwt,
+  Rust, server-side) — a different problem than a browser public client; forage
+  cannot lean on it for the browser flow (D4 confirms nothing else hosted applies).
+  The registry's "the pick is the owner's call" is satisfied: OQ6 WAS that call.
+- Settings surface exists — `js/main.js:70` routes `/settings` → `views.settingsView`;
+  OQ4's "mode preference in Settings" has a real home. Default route today:
+  `js/main.js:107` (`location.hash = '/popular'` when empty) with first-visit
+  auto-seed adjacent (`main.js:107-110`) — the phase-3 front-door flip must not
+  trigger memory auto-seed from the lens front door (named in 3d).
+- Baseline drift check (Pass 3): commits since `10a8ade` are doc/orientation only
+  (plan commits + `3d1e463`, `e80b643`, `d488e5e`); no code drift. The `adr/` →
+  `docs/adr/` migration the walk-through called out-of-scope has since LANDED
+  (`e80b643`: `docs/adr/0001-0002`); D4/ADR references here already point at
+  `docs/adr/`. Gate re-verified green at Pass 3: 172 tests, conformance 88/88.
 
 **Not verified** (Phase 0): like-record mechanics + authed `viewer.like` (D1);
 describeRepo handle resolution (D2); rkey colon legality (D3); OAuth vendor bundle
@@ -145,8 +164,10 @@ feasibility (D4); everything Spaces (D5); ring-dial cost measurements (D6).
 
 ## Documentation Impact
 
-- `README.md` — modes paragraph (1c); OAuth sign-in (2c); ring dial + lens writes
-  (3d); skins (4b); BBS mode + its alpha caveat (5, at split).
+- `README.md` — modes paragraph (1c); OAuth sign-in (2c); front door + ring dial +
+  lens writes (3d); skins (4b); BBS mode + its alpha caveat (5, at split).
+- `index.html` — if the front-door flip or Settings pref needs head-inline changes
+  (theme-flash precedent), 3d owns them; grepped otherwise-unaffected.
 - `TODO.md` — OAuth line closes (2c); DL-013 + lens polish lines close (3d); scoped
   in-app wiring gets an explicit "deferred by redirect" note (1c).
 - `ledger/divergence.js` — DL-013 promotion (3c); new ring-dial frontier entries
@@ -188,12 +209,13 @@ user-approved checkpoints.
   or documented refusal. **Disposition:** throwaway.
 - [ ] **D3: rkey colon legality.** createRecord with explicit rkey containing `:`;
   accept/refuse verbatim (BBS ids embed DIDs). **Disposition:** throwaway.
-- [ ] **D4: OAuth vendor feasibility + workspace precedent survey.** FIRST grep
-  `CroftC/.claude/DECISIONS.md` for the atproto-OAuth entries (the registry says
-  ~8 exist, with recorded criteria) and follow them; read arecipe `src/auth/` glue
-  end to end (patterns: loopback vs prod metadata, session provider, callback page)
-  and the croft-stack OAuth broker (locate it; record what it hosts and whether
-  forage can lean on it). THEN the one-off esbuild bundle of
+- [ ] **D4: OAuth vendor feasibility.** The survey half was RESOLVED during Pass 3
+  (see Verified Assumptions): DECISIONS.md grepped — official-library lineage is
+  arecipe + greetings_site; the croft-stack broker is a confidential server-side
+  client and does not apply. What remains: read arecipe `src/auth/` glue end to end
+  plus `arecipe/spike/d1-oauth/` (loopback facts) and skim
+  `greetings_site/src/auth-core.ts` (patterns: loopback vs prod metadata, session
+  provider, callback page). THEN the one-off esbuild bundle of
   `@atproto/oauth-client-browser` to a single browser ESM; record size; drive
   arecipe-style init + authorize redirect against the test account from a raw
   `python3 -m http.server` page (no build); confirm callback + DPoP-bound fetch +
@@ -235,11 +257,24 @@ never written outside memory mode); `exitMode` restores the memory dataset from 
 untouched key. Seed/Import/Delete-All gated outside memory. **Core invariant test**:
 memory round-trip byte-identical + fold deep-equal; a BBS cache key is a named
 deferral "until entry cost is felt" (user's words, imported).
+**Boundary cases (mutation resistance):** `persist()` invoked WHILE a network mode is
+active leaves `forage.state` byte-identical (the suspension is structural, not
+best-effort); the raw key value is captured before `enterMode` and compared verbatim
+at three points — during the network mode, after a network-mode dispatch, and after
+`exitMode`; `exitMode` without a prior `enterMode` refuses with words.
+**Wiring test:** with a network mode active, `actions.createPost` dispatches into the
+RAM dataset (event visible via selectors) AND `localStorage['forage.state']` is
+byte-unchanged — the entry-point path, not a storage unit test alone.
+**Observability:** mode transitions announce themselves (`console.info` with
+mode name; the dev-bar badge in 1c is the visible surface) — "why didn't my post
+persist" must be answerable from the console alone.
 **Write-set:** `js/store.js`, `js/storage.js`, `test/store-modes.test.js`.
 
 #### 1c: Mode control + docs
 Dev-bar Mode control (memory | bbs | "Bluesky view" as a navigation shortcut to the
-lens — labeled a view, not a store mode); Seed/Import disabled outside memory;
+lens — labeled a view, not a store mode). Per OQ4 this control is scaffolding: the
+canonical mode preference lands in Settings at 3d; the dev bar remains a mirror.
+Seed/Import disabled outside memory;
 persona dropdown pinned while a network mode is active; README modes paragraph;
 AGENTS.md line; TODO note recording the scoped-wiring deferral. Browser smoke: mode
 round-trip with memory visibly unchanged. **Write-set:** `js/devbar.js`,
@@ -270,9 +305,14 @@ round-trip with memory visibly unchanged. **Write-set:** `js/devbar.js`,
 **Depends on:** 2a, D4.
 
 #### 2c: Sign-in UI + lens/session integration
+- [ ] Tests FIRST: `test/lens.test.js` session-dependent cases re-pointed RED at the
+  OAuth session shape (`js/auth/session.js` fake) before any lens change; a RED
+  assertion that no app-password path remains (grep-style scan for the old
+  `signIn(identifier, password)` shape in lens.js/lens-views.js).
 - [ ] lens (`js/substrates/lens.js` + `js/ui/lens-views.js`) consumes the OAuth
   session (DPoP fetch) instead of the app-password card — the card is DELETED;
-  masthead/lens show signed-in identity; sign-out.
+  masthead/lens show signed-in identity; sign-out. Session errors and expiry
+  surface with words in the existing lens error states (no silent signed-out flips).
 - [ ] `README.md`/`TODO.md` — OAuth documented, OAuth TODO line closed.
 Live validation (Moderate→Broad): real sign-in round-trip on localhost loopback with
 the test account; fields/search/timeline behind the session work. Multi-commit ≤3.
@@ -285,7 +325,12 @@ the test account; fields/search/timeline behind the session work. Multi-commit �
   with the D6-derived cap; returns members + honest overflow info.
 - [ ] `test/lens-rings.test.js` — RED first over canned graph pages: intersection
   correct incl. pagination boundaries; cap enforced with overflow reported;
-  ring='world' bypasses graph entirely.
+  ring='world' bypasses graph entirely. **Boundary cases (mutation resistance):**
+  empty intersection (follows and followers disjoint) → empty ring, no fetch of
+  boards; intersection spanning a page boundary (member on page 2 of one side);
+  cap edges at exactly cap−1 / cap / cap+1 members (overflow reported only at
+  cap+1, with the true count); a member appearing in both mutuals and their-follows
+  counted once.
 
 #### 3b: Ring boards
 - [ ] `js/substrates/lens.js` — `ringFeed(ring, …)`: merged author-feed board
@@ -295,17 +340,36 @@ the test account; fields/search/timeline behind the session work. Multi-commit �
   on the lens home/field surfaces; overflow chip when capped.
 - [ ] `ledger/divergence.js` — ring frontier entries (beyond-cap truncation; ring
   criteria beyond follow-graph) land WITH their chips.
-**Wiring:** hermetic merged-board tests + the 3d smoke.
+**Wiring:** hermetic merged-board tests + the 3d smoke. Merged-board boundary
+cases named RED: timestamp ties keep a deterministic order (author-DID
+tiebreak, pinned); one member's feed exhausted mid-merge; cursor round-trip
+resumes without duplicates.
 
 #### 3c: Boost = like (DL-013), OAuth-bound
-As pre-redirect draft 3a/3b but on the OAuth session: shapes carry `cid`/`likeUri`;
-`lens.like/unlike`; invariant-scan narrowing (exactly the like create+delete pair);
-boost button optimistic flip; DL-013 → shipped in the same commit. PHASE-GATE: OQ3.
+Self-contained (the pre-redirect draft text no longer exists in this doc): lens
+shapes gain `cid` + `likeUri`; `lens.like(uri,cid)` creates `app.bsky.feed.like`
+via the OAuth DPoP fetch and `lens.unlike(likeUri)` deletes it (record shapes per
+D1 evidence); the boost button flips optimistically and reconciles on response.
+Tests RED first in `test/lens.test.js` (or a `lens-writes` file): create sends the
+D1-pinned record shape; unlike deletes the exact rkey; failure restores the
+pre-flip count with words. `test/invariants.test.js` — the lens no-write-path
+proof changes terms in the SAME commit: the exception is exactly the like
+create+delete pair (any other write through lens.js stays red). DL-013 → shipped,
+same commit. PHASE-GATE: OQ3 (own-test-post-only live validation, confirmed).
 
-#### 3d: Polish + live validation
-Author links → bsky.app profiles; pagination "More"; live smoke: OAuth sign-in →
-ring dial through mutuals → boost/unboost on own test post (evidence recorded);
-README updated. Multi-commit ≤3.
+#### 3d: Polish, the front door, and live validation
+- [ ] OQ4 consequences land HERE (scheduled, not just recorded in the OQ):
+  `js/main.js` empty-hash default flips `#/popular` → `#/lens` (the unauth Bluesky
+  view is the front door); the Settings view gains the mode/front-door preference
+  (device-local key, `js/theme.js` precedent — its own key, never `forage.state`);
+  the 1c dev-bar control is formally the mirror from here on. **Named check:** the
+  first-visit auto-seed (`main.js:107-110`) must NOT fire from the lens front door —
+  seeding remains a memory-mode entry event; a test pins that arriving at `#/lens`
+  with empty storage writes nothing to `forage.state`.
+- [ ] Author links → bsky.app profiles; pagination "More".
+- [ ] Live smoke (Broad): OAuth sign-in → ring dial through mutuals → boost/unboost
+  on own test post (evidence recorded); README updated (front door + modes + ring).
+Multi-commit ≤3.
 
 ### Phase 4 — Skins
 
@@ -319,7 +383,11 @@ README updated. Multi-commit ≤3.
   BBS skin and respects an explicit override.
 - [ ] `test/skins.test.js` — RED first: registry shape; every skin file exists and
   only overrides declared token custom properties (static scan — skins cannot
-  smuggle component rewrites); default = no-op.
+  smuggle component rewrites); default = no-op. **Negative case named:** a fixture
+  skin containing a component-selector rule (e.g. `.card { display:none }`) turns
+  the scan red — the scan is proven to bite, not just to pass on well-behaved
+  input. Skin preference persists under its own key (`forage.skin`, `js/theme.js`
+  precedent), never `forage.state`.
 - [ ] Dev-bar/settings skin picker; `sw.js` SHELL for skin files.
 Multi-commit ≤3.
 
@@ -465,3 +533,56 @@ the convention; migration is out of scope here); a claim file in
 `CroftC/.coordination/claims/` precedes any push/landing on forage `main`
 (Pages deploy follows it); execution runs in `worktrees/forage/modes-bbs`.
 Pass 3 next, fresh context.
+
+### Pass 3: Quality Gates — 2026-08-25 (fresh context)
+**TDD ordering:**
+- 2c gained an explicit tests-FIRST item (lens tests re-pointed at the OAuth
+  session shape + a no-app-password-path scan, RED before the card is deleted).
+- 3c rewritten self-contained — its "as pre-redirect draft 3a/3b" reference dangled
+  (that text no longer exists in this doc); named RED tests now inline, including
+  the invariant-scan term change in the SAME commit as the write path.
+- 1b gained a named wiring test (`actions.createPost` while a network mode is
+  active → RAM dataset gains the event, `forage.state` byte-unchanged).
+**Mutation resistance (boundaries named):**
+- 1b: persist-during-network-mode no-op; key compared verbatim at three points;
+  exitMode-without-enter refuses. 3a: empty intersection, page-boundary member,
+  cap−1/cap/cap+1 edges, double-membership dedup. 3b: timestamp ties (pinned
+  tiebreak), exhausted feed mid-merge, cursor resume without duplicates. 4a: a
+  misbehaving fixture skin proves the static scan bites (negative case).
+**Observability:**
+- 1b: mode transitions announce via `console.info` + the dev-bar badge — "why
+  didn't my post persist" answerable from the console. 2c: session errors/expiry
+  surface with words in existing lens error states.
+**Debugging readiness:**
+- Unchanged and adequate: commit-per-unit with gate green, Phase 0 report
+  checkpoint, mandatory phase-5 split checkpoint, worktree isolation.
+**Validation calibration:**
+- Per-phase strategies confirmed calibrated (hermetic for pure units; live
+  loopback round-trip for 2c; live smoke for 3d; live rehearsal at 5). Phase 0
+  dispositions all declared. **Resolve-now applied:** D4's survey half was pure
+  reading and was resolved DURING Pass 3 — DECISIONS.md grepped (official-library
+  lineage = arecipe + greetings_site; croft-stack broker is a confidential RFC 7523
+  server-side client, not reusable for a browser public client; the registry's
+  "owner's call" requirement is satisfied by OQ6). D4 slimmed to the arecipe/
+  greetings_site read + the esbuild bundle probe. D1/D2/D3/D5/D6 stay in Phase 0
+  (live probes needing credentials/accounts).
+**Concurrency honesty:**
+- Map confirmed; sequential plan (single worktree is the session's lock; recurring
+  files across phases). No missed parallel candidates worth the coordination cost.
+**Coherence:**
+- OQ4's consequences were recorded in the OQ but scheduled nowhere — now first-class
+  3d items (front-door flip, Settings mode preference, dev-bar demoted to mirror),
+  with a named check that the first-visit auto-seed cannot fire from the lens front
+  door. 1c cross-references the demotion. Settings surface verified real
+  (`js/main.js:70`).
+- Baseline drift checked: only doc/orientation commits since `10a8ade`; the `adr/`
+  → `docs/adr/` migration has since landed (`e80b643`), so the walk-through's
+  "migration out of scope" note is moot. Gate re-verified: 172 tests + conformance
+  88/88 green.
+**Documentation impact:**
+- All entries map to owning phases; 3d's README line widened to cover the front
+  door; `index.html` added as a checked candidate for 3d. No trailing docs phase
+  (phase 6 is reconciliation, not first-writing).
+**Confirmed ready:** yes — no open questions (8 settled: 6 resolved, 1 confirmed,
+1 withdrawn). Execution next: `worktrees/forage/modes-bbs`, Phase 0 first under the
+Discovery Exemption; phase 5 must split after D5 before any phase-5 implementation.
