@@ -64,6 +64,11 @@ Spaces integration (and Spaces is alpha — sandbox PDS, breaking changes).
   (prior plan; unauth-200 for the graph reads, timeline session-gated). Cost probe in
   Phase 0 sizes the caps with measurements, not guesses (memory rule: measure, don't
   predict).
+- **Lean into the lens (design tenet, user 2026-08-25):** Forage is another ANGLE on
+  the network — topic-centered where Bluesky is actor-centered — and advertises
+  rather than hides that relationship. Concretely: author links go OUT to bsky.app;
+  lens surfaces may carry "view on bsky.app" affordances; no faux-native profile
+  surfaces for network authors.
 - **Boost = like ships with OAuth, not before.** The lens write (DL-013) binds to the
   OAuth session so we never ship a write path on the app-password scaffolding we're
   simultaneously removing.
@@ -367,8 +372,13 @@ dial live, a boost, the BBS in its skin); TODO/ledger reconciled; plan close-out
   sessions and fetched data; the mode PREFERENCE is a persisted local setting, and
   OAuth sessions persist properly via the official client (that is what "wait for
   the OAuth plan" deferred to). Network-mode event data stays RAM-only.
-- [RECOMMENDED: ADVISORY] **OQ5 — lens author links:** external bsky.app profiles
-  (recommended) vs in-app author boards.
+- [RESOLVED 2026-08-25 — EXTERNAL, AND LEAN INTO THE LENS] **OQ5 — author links:**
+  external bsky.app profiles. Elevated by the user to a DESIGN TENET during the
+  walk-through: Forage deliberately leans into being a lens — a topic-centered
+  presentation of conversations (Fields/feeds) versus the network's actor-centered
+  one — and never hides that Bluesky is underneath; link out to the network's own
+  surfaces wherever they are the better home (profiles first). Applies across
+  phase 3; recorded in Reasoning.
 - [RECOMMENDED: PHASE-GATED (Phase 2)] **OQ6 — OAuth dependency posture:** vendor
   the official `@atproto/oauth-client-browser` bundle with a CI drift check
   (recommended; arecipe precedent + workspace vendoring rule) vs hand-rolled
