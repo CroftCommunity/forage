@@ -1,4 +1,5 @@
 # ADR-002: Wide-lens intake is AppView pull, not a Jetstream-fed index
+Tags: appview, atproto, ingestion
 
 Date: 2026-08-25
 Status: accepted

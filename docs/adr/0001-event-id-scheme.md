@@ -1,4 +1,5 @@
 # ADR-001: Actor-scoped event and entity ids
+Tags: events, ids, atproto, schema
 
 Date: 2026-08-24
 Status: accepted

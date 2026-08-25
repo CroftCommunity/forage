@@ -87,7 +87,7 @@ Every task ends with:
 
 ## Escalation
 
-STOP and write an ADR to `adr/` when: schema conflict, tolerance ambiguity,
+STOP and write an ADR to `docs/adr/` (NNNN-slug.md, registered in `CroftC/.claude/DECISIONS.md`) when: schema conflict, tolerance ambiguity,
 procedure underdetermines the choice. Never invent a convention.
 
 ## Concurrent sessions (workspace norm)
