@@ -1,0 +1,18 @@
+{
+  "repos": [
+    {
+      "did": "did:plc:jyzdarxgkgrh7fliwmlomdgy",
+      "rev": "3mtuwqswj7c2u",
+      "hash": {
+        "$bytes": "FbouqaXMZGoHYqDwBa9HMYm5DbKGCUucwCHKasES14w"
+      }
+    },
+    {
+      "did": "did:plc:um57xi3qbxuloibmxtvufonj",
+      "rev": "3mtuwqsxocs2u",
+      "hash": {
+        "$bytes": "sQCj1huVySJqte3wMVIXhf8r6qT90KCWYevnFX2zBNc"
+      }
+    }
+  ]
+}

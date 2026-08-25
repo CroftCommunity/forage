@@ -1,0 +1,14 @@
+{
+  "records": [
+    {
+      "collection": "fyi.forage.comment",
+      "rkey": "comment_1",
+      "cid": "bafyreig3doyprrhkstp7ebttajq3lsnwmupvgoaccxcmelllxq4v6sodwu",
+      "value": {
+        "body": "bob replies",
+        "$type": "fyi.forage.comment",
+        "createdAt": "2026-08-25T04:02:57.432Z"
+      }
+    }
+  ]
+}

@@ -83,9 +83,12 @@ Spaces integration (and Spaces is alpha — sandbox PDS, breaking changes).
 - **The BBS mode is the scoped tier inside a Space.** Same event↔record codec, same
   intake/writer shape, same moderation-as-masking — pointed at permissioned repos in
   one space instead of public repos under a roster. The space's membership IS the
-  aperture AND the read gate ("you choose even what's readable"). Built against the
-  hosted alpha PDS (`spaces-alpha.host.bsky.net`) with throwaway accounts only,
-  clearly labeled experimental in-app: the alpha has breaking changes and sandbox
+  aperture AND the read gate ("you choose even what's readable"). [CORRECTED at D5:
+  `spaces-alpha.host.bsky.net` does not exist — the hosted alpha PDS URL is
+  invite-gated behind the owner's Bluesky dev account. Rehearsals run against a
+  LOCAL `ghcr.io/bluesky-social/atproto:pds-spaces-alpha` Docker container with
+  throwaway accounts; per-run+teardown = `docker rm` the container+volume.]
+  Clearly labeled experimental in-app: the alpha has breaking changes and sandbox
   resets, so BBS mode ships as a sandbox experience until Spaces GA (OQ7 posture).
   Conformance memory↔bbs should hold via the codec world that already exists.
 - **Sequencing: modes foundation → OAuth → ring dial (+likes/polish) → skins → BBS.**
@@ -158,9 +161,74 @@ Firsthand, current tree (details in the prior plan where noted):
   (`e80b643`: `docs/adr/0001-0002`); D4/ADR references here already point at
   `docs/adr/`. Gate re-verified green at Pass 3: 172 tests, conformance 88/88.
 
-**Not verified** (Phase 0): like-record mechanics + authed `viewer.like` (D1);
-describeRepo handle resolution (D2); rkey colon legality (D3); OAuth vendor bundle
-feasibility (D4); everything Spaces (D5); ring-dial cost measurements (D6).
+**Phase 0 findings (2026-08-25, all probes firsthand):**
+
+- **D1 like mechanics** — `app.bsky.feed.like {subject:{uri,cid},createdAt}` via
+  `com.atproto.repo.createRecord`; authed `getPostThread` → `viewer.like` = the
+  like's exact at-uri; `deleteRecord(rkey)` → `viewer.like` absent (other viewer
+  fields remain); unauth (public.api.bsky.app) threads carry NO `viewer` but do
+  carry `likeCount`. Fixtures `wide-authed-thread-{liked,unliked}.json`. All
+  probe residue deleted.
+- **D2** — unauth `describeRepo(did)` on bsky.social: 200 + `handle` for both
+  test DIDs.
+- **D3** — colon rkeys legal: `fyi.forage.probe/post_did:plc:abc123_3xyz`
+  created 200 and deleted. Scoped/BBS ids embedding DIDs need no escaping.
+- **D4 OAuth vendor** — `@atproto/oauth-client-browser@0.5.3` + 
+  `atprotoLoopbackClientMetadata` (from `@atproto/oauth-types`) bundle to ONE
+  208KB minified ESM (esbuild 0.28.2; entry re-exports both; content sha256
+  `ad8b0860092bdc5072493ee40101ea1378c788ae0665b3d84370d8dc3901f1cd`, recorded in
+  the staged file's header). Live loopback round-trip PROVEN with no build step
+  (static page + `python3 -m http.server`, Playwright-driven): loopback client_id
+  with IP-literal redirect + explicit `atproto transition:generic` scope →
+  authorize on bsky.social → callback completed by `client.init()` → session did
+  → DPoP `fetchHandler` `getTimeline` 200 → `getTokenInfo(true)` forced refresh →
+  **session restored across reload from IndexedDB** → `signOut()` clean. Node
+  quirk: bare-importing the bundle under node leaves an open handle (Locks API
+  fallback) — 2a's drift test must parse/hash, and any import check needs an
+  explicit exit. Artifact staged (uncommitted) at
+  `vendor/atproto-oauth-client-browser.js`; 2a commits it drift-test-first.
+- **D5 Spaces** — hosted alpha PDS URL is INVITE-GATED (owner's Bluesky dev
+  account); `spaces-alpha.host.bsky.net` from Pass 1 web sourcing DOES NOT
+  EXIST. Rehearsal rig: local Docker `ghcr.io/bluesky-social/atproto:pds-spaces-alpha`
+  (amd64-only → `--platform linux/amd64` on Apple Silicon; needs a volume at
+  `/pds` chowned to `node`; PDS v0.5.29; htu in DPoP proofs must name the
+  server's CONFIGURED origin, not the mapped port). Full gated loop proven with
+  3 throwaway accounts: `simplespace.createSpace {type, policy:
+  memberListPolicy, appAccess: open}` → space uri
+  `at://<owner>/space/<type>/<tid>`; `space.createRecord {space, repo,
+  collection, rkey, record}` accepts `fyi.forage.*` (validate:false) — the
+  scoped codec's shape plus one `space` param; `simplespace.addMember/
+  listMembers/removeMember {space, did}` (member list is host-internal,
+  owner-auth). READS: own-repo `space.listRecords` works with plain session
+  auth; CROSS-repo reads require the space-credential dance —
+  `space.getDelegationToken` (session auth, own PDS) →
+  `space.getSpaceCredential` (Bearer delegation token + DPoP proof; ES256
+  WebCrypto; nonce retry) → reads with `Authorization: DPoP <credential>` +
+  proof carrying `ath` (b64url sha256 of credential); `space.listRepos`
+  enumerates member repos w/ revs; `listRecords` inlines values + cid. THE
+  GATE: outsider exchange refused `UserNotAuthorized`; outsider/removed-member
+  direct reads `RepoNotFound` (indistinguishable from empty, per lexicon); anon
+  401; public `repo.listRecords` shows ZERO space records. Alpha divergence
+  hit: `simplespace.getSpace` is owner-only on this build despite the lexicon
+  saying member-readable. Full lexicon set lives on atproto branch
+  `permissioned-data` (PR #5187): simplespace {createSpace,addMember,
+  removeMember,listMembers,getSpace,updateSpace,deleteSpace,checkUserAccess},
+  space {createRecord,putRecord,deleteRecord,applyWrites,getRecord,listRecords,
+  listRepos,listSpaces,getRepo,getLatestCommit,listBlobs,getBlob,
+  getDelegationToken,getSpaceCredential,registerNotify,unregisterNotify,
+  notifyWrite,notifySpaceDeleted,listRepoOps}. The `bulletin` sample app
+  (github.com/bluesky-social/bulletin) uses a server-side managing app
+  (`managingAppPolicy` + webhooks) — NOT needed for forage: `memberListPolicy`
+  is PDS-enforced and zero-backend. Consequence for phase 5: the BBS read path
+  needs a small DPoP/space-credential module (WebCrypto ES256, ~60 lines —
+  distinct from hand-rolling OAuth; the vendored client does not cover space
+  credentials). Fixtures `bbs-*.json` (5 files). Teardown complete.
+- **D6 ring costs** — mutuals: follows ∩ followers, 1 request per 100 edges per
+  side (trivial at test scale, 197ms total). Merged author-feed fan-out
+  (parallel, limit 30): N=5 81ms / N=15 105ms / N=25 110–420ms warm; serial
+  N=25 ~590ms; ONE cold-start stall of ~20s observed on a first-ever request →
+  the board fetch needs per-request timeouts with per-member failure chips.
+  **Cap ships at 25** (latency is not the binding constraint; board noise is).
 
 ## Documentation Impact
 
@@ -199,17 +267,45 @@ every unit ends gate-green with a commit; execution happens in
 `worktrees/forage/modes-bbs` (branch `claude/modes-bbs`), landing on main at
 user-approved checkpoints.
 
-### Phase 0: Discovery
+### Phase 0: Discovery — ✅ COMPLETE 2026-08-25 (all six tasks; findings below and in VA)
 
-- [ ] **D1: Like-record mechanics.** Probe (test_user1, own post): create
+**Findings summary (evidence in Verified Assumptions § Phase 0 findings):**
+- **D1 ✅** — like create/delete round-trip proven on our own probe post; authed
+  `viewer.like` carries the exact like at-uri, absent after delete; unauth threads
+  carry NO `viewer` but do carry `likeCount`. Fixtures:
+  `test/fixtures/atproto/wide-authed-thread-{liked,unliked}.json` (redacted).
+- **D2 ✅** — unauth `describeRepo` → 200 + handle for both test DIDs.
+- **D3 ✅** — colon rkeys LEGAL: `post_did:plc:abc123_3xyz` accepted verbatim
+  (created + deleted on bsky.social). BBS ids can embed DIDs unchanged.
+- **D4 ✅** — vendored-client path PROVEN end to end with no build step: 208KB
+  minified ESM bundle (v0.5.3), loopback sign-in round-trip on `127.0.0.1` via
+  Playwright (authorize → callback → DPoP `getTimeline` 200 → forced refresh →
+  session SURVIVES reload via IndexedDB → clean sign-out). OQ6's decision stands.
+- **D5 ✅** — the WHOLE gated loop demonstrated against a LOCAL
+  `pds-spaces-alpha` Docker PDS (the hosted alpha is invite-gated via the
+  owner's Bluesky dev account — the local container is the rehearsal rig, and
+  per-run+teardown becomes `docker rm`): space create (memberListPolicy) →
+  `fyi.forage.*` writes → member grant → cross-repo member read via the
+  **space-credential dance** → outsider refused (`UserNotAuthorized` at the
+  credential mint; `RepoNotFound` on direct reads; anon 401; ZERO leak through
+  the public repo surface) → member removal re-refuses. Fixtures:
+  `test/fixtures/atproto/bbs-*.json`. Full protocol facts in VA.
+- **D6 ✅** — measured: warm parallel author-feed fan-out 80–420ms for N≤25
+  (serial ~590ms); one cold-start stall of ~20s observed → per-request timeouts
+  required. **The cap ships at 25.** Mutuals math trivial at test-account scale;
+  pagination costs 1 request per 100 edges per side.
+
+Original task specs (all executed as written):
+
+- [x] **D1: Like-record mechanics.** Probe (test_user1, own post): create
   `app.bsky.feed.like` `{subject:{uri,cid},createdAt}`; authed getPostThread/getFeed
   → does `viewer.like` carry the like's at-uri; delete → gone. Fixtures kept
   (`wide-authed-*`, redacted). **Disposition:** keep-as-fixture.
-- [ ] **D2: describeRepo handle resolution, unauth.** For both test DIDs; 200+handle
+- [x] **D2: describeRepo handle resolution, unauth.** For both test DIDs; 200+handle
   or documented refusal. **Disposition:** throwaway.
-- [ ] **D3: rkey colon legality.** createRecord with explicit rkey containing `:`;
+- [x] **D3: rkey colon legality.** createRecord with explicit rkey containing `:`;
   accept/refuse verbatim (BBS ids embed DIDs). **Disposition:** throwaway.
-- [ ] **D4: OAuth vendor feasibility.** The survey half was RESOLVED during Pass 3
+- [x] **D4: OAuth vendor feasibility.** The survey half was RESOLVED during Pass 3
   (see Verified Assumptions): DECISIONS.md grepped — official-library lineage is
   arecipe + greetings_site; the croft-stack broker is a confidential server-side
   client and does not apply. What remains: read arecipe `src/auth/` glue end to end
@@ -223,7 +319,7 @@ user-approved checkpoints.
   **Success:** a working no-build sign-in round-trip, or a documented blocker that
   reopens the hand-roll/build-step decision (OQ6). **Disposition:** promote — the
   bundle and glue become phase 2's starting material, TDD applied there.
-- [ ] **D5: Spaces alpha recon.** Create TWO throwaway accounts on
+- [x] **D5: Spaces alpha recon.** Create TWO throwaway accounts on
   `spaces-alpha.host.bsky.net`; create a space; write `fyi.forage.*` records into the
   permissioned repo; grant membership to account 2; verify account 2 reads, an
   outsider CANNOT (the actual gate — the point of the mode); record the API/SDK
@@ -231,7 +327,7 @@ user-approved checkpoints.
   **Success:** the gated read/write loop demonstrated end to end, or a precise list
   of what's missing → phase 5 re-scoped at its split. **Disposition:**
   keep-as-fixture (responses; throwaway scripts).
-- [ ] **D6: Ring-dial cost measurements.** For the test account: mutuals computation
+- [x] **D6: Ring-dial cost measurements.** For the test account: mutuals computation
   (follows ∩ followers, paginated) — count + wall time; merged author-feed board for
   N ∈ {5, 15, 25} members — wall time + request count. Output: the measured cap the
   UI ships with. **Disposition:** throwaway (numbers into VA).
@@ -415,6 +511,15 @@ mode flips ALL wire capabilities at once (no partial tier).
 **Risks:** alpha churn (pin every endpoint/SDK fact to D5 evidence; re-probe at
 split); sandbox resets (RAM-only posture makes them harmless); auth on the alpha PDS
 may differ from mainline OAuth (D5 records it; the split decides the session story).
+**D5 inputs to the split (2026-08-25):** rehearsal rig is the LOCAL Docker alpha PDS
+(hosted URL is owner-invite-gated — if the owner supplies an invite, the same loop
+re-runs there); `memberListPolicy` + `appAccess: open` is the zero-backend shape (no
+managing app); writes are the scoped codec's shape + a `space` param; cross-repo
+reads need a small DPoP/space-credential module (WebCrypto ES256 — the split scopes
+it; NOT covered by the vendored OAuth client); own-repo reads work with plain
+session auth; `getSpace` is owner-only on this build (lexicon divergence — the
+member UI cannot rely on it); refusals are `UserNotAuthorized` (credential mint),
+`RepoNotFound` (reads — deliberately ambiguous), 401 (anon).
 
 ### Phase 6 — Close-out
 Docs truthful everywhere; final cross-mode browser smoke (memory untouched, ring
@@ -586,3 +691,24 @@ Pass 3 next, fresh context.
 **Confirmed ready:** yes — no open questions (8 settled: 6 resolved, 1 confirmed,
 1 withdrawn). Execution next: `worktrees/forage/modes-bbs`, Phase 0 first under the
 Discovery Exemption; phase 5 must split after D5 before any phase-5 implementation.
+
+### Phase 0 executed — 2026-08-25
+All six discovery tasks completed in one session under the Discovery Exemption
+(findings inline at Phase 0 and in VA § Phase 0 findings). Highlights: D4's live
+no-build OAuth round-trip succeeded first try on the arecipe facts (IP-literal
+redirect, explicit scope); D5 disproved the Pass-1 web-sourced hostname
+(`spaces-alpha.host.bsky.net` does not exist — hosted alpha is invite-gated), so
+the rehearsal rig became a LOCAL `pds-spaces-alpha` Docker container, where the
+full member-gated loop (create → write → grant → credential-dance read → outsider
+refused → removal re-refuses, zero public leak) was proven and torn down; D6 fixed
+the ring cap at 25 with measurements and surfaced the cold-start stall that
+mandates per-request timeouts. Dispositions honored: D2/D3/D6 spikes discarded
+(scratchpad); D1/D5 responses kept as fixtures (`test/fixtures/atproto/
+wide-authed-thread-*.json`, `bbs-*.json` — no tokens/emails in any of them);
+D4's bundle staged NON-PRODUCTION at `vendor/atproto-oauth-client-browser.js`
+(header records package version, build command, content sha256) for phase 2a to
+commit drift-test-first. Live residue: bsky.social probe post/like/D3 record
+deleted, OAuth session signed out, Docker container+volume removed. Plan changes:
+Reasoning's hosted-PDS sentence corrected; phase 5 gained "D5 inputs to the
+split"; no phase restructuring required — the phase-5 split (mandatory, after
+user review of these findings) now has its factual basis.

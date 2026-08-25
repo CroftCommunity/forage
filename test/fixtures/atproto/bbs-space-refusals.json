@@ -1,0 +1,10 @@
+{
+  "outsiderAuthed": {
+    "error": "RepoNotFound",
+    "message": "Could not find repo for DID: did:plc:jyzdarxgkgrh7fliwmlomdgy"
+  },
+  "anonymous": {
+    "error": "AuthMissing",
+    "message": "Authentication Required"
+  }
+}

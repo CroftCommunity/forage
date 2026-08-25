@@ -1,0 +1,47 @@
+{
+  "thread": {
+    "post": {
+      "uri": "at://did:plc:xyfhcaweaeyew3zrgk6jaln7/app.bsky.feed.post/3mtuvwjqq5v26",
+      "cid": "bafyreifyjima5hflz6gz3vjgea7lbhwuqf6sls5yv5uu5znsyyeppmv66i",
+      "author": {
+        "did": "did:plc:xyfhcaweaeyew3zrgk6jaln7",
+        "handle": "ngvalidation2112.bsky.social",
+        "displayName": "",
+        "avatar": "https://cdn.bsky.app/img/avatar/plain/did:plc:xyfhcaweaeyew3zrgk6jaln7/bafkreibo2ql5whbma6wauymi4s5cvwwotwvchoqqflaypzvoypgcjklpki",
+        "associated": {
+          "activitySubscription": {
+            "allowSubscriptions": "followers"
+          }
+        },
+        "viewer": {
+          "muted": false,
+          "mutedOnlyReposts": false,
+          "mutedOnlyQuoteposts": false,
+          "blockedBy": false
+        },
+        "labels": [],
+        "createdAt": "2026-06-13T12:09:52.667Z"
+      },
+      "record": {
+        "$type": "app.bsky.feed.post",
+        "createdAt": "2026-08-25T03:48:15.259Z",
+        "text": "forage phase-0 D1 probe (ephemeral)"
+      },
+      "bookmarkCount": 0,
+      "replyCount": 0,
+      "repostCount": 0,
+      "likeCount": 0,
+      "quoteCount": 0,
+      "indexedAt": "2026-08-25T03:48:15.470Z",
+      "viewer": {
+        "bookmarked": false,
+        "threadMuted": false,
+        "embeddingDisabled": false
+      },
+      "labels": []
+    },
+    "replies": [],
+    "threadContext": {},
+    "$type": "app.bsky.feed.defs#threadViewPost"
+  }
+}

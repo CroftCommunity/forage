@@ -1,0 +1,15 @@
+{
+  "records": [
+    {
+      "collection": "fyi.forage.post",
+      "rkey": "post_hello",
+      "cid": "bafyreicrjgu4kqlbycbcfsmohsb3yd6z2ownug266tbv2yq2auigleyp54",
+      "value": {
+        "body": "first BBS post",
+        "$type": "fyi.forage.post",
+        "title": "hello from the space",
+        "createdAt": "2026-08-25T04:02:57.368Z"
+      }
+    }
+  ]
+}
