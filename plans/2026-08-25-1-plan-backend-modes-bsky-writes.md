@@ -391,11 +391,11 @@ dial live, a boost, the BBS in its skin); TODO/ledger reconciled; plan close-out
   broker** (not yet examined — D4 now includes reading it: if the workspace runs a
   broker one layer up, forage may borrow hosted pieces, e.g. metadata or token
   services, instead of reinventing them).
-- [RECOMMENDED: PHASE-GATED (Phase 5)] **OQ7 — BBS ships as a sandbox-alpha
-  experience:** built against `spaces-alpha.host.bsky.net` with throwaway
-  identities, labeled experimental in-app, caches disposable, GA hardening deferred
-  until Spaces stabilizes. *Confirm that posture — it is what "alpha, breaking
-  changes, not production" permits.*
+- [CONFIRMED 2026-08-25] **OQ7 — BBS ships as a sandbox-alpha experience:** user
+  confirmed ("totally comfortable") — built against `spaces-alpha.host.bsky.net`
+  with throwaway identities, labeled experimental in-app, boards treated as
+  ephemeral (sandbox resets painless under the RAM-only posture), GA hardening a
+  named follow-up plan when Spaces stabilizes.
 - [RECOMMENDED: ADVISORY] **OQ8 — skin lineup:** classic BBS + ONE more (recommended:
   a restrained "usenet gray" to prove the mechanism generalizes) vs BBS-only vs a
   larger set.
