@@ -1,8 +1,8 @@
 # Plan: three modes — memory, the Bluesky view with a ring dial, and the private BBS
 
 date: 2026-08-25
-status: PLANNING — Pass 1+2 done, then USER REDIRECT incorporated (see Review Log);
-open-question walk-through pending, then Pass 3 in a fresh context
+status: PLANNING — Pass 1+2 + redirect + walk-through COMPLETE (2026-08-25); Pass 3
+pending in a fresh context, then execution in worktrees/forage/modes-bbs
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `10a8ade` (clean tree, pushed; forage.fyi deployed at forage-v11)
 prior plan: `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md` (CLOSED — built the
@@ -188,11 +188,12 @@ user-approved checkpoints.
   or documented refusal. **Disposition:** throwaway.
 - [ ] **D3: rkey colon legality.** createRecord with explicit rkey containing `:`;
   accept/refuse verbatim (BBS ids embed DIDs). **Disposition:** throwaway.
-- [ ] **D4: OAuth vendor feasibility + workspace precedent survey.** FIRST read the
-  workspace's existing OAuth implementations end to end: arecipe `src/auth/` glue
-  (patterns: loopback vs prod metadata, session provider, callback page) and the
-  croft-stack OAuth broker (locate it; record what it hosts and whether forage can
-  lean on it). THEN the one-off esbuild bundle of
+- [ ] **D4: OAuth vendor feasibility + workspace precedent survey.** FIRST grep
+  `CroftC/.claude/DECISIONS.md` for the atproto-OAuth entries (the registry says
+  ~8 exist, with recorded criteria) and follow them; read arecipe `src/auth/` glue
+  end to end (patterns: loopback vs prod metadata, session provider, callback page)
+  and the croft-stack OAuth broker (locate it; record what it hosts and whether
+  forage can lean on it). THEN the one-off esbuild bundle of
   `@atproto/oauth-client-browser` to a single browser ESM; record size; drive
   arecipe-style init + authorize redirect against the test account from a raw
   `python3 -m http.server` page (no build); confirm callback + DPoP-bound fetch +
@@ -396,9 +397,10 @@ dial live, a boost, the BBS in its skin); TODO/ledger reconciled; plan close-out
   with throwaway identities, labeled experimental in-app, boards treated as
   ephemeral (sandbox resets painless under the RAM-only posture), GA hardening a
   named follow-up plan when Spaces stabilizes.
-- [RECOMMENDED: ADVISORY] **OQ8 — skin lineup:** classic BBS + ONE more (recommended:
-  a restrained "usenet gray" to prove the mechanism generalizes) vs BBS-only vs a
-  larger set.
+- [ACCEPTED AS RECOMMENDED 2026-08-25] **OQ8 — skin lineup:** classic BBS + one
+  restrained second skin ("usenet gray"-style) to prove the mechanism generalizes;
+  more skins are cheap follow-ups once the mechanism exists. (Accepted via
+  "keep going" — user may override before phase 4.)
 
 ## Review Log
 
@@ -447,3 +449,19 @@ core is superseded by the user's redirect, recorded here. Peers croftc-6d and
 croftc-10 messaged; execution will claim `worktrees/forage/modes-bbs`. OQ4
 reframed with the surface-swap data point; remaining walk-through: OQ4, OQ5,
 OQ6, OQ7, OQ8.
+
+### Walk-through complete — 2026-08-25
+OQ4 resolved (unauth Bluesky view = the front door; mode is a device-local Settings
+preference; `/memory` route rejected); OQ5 resolved (external bsky.app author links,
+elevated to the lean-into-the-lens design tenet); OQ6 resolved (vendor the official
+client; D4 surveys DECISIONS.md + arecipe + the croft-stack broker; never hand-roll);
+OQ7 confirmed (sandbox-alpha BBS posture); OQ8 accepted as recommended (BBS + one
+tame second skin). With the earlier imports: OQ1 resolved (RAM-only), OQ2 withdrawn,
+OQ3 confirmed (real likes, own-test-post validation). Tally: 8 questions — 6
+resolved, 1 confirmed, 1 withdrawn; none open. Workspace-norms updates folded in:
+D4 consults `CroftC/.claude/DECISIONS.md` first; future ADRs go to `docs/adr/`
+(NNNN-slug.md, registered in DECISIONS.md — the prior plan's `adr/` files predate
+the convention; migration is out of scope here); a claim file in
+`CroftC/.coordination/claims/` precedes any push/landing on forage `main`
+(Pages deploy follows it); execution runs in `worktrees/forage/modes-bbs`.
+Pass 3 next, fresh context.
