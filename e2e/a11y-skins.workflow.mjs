@@ -43,17 +43,13 @@ const SURFACES = ['/popular', '/settings'];
 // seriously too.
 const LENS_SURFACES = ['/'];
 
-// Rules excluded, with the reason. An exclusion without one is how a suite
-// quietly stops meaning anything.
-//
-//   link-in-text-block — Forage sets `a { text-decoration: none }` app-wide, so
-//   an in-text link is distinguished by colour alone and must clear 3:1 against
-//   the surrounding prose. It does not, on the DEFAULT skin (2.32:1) and every
-//   other. That makes it a pre-existing, app-wide styling decision — underline
-//   in-text links, or shift the link colour — not a skin defect, and not a call
-//   to make as a side effect of adding this tier. Reported to the owner
-//   2026-08-26 and left visible here rather than silently passing.
-const EXCLUDED_RULES = ['link-in-text-block'];
+// No rules are excluded. `link-in-text-block` used to be, with a note that it
+// failed on the DEFAULT skin (2.32:1) because Forage sets
+// `a { text-decoration: none }` app-wide — a product styling decision rather
+// than a skin defect. The owner made that call on 2026-08-26: underline links
+// in prose. css/app.css now does, the exclusion is gone, and the rule is
+// enforced for every skin like any other.
+const EXCLUDED_RULES = [];
 
 export async function run() {
   const failures = [];
