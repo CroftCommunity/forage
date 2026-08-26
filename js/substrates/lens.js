@@ -318,6 +318,32 @@ export function withSavedFeed(preferences, uri, saved) {
     : [...preferences, next];
 }
 
+// 3m: the affordance split (owner-ratified 2026-08-26). /f/ and /h/ share the
+// board chrome and differ in ONE place — what each promises about getting in.
+// A hashtag is targetable BY CONSTRUCTION (the tag is the membership rule); a
+// feed is a program whose criteria are unpublished (DL-025), so we promise
+// nothing and render its description verbatim, since that prose is the only
+// inclusion instruction that exists anywhere.
+export function affordanceFor(stream) {
+  if (stream.kind === 'hashtag') {
+    return {
+      targetable: true,
+      headline: 'Anyone can post here.',
+      detail: `Include #${stream.key} in your post and it appears in this board.`,
+      composeLabel: `Post to #${stream.key}`,
+    };
+  }
+  const info = stream.info || {};
+  return {
+    targetable: false,
+    headline: `Curated by @${info.creator || 'unknown'}.`,
+    detail: info.description
+      ? info.description
+      : 'This feed does not say how it chooses posts. Feeds publish no machine-readable rules — only what their description states.',
+    composeLabel: null,
+  };
+}
+
 // OQ1: a lens Field's slug is the feed/list rkey (or the author handle).
 const slugForSource = (source) => {
   if (source.kind === 'author') return source.actor;
@@ -481,7 +507,11 @@ export function createLens({ session = null, transport = fetch } = {}) {
     // author DID, then uri). The cursor is the per-member cursor map, base64 —
     // resuming advances each member from its own cursor, so no duplicates;
     // exhausted members drop out.
-    async ringFeed(ring, { cursor } = {}) {
+    // 3l: onPage fires per member as its page lands (the board paints
+    // opportunistically instead of waiting for the whole fan-out), and
+    // timeoutMs bounds each member — D6 measured a ~20s cold-start stall, and
+    // one slow member must never hold the board hostage.
+    async ringFeed(ring, { cursor, onPage, timeoutMs = 8000 } = {}) {
       if (ring === 'world') {
         throw new Error('lens: the world ring has no merged board — its board is the sources/feeds surface');
       }
@@ -493,14 +523,22 @@ export function createLens({ session = null, transport = fetch } = {}) {
       const ringInfo = resumed ? { members: Object.keys(resumed.m) } : await this.ringMembers(ring);
       const cursors = resumed ? resumed.m : Object.fromEntries((ringInfo.members ?? []).map((d) => [d, undefined]));
       const failures = [];
+      const src0 = { fieldId: `lens:ring:${ring}`, fieldSlug: `ring:${ring}`, fieldTitle: ring === 'mutuals' ? 'Mutuals' : 'Mutuals +1' };
+      const withTimeout = (p, did) => new Promise((resolve) => {
+        let settled = false;
+        const timer = setTimeout(() => { if (!settled) { settled = true; failures.push(did); resolve(null); } }, timeoutMs);
+        p.then((v) => { if (!settled) { settled = true; clearTimeout(timer); resolve(v); } })
+         .catch(() => { if (!settled) { settled = true; clearTimeout(timer); failures.push(did); resolve(null); } });
+      });
       const pages = await Promise.all(Object.entries(cursors).map(async ([did, cur]) => {
-        try {
-          const data = await get('app.bsky.feed.getAuthorFeed', { actor: did, limit: 10, cursor: cur });
-          return { did, items: data.feed || [], next: data.cursor };
-        } catch {
-          failures.push(did);
-          return { did, items: [], next: undefined };
+        const data = await withTimeout(get('app.bsky.feed.getAuthorFeed', { actor: did, limit: 10, cursor: cur }), did);
+        if (!data) return { did, items: [], next: undefined };
+        const items = data.feed || [];
+        // paint this member's posts NOW — the caller renders as they arrive
+        if (onPage && items.length) {
+          onPage(items.map((i) => shapeLensPost(i.post, src0, posture)).filter((p) => !p.hidden));
         }
+        return { did, items, next: data.cursor };
       }));
       const items = pages.flatMap((p) => p.items);
       items.sort((x, y) => {
@@ -511,7 +549,7 @@ export function createLens({ session = null, transport = fetch } = {}) {
         return String(x.post.uri).localeCompare(String(y.post.uri));
       });
       const nextMap = Object.fromEntries(pages.filter((p) => p.next).map((p) => [p.did, p.next]));
-      const src = { fieldId: `lens:ring:${ring}`, fieldSlug: `ring:${ring}`, fieldTitle: ring === 'mutuals' ? 'Mutuals' : 'Mutuals +1' };
+      const src = src0;
       return {
         ...shapeLensFeed({ feed: items }, src, {}, posture), ...src,
         ring, failures,

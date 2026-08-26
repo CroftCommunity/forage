@@ -8,7 +8,7 @@
 
 import { el, timeAgo, fmtScore } from '../util.js';
 import { postRow, commentNode, voteBox, skeleton, emptyState, toast } from './components.js';
-import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow } from '../substrates/lens.js';
+import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow, affordanceFor } from '../substrates/lens.js';
 import { initSession, createAccountRoster } from '../auth/session.js';
 
 let manager = null;        // null = not booted; 'unavailable' = origin has no OAuth client
@@ -249,6 +249,13 @@ function boardToolbar(onChange) {
 function renderBoard(card, posts) {
   const view = boardView();
   const ordered = sortWindow(posts, boardSort, boardTimeframe, Date.now());
+  // Top + a narrow timeframe can legitimately empty the board — say why
+  // rather than showing a blank card (the journey caught this).
+  if (!ordered.length && posts.length) {
+    card.replaceChildren(el('div', { class: 'xs muted', style: 'padding:10px' },
+      `Nothing in the loaded posts falls within “${boardTimeframe === 'all' ? 'all time' : boardTimeframe}”. Try a wider timeframe, or load More.`));
+    return;
+  }
   card.replaceChildren(...ordered.map((p) => lensRow(p, view)));
   if (boardSort !== 'feed' || (boardSort === 'top' && boardTimeframe !== 'all')) {
     card.append(el('div', { class: 'xs muted', style: 'padding:6px' },
@@ -379,6 +386,16 @@ function ringDial() {
 
 function ringBoard(ring, cursor) {
   const holder = el('div', {}, skeleton(6));
+  // 3l: paint members as they land — a slow member no longer holds the whole
+  // board on a skeleton (owner-reported hang on mutuals+1).
+  const live = el('div', { class: 'card', 'data-ring-live': '1' });
+  let painted = 0;
+  const onPage = (posts) => {
+    if (!posts.length) return;
+    if (painted === 0) holder.replaceChildren(el('div', { class: 'xs muted', style: 'padding:4px' }, 'Loading your ring…'), live);
+    for (const p of posts) live.append(lensRow(p, boardView()));
+    painted += posts.length;
+  };
   const render = (board, into) => {
     const chips = el('div', { class: 'row wrap', style: 'gap:6px' });
     if (board.overflow) chips.append(chip(`ring capped: ${board.overflow.total} members → first ${RING_CAP} (DL-016)`, `The ring truly has ${board.overflow.total} members; the board draws the first ${RING_CAP}. Honest overflow, never silent.`));
@@ -393,7 +410,7 @@ function ringBoard(ring, cursor) {
     if (more) more.addEventListener('click', () => { into.replaceChildren(ringBoard(ring, board.cursor)); });
     into.replaceChildren(chips, board.posts.length ? card : emptyState('A quiet ring', 'No posts from these members yet.'), more || '');
   };
-  lens.ringFeed(ring, { cursor }).then((b) => render(b, holder))
+  lens.ringFeed(ring, { cursor, onPage }).then((b) => render(b, holder))
     .catch((e) => holder.replaceChildren(emptyState('Ring fetch failed', e.message)));
   return holder;
 }
@@ -449,7 +466,8 @@ export function lensFieldView(params) {
   const headerHost = el('div', {});
   if (entry.source.kind === 'feed' && entry.source.uri) {
     Promise.all([lens.feedInfo(entry.source.uri), ensureSavedFeeds()])
-      .then(([info]) => headerHost.replaceChildren(feedHeaderCard(info)))
+      .then(([info]) => headerHost.replaceChildren(
+        feedHeaderCard(info), affordanceStrip({ kind: 'feed', info })))
       .catch(() => {}); // the board still works without its card
   }
   lens.feed(entry.source, { title: entry.title }).then((f) => {
@@ -497,6 +515,25 @@ function quotedContext(quoted) {
       el('a', { href: `https://bsky.app/profile/${quoted.author}`, target: '_blank', rel: 'noopener noreferrer' }, quoted.author)),
     el('div', { class: 'small' }, quoted.excerpt),
     el('div', { class: 'xs' }, el('a', { href: `#/p?uri=${encodeURIComponent(quoted.uri)}` }, 'open the original ↳')));
+}
+
+// 3m: the affordance strip — the one place /f/ and /h/ differ. Same chrome
+// above and below; different promise here.
+function affordanceStrip(stream) {
+  const a = affordanceFor(stream);
+  const compose = a.composeLabel
+    ? (() => {
+        const b = el('button', { class: 'btn sm', 'data-compose': '1', disabled: true },
+          `${a.composeLabel} (composing not built yet)`);
+        return b;
+      })()
+    : null;
+  return el('div', { class: 'card', 'data-affordance': a.targetable ? 'targetable' : 'curated' },
+    el('div', { class: 'row spread wrap', style: 'gap:8px;align-items:center' },
+      el('div', { style: 'min-width:0' },
+        el('div', { class: 'small' }, el('strong', {}, a.headline)),
+        el('div', { class: 'xs muted', style: 'white-space:pre-wrap' }, a.detail)),
+      compose));
 }
 
 // 3k: the profile header — the bsky card, read-only (editing lives there).
@@ -658,7 +695,9 @@ export function lensHashtagView(params) {
   lens.stream({ kind: 'hashtag', key: tag }).then((board) => {
     const card = el('div', { class: 'card' });
     const repaint = () => renderBoard(card, board.posts);
-    main.replaceChildren(el('h1', {}, `#${tag}`), boardToolbar(repaint),
+    main.replaceChildren(el('h1', {}, `#${tag}`),
+      affordanceStrip({ kind: 'hashtag', key: tag }),
+      boardToolbar(repaint),
       board.posts.length ? card : emptyState('A quiet tag', `No recent posts carry #${tag}.`));
     repaint();
   }).catch((e) => main.replaceChildren(el('h1', {}, `#${tag}`), emptyState('Hashtag fetch failed', e.message)));

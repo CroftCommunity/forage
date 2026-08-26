@@ -212,3 +212,38 @@ test('3b: the overflow rides the board (capped ring reports it through)', async 
   const board = await createLens({ session: boardSession({ graph, authorFeeds: feeds }) }).ringFeed('mutuals+1');
   assert.deepEqual(board.overflow, { capped: true, total: RING_CAP + 5 });
 });
+
+// ---- 3l: opportunistic painting + per-member timeouts ----
+
+test('3l: ringFeed paints progressively — onPage fires per member as each lands', async () => {
+  const seen = [];
+  const session = boardSession({ graph: RING_GRAPH, authorFeeds: {
+    'did:plc:aa': { 0: { items: [mkPost('a1', 'did:plc:aa', '2026-08-25T10:00:00Z')] } },
+    'did:plc:bb': { 0: { items: [mkPost('b1', 'did:plc:bb', '2026-08-25T11:00:00Z')] } },
+  } });
+  const board = await createLens({ session }).ringFeed('mutuals', {
+    onPage: (posts) => seen.push(posts.map((p) => p.id.split('/').pop())),
+  });
+  assert.equal(seen.length, 2, 'one paint per member, not one at the end');
+  assert.deepEqual(seen.flat().sort(), ['a1', 'b1']);
+  // the final board is still fully sorted across members
+  assert.deepEqual(board.posts.map((p) => p.id.split('/').pop()), ['b1', 'a1']);
+});
+
+test('3l: a member whose feed never answers is timed out and REPORTED; the board still paints', async () => {
+  const session = { did: 'did:plc:me', handle: 'me.test', fetchHandler: async (path) => {
+    const u = new URL('http://x' + path);
+    const json = (d) => ({ ok: true, status: 200, json: async () => d });
+    if (path.includes('graph.getFollows') || path.includes('graph.getFollowers')) {
+      const key = path.includes('getFollowers') ? 'followers' : 'follows';
+      return json({ [key]: [{ did: 'did:plc:aa' }, { did: 'did:plc:hang' }] });
+    }
+    if (u.searchParams.get('actor') === 'did:plc:hang') return new Promise(() => {}); // never resolves
+    return json({ feed: [{ post: mkPost('a1', 'did:plc:aa', '2026-08-25T10:00:00Z') }] });
+  } };
+  const t0 = Date.now();
+  const board = await createLens({ session }).ringFeed('mutuals', { timeoutMs: 40 });
+  assert.ok(Date.now() - t0 < 3000, 'the hung member does not hold the board hostage');
+  assert.deepEqual(board.posts.map((p) => p.id.split('/').pop()), ['a1']);
+  assert.deepEqual(board.failures, ['did:plc:hang'], 'the timeout is reported, not swallowed');
+});

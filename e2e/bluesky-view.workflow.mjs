@@ -42,6 +42,9 @@ export async function run() {
       'describeRepo': { handle: 'me.test' },
       'getPreferences': { preferences: [{ $type: 'app.bsky.actor.defs#mutedWordsPref',
         items: [{ value: 'kryptonite', targets: ['content'], actorTarget: 'all' }] }] },
+      'getFeedGenerator?': { view: { uri: 'at://did:plc:trends/app.bsky.feed.generator/meadow1',
+        displayName: 'Meadow Fest', description: 'Post with #meadow to be considered.',
+        likeCount: 7, creator: { handle: 'curator.test' } }, isOnline: true, isValid: true },
       'getTrendingTopics': { topics: [
         { topic: 'Meadow Fest', displayName: 'Meadow Fest', description: 'campers assemble',
           link: '/profile/did:plc:trends/feed/meadow1' } ] },
@@ -145,6 +148,52 @@ export async function run() {
   await page.locator('a[data-tag="camp"]').first().click();
   await page.waitForSelector('h1:has-text("#camp")');
   await page.waitForSelector('text=post tagged1');
+
+  // 3m: the affordance split — a hashtag PROMISES a deterministic way in
+  await page.waitForSelector('[data-affordance="targetable"]');
+  await page.waitForSelector('text=Anyone can post here.');
+  await page.waitForSelector('text=Include #camp in your post');
+
+  // 3g segment: the trending rail (world ring) opens a topic as a FEED board
+  await page.goto(`${s.origin}/#/`);
+  await page.locator('[data-ring-dial] button:has-text("World")').first().click();
+  await page.waitForSelector('[data-trending] a:has-text("Meadow Fest")');
+  await page.locator('[data-trending] a:has-text("Meadow Fest")').click();
+  await page.waitForSelector('text=post tp1');
+
+  // 3m: a FEED promises nothing — curator + verbatim description, no compose
+  await page.waitForSelector('[data-affordance="curated"]');
+  await page.waitForSelector('text=Curated by @curator.test.');
+  await page.waitForSelector('text=Post with #meadow to be considered.');
+  assert.equal(await page.locator('[data-affordance="curated"] [data-compose]').count(), 0,
+    'no post-to button on a feed — it would be a lie (DL-025)');
+
+  // 3i segment: the board toolbar — window sorts, honestly scoped
+  await page.waitForSelector('[data-board-toolbar]');
+  let btext = await page.locator('.card', { hasText: 'post tp1' }).first().innerText();
+  assert.ok(btext.indexOf('post tp1') < btext.indexOf('post tp2'), 'feed order = the generator order');
+  await page.locator('[data-board-toolbar] select').first().selectOption('new');
+  await page.waitForSelector('text=Sorted within the loaded posts');
+  btext = await page.locator('.card', { hasText: 'post tp1' }).first().innerText();
+  assert.ok(btext.indexOf('post tp2') < btext.indexOf('post tp1'), 'New re-sorts the window by time');
+  await page.locator('[data-board-toolbar] select').first().selectOption('top');
+  // All time, deliberately: these fixtures carry absolute dates and Top's
+  // timeframe filter reads the wall clock — comparing scores under "Today"
+  // would be flaky by construction.
+  await page.locator('[data-board-toolbar] select').nth(1).selectOption('all');
+  await page.waitForTimeout(100);
+  btext = await page.locator('.card', { hasText: 'post tp1' }).first().innerText();
+  assert.ok(btext.indexOf('post tp1') < btext.indexOf('post tp2'), 'Top re-sorts by score');
+  await page.locator('[data-board-toolbar] select').first().selectOption('feed');
+
+  // 3i segment: media renders in Card; image-only titles from alt; Compact drops it
+  await page.waitForSelector('.media-strip img');
+  await page.waitForSelector('text=a test image post');
+  await page.locator('[data-board-toolbar] select').nth(2).selectOption('compact');
+  await page.waitForFunction(() => !document.querySelector('.media-strip'));
+  assert.ok(await page.locator('.postrow.compact').count() > 0, 'compact rows are compact');
+  await page.locator('[data-board-toolbar] select').nth(2).selectOption('card');
+  await page.waitForSelector('.media-strip img');
 
   assert.deepEqual(await s.shimMisses(), [], 'every network read had a fixture');
   await s.close();

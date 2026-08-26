@@ -329,3 +329,25 @@ test('3k: a bare profile (no avatar/banner/bio) degrades to nulls, never crashes
   assert.equal(p.followers, 0);
   assert.equal(p.verified, null);
 });
+
+// ---- 3m: the affordance split — hashtags are targetable, feeds are not ----
+
+test('3m: affordanceFor(hashtag) promises a DETERMINISTIC way in; feeds promise nothing of the sort', async () => {
+  const { affordanceFor } = await import('../js/substrates/lens.js');
+
+  const tag = affordanceFor({ kind: 'hashtag', key: 'gardening' });
+  assert.equal(tag.targetable, true);
+  assert.match(tag.headline, /anyone can post/i);
+  assert.match(tag.detail, /#gardening/, 'the literal tag is the instruction');
+  assert.equal(tag.composeLabel, 'Post to #gardening');
+
+  const feed = affordanceFor({ kind: 'feed', info: { title: 'Garden Talk', creator: 'grower.test', description: 'Post with #gardening to appear here.' } });
+  assert.equal(feed.targetable, false, 'a feed decides for itself — we never promise entry');
+  assert.match(feed.headline, /curated by @grower\.test/i);
+  assert.equal(feed.composeLabel, null, 'no post-to button: it would be a lie (DL-025)');
+  assert.equal(feed.detail, 'Post with #gardening to appear here.', 'the description is rendered VERBATIM — it is the only inclusion rule that exists');
+  // a feed with no description says so plainly rather than inventing guidance
+  const bare = affordanceFor({ kind: 'feed', info: { title: 'X', creator: 'a.test', description: '' } });
+  assert.match(bare.detail, /does not say|no description/i);
+  assert.equal(bare.targetable, false);
+});
