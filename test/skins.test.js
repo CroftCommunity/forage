@@ -313,16 +313,56 @@ test('1C: the OS dark preference now resolves THROUGH the registry to forage-dar
   assert.equal(resolveDefault(false, SKINS), 'default');
 });
 
-test('1C: forage-dark carries the legacy dark palette VERBATIM — no drift while copying', () => {
-  const tokensCss = readFileSync(join(root, 'css/tokens.css'), 'utf8');
-  const legacy = blockTokens(tokensCss, ':root[data-theme="dark"]');
-  const skin = blockTokens(readFileSync(join(root, 'skins/forage-dark.css'), 'utf8'), ':root');
+// The 1C verbatim-identity test (forage-dark token-for-token against the legacy
+// `[data-theme="dark"]` block) guarded the COPY. Phase 1F deletes that block, so
+// there is nothing left to drift from and the guard has done its job. What
+// replaces it is durable rather than migration-shaped: every dark skin must
+// actually be readable on its own ground, forever, including skins not yet
+// written.
 
-  assert.ok(legacy.size > 20, 'found the legacy dark block to compare against');
-  for (const [k, v] of legacy) {
-    assert.equal(skin.get(k), v, `${k} drifted: legacy ${v} vs skin ${skin.get(k)}`);
+// WCAG relative luminance / contrast ratio.
+function contrastOf(fg, bg) {
+  const rgb = (v) => {
+    const h = String(v).trim().replace(/^#/, '');
+    const full = h.length === 3 ? [...h].map((c) => c + c).join('') : h;
+    return [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16));
+  };
+  const lum = (c) => {
+    const [r, g, b] = rgb(c).map((x) => {
+      const v = x / 255;
+      return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const [hi, lo] = [lum(fg), lum(bg)].sort((a, b) => b - a);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+test('1F: every DARK skin declares its own ground and ink, and passes AA on them', () => {
+  // A dark skin that omits --bg or --text inherits the LIGHT default for it —
+  // dark ink on dark ground, or light on light. That is invisible to a token
+  // diff and obvious to a user, so it is asserted here.
+  const darks = Object.entries(SKINS).filter(([, s]) => s.palette === 'dark' && s.file);
+  assert.ok(darks.length > 0, 'there is at least one dark skin to check');
+  for (const [id, s] of darks) {
+    const t = blockTokens(readFileSync(join(root, s.file), 'utf8'), ':root');
+    assert.ok(t.has('--bg'), `${id} must declare its own --bg, not inherit the light one`);
+    assert.ok(t.has('--text'), `${id} must declare its own --text`);
+    const ratio = contrastOf(t.get('--text'), t.get('--bg'));
+    assert.ok(ratio >= 4.5,
+      `${id}: body text ${t.get('--text')} on ${t.get('--bg')} is ${ratio.toFixed(2)}:1, below AA 4.5`);
   }
-  assert.equal(skin.size, legacy.size, 'the skin declares exactly the legacy dark tokens, no more');
+});
+
+test('1F: tokens.css carries ONE palette — the light default and nothing else', () => {
+  // Strip comments: the file DESCRIBES the retired axis in prose, and a test
+  // that greps raw text would forbid explaining the change it is enforcing.
+  const css = readFileSync(join(root, 'css/tokens.css'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+  assert.doesNotMatch(css, /\[data-theme/,
+    'the data-theme axis is retired — a palette is a skin now');
+  assert.doesNotMatch(css, /prefers-color-scheme/,
+    'OS preference resolves in js/skins.js; a duplicated CSS block is the drift this removed');
 });
 
 test('1C: the service-worker SHELL caches every skin file, exactly once', () => {

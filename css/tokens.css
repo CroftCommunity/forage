@@ -5,6 +5,12 @@
    re-verified for the warmed values.
 
    Two roles are split so the brand reads on both themes:
+   This file is now the LIGHT palette only. Skins subsumed themes (plan
+   2026-08-26-1): a palette is a skin, so dark lives in skins/forage-dark.css
+   and the OS preference is resolved in js/skins.js rather than duplicated as a
+   prefers-color-scheme block here. The three hand-synced blocks this file used
+   to carry were a standing drift hazard; there is now one.
+
      --brand-ink   brand green for TEXT (wordmark, active tab, gutter, accents)
      --brand-fill  brand green for BUTTON fills (paired with --on-brand text)
      --color-scheme  native chrome (scrollbars, form controls, caret). A TOKEN
@@ -77,70 +83,3 @@
   --color-scheme: light;
 }
 
-/* ---------- DARK palette ----------
-   Applied when explicitly toggled (data-theme="dark") OR when the OS prefers
-   dark and the user hasn't overridden to light. Values are shared via a single
-   custom-property list; kept in sync between the two selectors below.        */
-:root[data-theme="dark"] {
-  --bg:          #262019;   /* warm umber, lifted from near-black */
-  --card:        #31291F;
-  --card-2:      #3B3226;
-  --text:        #EFE7D9;   /* warm paper */
-  --muted:       #B5A88F;
-  --border:      #4C4232;   /* twig */
-
-  --link:        #A5CD98;
-  --brand-ink:   #A5CD98;
-  --brand-fill:  #41724A;
-  --brand-fill-hover: #4A7F54;
-  --on-brand:    #FFFFFF;
-
-  --boost:       #8FC48A;
-  --bury:        #DE9A6E;
-  --tint:        #3A392A;
-
-  --gold-500:    #D4A94E;
-  --gold-strong: #E2BC64;
-
-  --danger:      #F0938A;
-  --danger-ink:  #F0938A;
-  --danger-tint: #42251F;
-
-  --clay-600:    #A24D2C;
-  --stripe:      rgba(255,255,255,.04);
-
-  --color-scheme: dark;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg:          #262019;   /* warm umber, lifted from near-black */
-    --card:        #31291F;
-    --card-2:      #3B3226;
-    --text:        #EFE7D9;   /* warm paper */
-    --muted:       #B5A88F;
-    --border:      #4C4232;   /* twig */
-
-    --link:        #A5CD98;
-    --brand-ink:   #A5CD98;
-    --brand-fill:  #41724A;
-    --brand-fill-hover: #4A7F54;
-    --on-brand:    #FFFFFF;
-
-    --boost:       #8FC48A;
-    --bury:        #DE9A6E;
-    --tint:        #3A392A;
-
-    --gold-500:    #D4A94E;
-    --gold-strong: #E2BC64;
-
-    --danger:      #F0938A;
-    --danger-ink:  #F0938A;
-    --danger-tint: #42251F;
-
-    --clay-600:    #A24D2C;
-    --stripe:      rgba(255,255,255,.04);
-
-    --color-scheme: dark;
-  }
-}
