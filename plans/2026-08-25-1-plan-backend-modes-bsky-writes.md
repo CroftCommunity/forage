@@ -1,7 +1,7 @@
 # Plan: three modes — memory, the Bluesky view with a ring dial, and the private BBS
 
 date: 2026-08-25
-status: EXECUTING — Phase 0 COMPLETE (D1–D10); 1a–1b SHIPPED; next unit: 1c.
+status: EXECUTING — Phase 0 COMPLETE (D1–D10); 1a–1c SHIPPED; next unit: 1d.
 Execution in worktrees/forage/modes-bbs (branch claude/modes-bbs)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `10a8ade` (clean tree, pushed; forage.fyi deployed at forage-v11)
@@ -436,7 +436,7 @@ As pre-redirect draft: `MODES` (now `{ memory, bbs }`), `setMode`/`currentMode`,
 `test/modes.test.js` RED-first incl. the stub-substrate wiring test through
 `actions.createPost`. **Write-set:** `js/config/routing.js`, `test/modes.test.js`.
 
-#### 1b: Mode lifecycle — the memory tier is untouchable, network modes are RAM-only — ✅ SHIPPED
+#### 1b: Mode lifecycle — the memory tier is untouchable, network modes are RAM-only — ✅ SHIPPED (`e7b4113`)
 SIMPLIFIED by the 2026-08-24 user confirmation (peer plan OQ2/OQ3, imported): network
 modes do NOT persist — no second storage key, no session persistence; reload lands in
 memory mode; entering a network mode is a deliberate, re-enterable act.
@@ -459,7 +459,7 @@ mode name; the dev-bar badge in 1c is the visible surface) — "why didn't my po
 persist" must be answerable from the console alone.
 **Write-set:** `js/store.js`, `js/storage.js`, `test/store-modes.test.js`.
 
-#### 1c: Mode control + docs
+#### 1c: Mode control + docs — ✅ SHIPPED
 Dev-bar Mode control (memory | bbs | "Bluesky view" as a navigation shortcut to the
 lens — labeled a view, not a store mode). Per OQ4 this control is scaffolding: the
 canonical mode preference lands in Settings at 3d; the dev bar remains a mirror.

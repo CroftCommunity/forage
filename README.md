@@ -60,6 +60,9 @@ Identity is a **dev-bar dropdown**, not a login. Every UX path is walkable from 
 
 Above the header, dashed to mark it as scaffolding:
 
+- **Mode** — memory | bbs (network modes are RAM-only; Seed/Import/Delete All and
+  the persona switch are pinned outside memory), plus the "Bluesky view" link —
+  a view, not a store mode.
 - **Persona** — switch seats; re-derives every viewer-dependent view in one place.
 - **Seed / Delete All** — replay the scenario library (`scenarios/` — the same
   deterministic, assertion-carrying scenarios the test suite and conformance harness
@@ -91,6 +94,23 @@ Above the header, dashed to mark it as scaffolding:
 | Rating | **Boost / Bury** |
 | Volunteer moderator | **Steward** |
 | Public mod log | **Audit log** |
+
+## Modes
+
+The running app has **modes** — named routing tables over the same capabilities
+(`MODES` in `js/config/routing.js`) plus a dataset lifecycle (`js/store.js`):
+
+- **memory** (the default): the local sandbox. The only mode that persists —
+  everything lives under the `forage.state` key.
+- **bbs** (experimental, phase 5): the private-board mode. RAM-only: entering it
+  suspends persistence structurally, the dataset dies on exit/reload, and
+  `forage.state` is provably untouched (byte-identical round-trip under test).
+- The **Bluesky view** (`#/lens`) is deliberately NOT a mode — it is a read
+  surface over the live network with its own session; nothing from it enters the
+  event fold.
+
+The dev bar's Mode control is a scaffolding mirror; the canonical preference
+lands in Settings (plan 2026-08-25-1, phase 3).
 
 ## The tiers
 

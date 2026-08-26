@@ -10,25 +10,54 @@ import { toast } from './ui/components.js';
 
 export function devBar() {
   const bar = el('div', { class: 'devbar' });
+  const inMemory = store.activeMode() === 'memory';
 
-  // persona dropdown
-  const sel = el('select', { title: 'Active persona' },
+  // Mode control (1c). SCAFFOLDING MIRROR: the canonical mode preference
+  // lands in Settings at 3d; this select mirrors it for dev work. "Bluesky
+  // view" is deliberately NOT in the select — it is a view (a route), not a
+  // store mode; the link makes that distinction visible.
+  const mode = el('select', { title: 'Store mode (memory = local sandbox; bbs = RAM-only network mode)' },
+    ...['memory', 'bbs'].map((m) => el('option', { value: m, selected: store.activeMode() === m || false }, m)));
+  mode.addEventListener('change', () => {
+    try {
+      if (mode.value === 'memory') store.exitMode();
+      else store.enterMode(mode.value);
+      toast(`Mode: ${store.activeMode()}${store.activeMode() === 'memory' ? '' : ' (RAM only — nothing persists)'}`, 'ok');
+    } catch (e) { toast(e.message, 'err'); mode.value = store.activeMode(); }
+  });
+  const modeGrp = el('span', { class: 'grp' }, el('label', {}, 'Mode'), mode);
+  if (!inMemory) modeGrp.append(el('span', { class: 'tag' }, `${store.activeMode()} · RAM only`));
+  modeGrp.append(el('a', { href: '#/lens', class: 'small', title: 'A view of the live network — not a store mode' }, 'Bluesky view'));
+  bar.append(modeGrp);
+
+  bar.append(sep());
+
+  // persona dropdown — pinned while a network mode is active (the signed-in
+  // identity owns network modes; personas are a memory-tier concept)
+  const sel = el('select', { title: inMemory ? 'Active persona' : 'Persona is pinned outside memory mode' },
     ...PERSONAS.map((p) => el('option', { value: p.id === null ? '' : p.id, selected: p.id === store.getPersonaId() || false }, p.label)));
   // include any runtime-created accounts not in the static roster
   for (const u of Object.values(store.getState().users)) {
     if (!PERSONAS.some((p) => p.id === u.id)) sel.append(el('option', { value: u.id, selected: u.id === store.getPersonaId() || false }, u.handle + ' (new)'));
   }
   sel.addEventListener('change', () => store.setPersona(sel.value === '' ? null : sel.value));
+  if (!inMemory) sel.disabled = true;
   bar.append(el('span', { class: 'grp' }, el('label', {}, 'Persona'), sel));
 
   bar.append(sep());
 
-  // seed / delete / export / import
+  // seed / delete / export / import — the mutating trio is gated outside
+  // memory mode (1b protects the KEY structurally; this protects the RAM
+  // dataset from a stray seed while camping)
+  const gate = (btn) => {
+    if (!inMemory) { btn.disabled = true; btn.title = 'Disabled outside memory mode'; }
+    return btn;
+  };
   bar.append(el('span', { class: 'grp' },
-    mkBtn('Seed', () => { store.loadEvents(buildSeed()); toast('Seeded (scenario library replay).', 'ok'); }),
-    mkBtn('Delete All', () => { if (confirm('Delete all local data?')) { store.reset(); toast('Cleared.', ''); } }),
+    gate(mkBtn('Seed', () => { store.loadEvents(buildSeed()); toast('Seeded (scenario library replay).', 'ok'); })),
+    gate(mkBtn('Delete All', () => { if (confirm('Delete all local data?')) { store.reset(); toast('Cleared.', ''); } })),
     mkBtn('Export', exportData),
-    mkBtn('Import', importData)));
+    gate(mkBtn('Import', importData))));
 
   bar.append(sep());
 
