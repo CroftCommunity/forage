@@ -93,6 +93,16 @@ export function shapeLensFeed(feedResponse, src, { sort = 'lens', timeframe = 'a
 
 const GUEST_APPVIEW = 'https://public.api.bsky.app';
 
+// D6-measured: warm parallel author-feed fan-out is 80–420ms at N=25; the cap
+// is a BOARD-NOISE bound, not a latency one. Beyond-cap is honest overflow.
+export const RING_CAP = 25;
+
+// Pure: follows ∩ followers, in follows order.
+export function computeMutuals(follows, followers) {
+  const fans = new Set(followers);
+  return follows.filter((did) => fans.has(did));
+}
+
 // OQ1: a lens Field's slug is the feed/list rkey (or the author handle).
 const slugForSource = (source) => {
   if (source.kind === 'author') return source.actor;
@@ -116,6 +126,19 @@ export function createLens({ session = null, transport = fetch } = {}) {
       : await transport(`${GUEST_APPVIEW}/xrpc/${path}${suffix}`, { headers: {} });
     if (!res.ok) throw new Error(`lens: ${path} failed HTTP ${res.status}`);
     return res.json();
+  }
+
+  // ---- 3a: ring membership (aperture over the social graph) ----
+
+  async function pagedGraph(method, actor) {
+    const out = [];
+    let cursor;
+    do {
+      const data = await get(`app.bsky.graph.${method}`, { actor, limit: 100, cursor });
+      out.push(...(data[method === 'getFollowers' ? 'followers' : 'follows'] || []).map((u) => u.did));
+      cursor = data.cursor;
+    } while (cursor);
+    return out;
   }
 
   const srcCtx = (source, title) => {
@@ -159,6 +182,31 @@ export function createLens({ session = null, transport = fetch } = {}) {
         slug: slugForSource(i.type === 'author' ? { kind: 'author', actor: i.value } : i.type === 'timeline' ? { kind: 'timeline' } : { kind: i.type, uri: i.value }),
         title: i.type === 'timeline' ? 'Following' : titleOf.get(i.value) || i.value.split('/').pop(),
       }));
+    },
+
+    // ring: 'world' | 'following' | 'mutuals' | 'mutuals+1'. world/following
+    // bypass the graph (their boards come from sources/timeline). mutuals =
+    // follows ∩ followers; mutuals+1 adds each mutual's follows under
+    // RING_CAP with HONEST overflow (the true pre-cap count — never silent).
+    async ringMembers(ring) {
+      if (ring === 'world' || ring === 'following') return { members: null };
+      if (ring !== 'mutuals' && ring !== 'mutuals+1') {
+        throw new Error(`lens: unknown ring: ${ring} (known: world, following, mutuals, mutuals+1)`);
+      }
+      if (!session) throw new Error('lens: rings are computed from YOUR graph — needs a session');
+      const [follows, followers] = await Promise.all([
+        pagedGraph('getFollows', session.did),
+        pagedGraph('getFollowers', session.did),
+      ]);
+      const mutuals = computeMutuals(follows, followers);
+      if (ring === 'mutuals') return { members: mutuals };
+      const seen = new Set(mutuals);
+      for (const m of mutuals) {
+        for (const did of await pagedGraph('getFollows', m)) seen.add(did);
+      }
+      const all = [...seen];
+      if (all.length <= RING_CAP) return { members: all };
+      return { members: all.slice(0, RING_CAP), overflow: { capped: true, total: all.length } };
     },
 
     async search(q) {

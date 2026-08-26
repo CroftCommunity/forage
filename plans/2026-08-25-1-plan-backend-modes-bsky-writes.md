@@ -1,7 +1,7 @@
 # Plan: three modes — memory, the Bluesky view with a ring dial, and the private BBS
 
 date: 2026-08-25
-status: EXECUTING — Phases 1–2 COMPLETE (OAuth live-validated on loopback); next: 3a (ring computation).
+status: EXECUTING — Phases 1–2 complete; 3a SHIPPED; next: 3b (ring boards + dial UI).
 Execution in worktrees/forage/modes-bbs (branch claude/modes-bbs)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `10a8ade` (clean tree, pushed; forage.fyi deployed at forage-v11)
@@ -551,7 +551,7 @@ corpus is JOURNEY files that grow, not one file per feature:**
   vendor bundle is absent/mismatched.
 **Depends on:** 2a, D4.
 
-#### 2c: Sign-in UI + lens/session integration — ✅ SHIPPED
+#### 2c: Sign-in UI + lens/session integration — ✅ SHIPPED (`510e84a`+`1fffe6c`+`1730748`)
 - [ ] Tests FIRST: `test/lens.test.js` session-dependent cases re-pointed RED at the
   OAuth session shape (`js/auth/session.js` fake) before any lens change; a RED
   assertion that no app-password path remains (grep-style scan for the old
@@ -574,7 +574,7 @@ a hashtag stream, the trending rail). Unit numbering is historical; the spine ab
 is the order. 3e/3f/3g's "the 3d smoke extends" lines mean the capstone smoke
 covers them, not that 3d has already run.
 
-#### 3a: Ring computation
+#### 3a: Ring computation — ✅ SHIPPED
 - [ ] `js/substrates/lens.js` — `ringMembers(ring, {session, fetch})`: `mutuals` =
   follows ∩ followers (paginated, D6-measured); `mutuals+1` = mutuals ∪ their follows
   with the D6-derived cap; returns members + honest overflow info.
