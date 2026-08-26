@@ -386,6 +386,37 @@ export function likeWindow(likes, nowMs) {
   };
 }
 
+// 4d: liveness. `isOnline`/`isValid` is not the signal — across 915
+// search-result feeds it was false ZERO times (probed 2026-08-26), including
+// for 138 feeds with no likes at all. What getFeed DOES is the signal:
+//   live    — its newest post is inside a week
+//   stale   — it answers, but with months-old posts
+//   empty   — it answers with nothing
+//   silent  — it will not answer, and we do NOT know why. Its refusals are not
+//             self-describing: the same personalized Bluesky feeds returned 502
+//             and 400 across repeated probes, and a deleted feed returns 400
+//             too. So this state is an absence of evidence, never a verdict of
+//             death — and it is materially rarer with a session, because
+//             personalized feeds answer 200 through the PDS proxy.
+const STALE_AFTER_MS = 7 * 86400_000;
+
+export function feedLiveness(items, nowMs) {
+  if (!items.length) return 'empty';
+  const newest = Math.min(...items.map((i) => nowMs - Date.parse(i.post?.indexedAt)));
+  return newest > STALE_AFTER_MS ? 'stale' : 'live';
+}
+
+// Keeps what is alive AND what has not been probed yet — a feed is never
+// hidden on the strength of no evidence.
+export function liveFeeds(feeds, states) {
+  const kept = feeds.filter((f) => {
+    const st = states.get(f.uri);
+    return st === undefined || st === 'live';
+  });
+  const count = (want) => feeds.filter((f) => states.get(f.uri) === want).length;
+  return { kept, stale: count('stale'), silent: count('silent'), empty: count('empty') };
+}
+
 const FEED_SORTS = {
   // 'popular' is the AppView's own opaque score. We render it untouched rather
   // than re-deriving it — DL-010's principle applied one level up, to the list
@@ -883,6 +914,26 @@ export function createLens({ session = null, transport = fetch } = {}) {
             out.set(uri, w);
             onWindow?.(uri, w);
           } catch { /* unmeasured: the sort keeps it at the back, with words */ }
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(concurrency, uris.length) }, worker));
+      return out;
+    },
+
+    // 4d: one getFeed per feed, limit=1 — freshness needs the newest post, not
+    // a page. Same bounded-concurrency, announce-as-it-lands shape as 4c.
+    async liveness(uris, { nowMs = Date.now(), onState, concurrency = 8, timeoutMs = 8000 } = {}) {
+      const out = new Map();
+      const queue = [...uris];
+      const worker = async () => {
+        for (let uri = queue.shift(); uri !== undefined; uri = queue.shift()) {
+          let state = 'silent';
+          try {
+            const data = await withTimeout(get('app.bsky.feed.getFeed', { feed: uri, limit: 1 }), timeoutMs);
+            state = feedLiveness(data.feed || [], nowMs);
+          } catch { /* silent: it did not answer, and we do not know why */ }
+          out.set(uri, state);
+          onState?.(uri, state);
         }
       };
       await Promise.all(Array.from({ length: Math.min(concurrency, uris.length) }, worker));

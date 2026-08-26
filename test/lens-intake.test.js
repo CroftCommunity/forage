@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createLens, sortFeeds, filterFeeds, platforms, likeWindow } from '../js/substrates/lens.js';
+import { createLens, sortFeeds, filterFeeds, platforms, likeWindow, feedLiveness, liveFeeds } from '../js/substrates/lens.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const fixture = (n) => JSON.parse(readFileSync(join(root, 'test/fixtures/atproto', `${n}.json`), 'utf8'));
@@ -307,6 +307,54 @@ test('3j: discoverFeeds lists popular generators and searches by query; guests g
   assert.ok(calls[0].includes('getPopularFeedGenerators'));
   await lens.discoverFeeds({ query: 'garden' });
   assert.ok(calls[1].includes('query=garden'), 'the query rides through');
+});
+
+// ---- 4d: liveness — which feeds in a search result actually still work ----
+// isOnline/isValid is NOT the signal: across 915 search-result feeds it was
+// false ZERO times (plan D6). The observable signal is what getFeed does — and
+// its refusals do not say why (D9), so a feed that will not answer is `silent`,
+// never `dead`.
+
+test('4d: feedLiveness reads the newest post — live, stale, or empty', () => {
+  const now = Date.parse('2026-08-26T12:00:00Z');
+  const at = (h) => ({ post: { indexedAt: new Date(now - h * 3600_000).toISOString() } });
+  assert.equal(feedLiveness([at(2)], now), 'live');
+  assert.equal(feedLiveness([at(167)], now), 'live', 'inside 7 days is still alive');
+  assert.equal(feedLiveness([at(169)], now), 'stale');
+  assert.equal(feedLiveness([], now), 'empty', 'it answered, and had nothing to say');
+});
+
+test('4d: liveness probes one feed each and calls a refusal SILENT, not dead', async () => {
+  const now = Date.parse('2026-08-26T12:00:00Z');
+  const fresh = new Date(now - 3600_000).toISOString();
+  const old = new Date(now - 900 * 3600_000).toISOString();
+  const transport = async (url) => {
+    const feed = new URL(url).searchParams.get('feed');
+    assert.ok(url.includes('limit=1'), 'freshness needs exactly one post, not a page');
+    if (feed.endsWith('live')) return { ok: true, status: 200, json: async () => ({ feed: [{ post: { indexedAt: fresh } }] }) };
+    if (feed.endsWith('stale')) return { ok: true, status: 200, json: async () => ({ feed: [{ post: { indexedAt: old } }] }) };
+    if (feed.endsWith('empty')) return { ok: true, status: 200, json: async () => ({ feed: [] }) };
+    return { ok: false, status: 502, json: async () => ({ error: 'InternalServerError' }) };
+  };
+  const uris = ['a/live', 'b/stale', 'c/empty', 'd/down'];
+  const out = await createLens({ transport }).liveness(uris, { nowMs: now });
+  // by key, not by iteration order — completion order is a scheduling detail
+  assert.equal(out.size, 4);
+  assert.equal(out.get('a/live'), 'live');
+  assert.equal(out.get('b/stale'), 'stale');
+  assert.equal(out.get('c/empty'), 'empty');
+  assert.equal(out.get('d/down'), 'silent');
+});
+
+test('4d: liveFeeds keeps live feeds and anything not yet probed, and counts what it dropped', () => {
+  const feeds = [{ uri: 'a' }, { uri: 'b' }, { uri: 'c' }, { uri: 'd' }, { uri: 'e' }];
+  const states = new Map([['a', 'live'], ['b', 'stale'], ['c', 'silent'], ['d', 'empty']]);
+  const { kept, stale, silent, empty } = liveFeeds(feeds, states);
+  assert.deepEqual(kept.map((f) => f.uri), ['a', 'e'],
+    'e has not been probed yet, so it is not hidden on the strength of no evidence');
+  assert.equal(stale, 1);
+  assert.equal(silent, 1);
+  assert.equal(empty, 1);
 });
 
 // ---- 4c: Rising — time-windowed like counts, one request per feed ----

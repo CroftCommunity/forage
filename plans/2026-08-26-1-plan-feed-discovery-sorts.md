@@ -1,8 +1,8 @@
 # Plan: sorting, filtering and time windows — for feed discovery and for boards
 
 date: 2026-08-26
-status: IN PROGRESS — research filed; **4a, 4b and 4c SHIPPED**. 4d (liveness on
-search) next. Gate green: 322 unit tests, 5/5 workflows.
+status: IN PROGRESS — research filed; **4a–4d SHIPPED** (discovery is done). 4e (`/h/`
+true top windows) next. Gate green: 325 unit tests, 5/5 workflows.
 Execution in worktrees/forage/feed-discovery-sorts (branch claude/feed-discovery-sorts)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `f08fa9d` (clean tree)
@@ -250,6 +250,34 @@ zero-like band. Caveat: three of the "transport" failures were client-side timeo
 under 16-way concurrency, not proven server truth — a real implementation needs
 per-feed timeouts and must not report its own timeout as the feed being down.
 
+### D9 — the liveness probe cannot tell "personalized" from "broken" (2026-08-26, follow-up)
+
+Probing 4d's design turned up a constraint the first pass missed. `getFeed?limit=1` is
+enough for freshness (200 in 0.34s, newest post returned), but the REFUSALS are not
+self-describing. The same three personalized Bluesky feeds, probed three times each
+unauthenticated:
+
+```
+Mutuals          502 InternalServerError  ×3
+Popular With Friends  502 InternalServerError  ×3
+OnlyPosts        400 InvalidRequest       ×3
+a genuinely absent feed   400 InvalidRequest ("could not find feed")
+```
+
+The `401 AuthRequiredError` seen in the first sweep is NOT stable — the same feeds now
+answer 502 and 400, and a dead feed answers 400 too. **So an unauthenticated probe
+cannot distinguish "this feed is personalized and needs your session" from "this
+generator is down" from "this feed no longer exists."**
+
+Consequences for 4d, all of them wording rather than logic:
+- the state is **`silent`**, not `dead` — we report that a feed did not answer, never
+  why, because we do not know why;
+- silent and stale are counted SEPARATELY in the UI, since stale is a real observation
+  and silent is an absence of one;
+- the probe is materially more accurate signed in (session reads go through the PDS
+  proxy, so personalized feeds answer 200), and the UI says so rather than presenting
+  a guest's result as the truth.
+
 ### D7 — Constellation: signals no Bluesky endpoint exposes
 
 `constellation.microcosm.blue` — atproto-wide backlink index (17.6B links, 575 days
@@ -354,7 +382,18 @@ cache; sorts "Rising · 7 days" and "Rising · 30 days". 24h is NOT offered (D2)
 counts at the cap display `100+`. Words on the control, in the `sortWindow` spirit:
 likes gained in the window; joins are private, so likes are the only public signal.
 
-**4d — T1b liveness.** `getFeed` probe per feed → live / stale / empty / unreachable,
+**4d — T1b liveness. ✅ SHIPPED 2026-08-26.**
+Landed as: pure `feedLiveness(items, nowMs)` → live | stale | empty; `liveFeeds` keeps
+the live AND the not-yet-probed (a feed is never hidden on the strength of no
+evidence); `lens.liveness()` probes `getFeed?limit=1` per feed — freshness needs the
+newest post, not a page — at concurrency 8 with an 8s timeout. **D9 changed the
+wording throughout:** a feed that will not answer is `silent`, never `dead`, because
+its refusals are not self-describing, and the count line keeps `silent` separate from
+`stale` and tells a signed-out user that some may be personalized feeds. Defaulted ON
+for search (a third of results are dead or stale) and OFF for browse (0 of 117
+popular feeds are). 3 unit tests + a journey segment. Original description follows.
+
+ `getFeed` probe per feed → live / stale / empty / unreachable,
 with per-feed timeouts, degrading per feed rather than globally (2 of 16 popular
 feeds are `401 AuthRequiredError` unauth — personalized feeds are not broken feeds
 and must not be labelled as such). Default ON for **search** results, off for browse

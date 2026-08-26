@@ -9,7 +9,7 @@
 import { el, timeAgo, fmtScore } from '../util.js';
 import { postRow, commentNode, voteBox, skeleton, emptyState, toast } from './components.js';
 import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow, affordanceFor, feedCardModel, threadNodeStyle,
-  sortFeeds, filterFeeds, platforms } from '../substrates/lens.js';
+  sortFeeds, filterFeeds, platforms, liveFeeds } from '../substrates/lens.js';
 import { initSession, createAccountRoster } from '../auth/session.js';
 import * as mediaScale from '../media-scale.js';
 import * as lang from '../lang.js';
@@ -787,6 +787,12 @@ export function lensFeedsView() {
   // on arrival for a sort nobody may pick.
   let windows = new Map();
   let measuring = false;
+  // 4d: uri → live | stale | empty | silent. Defaulted ON for search, where a
+  // third of results are dead or stale (D6), and OFF for browse, where 0 of 117
+  // popular feeds were (the filter would be dead weight there).
+  let states = new Map();
+  let hideDead = false;
+  let probing = false;
 
   const card = (f) => {
     registerSource({ slug: f.uri.split('/').pop(), humanSlug: slugifyFeedName(f.title), title: f.title,
@@ -816,7 +822,9 @@ export function lensFeedsView() {
   };
 
   const paint = () => {
-    const shown = searching ? corpus : sortFeeds(filterFeeds(corpus, { platform, video: videoOnly }), sort, windows);
+    const ranked = searching ? corpus : sortFeeds(filterFeeds(corpus, { platform, video: videoOnly }), sort, windows);
+    const live = hideDead ? liveFeeds(ranked, states) : null;
+    const shown = live ? live.kept : ranked;
     results.replaceChildren(...(shown.length
       ? shown.map(card)
       : [emptyState('No feeds found', searching
@@ -828,12 +836,20 @@ export function lensFeedsView() {
         ? `All ${corpus.length} feeds Bluesky lists as popular.`
         : `${shown.length} of ${corpus.length} feeds.`;
     // 4c: say what Rising is counting, and that joins are not countable at all
+    // 4d: never filter silently — say how many went where, and keep `silent`
+    // separate from `stale`, because one is an observation and the other is the
+    // absence of one (D9).
+    const dropped = live && (live.stale + live.silent + live.empty)
+      ? ` Hiding ${[live.stale && `${live.stale} stale`, live.empty && `${live.empty} empty`,
+          live.silent && `${live.silent} that did not answer`].filter(Boolean).join(', ')}.` +
+        (live.silent && !session ? ' Some of those may be personalized feeds that need you signed in.' : '')
+      : (hideDead && probing ? ' Checking which are still alive…' : '');
     const note = sort.startsWith('rising')
       ? ` Ranked by likes gained in the last ${sort === 'rising7' ? '7 days' : '30 days'}` +
         `${measuring ? ` — measured ${windows.size} of ${corpus.length} so far…` : ''}. ` +
         'Joining a feed is private, so likes are the only public signal there is.'
       : '';
-    countLine.replaceChildren(base + note);
+    countLine.replaceChildren(base + dropped + note);
   };
 
   // 4b: sorting a search slice would claim to rank everything that matched, so
@@ -859,7 +875,18 @@ export function lensFeedsView() {
         disabled: searching || undefined }), 'Video only');
     vid.querySelector('input').addEventListener('change', (e) => { videoOnly = e.target.checked; paint(); });
 
-    controls.replaceChildren(sortSel, platSel, vid);
+    // 4d: on search this is checked by default — a third of search results are
+    // dead or stale — and it is a real control, not a hidden behaviour.
+    const alive = el('label', { class: 'xs', style: 'display:flex;gap:4px;align-items:center' },
+      el('input', { type: 'checkbox', 'data-feed-alive': '1', checked: hideDead || undefined }),
+      'Hide inactive');
+    alive.querySelector('input').addEventListener('change', (e) => {
+      hideDead = e.target.checked;
+      ensureLiveness();
+      paint();
+    });
+
+    controls.replaceChildren(sortSel, platSel, vid, alive);
   };
 
   // 4c: 24h is NOT offered. Measured over the whole corpus, only 9 of 117 feeds
@@ -877,6 +904,16 @@ export function lensFeedsView() {
     }).finally(() => { measuring = false; paint(); });
   };
 
+  const ensureLiveness = () => {
+    if (!hideDead || probing || states.size) return;
+    probing = true;
+    paint();
+    lens.liveness(corpus.map((f) => f.uri), {
+      nowMs: Date.now(),
+      onState: (uri, st) => { states.set(uri, st); paint(); },
+    }).finally(() => { probing = false; paint(); });
+  };
+
   const run = (query) => {
     searching = !!query;
     results.replaceChildren(skeleton(3));
@@ -885,10 +922,13 @@ export function lensFeedsView() {
       .then((feeds) => {
         corpus = feeds;
         windows = new Map();   // a new corpus invalidates the measurements
+        states = new Map();
+        hideDead = searching;  // on for search, off for the curated popular list
         if (!searching) { platform = ''; videoOnly = false; }
         if (searching && sort.startsWith('rising')) sort = 'popular';
         buildControls();
         ensureWindows();
+        ensureLiveness();
         paint();
       })
       .catch((e) => {

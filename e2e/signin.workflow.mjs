@@ -16,6 +16,7 @@ const WHATS_HOT = 'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator
 const AFTER_DARK = 'at://did:plc:x/app.bsky.feed.generator/afterdark';
 const GARDEN = 'at://did:plc:g/app.bsky.feed.generator/gardentalk';
 const FRESHEST = 'at://did:plc:i/app.bsky.feed.generator/freshest';
+const LOUDEST = 'at://did:plc:h/app.bsky.feed.generator/loudest';
 const enc = (uri) => encodeURIComponent(uri);
 // an hour old: comfortably inside both the 7d and 30d windows 4c counts
 const recentLikes = (n) => Array.from({ length: n },
@@ -74,7 +75,7 @@ export async function run() {
           did: 'did:web:skyfeed.me', indexedAt: '2024-01-01T00:00:00Z' },
         // 4b: T0 dimensions with real variety, so the sorts and the builder
         // filter have something to actually do.
-        { uri: 'at://did:plc:h/app.bsky.feed.generator/loudest', displayName: 'Loudest',
+        { uri: LOUDEST, displayName: 'Loudest',
           description: 'most liked', likeCount: 900, creator: { handle: 'loud.test' },
           did: 'did:web:api.graze.social', indexedAt: '2023-01-01T00:00:00Z' },
         { uri: FRESHEST, displayName: 'Freshest',
@@ -99,6 +100,15 @@ export async function run() {
       [`getLikes?uri=${enc(FRESHEST)}`]: { likes: recentLikes(5) },
       [`getLikes?uri=${enc(GARDEN)}`]: { likes: recentLikes(2) },
       'getLikes': { likes: recentLikes(1) },
+      // 4d: Garden Talk answers with a fresh post; Loudest answers with a
+      // months-old one; Freshest refuses entirely. Shim routing is by URL
+      // substring, first match wins.
+      [`getFeed?feed=${enc(GARDEN)}`]: { feed: [{ post: { indexedAt: new Date(Date.now() - 3600_000).toISOString() } }] },
+      [`getFeed?feed=${enc(LOUDEST)}`]: { feed: [{ post: { indexedAt: new Date(Date.now() - 900 * 3600_000).toISOString() } }] },
+      // Freshest answers with nothing at all. (The `silent` state — a feed that
+      // will not answer — is not reachable through the shim, which only speaks
+      // 200; its unit test covers it.)
+      [`getFeed?feed=${enc(FRESHEST)}`]: { feed: [] },
       'putPreferences': {},
       'getProfile': { did: 'did:plc:w2test', handle: 'wtest.bsky.social', displayName: 'W Tester',
         avatar: 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==', description: 'a test bio', followersCount: 5, followsCount: 7, postsCount: 9 },
@@ -209,6 +219,19 @@ export async function run() {
   await page.waitForSelector('text=in the order Bluesky\'s search ranked them.');
   assert.equal(await page.locator('[data-feed-sort]').isDisabled(), true,
     'sorting a search slice would misrepresent it as a ranking of the whole index');
+
+  // 4d: on SEARCH, inactive feeds are hidden by default — a third of search
+  // results are dead or stale. The drop is stated, never silent, and a feed
+  // that would not answer is reported as that, not as dead.
+  assert.equal(await page.locator('[data-feed-alive]').isChecked(), true,
+    'hide-inactive defaults ON for search');
+  await page.waitForSelector('text=1 stale');
+  await page.waitForSelector('text=1 empty');
+  assert.deepEqual(await titles(), ['Garden Talk'], 'only the feed with a fresh post survives');
+
+  // unchecking brings them back — it is a filter the user controls
+  await page.locator('[data-feed-alive]').uncheck();
+  assert.deepEqual(await titles(), ['Garden Talk', 'Loudest', 'Freshest']);
 
   // 4a: it is gone from the sidebar too, even though the account JOINED it —
   // membership does not override the account's moderation setting.
