@@ -19,12 +19,89 @@ export const LENS_PERMS = Object.freeze({
 
 const NSFW_LABELS = new Set(['porn', 'sexual', 'nudity', 'graphic-media', 'gore']);
 
+// ---- 3f: the account's moderation posture (piggy-back principle, D10) ----
+// Forage stores NO moderation state: the posture derives from the account's
+// own preferences + graph endpoints and applies IN THE SHAPE LAYER.
+
+const ADULT_LABELS = new Set(['porn', 'sexual', 'nudity', 'sexual-figurative']);
+
+export const EMPTY_POSTURE = Object.freeze({
+  mutedWords: [], labelPrefs: new Map(), adultEnabled: true,
+  mutedDids: new Set(), blockedDids: new Set(), hideBadges: false,
+});
+
+// Pure: the D10 payloads → one posture object. Expired muted words drop at
+// build time (the posture is rebuilt per session entry, not long-lived).
+export function buildPosture({ preferences = [], mutes = [], blocks = [], listMutes = [], listBlocks = [] } = {}, nowMs) {
+  const t = (x) => (x.$type || '').replace('app.bsky.actor.defs#', '');
+  const mutedWords = preferences.filter((p) => t(p) === 'mutedWordsPref')
+    .flatMap((p) => p.items || [])
+    .filter((w) => !w.expiresAt || Date.parse(w.expiresAt) > nowMs);
+  const labelPrefs = new Map(preferences.filter((p) => t(p) === 'contentLabelPref')
+    .map((p) => [p.label, p.visibility]));
+  const adult = preferences.find((p) => t(p) === 'adultContentPref');
+  const verifPref = preferences.find((p) => t(p) === 'verificationPrefs');
+  return {
+    mutedWords, labelPrefs,
+    adultEnabled: adult ? !!adult.enabled : true,
+    mutedDids: new Set(mutes.map((u) => u.did)),
+    blockedDids: new Set(blocks.map((u) => u.did)),
+    hideBadges: !!verifPref?.hideBadges,
+    listMuteCount: listMutes.length, listBlockCount: listBlocks.length,
+  };
+}
+
+// A muted-word entry hits this post? targets: 'content' (text) and/or 'tag';
+// actorTarget 'exclude-following' spares authors the viewer follows.
+function mutedWordHits(w, post) {
+  if (w.actorTarget === 'exclude-following' && post.author?.viewer?.following) return false;
+  const needle = w.value.toLowerCase();
+  const tags = (post.record?.tags || []).map((x) => String(x).toLowerCase());
+  if ((w.targets || []).includes('tag') && tags.includes(needle)) return true;
+  if ((w.targets || []).includes('content') && String(post.record?.text || '').toLowerCase().includes(needle)) return true;
+  return false;
+}
+
+// Label disposition under the posture: 'hide' | 'warn' | null.
+function labelDisposition(post, posture) {
+  let warn = null;
+  for (const l of post.labels || []) {
+    if (ADULT_LABELS.has(l.val) && !posture.adultEnabled) return { mode: 'hide' };
+    const v = posture.labelPrefs.get(l.val);
+    if (v === 'hide') return { mode: 'hide' };
+    if (v === 'warn') warn = warn ? { mode: 'warn', labels: [...warn.labels, l.val] } : { mode: 'warn', labels: [l.val] };
+  }
+  return warn;
+}
+
+// ---- 3f: facets are BYTE-indexed (UTF-8), not UTF-16 — decode via bytes ----
+// Returns [{text, facet?}] where facet = {type:'link'|'mention'|'tag', value}.
+export function facetSegments(text, facets) {
+  const bytes = new TextEncoder().encode(text);
+  const dec = new TextDecoder();
+  const spans = (facets || []).map((f) => {
+    const feat = (f.features || [])[0] || {};
+    const type = (feat.$type || '').split('#').pop();
+    const value = type === 'link' ? feat.uri : type === 'mention' ? feat.did : type === 'tag' ? feat.tag : null;
+    return { start: f.index?.byteStart ?? 0, end: f.index?.byteEnd ?? 0, type, value };
+  }).filter((sp) => sp.value != null).sort((a, b) => a.start - b.start);
+  const out = [];
+  let at = 0;
+  for (const sp of spans) {
+    if (sp.start > at) out.push({ text: dec.decode(bytes.slice(at, sp.start)) });
+    out.push({ text: dec.decode(bytes.slice(sp.start, sp.end)), facet: { type: sp.type, value: sp.value } });
+    at = sp.end;
+  }
+  if (at < bytes.length) out.push({ text: dec.decode(bytes.slice(at)) });
+  return out.length ? out : [{ text: '' }];
+}
+
 const maskedByViewer = (post) =>
   !!(post.author?.viewer?.muted || post.author?.viewer?.blockedBy || post.viewer?.muted);
 
 // One bsky post view -> our post shape. `src` names the Field this lens
 // surface renders as: { fieldId, fieldSlug, fieldTitle }.
-export function shapeLensPost(post, src) {
+export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
   const record = post.record || {};
   const createdTs = Date.parse(record.createdAt || post.indexedAt);
   const labels = new Set((post.labels || []).map((l) => l.val));
@@ -40,11 +117,23 @@ export function shapeLensPost(post, src) {
     ups: post.likeCount ?? 0, downs: 0, score: post.likeCount ?? 0, // DL-011: likes-only
     myVote: post.viewer?.like ? 1 : 0,
     cid: post.cid ?? null, likeUri: post.viewer?.like ?? null, // 3c: the boost write pair's inputs
+    facets: record.facets || [],
+    verified: posture.hideBadges ? null
+      : post.author?.verification?.verifiedStatus === 'valid' ? 'valid'
+      : post.author?.verification?.trustedVerifierStatus === 'valid' ? 'trusted' : null,
     saved: false, // bookmarks are not public API surface yet — frontier
     commentCount: post.replyCount ?? 0,
   };
-  if (maskedByViewer(post)) {
+  // 3f: the posture applies here — policy in the shape layer, never components.
+  const disp = labelDisposition(post, posture);
+  if (disp?.mode === 'hide') {
+    return { ...base, title: '[hidden by your filters]', body: '', url: '', author: null, authorId: null, maskedRemoved: true, hidden: true };
+  }
+  if (maskedByViewer(post) || posture.mutedDids.has(post.author?.did)) {
     return { ...base, title: '[muted account]', body: '', url: '', author: null, authorId: null, maskedRemoved: true };
+  }
+  if (posture.mutedWords.some((w) => mutedWordHits(w, post))) {
+    return { ...base, title: '[muted — matches your muted words]', body: '', url: '', author: null, authorId: null, maskedRemoved: true };
   }
   // 3e inbound: a quote post carries its quoted original in the embed — the
   // context renders for free (D7); the uri links to the original's thread.
@@ -59,6 +148,7 @@ export function shapeLensPost(post, src) {
     author: post.author?.handle || '[unknown]', authorId: post.author?.did || null,
     removedReason: '',
     ...(quoted ? { quoted } : {}),
+    ...(disp?.mode === 'warn' ? { warnLabels: disp.labels } : {}),
   };
 }
 
@@ -69,9 +159,9 @@ export function shapeLensPost(post, src) {
 // deterministic tie order (createdTs, authorId, id). A quote node carries
 // quoteUri so it opens as its own thread. Detached quotes never appear: we
 // render exactly what the appview returned, never re-derive.
-export function shapeLensThread(threadResponse, src, { quotes } = {}) {
+export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_POSTURE } = {}) {
   const root = threadResponse.thread;
-  const post = shapeLensPost(root.post, src);
+  const post = shapeLensPost(root.post, src, posture);
   let total = 0;
   const node = (p, depth, extra = {}) => ({
     id: p.id, postId: post.id, parentId: null,
@@ -88,8 +178,9 @@ export function shapeLensThread(threadResponse, src, { quotes } = {}) {
   });
   const build = (nodes, depth) => (nodes || []).map((n) => {
     if (!n.post) return null; // blocked / notFound stubs
+    if (posture.blockedDids.has(n.post.author?.did)) return null; // never renders
     total += 1;
-    const p = shapeLensPost(n.post, src);
+    const p = shapeLensPost(n.post, src, posture);
     return {
       ...node(p, depth),
       children: depth >= 10 ? [] : build(n.replies, depth + 1),
@@ -97,11 +188,13 @@ export function shapeLensThread(threadResponse, src, { quotes } = {}) {
     };
   }).filter(Boolean);
   const replies = build(root.replies, 0);
-  const quoteNodes = (quotes || []).map((q) => {
-    total += 1;
-    const p = shapeLensPost(q, src);
-    return node(p, 0, { kind: 'quote', quoteUri: p.id, quoted: p.quoted });
-  });
+  const quoteNodes = (quotes || [])
+    .filter((q) => !posture.blockedDids.has(q.author?.did))
+    .map((q) => {
+      total += 1;
+      const p = shapeLensPost(q, src, posture);
+      return node(p, 0, { kind: 'quote', quoteUri: p.id, quoted: p.quoted });
+    });
   const comments = [...replies, ...quoteNodes].sort((a, b) =>
     (a.createdTs - b.createdTs)
     || String(a.authorId).localeCompare(String(b.authorId))
@@ -111,11 +204,15 @@ export function shapeLensThread(threadResponse, src, { quotes } = {}) {
 }
 
 // One bsky feed page -> our feed result shape.
-export function shapeLensFeed(feedResponse, src, { sort = 'lens', timeframe = 'all' } = {}) {
+export function shapeLensFeed(feedResponse, src, { sort = 'lens', timeframe = 'all' } = {}, posture = EMPTY_POSTURE) {
+  const posts = (feedResponse.feed || [])
+    .filter((item) => !posture.blockedDids.has(item.post?.author?.did)) // blocked: never renders
+    .map((item) => shapeLensPost(item.post, src, posture))
+    .filter((p) => !p.hidden); // label-hidden: dropped from lists
   return {
     scope: `lens:${src.fieldSlug}`, sort, timeframe,
     perms: LENS_PERMS,
-    posts: (feedResponse.feed || []).map((item) => shapeLensPost(item.post, src)),
+    posts,
     cursor: feedResponse.cursor,
   };
 }
@@ -153,6 +250,8 @@ const slugForSource = (source) => {
 const LIKE_COLLECTION = 'app.bsky.feed.like';
 
 export function createLens({ session = null, transport = fetch } = {}) {
+  let posture = EMPTY_POSTURE;
+
   async function post(path, body, verb) {
     if (!session) throw new Error(`lens: ${verb} needs a session — sign in first`);
     const res = await session.fetchHandler(`/xrpc/${path}`, {
@@ -202,8 +301,28 @@ export function createLens({ session = null, transport = fetch } = {}) {
         data = await get('app.bsky.feed.getTimeline', { limit: 30, cursor });
       } else data = await get('app.bsky.feed.getFeed', { feed: source.uri, limit: 30, cursor });
       const src = srcCtx(source, title);
-      return { ...shapeLensFeed(data, src), ...src };
+      return { ...shapeLensFeed(data, src, {}, posture), ...src };
     },
+
+    // 3f: pull the account's whole moderation posture (one round per session
+    // entry). Guests keep the permissive default; failures throw with words —
+    // the caller decides whether to run unfiltered.
+    async loadPosture() {
+      if (!session) { posture = EMPTY_POSTURE; return posture; }
+      const [prefs, mutes, blocks, listMutes, listBlocks] = await Promise.all([
+        get('app.bsky.actor.getPreferences'),
+        get('app.bsky.graph.getMutes', { limit: 100 }),
+        get('app.bsky.graph.getBlocks', { limit: 100 }),
+        get('app.bsky.graph.getListMutes', { limit: 100 }),
+        get('app.bsky.graph.getListBlocks', { limit: 100 }),
+      ]);
+      posture = buildPosture({
+        preferences: prefs.preferences, mutes: mutes.mutes, blocks: blocks.blocks,
+        listMutes: listMutes.lists, listBlocks: listBlocks.lists,
+      }, Date.now());
+      return posture;
+    },
+    posture: () => posture,
 
     async thread(uri, src) {
       const [data, quotesRes] = await Promise.all([
@@ -212,7 +331,7 @@ export function createLens({ session = null, transport = fetch } = {}) {
       ]);
       const shaped = shapeLensThread(data,
         src || { fieldId: 'lens:thread', fieldSlug: 'thread', fieldTitle: 'Thread' },
-        { quotes: quotesRes?.posts });
+        { quotes: quotesRes?.posts, posture });
       return quotesRes === null ? { ...shaped, quotesFailed: true } : shaped;
     },
 
@@ -298,7 +417,7 @@ export function createLens({ session = null, transport = fetch } = {}) {
       const nextMap = Object.fromEntries(pages.filter((p) => p.next).map((p) => [p.did, p.next]));
       const src = { fieldId: `lens:ring:${ring}`, fieldSlug: `ring:${ring}`, fieldTitle: ring === 'mutuals' ? 'Mutuals' : 'Mutuals +1' };
       return {
-        ...shapeLensFeed({ feed: items }, src), ...src,
+        ...shapeLensFeed({ feed: items }, src, {}, posture), ...src,
         ring, failures,
         ...(ringInfo.overflow ? { overflow: ringInfo.overflow } : {}),
         cursor: Object.keys(nextMap).length ? btoa(JSON.stringify({ m: nextMap })) : undefined,
@@ -327,7 +446,10 @@ export function createLens({ session = null, transport = fetch } = {}) {
       if (!session) throw new Error('lens: search needs a session (403 unauth — probe-verified)');
       const data = await get('app.bsky.feed.searchPosts', { q, limit: 30 });
       const src = { fieldId: 'lens:search', fieldSlug: 'search', fieldTitle: `Search: ${q}` };
-      return { posts: (data.posts || []).map((p) => shapeLensPost(p, src)) };
+      return { posts: (data.posts || [])
+        .filter((p) => !posture.blockedDids.has(p.author?.did))
+        .map((p) => shapeLensPost(p, src, posture))
+        .filter((p) => !p.hidden) };
     },
   };
 }
