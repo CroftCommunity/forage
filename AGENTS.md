@@ -32,6 +32,9 @@ one**, they win; fix the document.
 5. Every mutation type MUST exist in the shared schema before any implementation
    uses it.
 6. Every new mutation MUST land with at least one scenario exercising it.
+6b. Every unit shipping user-visible behavior MUST add or extend a workflow
+    journey (`e2e/`) in the same unit; a unit with no workflow surface says so
+    explicitly in its plan entry. (Browser-level sibling of invariant 6.)
 7. Deferring a path and registering its frontier MUST be the same commit.
 8. Behavior present only at one tier MUST carry a proposal (or frontier) entry
    before it renders.
@@ -89,6 +92,9 @@ Every task ends with:
    the identical command).
 2. `npm run conformance` — once phase 4 lands; until then this line is inert and
    `npm test` is the full gate.
+2b. `npm run workflows` — the workflow corpus (`e2e/*.workflow.mjs`): the app as
+   a running system in a real browser, shim-backed and hermetic; LIVE=1/DOCKER=1
+   unlock the credentialed/daemon-bound journeys locally.
 3. The acceptance checklist items for affected screens, executed seat by seat via
    the dev-bar persona switcher (seat-level and observable: "switch to seat
    `newbie.moss`; Create Field is gated with the probation message").

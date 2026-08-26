@@ -56,6 +56,13 @@ Identity is a **dev-bar dropdown**, not a login. Every UX path is walkable from 
   (Wilson), Controversial and Rising carry the build spec's formulas verbatim; the Limits
   engine runs rolling-window rate limits over the event log.
 
+## Testing
+
+`npm test` (units + invariant scans) · `npm run conformance` (memory↔codec worlds)
+· `npm run workflows` (the journey corpus: the app in a real browser over a
+hermetic network shim — `e2e/`; `LIVE=1` / `DOCKER=1` unlock the credentialed and
+spaces-PDS journeys locally).
+
 ## The dev bar
 
 Above the header, dashed to mark it as scaffolding:

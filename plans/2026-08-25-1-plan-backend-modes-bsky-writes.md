@@ -1,7 +1,7 @@
 # Plan: three modes — memory, the Bluesky view with a ring dial, and the private BBS
 
 date: 2026-08-25
-status: EXECUTING — Phase 0 COMPLETE (D1–D10); 1a–1c SHIPPED; next unit: 1d.
+status: EXECUTING — Phase 1 COMPLETE (1a–1d shipped); next unit: 2a (OAuth vendor + drift check).
 Execution in worktrees/forage/modes-bbs (branch claude/modes-bbs)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `10a8ade` (clean tree, pushed; forage.fyi deployed at forage-v11)
@@ -459,7 +459,7 @@ mode name; the dev-bar badge in 1c is the visible surface) — "why didn't my po
 persist" must be answerable from the console alone.
 **Write-set:** `js/store.js`, `js/storage.js`, `test/store-modes.test.js`.
 
-#### 1c: Mode control + docs — ✅ SHIPPED
+#### 1c: Mode control + docs — ✅ SHIPPED (`d063c2f`+`8ba4106`)
 Dev-bar Mode control (memory | bbs | "Bluesky view" as a navigation shortcut to the
 lens — labeled a view, not a store mode). Per OQ4 this control is scaffolding: the
 canonical mode preference lands in Settings at 3d; the dev bar remains a mirror.
@@ -469,7 +469,7 @@ AGENTS.md line; TODO note recording the scoped-wiring deferral. Browser smoke: m
 round-trip with memory visibly unchanged. **Write-set:** `js/devbar.js`,
 `README.md` (+`AGENTS.md`/`TODO.md` — multi-commit, ≤3 per slice).
 
-#### 1d: Workflow-test harness + W1 (added 2026-08-25, user direction; udm-patterned)
+#### 1d: Workflow-test harness + W1 — ✅ SHIPPED (added 2026-08-25, user direction; udm-patterned)
 Full-workflow testing joins the gate NOW so the corpus grows with each phase
 instead of arriving as an afterthought. Pattern source: `l360/sdlc/udm/e2e`
 (read 2026-08-25) — a scenario COMPOSER (tests declare a named app state; the

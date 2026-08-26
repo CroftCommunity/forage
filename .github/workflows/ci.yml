@@ -37,3 +37,21 @@ jobs:
       # invariant 9's merge gate). Runtime deps: zero; devDependencies exist
       # (Stryker) but the gate needs none of them, so still no npm ci.
       - run: npm test && npm run conformance
+
+  # The workflow corpus (plan 2026-08-25-1, 1d): the app as a running system
+  # in a real browser — journey files under e2e/, shim-backed and hermetic.
+  # LIVE/DOCKER journeys skip-report here by design (credentialed/daemon-bound;
+  # they run locally). A separate job so a browser-install failure is
+  # distinguishable from a unit-suite failure at a glance.
+  workflows:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run workflows
