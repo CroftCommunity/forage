@@ -35,6 +35,8 @@ const post = (rkey, did, ts) => ({ post: {
   replyCount: 0, repostCount: 0, likeCount: 2,
 } });
 
+const withLikes = (p, likeCount) => ({ ...p, likeCount });
+
 export async function run() {
   const s = await scenario('first-visit', {
     initScripts: [FAKE_SIGNED_IN],
@@ -69,8 +71,15 @@ export async function run() {
       // 4e: the /h/ toolbar RE-QUERIES rather than re-sorting, so the shim
       // answers the windowed query differently. First match wins, so the
       // top-of-week key precedes the plain one.
-      'searchPosts?q=%23camp&tag=camp&limit=30&sort=top&since=':
-        { posts: [post('topofweek', 'did:plc:cc', '2026-08-20T13:00:00Z').post] },
+      // The server's order is deliberately NOT likeCount-descending — that is
+      // what Bluesky's `top` actually looks like (a probe returned 152, 113,
+      // 1478, 122, 168 likes in that order). If the board re-sorted this
+      // locally, `topB` would jump to the front and the journey would catch it.
+      'searchPosts?q=%23camp&tag=camp&limit=30&sort=top&since=': { posts: [
+        withLikes(post('topA', 'did:plc:cc', '2026-08-20T13:00:00Z').post, 152),
+        withLikes(post('topB', 'did:plc:cc', '2026-08-21T13:00:00Z').post, 1478),
+        withLikes(post('topC', 'did:plc:cc', '2026-08-22T13:00:00Z').post, 113),
+      ] },
       'searchPosts': { posts: [post('tagged1', 'did:plc:cc', '2026-08-25T13:00:00Z').post] },
       'getAuthorFeed?actor=did%3Aplc%3Atrends': { feed: [post('trendpost', 'did:plc:cc', '2026-08-25T14:00:00Z')] },
       'getFeed': { feed: [
@@ -209,7 +218,13 @@ export async function run() {
   // refetches and the loaded-window caveat is gone, because it would be a lie.
   await page.locator('[data-board-toolbar] select').first().selectOption('top');
   await page.locator('[data-board-toolbar] select').nth(1).selectOption('week');
-  await page.waitForSelector('text=post topofweek');
+  await page.waitForSelector('text=post topA');
+  // the SERVER's order stands: re-sorting locally would put topB (1478 likes)
+  // first, which is exactly the mutation this assertion exists to catch
+  const bodies = await page.locator('[data-board="hashtag"]').innerText();
+  assert.ok(bodies.indexOf('topA') < bodies.indexOf('topB'),
+    'the board renders Bluesky\'s ranking, not a local likeCount sort');
+  assert.ok(bodies.indexOf('topB') < bodies.indexOf('topC'), 'and it is the server order end to end');
   await page.waitForSelector('[data-whole-corpus]:has-text("ranked every #camp post")');
   assert.equal(await page.locator('text=Sorted within the loaded posts').count(), 0,
     'the /f/ caveat must not follow a server-ranked board');

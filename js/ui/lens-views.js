@@ -969,7 +969,7 @@ export function lensHashtagView(params) {
       side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()) };
   }
   const main = el('div', {}, el('h1', {}, `#${tag}`), skeleton(6));
-  const card = el('div', { class: 'card' });
+  const card = el('div', { class: 'card', 'data-board': 'hashtag' });
   const note = el('div', { class: 'xs muted', style: 'padding:6px', 'data-whole-corpus': '1' });
   // 4e: the toolbar RE-QUERIES here rather than re-sorting what loaded.
   // searchPosts takes sort and since server-side, so a hashtag board's "Top ·
