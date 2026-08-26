@@ -6,6 +6,7 @@ import * as store from '../store.js';
 import * as sel from '../selectors.js';
 import * as actions from '../actions.js';
 import * as skins from '../skins.js';
+import * as version from '../version.js';
 import { go } from '../router.js';
 import { frontiers } from '../../ledger/divergence.js';
 import { humanWait } from '../engines/limits.js';
@@ -530,10 +531,19 @@ export function settingsView() {
   themeSel.addEventListener('change', () => themeCtl.setTheme(themeSel.value));
   // 3d (OQ4): the front-door/mode preference is a device-local setting —
   // "it's local to them". The dev-bar Mode control is a scaffolding mirror.
-  const frontSel = el('select', { class: 'form' },
-    el('option', { value: 'bluesky', selected: (localStorage.getItem('forage.front') || 'bluesky') === 'bluesky' || false }, 'Bluesky view (the live network)'),
-    el('option', { value: 'memory', selected: localStorage.getItem('forage.front') === 'memory' || false }, 'Memory (the local sandbox)'));
-  frontSel.addEventListener('change', () => { try { localStorage.setItem('forage.front', frontSel.value); } catch {} });
+  // 3o: which build is this device running? (owner ask) — a stale service
+  // worker is the usual answer to "my change isn't there".
+  const versionOut = el('span', { class: 'small muted', 'data-version': 'pending' }, 'checking…');
+  Promise.all([version.deployedVersion(), version.runningVersion()]).then(([deployed, running]) => {
+    const st = version.versionStatus({ deployed, running });
+    versionOut.setAttribute('data-version', st.state);
+    versionOut.replaceChildren(st.label);
+    if (st.state === 'stale') {
+      const b = el('button', { class: 'btn sm', style: 'margin-left:8px' }, 'Reload now');
+      b.addEventListener('click', () => location.reload());
+      versionOut.append(b);
+    }
+  });
   // 4a: the skin picker — skins and modes are independent axes; any skin in
   // any mode. Device-local, like theme and front door.
   const skinSel = el('select', { class: 'form' }, ...Object.entries(skins.SKINS).map(([id, s]) =>
@@ -542,8 +552,12 @@ export function settingsView() {
   const themeCard = el('div', { class: 'card' },
     el('div', { class: 'field-row' }, el('label', {}, 'Theme'), themeSel),
     el('div', { class: 'field-row' }, el('label', {}, 'Skin'), skinSel),
-    el('div', { class: 'field-row' }, el('label', {}, 'Front door'), frontSel),
-    el('div', { class: 'xs muted' }, 'Skin and front door are this device only.'));
+    el('div', { class: 'field-row' }, el('label', {}, 'Mode'),
+      el('a', { href: '/mode' }, 'Bluesky view ↔ Memory sandbox — choose at /mode')),
+    el('div', { class: 'field-row' }, el('label', {}, 'Accounts'),
+      el('a', { href: '/me' }, 'Switch account, add another, or sign out')),
+    el('div', { class: 'field-row' }, el('label', {}, 'Version'), versionOut),
+    el('div', { class: 'xs muted' }, 'Theme, skin, and mode are this device only.'));
 
   if (!V()) {
     return { main: el('div', {}, el('h1', {}, 'Preferences'), themeCard,

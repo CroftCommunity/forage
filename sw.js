@@ -7,11 +7,11 @@
 // Bump CACHE whenever you want to force a clean re-cache on the very next load
 // (asset URLs are hashless, so the name is the version).
 
-const CACHE = 'forage-v20';
+const CACHE = 'forage-v21';
 const SHELL = [
   '/', '/404.html',
   './skins/bbs.css', './skins/usenet.css',
-  './vendor/atproto-oauth-client-browser.js', './js/auth/session.js', './js/skins.js', './js/mode.js', './js/ui/mode-view.js',
+  './vendor/atproto-oauth-client-browser.js', './js/auth/session.js', './js/skins.js', './js/version.js', './js/mode.js', './js/ui/mode-view.js',
   './', './index.html',
   './css/tokens.css', './css/app.css',
   './js/main.js', './js/router.js', './js/store.js', './js/storage.js',

@@ -39,6 +39,13 @@ export async function run() {
   await page.waitForFunction(() => !document.getElementById('skin-sheet'));
   assert.equal(await fontOf(), before, 'default restores the exact original font stack');
 
+  // 3o: Settings answers "which build am I looking at?"
+  await page.waitForSelector('[data-version]');
+  await page.waitForFunction(() => document.querySelector('[data-version]')?.getAttribute('data-version') !== 'pending',
+    null, { timeout: 10000 });
+  const vtext = await page.locator('[data-version]').innerText();
+  assert.match(vtext, /forage-v\d+/, `the version row names a build: ${vtext}`);
+
   assert.deepEqual(await s.shimMisses(), [], 'skins are pure CSS — no network');
   await s.close();
 }
