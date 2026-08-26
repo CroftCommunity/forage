@@ -1,7 +1,7 @@
 # Plan: forum-chrome tokens, the phpBB skin, and a phpBB style importer
 
 date: 2026-08-26
-status: PHASE 0 COMPLETE (2026-08-26) — vocabulary ratified on measured evidence; OQ1/OQ4/OQ5 decided by owner. Phases 1–4 awaiting go.
+status: COMPLETE (2026-08-26) — all phases executed on branch `claude/skin-chrome`. 347 unit tests + 5/5 browser workflows green. Not pushed; not merged to main.
 Execution in `worktrees/forage/skin-chrome` (branch `claude/skin-chrome`)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `f08fa9d` (rebased 2026-08-26 from `f6012bf`; main moved when
@@ -969,3 +969,52 @@ Spine: Phase 0 → 1B → 1C → 1D → 1E → 1F → 2 → 3A → 3B → 4A →
 
 Expand/contract still holds: 1B–1E add the new path beside the legacy one, 1F removes
 the old. `js/theme.js` keeps working until 1F, so every intermediate state is shippable.
+
+### Execution complete — 2026-08-26
+
+All phases landed. Ordered as planned except where execution found otherwise,
+each recorded at the time:
+
+| Phase | What shipped |
+|---|---|
+| 0 | 4 real styles measured; vocabulary ratified; 6 findings |
+| 1A–1G | The collapse: skins subsume themes (7 phases, not 4 — see below) |
+| 2 | The 15-role chrome vocabulary, inert by default, radii tokenised |
+| 3A/3B | `phpbb` + `phpbb-dark`, hand-authored, paired |
+| 4A/4B | GPL fixtures with provenance; the importer |
+| 5 | The skins journey, built phase-by-phase per owner direction |
+| 6 | ADR-003, DL-027, README, `docs/SKINS.md` |
+
+**Three plan defects surfaced during execution, all in the same class — a phase
+that named a change but not the file it lived in:**
+
+1. Registering `forage-dark` had no home in any write-set (found reading ahead
+   into 1B). Adding it made 4 files, so the collapse re-split 1B–1F, then 1G.
+2. 1D's no-flash workflow assertion had no `e2e/` entry in its write-set.
+3. 1E's Theme-row removal broke two OTHER workflows that used `text=Theme` as a
+   settings sentinel — invisible to the write-set discipline entirely, because
+   the coupling was through a string in an unrelated file.
+
+The first two are the same Pass-2 gap analysis missed twice: a phase's write-set
+was derived from its *narrative*, not from tracing what the change touches. The
+third is the argument for the browser tier existing at all.
+
+**Where the tests earned their keep, beyond going green:**
+
+- Mutation on 1A: 8 mutations, 7 killed. The survivor showed a test passing for
+  the wrong reason (a self-pair also trips the same-palette guard).
+- The 1D pre-paint test passed with BOTH boot scripts deleted, three times over,
+  before it tested anything: the service worker served the module from cache;
+  nothing asserted the block worked; and only one of two entry documents was
+  covered. Fixed and mutation-verified on both.
+- The importer's gate independently rediscovered the accessibility defect found
+  by hand in 3A (`a:hover #D46400` at 3.74:1). Two routes, one finding.
+
+**Not done, deliberately:** `@axe-core/playwright` (a dependency + version
+override decision for the owner, trap recorded in Phase 5); the OQ3 structural
+layer (DL-027).
+
+**Owner decisions honoured:** registry-only phpbb (OQ2), density deferred as a
+frontier (OQ3), GPL-only in-repo with the importer as a local tool (OQ1),
+subSilver palette + prosilver band (OQ5), derived-dark superseded by the
+collapse (OQ4), Playwright pin actioned as pre-work (OQ6).
