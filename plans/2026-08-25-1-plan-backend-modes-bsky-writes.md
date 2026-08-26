@@ -1253,3 +1253,52 @@ is body, never a comment). 250/250 + 4 journeys green.
   points at the wrong feed), links display `f/<Display Name>` with the alias
   href, and the rkey URL keeps working forever. If an owner renames their feed,
   old alias links die but canon survives — recorded honestly.
+
+### Preview iteration, part 5 — feed box, quote cascades, favorites, sizing, language (2026-08-26)
+
+Five units from a live preview pass, each RED-first with a journey segment.
+
+- **3p — one box above a feed board** (`8ea64d1`). The header card and the
+  affordance strip duplicated the `<h1>`'s title AND the description. Merged:
+  logo, "Curated by @handle." where the duplicate title was, Join/Leave
+  right-aligned on that line, the feed's own description quoted beneath with a
+  left wall (it is the only inclusion rule that exists — DL-025). A feed with
+  no description gets OUR sentence, unquoted. `feedCardModel()` carries no
+  title field at all, so the dupe cannot drift back; mutation-verified (adding
+  the h2 back fails W3).
+- **3q — the quote wall** (`52f0495`). The quote node's classes (`.cmeta`,
+  `.cbody`) had NO CSS rules, so it rendered as default body text; and with no
+  left rule of its own, the first reply below it read as nested under it.
+  Grammar now: **a left wall means quoted material, the green gutter means
+  collapsible reply, never both on one node.**
+- **3r — quote CASCADES** (`7f7e90b`). A repost-with-comment can itself be
+  quoted and collects replies of its own; the thread showed neither.
+  `shapeLensThread` folds a cascade (a quote entry is a threadViewPost plus its
+  own quotes) to `QUOTE_CASCADE_DEPTH`, one ordering rule the whole way down.
+  The wall now marks KIND at any depth, so walls nest in walls and gutters nest
+  in walls. The fetch is opt-in and lands after first paint; fan-out is bounded
+  by the depth cap AND by the appview's own replyCount/quoteCount, so a quote
+  announcing neither is never asked about. Past the cap the node says how many
+  it is hiding.
+- **3s — Favorite split from Join** (`7f7e90b`). Joining forced `pinned: true`,
+  silently rearranging the tab bar bsky.app shows. Now joining saves, the star
+  pins, unfavoriting leaves you joined, favoriting joins you if you weren't.
+  The write-path invariant was updated deliberately: two putPreferences
+  callers, both under the marker, count pinned.
+- **3t — the image-size slider** (`07618f1`). Preview size is a per-screen
+  judgement, so it is a slider on the sort row, card view only (compact renders
+  no media). Device-local; drags write one CSS custom property, so the board
+  resizes without refetching. The default IS the old hard-coded 220px cap, so
+  an untouched board is unchanged.
+- **3u — content languages** (`0104c72`, DL-026). **Researched before built.**
+  Verified: `app.bsky.feed.post.langs` exists (array, max 3, format
+  "language"; live probe returned `["en"]`); `searchPosts` takes a `lang`
+  param; and `app.bsky.actor.defs` has **no language preference at all** — the
+  official app's "content languages" is app-local, not account state. So there
+  is nothing to mirror: Forage's preference is Forage's own, device-local, and
+  the profile panel says so. Default unchanged (everything shows); a post
+  declaring a language you don't read is annotated with a chip, not hidden.
+  Choosing languages makes it a filter that runs before the window sort and
+  reports what it removed. A post that declared nothing is never hidden.
+
+302 unit tests / 88 conformance / 5 journeys green. `sw.js` at `forage-v24`.
