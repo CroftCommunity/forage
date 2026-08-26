@@ -56,6 +56,11 @@ export async function run() {
         items: [{ type: 'feed', value: WHATS_HOT, pinned: true, id: '1' },
                 { type: 'timeline', value: 'following', pinned: true, id: '2' }] }] },
       'getFeedGenerators': { feeds: [{ uri: WHATS_HOT, displayName: "What's Hot", likeCount: 1 }] },
+      'getMutes': { mutes: [] },
+      'getBlocks': { blocks: [] },
+      'getListMutes': { lists: [] },
+      'getListBlocks': { lists: [] },
+
       'getFeed': fixture('wide-getFeed'),
     },
   });

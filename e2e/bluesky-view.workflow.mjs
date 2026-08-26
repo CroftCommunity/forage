@@ -2,8 +2,8 @@
 //   3b: signed-in ring dial → merged mutuals board
 //   3c: boost = like (optimistic flip; the write's exact shape asserted)
 //   3e: a thread where a reply AND a quote are one continuation
-// Later units append: masking + verification (3f), trending + /h/ (3g), the
-// front-door arc (3d).
+//   3f: the account's muted word masks in the board; a verified author ✓
+// Later units append: trending + /h/ (3g), the front-door arc (3d).
 import assert from 'node:assert/strict';
 import { scenario } from './harness/scenario.mjs';
 
@@ -27,7 +27,8 @@ const FAKE_SIGNED_IN = `(() => {
 
 const post = (rkey, did, ts) => ({ post: {
   uri: `at://${did}/app.bsky.feed.post/${rkey}`, cid: 'cid-' + rkey,
-  author: { did, handle: did.slice(8) + '.test', displayName: rkey },
+  author: { did, handle: did.slice(8) + '.test', displayName: rkey,
+    ...(did === 'did:plc:aa' ? { verification: { verifiedStatus: 'valid', trustedVerifierStatus: 'none' } } : {}) },
   record: { text: `post ${rkey}`, createdAt: ts }, indexedAt: ts,
   replyCount: 0, repostCount: 0, likeCount: 2,
 } });
@@ -37,11 +38,21 @@ export async function run() {
     initScripts: [FAKE_SIGNED_IN],
     responses: {
       'describeRepo': { handle: 'me.test' },
-      'getPreferences': { preferences: [] },
+      'getPreferences': { preferences: [{ $type: 'app.bsky.actor.defs#mutedWordsPref',
+        items: [{ value: 'kryptonite', targets: ['content'], actorTarget: 'all' }] }] },
+      'getMutes': { mutes: [] },
+      'getBlocks': { blocks: [] },
+      'getListMutes': { lists: [] },
+      'getListBlocks': { lists: [] },
+
       'getFollows?actor=did%3Aplc%3Ame': { follows: [{ did: 'did:plc:aa' }, { did: 'did:plc:bb' }] },
       'getFollowers': { followers: [{ did: 'did:plc:aa' }, { did: 'did:plc:bb' }] },
       'getAuthorFeed?actor=did%3Aplc%3Aaa': { feed: [post('a1', 'did:plc:aa', '2026-08-25T10:00:00Z')] },
-      'getAuthorFeed?actor=did%3Aplc%3Abb': { feed: [post('b1', 'did:plc:bb', '2026-08-25T11:00:00Z')] },
+      'getAuthorFeed?actor=did%3Aplc%3Abb': { feed: [
+        post('b1', 'did:plc:bb', '2026-08-25T11:00:00Z'),
+        { post: { ...post('b2', 'did:plc:bb', '2026-08-25T09:00:00Z').post,
+          record: { text: 'my kryptonite take', createdAt: '2026-08-25T09:00:00Z' } } },
+      ] },
       'com.atproto.repo.createRecord': { uri: 'at://did:plc:me/app.bsky.feed.like/3w3like', cid: 'lc' },
       'com.atproto.repo.deleteRecord': {},
       'getPostThread': { thread: {
@@ -85,6 +96,12 @@ export async function run() {
   await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('deleteRecord')));
   const del = await page.evaluate(() => JSON.parse(window.__shimHits.find((h) => h.url.includes('deleteRecord')).body));
   assert.deepEqual(del, { repo: 'did:plc:me', collection: 'app.bsky.feed.like', rkey: '3w3like' });
+
+  // 3f segment: the account-side muted word masks IN THE BOARD; ✓ renders
+  await page.waitForSelector('text=[muted — matches your muted words]');
+  assert.equal(await page.locator('text=kryptonite').count(), 0, 'the muted text never renders');
+  assert.ok(await page.locator('.postrow:has-text("post a1") span[title="Verified on Bluesky"]').count(),
+    'the verified author carries the checkmark');
 
   // 3e segment: open b1's thread — reply and quote are ONE continuation
   await page.locator('.postrow', { hasText: 'post b1' }).locator('a[href*="/lens/p?uri="]').first().click();

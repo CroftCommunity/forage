@@ -1,7 +1,7 @@
 # Plan: three modes — memory, the Bluesky view with a ring dial, and the private BBS
 
 date: 2026-08-25
-status: EXECUTING — 3a–3c + 3e SHIPPED; next: 3f (the moderation-posture mirror).
+status: EXECUTING — 3a–3f SHIPPED (posture mirror live); next: 3g (content streams: /h/ + trending).
 Execution in worktrees/forage/modes-bbs (branch claude/modes-bbs)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `10a8ade` (clean tree, pushed; forage.fyi deployed at forage-v11)
@@ -632,7 +632,7 @@ same commit. PHASE-GATE: OQ3 (own-test-post-only live validation, confirmed).
   backend; the live credentialed pass stays manual.
 Multi-commit ≤3.
 
-#### 3e: Quotes as thread continuation — ✅ SHIPPED (D7-grounded)
+#### 3e: Quotes as thread continuation — ✅ SHIPPED (`55938af`) (D7-grounded)
 The user's observation: on Bluesky people respond by replying AND by quoting, and a
 topic-centered lens should present BOTH as the thread's continuation (the network's
 actor-centered view scatters quotes onto the quoter's profile). Also the BBS idiom.
@@ -657,7 +657,7 @@ actor-centered view scatters quotes onto the quoter's profile). Also the BBS idi
 **Wiring:** hermetic thread tests + the 3d live smoke extends to open a thread with
 a known quote (own test post pair). Multi-commit ≤3.
 
-#### 3f: Honest rendering — the account's own moderation posture, mirrored
+#### 3f: Honest rendering — the account's own moderation posture, mirrored — ✅ SHIPPED
 (Added 2026-08-25, user-ratified tier 1 + verification; EXPANDED same day on user
 direction: "mirror the standard moderation controls … piggy back anywhere we can".)
 Correctness, not features: a lens that drops these misrepresents the network.
