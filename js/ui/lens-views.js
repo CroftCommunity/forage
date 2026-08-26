@@ -62,6 +62,24 @@ const sources = new Map(CURATED.map((c) => [c.slug, c]));
 
 const chip = (label, title) => el('span', { class: 'frontier-chip', title }, label);
 
+// 3c: boost = like. Optimistic flip lives in voteBox; this handler does the
+// network truth. Bury has no Bluesky analogue (DL-011 likes-only) — words,
+// then the 'gated' signal so voteBox reverts silently.
+function lensVote(p) {
+  return async (next) => {
+    if (next === -1) { toast('Bury has no Bluesky analogue — boosts ride likes (DL-011).', 'err'); throw new Error('gated'); }
+    if (next === 1) {
+      const { likeUri } = await lens.like(p.id, p.cid);
+      p.likeUri = likeUri; // so an immediate unboost knows its rkey
+    } else {
+      if (!p.likeUri) throw new Error('no like to remove');
+      await lens.unlike(p.likeUri);
+      p.likeUri = null;
+    }
+  };
+}
+const lensRow = (p) => postRow(p, !!session, { onVote: lensVote(p) });
+
 function lensSidebar() {
   const fieldsCard = el('div', { class: 'card' }, el('h2', {}, 'Lens Fields'));
   const list = el('div', { class: 'stack' });
@@ -161,7 +179,7 @@ function ringBoard(ring, cursor) {
     if (board.overflow) chips.append(chip(`ring capped: ${board.overflow.total} members → first ${RING_CAP} (DL-016)`, `The ring truly has ${board.overflow.total} members; the board draws the first ${RING_CAP}. Honest overflow, never silent.`));
     if (board.failures.length) chips.append(chip(`${board.failures.length} member feed(s) unreachable`, board.failures.join(', ')));
     const card = el('div', { class: 'card' });
-    for (const p of board.posts) card.append(postRow(p, false));
+    for (const p of board.posts) card.append(lensRow(p));
     for (const a of card.querySelectorAll('a[href*="/p/at:"]')) {
       const m = a.getAttribute('href').match(/\/p\/(at:.+)$/);
       if (m) a.setAttribute('href', `#/lens/p?uri=${encodeURIComponent(m[1])}&from=${board.fieldSlug}`);
@@ -186,9 +204,8 @@ export function lensHomeView() {
     ringDial(),
     el('div', { class: 'card' },
       el('p', { class: 'small' },
-        'Your Bluesky, shaped as a forum: Fields are feeds, threads are threads, boosts ride likes. Read-only — writes stay on the demo tier for now.'),
+        'Your Bluesky, shaped as a forum: Fields are feeds, threads are threads, and boosting IS liking — a boost here is a real like on Bluesky (DL-013 shipped). Signed out, the lens is read-only.'),
       el('div', { class: 'row wrap', style: 'gap:6px' },
-        chip('boost = like: deferred (DL-013)', 'Writing likes from the lens is a ledgered frontier'),
         chip('guest search: needs sign-in (DL-014)', 'searchPosts is 403 unauthenticated — probe-verified'),
         chip('saves: deferred (DL-015)', 'Bookmarks are not public API surface yet'))),
     el('div', { class: 'card' },
@@ -208,7 +225,7 @@ export function lensFieldView(params) {
     skeleton(6));
   lens.feed(entry.source, { title: entry.title }).then((f) => {
     const card = el('div', { class: 'card' });
-    for (const p of f.posts) card.append(postRow(p, false));
+    for (const p of f.posts) card.append(lensRow(p));
     main.replaceChildren(
       el('div', { class: 'row spread wrap' },
         el('h1', {}, entry.title),

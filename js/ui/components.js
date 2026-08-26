@@ -28,7 +28,9 @@ export function gate(msg) {
 }
 
 // ---------- vote control (optimistic) ----------
-export function voteBox(subjectType, id, data, canVote, orientation = 'col') {
+// onVote (optional) replaces the memory-tier write path — the lens injects
+// its like/unlike here so policy stays out of this component (invariant 2).
+export function voteBox(subjectType, id, data, canVote, orientation = 'col', onVote = null) {
   const scoreEl = el('div', { class: 'score' }, fmtScore(data.score));
   const boost = el('button', { class: 'vote boost' + (data.myVote === 1 ? ' on' : ''), title: 'Boost', 'aria-label': 'Boost' }, '▲');
   const bury = el('button', { class: 'vote bury' + (data.myVote === -1 ? ' on' : ''), title: 'Bury', 'aria-label': 'Bury' }, '▼');
@@ -44,7 +46,8 @@ export function voteBox(subjectType, id, data, canVote, orientation = 'col') {
     bury.classList.toggle('on', next === -1);
     scoreEl.textContent = fmtScore(score);
     try {
-      await actions.setVote(subjectType, id, next);
+      if (onVote) await onVote(next, prevVote);
+      else await actions.setVote(subjectType, id, next);
       // store notify triggers a full re-render with the truth
     } catch (e) {
       // revert (the "fills green then reverts" path with Fail Next armed)
@@ -74,7 +77,7 @@ function postBadges(p) {
 }
 
 // ---------- post row (feed) ----------
-export function postRow(p, viewerCanVote) {
+export function postRow(p, viewerCanVote, opts = {}) {
   const link = `#/f/${p.fieldSlug}/p/${p.id}`;
   const titleLink = p.format === 'link' && p.url
     ? el('a', { href: p.url, target: '_blank', rel: 'noopener noreferrer' }, p.title)
@@ -96,7 +99,7 @@ export function postRow(p, viewerCanVote) {
     body, meta,
   );
   const row = el('div', { class: 'postrow' + (p.pinned ? ' pinned-row' : '') },
-    voteBox('post', p.id, p, viewerCanVote), right);
+    voteBox('post', p.id, p, viewerCanVote, 'col', opts.onVote), right);
   return row;
 }
 
