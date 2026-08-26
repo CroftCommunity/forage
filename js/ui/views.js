@@ -387,7 +387,7 @@ export function submitView(params, query) {
     const sel2 = el('select', { class: 'form' }, el('option', { value: '' }, '— choose a Field —'),
       ...fields.map((f) => el('option', { value: f.slug, selected: f.slug === state.fieldSlug || false }, `f/${f.slug}`)));
     sel2.addEventListener('change', () => (state.fieldSlug = sel2.value));
-    host.append(el('div', { class: 'field-row' }, el('label', {}, 'Post to which Field?'), sel2),
+    host.append(fieldRow('Post to which Field?', sel2),
       el('button', { class: 'btn primary', onclick: () => { if (!state.fieldSlug) return toast('Pick a Field.', 'err'); next(); } }, 'Next →'));
   }
   function step2() {
@@ -397,7 +397,8 @@ export function submitView(params, query) {
       el('button', { class: 'btn', onclick: back }, '← Back'), el('button', { class: 'btn primary', onclick: next }, 'Next →')));
   }
   function fmtTab(fmt, label, locked) {
-    const t = el('div', { class: 'ft' + (state.format === fmt ? ' active' : '') + (locked ? ' locked' : '') }, label,
+    const t = el('div', { class: 'ft' + (state.format === fmt ? ' active' : '') + (locked ? ' locked' : ''),
+      ...(locked ? { 'aria-disabled': 'true' } : {}) }, label,
       locked ? el('div', { class: 'xs' }, 'frontier') : null);
     if (!locked) t.addEventListener('click', () => { state.format = fmt; render(); });
     return t;
@@ -407,11 +408,11 @@ export function submitView(params, query) {
     const fdata = sel.field(S(), V(), state.fieldSlug, NOW());
     const title = el('input', { type: 'text', value: state.title, placeholder: 'Title' });
     title.addEventListener('input', () => (state.title = title.value));
-    host.append(el('div', { class: 'field-row' }, el('label', {}, 'Title'), title));
+    host.append(fieldRow('Title', title));
     if (state.format === 'text') {
       const body = el('textarea', { placeholder: 'Body (markdown-lite: **bold**, *italic*, `code`)' }); body.value = state.body;
       body.addEventListener('input', () => (state.body = body.value));
-      host.append(el('div', { class: 'field-row' }, el('label', {}, 'Body'), body));
+      host.append(fieldRow('Body', body));
     } else {
       const url = el('input', { type: 'url', value: state.url, placeholder: 'https://…' });
       url.addEventListener('input', () => { state.url = url.value; checkDupe(); });
@@ -421,12 +422,12 @@ export function submitView(params, query) {
         dupe.textContent = hit ? `⚠ Possible duplicate: “${hit.title}” was already posted.` : '';
       };
       url.addEventListener('blur', checkDupe);
-      host.append(el('div', { class: 'field-row' }, el('label', {}, 'URL'), url, dupe));
+      host.append(fieldRow('URL', url, dupe));
     }
     if (fdata?.settings.requireTags) {
       const tag = el('input', { type: 'text', value: state.tagId, placeholder: 'e.g. guide, help, chat' });
       tag.addEventListener('input', () => (state.tagId = tag.value));
-      host.append(el('div', { class: 'field-row' }, el('label', {}, 'Tag (required in this Field)'), tag));
+      host.append(fieldRow('Tag (required in this Field)', tag));
     }
     const nsfw = el('input', { type: 'checkbox' }); nsfw.checked = state.nsfw; nsfw.addEventListener('change', () => (state.nsfw = nsfw.checked));
     const spoiler = el('input', { type: 'checkbox' }); spoiler.checked = state.spoiler; spoiler.addEventListener('change', () => (state.spoiler = spoiler.checked));
@@ -476,9 +477,9 @@ export function createFieldView() {
   const title = el('input', { type: 'text', placeholder: 'Title' });
   const desc = el('textarea', { placeholder: 'Description' });
   const host = el('div', { class: 'card' },
-    el('div', { class: 'field-row' }, el('label', {}, 'Slug'), slug),
-    el('div', { class: 'field-row' }, el('label', {}, 'Title'), title),
-    el('div', { class: 'field-row' }, el('label', {}, 'Description'), desc),
+    fieldRow('Slug', slug),
+    fieldRow('Title', title),
+    fieldRow('Description', desc),
     el('button', { class: 'btn primary', onclick: async () => {
       const s = slug.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
       if (!s || !title.value.trim()) return toast('Slug and title required.', 'err');
@@ -512,7 +513,7 @@ export function fieldSettingsView(params) {
   const desc = el('textarea', {}); desc.value = f.description;
   const reqTags = el('input', { type: 'checkbox' }); reqTags.checked = f.settings.requireTags;
   const host = el('div', { class: 'card' },
-    el('div', { class: 'field-row' }, el('label', {}, 'Description'), desc),
+    fieldRow('Description', desc),
     el('label', { class: 'xs' }, reqTags, ' Require a tag on every post'),
     el('div', { style: 'margin-top:12px' }, el('button', { class: 'btn primary', onclick: async () => {
       await actions.updateFieldSettings(f.id, { requireTags: reqTags.checked, description: desc.value.trim() });
@@ -522,14 +523,23 @@ export function fieldSettingsView(params) {
     el('p', { class: 'muted small' }, `Steward management and the rules editor are owner tools; stewards: ${f.stewards.join(', ')}`), host), side: null };
 }
 
+// A <label> that merely sits NEXT TO an input names nothing. A screen reader
+// announces "edit text, blank", and clicking the label does not focus the
+// field. Both are fixed by one association: label[for] -> control[id].
+//
+// Centralised because the bare pattern was repeated at 17 call sites and 14 of
+// them were unlabelled — this is not a thing to remember per form. Rows that
+// hold a LINK or a readout rather than a control (Mode, Accounts, Version) are
+// not form fields; they keep their plain label and are left alone.
+let fieldSeq = 0;
+export function fieldRow(labelText, control, ...extra) {
+  const isControl = /^(INPUT|SELECT|TEXTAREA)$/.test(control?.tagName ?? '');
+  if (!isControl) return el('div', { class: 'field-row' }, el('label', {}, labelText), control, ...extra);
+  if (!control.id) control.id = `fr-${++fieldSeq}`;
+  return el('div', { class: 'field-row' }, el('label', { for: control.id }, labelText), control, ...extra);
+}
+
 // ---------- settings / prefs ----------
-// NOTE (2026-08-26): the `.field-row` pattern used throughout this file places
-// a <label> as a SIBLING of its control, with no `for`. That names nothing —
-// axe reports `select-name` / form-field-without-label. The controls on THIS
-// view are wired with id/for because e2e/a11y-skins.workflow.mjs scans it. The
-// same latent defect exists at the other field-row call sites (submit, create
-// field, field settings); those surfaces are not scanned yet, so they are
-// recorded here rather than quietly left as if checked.
 export function settingsView() {
   // Skins subsumed themes (plan 2026-08-26-1): the separate Theme control is
   // gone, because a palette IS a skin. Light and dark are two entries in the
@@ -562,7 +572,7 @@ export function settingsView() {
     el('optgroup', { label: 'Dark' }, ...optsFor('dark')));
   skinSel.addEventListener('change', () => skins.setSkin(skinSel.value));
   const themeCard = el('div', { class: 'card' },
-    el('div', { class: 'field-row' }, el('label', { for: 'pref-skin' }, 'Skin'), skinSel),
+    fieldRow('Skin', skinSel),
     el('div', { class: 'field-row' }, el('label', {}, 'Mode'),
       el('a', { href: '/mode' }, 'Bluesky view ↔ Memory sandbox — choose at /mode')),
     el('div', { class: 'field-row' }, el('label', {}, 'Accounts'),
@@ -582,8 +592,8 @@ export function settingsView() {
   return { main: el('div', {}, el('h1', {}, 'Preferences'),
     themeCard,
     el('div', { class: 'card', style: 'margin-top:12px' },
-      el('div', { class: 'field-row' }, el('label', { for: 'pref-threshold' }, 'Auto-collapse comments below score'), thr),
-      el('div', { class: 'field-row' }, el('label', { for: 'pref-sort' }, 'Default feed sort'), sort))), side: null };
+      fieldRow('Auto-collapse comments below score', thr),
+      fieldRow('Default feed sort', sort))), side: null };
 }
 
 // ---------- about the dev bar (meta) ----------
@@ -679,8 +689,8 @@ export function signupView() {
     el('h1', {}, 'Join Forage'),
     el('p', { class: 'muted' }, 'Forage the open web.'),
     el('div', { class: 'card' },
-      el('div', { class: 'field-row' }, el('label', {}, 'Handle'), handle),
-      el('div', { class: 'field-row' }, el('label', {}, 'Email'), email),
+      fieldRow('Handle', handle),
+      fieldRow('Email', email),
       el('button', { class: 'btn primary', onclick: async () => {
         const h = handle.value.trim();
         if (!h) return toast('Pick a handle.', 'err');

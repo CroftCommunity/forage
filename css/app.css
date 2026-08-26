@@ -288,7 +288,14 @@ textarea { min-height: 120px; resize: vertical; }
 .format-tabs { display: flex; gap: var(--s2); margin-bottom: var(--s3); }
 .format-tabs .ft { flex: 1; text-align: center; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-card); cursor: pointer; font-size: var(--t-sm); }
 .format-tabs .ft.active { border-color: var(--brand); background: var(--green-100); color: var(--brand); }
-.format-tabs .ft.locked { opacity: .5; cursor: not-allowed; }
+/* The locked format tab is a FRONTIER MARKER — it says "Media, frontier", i.e.
+   deliberately deferred. `opacity: .5` dropped it to 3.09:1 on white, so the
+   one thing a person needs to read in order to understand why the option is
+   unavailable was the thing they could not read. Muted via the palette instead
+   of dimmed, so it stays legible in every skin and still reads as inert. */
+.format-tabs .ft.locked {
+  color: var(--muted); background: var(--card-2); cursor: not-allowed;
+}
 
 /* ---- Frontier chips ---- */
 .frontier-chip { display: inline-block; border: 1px dashed var(--muted); border-radius: var(--radius-chip); padding: 3px 12px; font-size: var(--t-xs); color: var(--muted); margin: 3px; }
