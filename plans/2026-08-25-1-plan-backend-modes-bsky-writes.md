@@ -1,7 +1,7 @@
 # Plan: three modes — memory, the Bluesky view with a ring dial, and the private BBS
 
 date: 2026-08-25
-status: PHASES 1–4 COMPLETE AND LANDING (user 2026-08-25: pause before the Spaces pilot; commit, deploy, document). Phase 5 split approved, implementation awaits the owner's go.
+status: PHASES 1–4 DEPLOYED to forage.fyi (2026-08-25, main @ 0d77e8e, sw forage-v15; CI green; HOSTED OAuth validated live on production). Phase 5 split approved, implementation awaits the owner's go.
 Execution in worktrees/forage/modes-bbs (branch claude/modes-bbs)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `10a8ade` (clean tree, pushed; forage.fyi deployed at forage-v11)
