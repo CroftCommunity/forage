@@ -10,7 +10,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   authModeFor, buildLoopbackClientId, OAUTH_SCOPE, PRODUCTION_ORIGIN,
-  createSessionManager,
+  createSessionManager, isOAuthCallback,
 } from '../js/auth/session.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -95,4 +95,14 @@ test('refusals with words: fetch without a session; signOut when signed out is a
   await assert.rejects(() => mgr.fetch('/xrpc/x'), /signed out|no session/i);
   await mgr.signOut(); // no throw
   assert.equal(mgr.state(), 'signed-out');
+});
+
+test('isOAuthCallback: code+state required, query OR fragment form (atproto browser clients default to response_mode=fragment — live-observed)', () => {
+  assert.equal(isOAuthCallback('?code=abc&state=xyz'), true);
+  assert.equal(isOAuthCallback('#state=xyz&iss=https%3A%2F%2Fbsky.social&code=cod-abc'), true);
+  assert.equal(isOAuthCallback('state=xyz&code=abc'), true);
+  assert.equal(isOAuthCallback('?code=abc'), false);
+  assert.equal(isOAuthCallback('#state=xyz'), false);
+  assert.equal(isOAuthCallback('#/lens'), false);
+  assert.equal(isOAuthCallback(''), false);
 });

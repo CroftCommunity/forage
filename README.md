@@ -114,7 +114,11 @@ The running app has **modes** — named routing tables over the same capabilitie
   `forage.state` is provably untouched (byte-identical round-trip under test).
 - The **Bluesky view** (`#/lens`) is deliberately NOT a mode — it is a read
   surface over the live network with its own session; nothing from it enters the
-  event fold.
+  event fold. Identity is **Sign in with Bluesky** (the official OAuth flow via
+  the vendored `@atproto/oauth-client-browser`, drift-checked in
+  `test/vendor.test.js`): you authorize on your own server, no credentials touch
+  Forage, and the session survives reloads. Works on forage.fyi and localhost
+  (the OAuth client is origin-bound; other origins are read-only).
 
 The dev bar's Mode control is a scaffolding mirror; the canonical preference
 lands in Settings (plan 2026-08-25-1, phase 3).

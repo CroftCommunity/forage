@@ -17,7 +17,7 @@ import { fetchShim } from './shim.mjs';
 
 const STATES = ['first-visit', 'seeded'];
 
-export async function scenario(state, { ...shimOpts } = {}) {
+export async function scenario(state, { initScripts = [], ...shimOpts } = {}) {
   if (!STATES.includes(state)) {
     throw new Error(`unknown scenario state: ${state} (known: ${STATES.join(', ')})`);
   }
@@ -25,6 +25,10 @@ export async function scenario(state, { ...shimOpts } = {}) {
   const browser = await chromium.launch({ headless: !process.env.HEADED });
   const context = await browser.newContext();
   await context.addInitScript(fetchShim(shimOpts));
+  // Extra scripts (fake managers, seams) install at the CONTEXT before any
+  // navigation — a page-level addInitScript after the first document does NOT
+  // reach later navigations (observed on @playwright/test 1.61).
+  for (const script of initScripts) await context.addInitScript(script);
   if (state === 'seeded') {
     // Deterministic: seed BEFORE first paint via the same seed the app uses,
     // written by the app itself on first visit — here we simply let the
@@ -53,7 +57,9 @@ export async function scenario(state, { ...shimOpts } = {}) {
     },
     errors: () => pageErrors.splice(0),
     consoleErrors: () => consoleErrors.splice(0),
-    shimMisses: () => page.evaluate(() => window.__shimMisses ?? []),
+    // NO `?? []` — if the shim is absent this returns undefined and the
+    // hermeticity assertion FAILS instead of passing vacuously.
+    shimMisses: () => page.evaluate(() => window.__shimMisses),
     async close() {
       const errs = [...pageErrors, ...consoleErrors];
       await browser.close();

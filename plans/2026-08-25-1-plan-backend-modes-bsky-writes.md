@@ -1,7 +1,7 @@
 # Plan: three modes — memory, the Bluesky view with a ring dial, and the private BBS
 
 date: 2026-08-25
-status: EXECUTING — Phase 1 complete; 2a–2b SHIPPED; next unit: 2c (sign-in UI + lens integration).
+status: EXECUTING — Phases 1–2 COMPLETE (OAuth live-validated on loopback); next: 3a (ring computation).
 Execution in worktrees/forage/modes-bbs (branch claude/modes-bbs)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `10a8ade` (clean tree, pushed; forage.fyi deployed at forage-v11)
@@ -538,7 +538,7 @@ corpus is JOURNEY files that grow, not one file per feature:**
 - [ ] `sw.js` — SHELL + bump (registry gate forces it).
 **Wiring:** consumed by 2b; this unit proves integrity, not usage.
 
-#### 2b: The session module — ✅ SHIPPED
+#### 2b: The session module — ✅ SHIPPED (`c175372`)
 - [ ] `js/auth/session.js` — init from vendored client (client-metadata for
   forage.fyi; loopback metadata for localhost dev, arecipe pattern), `signIn(handle)`
   (authorize redirect), callback completion, `currentSession()`, `signOut()`,
@@ -551,7 +551,7 @@ corpus is JOURNEY files that grow, not one file per feature:**
   vendor bundle is absent/mismatched.
 **Depends on:** 2a, D4.
 
-#### 2c: Sign-in UI + lens/session integration
+#### 2c: Sign-in UI + lens/session integration — ✅ SHIPPED
 - [ ] Tests FIRST: `test/lens.test.js` session-dependent cases re-pointed RED at the
   OAuth session shape (`js/auth/session.js` fake) before any lens change; a RED
   assertion that no app-password path remains (grep-style scan for the old
@@ -1035,6 +1035,18 @@ frontiers (forage composes no network posts). The piggy-back principle recorded 
 a Reasoning tenet. BBS-side board moderation (banned words as a space-owner
 concept) is a phase-5-split topic — the memory tier's moderation-as-masking is the
 shape it reuses.
+
+### 2c execution find — fragment callbacks (2026-08-25)
+The live loopback run caught a planning blind spot: the authorize response
+returns in the HASH FRAGMENT (`#state=…&code=…`, atproto's browser default
+response_mode), not the query — and forage routes on the hash, so the router
+saw the callback as an unknown route and the code was never consumed.
+Fix (test-first): `isOAuthCallback` accepts query OR fragment; main.js
+completes the exchange via `ensureAuthBoot()` BEFORE touching the hash, then
+lands on `#/lens`. D4's probe page missed this because it ran init()
+unconditionally with no router. W2's fake-manager journey deliberately mirrors
+the marker→reload→restore shape rather than the fragment (the fragment is the
+real library's concern — covered by this live validation).
 
 ### Amendment review pass — 2026-08-25 (user-requested, over D7–D10 + 3e/3f/3g)
 The plan grew four probes and three phase-3 units after Pass 3 closed; this pass

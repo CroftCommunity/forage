@@ -46,8 +46,9 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 
 ## Lens polish
 
-- Real OAuth replaces the in-memory app-password sign-in (croft's connect OAuth
-  machinery is the workspace precedent).
+- ~~Real OAuth replaces the in-memory app-password sign-in~~ — DONE 2026-08-25
+  (plan 2026-08-25-1, 2a–2c): vendored official client, `js/auth/session.js`,
+  app-password card deleted; live loopback round-trip validated.
 - Comment author links inside lens threads still point at `#/u/<handle>` (memory
   profiles) — route them to bsky.app profiles or a lens profile view.
 - Lens pagination (cursors are plumbed through `lens.feed`, UI has no "more" yet).
