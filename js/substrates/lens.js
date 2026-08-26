@@ -8,6 +8,8 @@
 
 // Lens surfaces are read-only; the write gates all stay shut (frontier chips,
 // never dead buttons — the UI renders these as deferred, invariant 7).
+import { buildPost, withTag } from '../compose.js';
+
 export const LENS_PERMS = Object.freeze({
   viewerId: null, loggedIn: false, admin: false, probation: false,
   isSteward: false, isOwner: false, bannedHere: false, banInfo: null,
@@ -463,10 +465,15 @@ const slugForSource = (source) => {
 // with a RELATIVE /xrpc path (the library owns auth headers, tokens, and
 // refresh; the lens builds none of it) and the personal surfaces (fields,
 // search, timeline) open up.
-// THE one write pair (DL-013): boost = a real Bluesky like. The ONLY records
-// the lens ever writes are its own likes — test/invariants.test.js narrows the
-// read-only proof to exactly this pair.
+// THE write pair (DL-013): boost = a real Bluesky like.
 const LIKE_COLLECTION = 'app.bsky.feed.like';
+
+// 3w: THE publish write. The second kind of record the lens creates, and the
+// one that makes Forage a forum rather than a reader. Deliberately narrow:
+// our own repo, this one collection, a record built by the pure composer, and
+// no deletes — nothing here can remove anything. test/invariants.test.js pins
+// the count so a third kind cannot appear unnoticed.
+const POST_COLLECTION = 'app.bsky.feed.post';
 
 export function createLens({ session = null, transport = fetch } = {}) {
   let posture = EMPTY_POSTURE;
@@ -709,6 +716,19 @@ export function createLens({ session = null, transport = fetch } = {}) {
         record: { $type: LIKE_COLLECTION, subject: { uri, cid }, createdAt: new Date().toISOString() },
       }, 'like');
       return { likeUri: data.uri };
+    },
+
+    // 3w: publish MY post. The composer decides what a post IS (limits,
+    // facets, reply refs) and refuses before anything reaches the network;
+    // this only carries it. Returns uri+cid so a reply can thread onto it
+    // without a refetch.
+    async publish({ text, tag, langs, replyTo } = {}) {
+      if (!session) throw new Error('lens: publishing needs a session — sign in first');
+      const record = buildPost({ text: tag ? withTag(text, tag) : text, langs, replyTo });
+      const data = await post('com.atproto.repo.createRecord', {
+        repo: session.did, collection: POST_COLLECTION, record,
+      }, 'publish');
+      return { uri: data.uri, cid: data.cid, record };
     },
 
     // unboost: delete MY like by its exact rkey.

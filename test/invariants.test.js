@@ -60,16 +60,29 @@ test('the lens exception holds: writes are records-none, likes-one-pair, prefere
   const prefMarker = src.indexOf('the SECOND lens write');
   assert.ok(prefMarker > 0, 'the preferences write carries its marker comment');
   assert.ok(src.indexOf('putPreferences') > prefMarker, 'they live under that marker');
-  // exactly ONE createRecord and ONE deleteRecord, both under the marked
-  // write-pair section, both bound to the like collection constant
-  assert.equal((src.match(/createRecord/g) || []).length, 1, 'exactly one createRecord (the like)');
-  assert.equal((src.match(/deleteRecord/g) || []).length, 1, 'exactly one deleteRecord (the unlike)');
-  const marker = src.indexOf('THE one write pair (DL-013)');
-  assert.ok(marker > 0, 'the write pair carries its marker comment');
-  assert.ok(src.indexOf('createRecord') > marker && src.indexOf('deleteRecord') > marker,
-    'both writes live under the marked section');
-  assert.match(src, /LIKE_COLLECTION = 'app\.bsky\.feed\.like'/, 'the collection is a named constant');
-  assert.equal((src.match(/collection: LIKE_COLLECTION/g) || []).length, 2, 'both writes bind to it');
+  // 3w: the lens now creates TWO kinds of record — its own likes, and its own
+  // posts. That is a deliberate widening (a forum has to be able to write),
+  // and the shape of the widening is what this pins:
+  //   • two createRecord calls, one per collection constant, no more
+  //   • ONE deleteRecord, still bound to the like collection — publishing
+  //     gained no power to delete anything
+  //   • still no putRecord: the lens creates and unlikes; it never edits
+  assert.equal((src.match(/createRecord/g) || []).length, 2, 'exactly two createRecord (the like, the post)');
+  assert.equal((src.match(/deleteRecord/g) || []).length, 1, 'exactly one deleteRecord — and it is the unlike');
+  assert.match(src, /LIKE_COLLECTION = 'app\.bsky\.feed\.like'/, 'the like collection is a named constant');
+  assert.match(src, /POST_COLLECTION = 'app\.bsky\.feed\.post'/, 'so is the post collection');
+  assert.equal((src.match(/collection: LIKE_COLLECTION/g) || []).length, 2, 'the like pair binds to its constant');
+  assert.equal((src.match(/collection: POST_COLLECTION/g) || []).length, 1, 'publish binds to its own');
+  // the deleteRecord must sit with the like, not near publish: a delete under
+  // the publishing path would be a different capability wearing this one's name
+  const deleteAt = src.indexOf('deleteRecord');
+  const likeConst = src.indexOf("LIKE_COLLECTION = 'app.bsky.feed.like'");
+  assert.ok(deleteAt > likeConst, 'the delete lives under the like machinery');
+  assert.match(src.slice(deleteAt - 400, deleteAt), /unboost|unlike/i, 'and is reached only by unliking');
+  // the record itself is built by the PURE composer, never assembled inline —
+  // that is where the lexicon limits and byte-indexed facets are enforced
+  assert.match(src, /import \{ buildPost, withTag \} from '\.\.\/compose\.js'/,
+    'publish delegates the record shape to the pure composer');
 });
 
 // 3n: clean paths mean relative asset URLs resolve against the ROUTE, so

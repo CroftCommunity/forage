@@ -12,6 +12,7 @@ import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortW
 import { initSession, createAccountRoster } from '../auth/session.js';
 import * as mediaScale from '../media-scale.js';
 import * as lang from '../lang.js';
+import { POST_LIMITS, graphemes, withTag } from '../compose.js';
 import { MEDIA_SCALE } from '../media-scale.js';
 
 let manager = null;        // null = not booted; 'unavailable' = origin has no OAuth client
@@ -635,21 +636,76 @@ function quotedContext(quoted) {
 
 // 3m: the affordance strip — the one place /f/ and /h/ differ. Same chrome
 // above and below; different promise here.
-function affordanceStrip(stream) {
+function affordanceStrip(stream, onPosted) {
   const a = affordanceFor(stream);
+  const host = el('div', { class: 'card', 'data-affordance': a.targetable ? 'targetable' : 'curated' });
+  // 3w: the promise is now KEPT. A hashtag board is targetable, so its button
+  // opens a real composer; a feed still gets none, because we cannot promise
+  // entry to a program whose criteria are unpublished (DL-025).
   const compose = a.composeLabel
     ? (() => {
-        const b = el('button', { class: 'btn sm', 'data-compose': '1', disabled: true },
-          `${a.composeLabel} (composing not built yet)`);
+        const b = el('button', { class: 'btn sm primary', 'data-compose': '1' }, a.composeLabel);
+        b.addEventListener('click', () => {
+          if (!session) return toast('Sign in to post — it writes to your own Bluesky account.', 'err');
+          if (host.querySelector('[data-composer]')) return;
+          host.append(composerCard({ tag: stream.key, onDone: onPosted }));
+        });
         return b;
       })()
     : null;
-  return el('div', { class: 'card', 'data-affordance': a.targetable ? 'targetable' : 'curated' },
-    el('div', { class: 'row spread wrap', style: 'gap:8px;align-items:center' },
-      el('div', { style: 'min-width:0' },
-        el('div', { class: 'small' }, el('strong', {}, a.headline)),
-        el('div', { class: 'xs muted', style: 'white-space:pre-wrap' }, a.detail)),
-      compose));
+  host.append(el('div', { class: 'row spread wrap', style: 'gap:8px;align-items:center' },
+    el('div', { style: 'min-width:0' },
+      el('div', { class: 'small' }, el('strong', {}, a.headline)),
+      el('div', { class: 'xs muted', style: 'white-space:pre-wrap' }, a.detail)),
+    compose));
+  return host;
+}
+
+// 3w: the composer. The pure module owns what a post IS — the two limits, the
+// byte-indexed facets, the reply refs — so this only collects text and shows
+// the writer what the composer would say before they send it. The counter goes
+// NEGATIVE past the limit rather than clamping, because clamping hides that
+// their words are being cut.
+function composerCard({ tag, replyTo, onDone }) {
+  const box = el('textarea', { rows: '3', 'data-composer-text': '1',
+    placeholder: tag ? `Post to #${tag}…` : 'Write a reply…' });
+  const remaining = el('span', { class: 'xs muted', 'data-remaining': '1' });
+  const note = el('span', { class: 'xs muted' },
+    tag ? `#${tag} is added for you if you don’t write it.` : '');
+  const send = el('button', { class: 'btn sm primary' }, replyTo ? 'Reply' : 'Post');
+  const cancel = el('button', { class: 'btn sm' }, 'Cancel');
+  const card = el('div', { class: 'card', 'data-composer': '1', style: 'margin-top:8px' },
+    box,
+    el('div', { class: 'row spread wrap', style: 'gap:8px;align-items:center;margin-top:6px' },
+      el('div', { class: 'row', style: 'gap:8px;align-items:center' }, remaining, note),
+      el('div', { class: 'row', style: 'gap:6px' }, cancel, send)));
+
+  const sync = () => {
+    // count what will actually be SENT, board tag included — otherwise the
+    // number lies by exactly the length of the tag
+    const willSend = tag ? withTag(box.value, tag) : box.value.trim();
+    const left = POST_LIMITS.graphemes - graphemes(willSend);
+    remaining.textContent = left >= 0 ? `${left} left` : `${-left} over`;
+    remaining.classList.toggle('over', left < 0);
+    send.disabled = left < 0 || !willSend.trim();
+  };
+  box.addEventListener('input', sync);
+  sync();
+
+  cancel.addEventListener('click', () => card.remove());
+  send.addEventListener('click', async () => {
+    send.disabled = true;
+    try {
+      await lens.publish({ text: box.value, tag, replyTo, langs: lang.active().slice(0, 1) });
+      toast('Posted — it is on your Bluesky account too.', 'ok');
+      card.remove();
+      onDone?.();
+    } catch (e) {
+      toast('Post failed: ' + e.message, 'err');
+      send.disabled = false;
+    }
+  });
+  return card;
 }
 
 // 3k: the profile header — the bsky card, read-only (editing lives there).
@@ -944,6 +1000,20 @@ export function lensThreadView(params, query) {
   let onCascade = () => {};
   lens.thread(uri, src, { onCascade: (t) => onCascade(t) }).then((t) => {
     const p = t.post;
+    // 3w: the thread is no longer read-only — replies are a real write now.
+    // A reply's PARENT is the node you answered; its ROOT is the top of the
+    // thread, which for a lens thread is always the post being read. Defined
+    // before the head, which uses them.
+    const rootRef = { uri: p.id, cid: p.cid };
+    const replyHost = el('div', {});
+    const openReply = (parentRef) => {
+      if (!session) return toast('Sign in to reply — it writes to your own Bluesky account.', 'err');
+      if (replyHost.querySelector('[data-composer]')) return;
+      replyHost.replaceChildren(composerCard({
+        replyTo: { root: rootRef, parent: parentRef },
+        onDone: () => rerender(),
+      }));
+    };
     const head = el('div', { class: 'card', style: 'display:flex;gap:10px' },
       voteBox('post', p.id, p, !!session, 'col', lensVote(p)),
       el('div', {},
@@ -965,8 +1035,14 @@ export function lensThreadView(params, query) {
         }))),
       p.quoted ? quotedContext(p.quoted) : null,
       t.quotesFailed ? el('div', { class: 'row', style: 'gap:6px;margin-top:6px' },
-        chip(`${t.quoteCount} quote${t.quoteCount === 1 ? '' : 's'} — couldn't fetch`, 'getQuotes failed; replies still render. Reload to retry.')) : null));
-    const ctx = { ...LENS_PERMS, locked: true, // read-only: reply/vote/save/mod all gate
+        chip(`${t.quoteCount} quote${t.quoteCount === 1 ? '' : 's'} — couldn't fetch`, 'getQuotes failed; replies still render. Reload to retry.')) : null,
+      (() => {
+        const b = el('button', { class: 'btn sm primary', 'data-reply-open': '1', style: 'margin-top:8px' }, 'Reply');
+        b.addEventListener('click', () => openReply(rootRef)); // replying to the post: parent IS root
+        return b;
+      })(),
+      replyHost));
+    const ctx = { ...LENS_PERMS, locked: true, // vote/save/mod still gate; replying does not
       authorHref: (n) => `/u/${encodeURIComponent(n.author)}`, // 3k: authors reach OUR profile page (which links out)
       nodeRenderer: (n, c) => lensNode(n, c) }; // 3r: a quote nested under a reply is still a quote
     const commentsCard = el('div', { class: 'card' });

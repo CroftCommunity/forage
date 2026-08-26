@@ -156,6 +156,23 @@ export async function run() {
   assert.match(await qnode.innerText(), /post quote1/, 'the quote body renders in the thread');
   assert.ok(await qnode.locator('a:has-text("open its thread")').count(), 'a quote opens as its own room');
 
+  // 3w: a thread takes replies. The reply threads onto the post it answers —
+  // parent is what you clicked, root is the top of the thread — and both refs
+  // carry a cid, which the lexicon requires and a broken ref would not.
+  await page.waitForSelector('[data-reply-open]');
+  await page.locator('[data-reply-open]').first().click();
+  await page.waitForSelector('[data-composer]');
+  await page.locator('[data-composer] textarea').fill('mine came up early too');
+  await page.locator('[data-composer] button:has-text("Reply")').click();
+  await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('createRecord')
+    && JSON.parse(h.body).collection === 'app.bsky.feed.post'));
+  const reply = await page.evaluate(() => JSON.parse(window.__shimHits
+    .filter((h) => h.url.includes('createRecord')).at(-1).body));
+  assert.equal(reply.record.text, 'mine came up early too');
+  assert.ok(reply.record.reply.root.uri.endsWith('/b1'), 'the thread root is the post being read');
+  assert.ok(reply.record.reply.root.cid, 'root carries a cid');
+  assert.ok(reply.record.reply.parent.cid, 'so does parent');
+
   // 3q: the quote is WALLED — a left rule and its own tinted block — so it
   // reads as a top-level thread on the post instead of blending into the
   // replies beneath it. The replies keep the collapse gutter; never both.
@@ -204,6 +221,41 @@ export async function run() {
   await page.waitForSelector('[data-affordance="targetable"]');
   await page.waitForSelector('text=Anyone can post here.');
   await page.waitForSelector('text=Include #camp in your post');
+
+  // 3w: and now the promise is KEPT — the compose button opens a real composer
+  // and the post it writes carries the board's tag as a byte-indexed facet.
+  const composeBtn = page.locator('[data-affordance="targetable"] [data-compose]');
+  assert.equal(await composeBtn.isDisabled(), false, 'the compose button is live now, not a stub');
+  await composeBtn.click();
+  await page.waitForSelector('[data-composer]');
+  await page.locator('[data-composer] textarea').fill('first tomato of the year');
+  // 24 typed + 6 for the " #camp" the board adds = 30 of 300. The counter
+  // counts what will be SENT, not what was typed — otherwise it lies by
+  // exactly the length of the tag.
+  assert.match(await page.locator('[data-composer] [data-remaining]').innerText(), /^270 left$/,
+    'the counter includes the tag the board is about to add');
+  await page.locator('[data-composer] button:has-text("Post")').click();
+  await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('createRecord')
+    && JSON.parse(h.body).collection === 'app.bsky.feed.post'));
+  const wrote = await page.evaluate(() => JSON.parse(window.__shimHits
+    .filter((h) => h.url.includes('createRecord')).at(-1).body));
+  assert.equal(wrote.collection, 'app.bsky.feed.post');
+  assert.equal(wrote.record.text, 'first tomato of the year #camp', 'the board tag joins the text');
+  assert.equal(wrote.record.facets[0].features[0].tag, 'camp', 'and is faceted so the network indexes it');
+  await page.waitForSelector('text=Posted', { timeout: 10000 });
+
+  // over-limit text is refused BEFORE the network, and says why
+  await composeBtn.click();
+  await page.waitForSelector('[data-composer]');
+  await page.locator('[data-composer] textarea').fill('x'.repeat(305));
+  assert.equal(await page.locator('[data-composer] button:has-text("Post")').isDisabled(), true,
+    'you cannot send a post the lexicon would reject');
+  // 305 typed + 6 for " #camp" = 311, i.e. 11 over — and it SAYS over rather
+  // than clamping, because clamping hides that words are being cut
+  assert.match(await page.locator('[data-composer] [data-remaining]').innerText(), /^11 over$/,
+    'the counter reports the overage, tag included');
+  await page.locator('[data-composer] button:has-text("Cancel")').click();
+  await page.waitForSelector('[data-composer]', { state: 'detached' });
 
   // 3g segment: the trending rail (world ring) opens a topic as a FEED board
   await page.goto(`${s.origin}/`);
