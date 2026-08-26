@@ -50,6 +50,19 @@ export function permissions(state, viewerId, fieldId, now) {
   };
 }
 
+// 3g: the memory-mode /h/ tag stream — the route scheme is a platform
+// concept, not a lens hack. Tags are free-form strings on posts; the stream
+// crosses fields, newest first, case-insensitive, policy via shapePost.
+export function tagStream(state, viewerId, tag, now) {
+  const perms = permissions(state, viewerId, null, now);
+  const needle = String(tag || '').toLowerCase();
+  const posts = Object.values(state.posts)
+    .filter((p) => !p.deleted && !p.held && String(p.tagId || '').toLowerCase() === needle && needle !== '')
+    .sort((a, b) => b.createdTs - a.createdTs)
+    .map((p) => shapePost(state, viewerId, p, perms));
+  return { tag: needle, posts, perms };
+}
+
 // ---- shaping with removal/deletion masking ----
 function shapePost(state, viewerId, post, perms) {
   const canSeeRemoved = perms.canModerate || post.authorId === viewerId;

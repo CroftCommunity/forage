@@ -114,3 +114,41 @@ test('2c scan: no app-password path survives anywhere in the lens', () => {
     assert.ok(!/app.?password/i.test(src), f + ' still mentions app passwords');
   }
 });
+
+// ---- 3g: content streams — one abstraction, two keys ----
+
+test('3g: stream() dispatches by kind — feed reaches getFeed, unknown refuses with words', async () => {
+  const log = [];
+  const lens = createLens({ transport: makeTransport(log) });
+  const f = await lens.stream({ kind: 'feed', key: WHATS_HOT });
+  assert.equal(f.posts.length, 3);
+  assert.ok(log[0].path.endsWith('getFeed'));
+  await assert.rejects(() => lens.stream({ kind: 'firehose', key: 'x' }), (e) => {
+    assert.match(e.message, /firehose/);
+    assert.match(e.message, /feed.*hashtag|hashtag.*feed/);
+    return true;
+  });
+});
+
+test('3g: hashtag streams are session-gated with words; signed in they search by tag', async () => {
+  await assert.rejects(() => createLens({ transport: makeTransport([]) }).stream({ kind: 'hashtag', key: 'gardening' }), /session|sign/i);
+  const log = [];
+  const lens = createLens({ session: oauthSession(log), transport: makeTransport([]) });
+  const s = await lens.stream({ kind: 'hashtag', key: 'gardening' });
+  assert.equal(s.posts.length, 3);
+  assert.ok(log.some((c) => c.path.includes('searchPosts') && c.path.includes('tag=gardening')));
+  assert.equal(s.fieldSlug, 'h:gardening');
+});
+
+test('3g: trending maps unspecced topics to FEED-stream descriptors (link → at-uri)', async () => {
+  const transport = async (url) => ({ ok: true, status: 200, json: async () => ({ topics: [
+    { topic: 'Big News', displayName: 'Big News', description: 'd',
+      link: '/profile/did:plc:trends/feed/abc123' },
+    { topic: 'Weird', displayName: 'Weird', description: 'w', link: '/search?q=weird' }, // not a feed link
+  ] }) });
+  const t = await createLens({ transport }).trending();
+  assert.equal(t.length, 2);
+  assert.equal(t[0].feedUri, 'at://did:plc:trends/app.bsky.feed.generator/abc123');
+  assert.equal(t[0].displayName, 'Big News');
+  assert.equal(t[1].feedUri, null, 'a non-feed link keeps the topic, without a board');
+});

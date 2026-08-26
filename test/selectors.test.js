@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { emptyState, reduce } from '../js/reducers.js';
-import { permissions, feed, thread, field, notifications, viewerCtx, limits } from '../js/selectors.js';
+import { permissions, feed, thread, field, notifications, viewerCtx, limits, tagStream } from '../js/selectors.js';
 
 const T = 2_000_000_000; // explicit test clock (sec) — selectors fail loud without one
 let seq = 0;
@@ -236,4 +236,22 @@ test('same state + same now => identical feed and thread output (pure evaluation
     feed(s, 'u_fern', 'field:gardening', 'hot', 'all', now),
   );
   assert.deepStrictEqual(thread(s, 'u_fern', 'p_norm', 'best', now), thread(s, 'u_fern', 'p_norm', 'best', now));
+});
+
+// ---- 3g: the memory-mode /h/ tag stream (route symmetry with the lens) ----
+
+test('3g: tagStream collects tagged posts ACROSS fields, newest first, case-insensitive; empty tag → empty', () => {
+  const log = [
+    { id: 'e1', type: 'account.registered', actor: 'u_a', ts: 1000, payload: { handle: 'a' } },
+    { id: 'e2', type: 'field.created', actor: 'u_a', ts: 2000, payload: { id: 'f1', slug: 'g1', title: 'G1' } },
+    { id: 'e3', type: 'field.created', actor: 'u_a', ts: 2500, payload: { id: 'f2', slug: 'g2', title: 'G2' } },
+    { id: 'e4', type: 'post.created', actor: 'u_a', ts: 3000, payload: { id: 'p1', fieldId: 'f1', format: 'text', title: 'one', tagId: 'Gardening' } },
+    { id: 'e5', type: 'post.created', actor: 'u_a', ts: 4000, payload: { id: 'p2', fieldId: 'f2', format: 'text', title: 'two', tagId: 'gardening' } },
+    { id: 'e6', type: 'post.created', actor: 'u_a', ts: 5000, payload: { id: 'p3', fieldId: 'f1', format: 'text', title: 'untagged' } },
+  ];
+  const s = log.reduce((st, e) => reduce(st, e), emptyState());
+  const r = tagStream(s, null, 'gardening', 10);
+  assert.deepEqual(r.posts.map((p) => p.id), ['p2', 'p1'], 'both fields, newest first');
+  assert.equal(r.tag, 'gardening');
+  assert.deepEqual(tagStream(s, null, 'nosuch', 10).posts, []);
 });

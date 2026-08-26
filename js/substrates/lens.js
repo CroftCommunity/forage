@@ -442,6 +442,34 @@ export function createLens({ session = null, transport = fetch } = {}) {
       }, 'unlike');
     },
 
+    // 3g: content streams — one abstraction, two keys. 'feed' opens any
+    // feed-generator at-uri (trending topics resolve to these, D8);
+    // 'hashtag' is searchPosts tag= (session-gated, worded refusal).
+    async stream({ kind, key } = {}) {
+      if (kind === 'feed') return this.feed({ kind: 'feed', uri: key });
+      if (kind === 'hashtag') {
+        if (!session) throw new Error('lens: hashtag streams need a session (search is 403 unauthenticated) — sign in first');
+        const data = await get('app.bsky.feed.searchPosts', { q: `#${key}`, tag: key, limit: 30 });
+        const src = { fieldId: `lens:h:${key}`, fieldSlug: `h:${key}`, fieldTitle: `#${key}` };
+        return { ...shapeLensFeed({ feed: (data.posts || []).map((p) => ({ post: p })), cursor: data.cursor }, src, {}, posture), ...src };
+      }
+      throw new Error(`lens: unknown stream kind: ${kind} (known: feed, hashtag)`);
+    },
+
+    // 3g: the trending rail — unspecced API (may break without notice; the
+    // caller degrades to absent-with-words). Each topic's link resolves to a
+    // feed generator; a non-feed link keeps the topic without a board.
+    async trending() {
+      const data = await get('app.bsky.unspecced.getTrendingTopics', { limit: 10 });
+      return (data.topics || []).map((t) => {
+        const m = String(t.link || '').match(/^\/profile\/([^/]+)\/feed\/([^/?]+)$/);
+        return {
+          topic: t.topic, displayName: t.displayName || t.topic, description: t.description || '',
+          feedUri: m ? `at://${m[1]}/app.bsky.feed.generator/${m[2]}` : null,
+        };
+      });
+    },
+
     async search(q) {
       if (!session) throw new Error('lens: search needs a session (403 unauth — probe-verified)');
       const data = await get('app.bsky.feed.searchPosts', { q, limit: 30 });
