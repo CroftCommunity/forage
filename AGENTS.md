@@ -84,6 +84,18 @@ underdetermines the choice: STOP, surface the question, and log it as an ADR rat
 than inventing an answer. An invented convention that ships is drift with a head
 start.
 
+## Surfaces (Bluesky population)
+
+One route namespace, resolved by the active presentation mode (`js/mode.js`):
+`/` home · `/f/:slug` feed board · `/h/:tag` hashtag board · `/p?uri=` thread ·
+`/u/:handle` profile · `/me` your session + accounts + moderation mirror ·
+`/feeds` discovery · `/mode` · `/settings`. Cross-population routes gate with
+words. Feed links share the FIXED identity (the rkey); human aliases route too.
+
+Two writes exist in the lens and only two — the like pair (DL-013) and
+savedFeedsPrefV2 for joining feeds (3j). `test/invariants.test.js` counts them;
+adding a third means arguing for it there first.
+
 ## Verification
 
 Every task ends with:

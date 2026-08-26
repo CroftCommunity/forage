@@ -72,12 +72,14 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 
 ## Bluesky-view polish (owner findings, 2026-08-26 local preview)
 
-- **mutuals+1 hangs on the skeleton** — the ring computation is serial-ish and
-  the board waits for the WHOLE fan-out before painting. Fix: paint
-  opportunistically (render each member's posts as they land), add per-request
-  timeouts (D6 saw a ~20s cold-start stall), and consider preloading the ring
-  membership on session restore. Related: DL-016 (cap) and E139 (Jetstream v2
-  freshness).
+- ~~mutuals+1 hangs on the skeleton~~ — FIXED 2026-08-26 (3l): the board paints
+  each member's posts as they land and bounds every member with a timeout; a
+  hung member is reported, not fatal. STILL OPEN: preloading ring membership on
+  session restore, and caching it across navigations. Related: DL-016 (cap),
+  E139 (Jetstream v2 freshness).
+- **Composing** — the hashtag affordance strip carries a disabled "Post to #x"
+  button (3m). Writing posts is not built; when it is, that button is the
+  deterministic path (feeds get no equivalent — DL-025).
 - **`#/` hash routing vs clean paths** (`/f/gardening`): the hash router needs
   no server rewrites, which is why it shipped; clean paths on GitHub Pages need
   the 404.html SPA fallback trick (it works, and costs a redirect on cold load

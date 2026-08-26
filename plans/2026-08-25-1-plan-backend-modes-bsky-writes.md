@@ -1196,6 +1196,22 @@ localStorage (static Pages site; same theme/skin pattern). Unit 3h:
 Iteration posture: LOCAL preview only (owner: "we can iterate local quicker")
 — no landing/deploy until the owner says so.
 
+### Amendment: 3k–3m — identity, performance, and the affordance split (2026-08-26)
+- **3k identity surfaces:** `/u/<handle>` profiles (bsky card: avatar, banner,
+  counts, bio, verification) with author links throughout the lens now reaching
+  OUR page (which links out for editing); `/me` gains the account switcher —
+  several accounts, completely separate, from one page (roster of signed-in
+  DIDs device-local; `manager.switchTo(did)` restores that account's own
+  session). Settings points at both.
+- **3l performance (owner-reported hang):** ring boards paint per member as
+  pages land, each member bounded by a timeout; hung members are reported.
+- **3m the affordance split (owner-ratified):** `/f/` and `/h/` share the board
+  chrome and differ only in the top strip — hashtags promise a deterministic
+  way in, feeds promise nothing and render their description verbatim with no
+  compose button. Grounded in DL-025's verified finding.
+- Mobile-fit (W6) adopted from croft-pwa's practice: no overflow at
+  320/360/390 in both populations, with the container-level wrap fix it forced.
+
 ### Amendment: 3j — feeds as first-class (2026-08-26 owner iteration)
 `/feeds` discovery (getPopularFeedGenerators, unauth-200, searchable via
 `query=`), the feed header card (avatar, description, creator, likes) on every

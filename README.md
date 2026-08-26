@@ -112,6 +112,29 @@ Above the header, dashed to mark it as scaffolding:
 | Volunteer moderator | **Steward** |
 | Public mod log | **Audit log** |
 
+## Boards: feeds and hashtags are NOT the same promise
+
+Both render as boards — same rows, same sort bar, same card/compact view — and
+differ in exactly one place, the strip at the top:
+
+| | `/h/<tag>` hashtag | `/f/<feed>` feed |
+|---|---|---|
+| Who decides what appears | the tag itself | a program you cannot inspect |
+| Can you get in on purpose | **yes** — include the tag | **not knowably** |
+| Rules published | n/a (the tag IS the rule) | **no** — verified 2026-08-26 |
+| Join | nothing to join | subscribe (writes your Bluesky saved feeds) |
+
+Feeds publish no machine-readable criteria: the `app.bsky.feed.generator`
+record carries only name/description/avatar, `describeFeedGenerator` returns a
+service DID, and the third-party builders keep configs server-side. The only
+inclusion instructions that exist are the feed's own description prose — which
+is why the feed board renders it verbatim and never offers a "post to this
+feed" button (`ledger/divergence.js` DL-025).
+
+Neither is a subreddit: a hashtag has no membership or moderators, a feed
+cannot be posted into. The BBS mode (phase 5) is the surface where the full
+forum contract — membership, gatekeeping, posting into a place — becomes real.
+
 ## The front door, and the two populations
 
 Forage is **one of two things at a time** — full populations, never mixed
@@ -129,6 +152,12 @@ active):
 Your choice at `#/mode` is device-local, and CLEARING it means the device
 follows the domain default. A route that belongs to the other population gates
 with words — no silent redirects, no mixed chrome.
+
+**Identity surfaces** (Bluesky population): `#/me` carries your session, the
+account switcher (several fully separate accounts, one page), and the
+moderation mirror; `#/u/<handle>` is any user's profile — avatar, banner,
+counts, bio, and their posts — with editing linked out to bsky.app.
+`#/feeds` is feed discovery (searchable); every feed board carries its card.
 
 ## Modes
 
