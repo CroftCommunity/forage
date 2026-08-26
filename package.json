@@ -15,6 +15,7 @@
     "import-phpbb": "node scripts/import-phpbb-style.mjs"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.61.1",
     "@stryker-mutator/core": "^10.0.0"
   }

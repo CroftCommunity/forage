@@ -1,0 +1,42 @@
+/* Usenet gray after dark — sibling of `usenet`.
+
+   The dark palette that used to live in usenet.css as
+   `:root:not([data-theme="light"])`, lifted here when the theme axis retired
+   (ADR-003). One skin, one palette.
+
+   One repair on the way: --gold-strong was #8A6A1E, which is 2.78:1 on this
+   skin's card (#2C2C27) — an axe scan caught it, no token-pair test did,
+   because nothing enumerated gold-on-card. Now #E2BC64 at 7.76:1, matching
+   what forage-dark uses for the same role.
+
+   AA: #D9D9D2 on #23231F is ~12.5:1. */
+
+:root {
+  --bg:          #23231F;
+  --paper:       #23231F;
+  --surface:     #2A2A25;
+  --card:        #2C2C27;
+  --card-2:      #34342E;
+  --text:        #D9D9D2;
+  --ink:         #D9D9D2;
+  --ink-soft:    #B0B0A8;
+  --muted:       #A0A098;
+  --border:      #46463E;
+  --line:        #46463E;
+  --stripe:      #29291F;
+  --link:        #8FA8E8;
+  --brand:       #C9C9C0;
+  --brand-ink:   #C9C9C0;
+  --brand-fill:  #4A4A44;
+  --brand-fill-hover: #57574F;
+  --on-brand:    #F0F0EA;
+  --boost:       #8FA8E8;
+  --bury:        #D08A7A;
+  --tint:        #33332B;
+  --font-body:   Verdana, Geneva, Tahoma, sans-serif;
+  --font-display: Verdana, Geneva, Tahoma, sans-serif;
+  --radius-card: 2px;
+  --radius-chip: 2px;
+  --gold-strong: #E2BC64;
+  --color-scheme: dark;
+}

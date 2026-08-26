@@ -171,10 +171,10 @@ export async function run() {
     // a single-palette skin has nowhere to toggle to, and shows it
     await page.goto(`${tog.origin}/settings`);
     await page.waitForSelector('text=Skin');
-    await page.locator('.field-row:has-text("Skin") select').selectOption('usenet');
+    await page.locator('.field-row:has-text("Skin") select').selectOption('bbs');
     await page.waitForFunction(() => document.getElementById('skin-sheet'));
     assert.equal(await toggle().isDisabled(), true,
-      'usenet ships one palette — the toggle must read as unavailable, not merely inert');
+      'bbs ships one palette — the toggle must read as unavailable, not merely inert');
     const title = await toggle().getAttribute('title');
     assert.match(title ?? '', /one palette/i, `the disabled toggle explains itself: ${title}`);
   } finally {
@@ -273,7 +273,7 @@ export async function run() {
       };
     });
 
-    assert.equal(look.band, 'rgb(70, 136, 206)', 'the category band carries prosilver blue #4688CE');
+    assert.equal(look.band, 'rgb(58, 120, 188)', 'the category band carries the AA-corrected board blue #3A78BC');
     assert.equal(look.cardRadius, '0px', 'a board has corners — the radii tokenised in Phase 2 are squared');
     assert.match(look.font, /Lucida Grande|Verdana/, 'the subsilver2 font stack');
     assert.equal(look.rows[0], 'rgb(236, 236, 236)', 'odd rows carry subsilver2 .row1 #ECECEC');
@@ -302,10 +302,10 @@ export async function run() {
 
     await page.locator('.themetoggle').first().click();
     await page.waitForFunction(() =>
-      getComputedStyle(document.querySelector('.masthead')).backgroundColor === 'rgb(70, 136, 206)');
+      getComputedStyle(document.querySelector('.masthead')).backgroundColor === 'rgb(58, 120, 188)');
     assert.equal(
       await page.evaluate(() => getComputedStyle(document.querySelector('.masthead')).backgroundColor),
-      'rgb(70, 136, 206)', 'and back to the light board, not to Forage');
+      'rgb(58, 120, 188)', 'and back to the light board, not to Forage');
   } finally {
     await board.close();
   }
@@ -325,7 +325,7 @@ export async function run() {
     await across.page.waitForSelector('.masthead');
     assert.equal(
       await across.page.evaluate(() => getComputedStyle(document.querySelector('.masthead')).backgroundColor),
-      'rgb(70, 136, 206)', 'the phpBB band dresses the Bluesky view too — skins ride the shell');
+      'rgb(58, 120, 188)', 'the phpBB band dresses the Bluesky view too — skins ride the shell');
     assert.equal(
       await across.page.evaluate(() => localStorage.getItem('forage.mode')), 'bluesky',
       'and the mode is genuinely the other one, not a silent fallback to memory');

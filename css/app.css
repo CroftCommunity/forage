@@ -58,7 +58,10 @@ kbd { background: var(--green-100); border: 1px solid var(--border); border-radi
   display: flex; align-items: center; gap: var(--s4);
   padding: var(--s2) var(--s4);
 }
-.wordmark { font-family: var(--font-display); font-size: var(--t-lg); color: var(--brand); font-weight: 700; }
+/* --band-brand, not --brand: the wordmark sits on the masthead band, so a
+   skin that fills the band must be able to move it too. Defaults to
+   var(--brand), so the default look is unchanged. */
+.wordmark { font-family: var(--font-display); font-size: var(--t-lg); color: var(--band-brand); font-weight: 700; }
 .wordmark:hover { text-decoration: none; }
 .wordmark-glyph { width: 28px; height: 28px; border-radius: var(--radius-round); vertical-align: -7px; margin-right: 8px; }
 .hero-gate { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }

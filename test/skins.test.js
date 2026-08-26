@@ -458,6 +458,7 @@ const CHROME_TOKENS = {
   '--band-fill':    'var(--card)',      // the masthead is a card surface today
   '--band-ink':     'var(--text)',
   '--band-link':    'var(--link)',
+  '--band-brand':   'var(--brand)',   // the wordmark sits ON the band
   '--nav-fill':     'transparent',      // .tabs has no fill today
   '--panel':        'var(--card)',
   '--row-odd':      'transparent',      // post rows are unstriped today
@@ -498,4 +499,32 @@ test('2: the hardcoded radii are tokenised, so a skin can square the UI', () => 
   const raw = [...app.matchAll(/border-radius:\s*(\d+px|50%)/g)].map((m) => m[1]);
   assert.deepEqual(raw, [],
     `app.css still hardcodes ${raw.length} radius value(s) — --radius-card:0 cannot square the UI while these remain`);
+});
+
+test('no skin may key off the retired data-theme axis', () => {
+  // Regression guard. Skins predating the collapse were written as two blocks:
+  //   :root, :root[data-theme="light"] { light }
+  //   :root:not([data-theme="light"]) { dark }
+  // With data-theme gone, that second selector matches ALWAYS and comes last —
+  // so the skin silently renders its dark palette while the registry calls it
+  // light. usenet shipped exactly that way (caught by axe, not by this suite,
+  // because the 1F contrast invariant keys off the DECLARED palette and the
+  // declaration was the thing that was wrong).
+  for (const [id, s] of Object.entries(SKINS)) {
+    if (!s.file) continue;
+    const css = readFileSync(join(root, s.file), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    assert.doesNotMatch(css, /\[data-theme/,
+      `${id} keys off data-theme, which no longer exists — its block matches unconditionally`);
+  }
+});
+
+test('a skin declares exactly ONE :root block, so its palette is unambiguous', () => {
+  // One skin, one palette (ADR-003). Two :root blocks means the last one wins
+  // and the first is dead weight at best, a wrong palette at worst.
+  for (const [id, s] of Object.entries(SKINS)) {
+    if (!s.file) continue;
+    const css = readFileSync(join(root, s.file), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const blocks = [...css.matchAll(/(^|\})\s*([^{}]*?):root[^{}]*\{/g)].length;
+    assert.equal(blocks, 1, `${id} declares ${blocks} :root blocks; a skin carries one palette`);
+  }
 });

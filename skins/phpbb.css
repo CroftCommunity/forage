@@ -38,19 +38,20 @@
   --card:        #FFFFFF;
   --card-2:      #ECECEC;
   --text:        #323D4F;
-  --muted:       #5A6779;
+  --muted:       #4E5A6B;
   --border:      #98AAB1;
 
   --link:        #006597;
   --link-hover:  #BB5800;
   --brand-ink:   #006597;
-  --brand-fill:  #4688CE;
-  --brand-fill-hover: #3A78BC;
+  --brand-fill:  #3A78BC;
+  --brand-fill-hover: #2F6BAE;
   --on-brand:    #FFFFFF;
 
-  --band-fill:   #4688CE;
+  --band-fill:   #3A78BC;
   --band-ink:    #FFFFFF;
   --band-link:   #FFFFFF;
+  --band-brand:  #FFFFFF;
   --nav-fill:    #C9DEE8;
   --panel:       #FFFFFF;
   --row-odd:     #ECECEC;

@@ -87,6 +87,7 @@
   --band-fill:    var(--card);      /* masthead + category bands */
   --band-ink:     var(--text);
   --band-link:    var(--link);
+  --band-brand:   var(--brand);     /* the wordmark, which SITS on the band */
   --nav-fill:     transparent;      /* the tab strip has no fill today */
   --panel:        var(--card);      /* side/aside surfaces */
   --row-odd:      transparent;      /* post rows are unstriped today */

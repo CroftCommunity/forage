@@ -4,7 +4,10 @@
    green #33E070 on near-black exceed 8:1; body text #D8D2B8 exceeds 9:1.
    This skin commits to one look — both theme states get the terminal. */
 
-:root, :root[data-theme="light"], :root[data-theme="dark"] {
+/* One block, one palette: this skin was always amber-on-black in both themes,
+   so the retired data-theme selectors it used to list are dropped rather than
+   translated (ADR-003). */
+:root {
   --bg:          #0A0A05;
   --paper:       #0A0A05;
   --surface:     #0F0F08;
@@ -39,4 +42,5 @@
   --font-display: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   --radius-card: 0px;
   --radius-chip: 0px;
+  --color-scheme: dark;
 }

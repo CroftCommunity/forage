@@ -24,7 +24,8 @@ export const SKINS = Object.freeze({
   default: { label: 'Forage (light)', file: null, palette: 'light', pairedWith: 'forage-dark' },
   'forage-dark': { label: 'Forage (dark)', file: 'skins/forage-dark.css', palette: 'dark', pairedWith: 'default' },
   bbs: { label: 'Classic BBS (amber terminal)', file: 'skins/bbs.css', palette: 'dark' },
-  usenet: { label: 'Usenet gray (newsprint)', file: 'skins/usenet.css', palette: 'light' },
+  usenet: { label: 'Usenet gray (newsprint)', file: 'skins/usenet.css', palette: 'light', pairedWith: 'usenet-dark' },
+  'usenet-dark': { label: 'Usenet gray (after dark)', file: 'skins/usenet-dark.css', palette: 'dark', pairedWith: 'usenet' },
   // The classic phpBB board. Registered as always-available (owner, 2026-08-26):
   // a first-class entry, not tied to any mode.
   phpbb: { label: 'phpBB (classic board)', file: 'skins/phpbb.css', palette: 'light', pairedWith: 'phpbb-dark' },
