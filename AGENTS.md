@@ -89,14 +89,28 @@ start.
 Clean paths (3n) — no `#` fragments; `404.html` mirrors `index.html` for Pages
 deep links and the service worker upgrades them to 200s. One route namespace,
 resolved by the active presentation mode (`js/mode.js`):
-`/` home · `/f/:slug` feed board · `/h/:tag` hashtag board · `/p?uri=` thread ·
+`/` home · `/f/@creator/:rkey` feed board (the SHAREABLE form) · `/f/:slug` the
+same board in-session · `/h/:tag` hashtag board · `/p?uri=` thread ·
 `/u/:handle` profile · `/me` your session + accounts + moderation mirror ·
 `/feeds` discovery · `/mode` · `/settings`. Cross-population routes gate with
-words. Feed links share the FIXED identity (the rkey); human aliases route too.
+words. A feed link must carry its CREATOR to survive being pasted: an rkey has
+no DID, and nothing resolves one without a repo (3v). Human aliases still route.
 
-Two writes exist in the lens and only two — the like pair (DL-013) and
-savedFeedsPrefV2 for joining feeds (3j). `test/invariants.test.js` counts them;
-adding a third means arguing for it there first.
+The lens writes, and `test/invariants.test.js` counts every one of them —
+adding another means arguing for it there first:
+
+| Write | What | Since |
+|---|---|---|
+| `createRecord` → `app.bsky.feed.like` | boost | DL-013 |
+| `deleteRecord` → `app.bsky.feed.like` | unboost | DL-013 |
+| `createRecord` → `app.bsky.feed.post` | publish a post or reply | 3w |
+| `putPreferences` (savedFeedsPrefV2) | join / leave a feed | 3j |
+| `putPreferences` (savedFeedsPrefV2) | favorite / unfavorite (pin) | 3s |
+
+No `putRecord` anywhere: the lens creates and unlikes, and never edits a
+record. Joining and favoriting are DIFFERENT states — saved is your list,
+pinned is the top row of tabs — and conflating them rearranged the official
+app's tab bar for anyone who joined a feed here (3s).
 
 ## Verification
 
