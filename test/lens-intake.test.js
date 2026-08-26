@@ -297,3 +297,35 @@ test('3j: pinFeed/unpinFeed write through putPreferences and refuse without a se
   assert.equal(savedPref.items[0].value, URI);
   assert.equal(savedPref.items[0].pinned, true);
 });
+
+// ---- 3k: user profiles (persistent /u/<handle> URLs) ----
+
+test('3k: profile() shapes the bsky profile card — avatar, banner, counts, bio, verification', async () => {
+  const transport = async (url) => {
+    assert.ok(url.includes('app.bsky.actor.getProfile'));
+    assert.ok(url.includes('actor=chase523.bsky.social'));
+    return { ok: true, status: 200, json: async () => ({
+      did: 'did:plc:me', handle: 'chase523.bsky.social', displayName: 'Chase (523)',
+      avatar: 'https://cdn/av.png', banner: 'https://cdn/bn.png',
+      description: 'He/Him\n\nTo be a loving human being is enough.',
+      followersCount: 34, followsCount: 102, postsCount: 266,
+      verification: { verifiedStatus: 'valid', trustedVerifierStatus: 'none' },
+    }) };
+  };
+  const p = await createLens({ transport }).profile('chase523.bsky.social');
+  assert.deepEqual(p, {
+    did: 'did:plc:me', handle: 'chase523.bsky.social', displayName: 'Chase (523)',
+    avatar: 'https://cdn/av.png', banner: 'https://cdn/bn.png',
+    description: 'He/Him\n\nTo be a loving human being is enough.',
+    followers: 34, following: 102, posts: 266, verified: 'valid',
+  });
+});
+
+test('3k: a bare profile (no avatar/banner/bio) degrades to nulls, never crashes', async () => {
+  const transport = async () => ({ ok: true, status: 200, json: async () => ({ did: 'd', handle: 'bare.test' }) });
+  const p = await createLens({ transport }).profile('bare.test');
+  assert.equal(p.displayName, 'bare.test', 'the handle stands in for a missing display name');
+  assert.equal(p.avatar, null);
+  assert.equal(p.followers, 0);
+  assert.equal(p.verified, null);
+});

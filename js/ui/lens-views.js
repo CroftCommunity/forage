@@ -9,7 +9,7 @@
 import { el, timeAgo, fmtScore } from '../util.js';
 import { postRow, commentNode, voteBox, skeleton, emptyState, toast } from './components.js';
 import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow } from '../substrates/lens.js';
-import { initSession } from '../auth/session.js';
+import { initSession, createAccountRoster } from '../auth/session.js';
 
 let manager = null;        // null = not booted; 'unavailable' = origin has no OAuth client
 let session = null;        // the lens session shape, set after restore
@@ -20,6 +20,7 @@ let bootStarted = false;
 // between them showed the wrong Join/Leave label.
 const savedFeedUris = new Set();
 let savedFeedsPromise = null;
+const roster = createAccountRoster();
 function ensureSavedFeeds() {
   if (!session) return Promise.resolve(savedFeedUris);
   if (!savedFeedsPromise) {
@@ -86,6 +87,7 @@ async function adoptSession(s) {
   lens = createLens({ session });
   savedFeedUris.clear();
   savedFeedsPromise = null;
+  roster.remember({ did: s.did, handle }); // 3k: this device knows this account now
   // 3f: mirror the account's moderation posture — mute a word on bsky.app and
   // it is muted here. A failure runs unfiltered WITH WORDS, never silently.
   try {
@@ -481,7 +483,7 @@ function quoteNode(node) {
   return el('div', { class: 'comment', 'data-kind': 'quote' },
     el('div', { class: 'cmeta' },
       el('span', { title: 'A quote-response: this author quoted the post above' }, '❝ '),
-      node.author ? el('a', { href: `https://bsky.app/profile/${node.author}`, target: '_blank', rel: 'noopener noreferrer' }, node.author) : '[muted]',
+      node.author ? el('a', { href: `#/u/${encodeURIComponent(node.author)}` }, node.author) : '[muted]',
       el('span', { class: 'muted' }, ` quoted this · ${timeAgo(node.createdTs)} ago · ${fmtScore(node.score)} likes`)),
     el('div', { class: 'cbody' }, node.maskedRemoved ? el('span', { class: 'muted' }, node.title || '[muted]') : node.body),
     el('div', { class: 'xs' },
@@ -495,6 +497,82 @@ function quotedContext(quoted) {
       el('a', { href: `https://bsky.app/profile/${quoted.author}`, target: '_blank', rel: 'noopener noreferrer' }, quoted.author)),
     el('div', { class: 'small' }, quoted.excerpt),
     el('div', { class: 'xs' }, el('a', { href: `#/p?uri=${encodeURIComponent(quoted.uri)}` }, 'open the original ↳')));
+}
+
+// 3k: the profile header — the bsky card, read-only (editing lives there).
+function profileHeader(p, extra) {
+  return el('div', { class: 'card', 'data-profile-header': '1' },
+    p.banner ? el('img', { src: p.banner, alt: '', class: 'profile-banner', loading: 'lazy' }) : null,
+    el('div', { class: 'row wrap', style: 'gap:12px;align-items:flex-start' },
+      p.avatar ? el('img', { src: p.avatar, alt: '', class: 'profile-avatar', loading: 'lazy' }) : null,
+      el('div', { style: 'min-width:0;flex:1' },
+        el('h1', { style: 'margin:0' }, p.displayName,
+          p.verified === 'valid' ? el('span', { class: 'xs', title: 'Verified on Bluesky' }, ' ✓') : null,
+          p.verified === 'trusted' ? el('span', { class: 'xs', title: 'Trusted verifier' }, ' ✪') : null),
+        el('div', { class: 'small muted' }, `@${p.handle}`),
+        el('div', { class: 'row wrap', style: 'gap:12px;margin-top:6px' },
+          el('span', { class: 'small' }, el('strong', {}, fmtScore(p.followers)), ' followers'),
+          el('span', { class: 'small' }, el('strong', {}, fmtScore(p.following)), ' following'),
+          el('span', { class: 'small' }, el('strong', {}, fmtScore(p.posts)), ' posts')),
+        p.description ? el('p', { class: 'small', style: 'margin:8px 0 0;white-space:pre-wrap' }, p.description) : null,
+        el('div', { class: 'xs', style: 'margin-top:6px' },
+          el('a', { href: `https://bsky.app/profile/${p.handle}`, target: '_blank', rel: 'noopener noreferrer' },
+            'Profile settings live on bsky.app ↗')),
+        extra || null)));
+}
+
+// 3k: the account menu — switch between fully separate signed-in accounts,
+// add another, or sign out. The OAuth library keeps each session isolated.
+export function accountMenu() {
+  const accounts = roster.list();
+  const rows = accounts.map((a) => {
+    const active = session && a.did === session.did;
+    const b = el('button', { class: 'btn sm' + (active ? '' : ' primary'), 'data-switch-did': a.did },
+      `@${a.handle}${active ? ' (active)' : ''}`);
+    if (active) b.disabled = true;
+    else b.addEventListener('click', async () => {
+      try {
+        const s = await manager.switchTo(a.did);
+        await adoptSession(s);
+        toast(`Switched to @${a.handle}`, 'ok');
+        rerender();
+      } catch (e) { toast(`Could not switch: ${e.message}. Sign in again to re-add it.`, 'err'); }
+    });
+    return b;
+  });
+  const add = el('button', { class: 'btn sm' }, '+ Add another account');
+  add.addEventListener('click', () => startDirectSignIn());
+  const out = el('button', { class: 'btn sm' }, 'Sign out');
+  out.addEventListener('click', async () => {
+    const did = session?.did;
+    try { await manager.signOut(); } catch (e) { toast(e.message, 'err'); }
+    if (did) roster.forget(did);
+    session = null; lens = createLens({}); savedFeedUris.clear(); savedFeedsPromise = null; activeRing = 'world';
+    toast('Signed out.', 'ok');
+    rerender();
+  });
+  return el('div', { class: 'card', 'data-account-menu': '1' },
+    el('h2', { style: 'margin:0 0 6px' }, 'Accounts'),
+    el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
+      'Each account is completely separate — its own session, feeds, and moderation.'),
+    el('div', { class: 'row wrap', style: 'gap:6px' }, ...rows),
+    el('div', { class: 'row wrap', style: 'gap:6px;margin-top:8px' }, add, out));
+}
+
+// 3k: any user's profile — the persistent /u/<handle> surface.
+export function lensUserView(params) {
+  const handle = decodeURIComponent(params.handle);
+  const main = el('div', {}, skeleton(4));
+  Promise.all([lens.profile(handle), lens.feed({ kind: 'author', actor: handle }, { title: `@${handle}` })])
+    .then(([p, board]) => {
+      const card = el('div', { class: 'card' });
+      const repaint = () => renderBoard(card, board.posts);
+      main.replaceChildren(profileHeader(p), boardToolbar(repaint),
+        board.posts.length ? card : emptyState('No posts', 'Nothing here yet.'));
+      repaint();
+    })
+    .catch((e) => main.replaceChildren(emptyState('Profile fetch failed', e.message)));
+  return { main, side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()) };
 }
 
 // 3j: the feed's card — avatar, description (where "post #tag to appear here"
@@ -615,14 +693,14 @@ export function lensProfileView() {
       el('p', { class: 'muted small' }, 'Sign in and this page carries your session and your moderation mirror.'),
       sessionCard()), side: null };
   }
-  return {
-    main: el('div', {}, el('h1', {}, `@${session.handle}`),
-      sessionCard(), moderationPanel(),
-      el('div', { class: 'xs muted', style: 'margin-top:8px' },
-        el('a', { href: `https://bsky.app/profile/${session.handle}`, target: '_blank', rel: 'noopener noreferrer' },
-          'Your public profile lives on bsky.app ↗'))),
-    side: null,
-  };
+  // capture the handle NOW: an in-flight profile fetch must not read a
+  // session that sign-out has since cleared (the journey caught this).
+  const handle = session.handle;
+  const main = el('div', {}, skeleton(3), accountMenu(), moderationPanel());
+  lens.profile(handle)
+    .then((p) => { if (session) main.replaceChildren(profileHeader(p), accountMenu(), moderationPanel()); })
+    .catch(() => { if (session) main.replaceChildren(el('h1', {}, `@${handle}`), accountMenu(), moderationPanel()); });
+  return { main, side: null };
 }
 
 export function lensThreadView(params, query) {
@@ -642,7 +720,7 @@ export function lensThreadView(params, query) {
         p.nsfw ? el('span', { class: 'chip badge-nsfw' }, 'NSFW') : null),
       el('h1', {}, p.title.slice(0, 300)),
       el('div', { class: 'postmeta' },
-        p.author ? el('a', { href: `https://bsky.app/profile/${p.author}`, target: '_blank', rel: 'noopener noreferrer' }, p.author) : '[muted]',
+        p.author ? el('a', { href: `#/u/${encodeURIComponent(p.author)}` }, p.author) : '[muted]',
         ` · ${fmtScore(p.score)} likes · ${timeAgo(p.createdTs)} ago · ${p.commentCount} replies`),
       // 3i: the poster's own 1/3-2/3-3/3 chain reads as the post body
       ...(t.selfThread || []).map((part) => el('div', { class: 'small', style: 'margin-top:8px' },
@@ -657,7 +735,7 @@ export function lensThreadView(params, query) {
       t.quotesFailed ? el('div', { class: 'row', style: 'gap:6px;margin-top:6px' },
         chip(`${t.quoteCount} quote${t.quoteCount === 1 ? '' : 's'} — couldn't fetch`, 'getQuotes failed; replies still render. Reload to retry.')) : null));
     const ctx = { ...LENS_PERMS, locked: true, // read-only: reply/vote/save/mod all gate
-      authorHref: (n) => `https://bsky.app/profile/${n.author}` }; // 3d: authors link OUT (the tenet)
+      authorHref: (n) => `#/u/${encodeURIComponent(n.author)}` }; // 3k: authors reach OUR profile page (which links out)
     const commentsCard = el('div', { class: 'card' });
     for (const node of t.comments) {
       commentsCard.append(node.kind === 'quote' ? quoteNode(node) : commentNode(node, ctx));

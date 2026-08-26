@@ -106,3 +106,52 @@ test('isOAuthCallback: code+state required, query OR fragment form (atproto brow
   assert.equal(isOAuthCallback('#/lens'), false);
   assert.equal(isOAuthCallback(''), false);
 });
+
+// ---- 3k: multiple accounts, completely separate, from one page ----
+
+test('3k: the account roster remembers signed-in DIDs and the active one', async () => {
+  const { createAccountRoster } = await import('../js/auth/session.js');
+  const bag = new Map();
+  const store = { get: (k) => bag.get(k) ?? null, set: (k, v) => bag.set(k, v), remove: (k) => bag.delete(k) };
+  const roster = createAccountRoster(store);
+
+  assert.deepEqual(roster.list(), []);
+  roster.remember({ did: 'did:plc:a', handle: 'a.test' });
+  roster.remember({ did: 'did:plc:b', handle: 'b.test' });
+  assert.deepEqual(roster.list().map((a) => a.handle), ['a.test', 'b.test']);
+
+  // re-remembering updates the handle in place, never duplicates
+  roster.remember({ did: 'did:plc:a', handle: 'renamed.test' });
+  assert.equal(roster.list().length, 2);
+  assert.equal(roster.list().find((a) => a.did === 'did:plc:a').handle, 'renamed.test');
+
+  // forgetting one leaves the rest
+  roster.forget('did:plc:b');
+  assert.deepEqual(roster.list().map((a) => a.did), ['did:plc:a']);
+
+  // a corrupt store degrades to empty, never throws
+  bag.set('forage.accounts', 'not json');
+  assert.deepEqual(roster.list(), []);
+});
+
+test('3k: switchTo restores a remembered account through the client; unknown DIDs refuse with words', async () => {
+  const restored = [];
+  const client = {
+    init: async () => ({ session: { did: 'did:plc:a', signOut: async () => {}, fetchHandler: async () => new Response('{}') } }),
+    signIn: async () => new Promise(() => {}),
+    restore: async (did) => { restored.push(did); return { did, signOut: async () => {}, fetchHandler: async () => new Response('{}') }; },
+  };
+  const mgr = createSessionManager({ client });
+  await mgr.restore();
+  assert.equal(mgr.currentSession().did, 'did:plc:a');
+
+  const s = await mgr.switchTo('did:plc:b');
+  assert.deepEqual(restored, ['did:plc:b']);
+  assert.equal(s.did, 'did:plc:b');
+  assert.equal(mgr.currentSession().did, 'did:plc:b', 'the active session swapped');
+  assert.equal(mgr.state(), 'signed-in');
+
+  const noRestore = createSessionManager({ client: { init: async () => undefined, signIn: async () => {} } });
+  await noRestore.restore();
+  await assert.rejects(() => noRestore.switchTo('did:plc:x'), /switch|restore/i);
+});

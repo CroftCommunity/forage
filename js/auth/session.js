@@ -47,6 +47,45 @@ export function isOAuthCallback(searchOrHash) {
   return params.has('code') && params.has('state');
 }
 
+// 3k: the account roster — multiple accounts, completely separate, reachable
+// from one page. The OAuth library keeps each account's session in its own
+// store; this remembers WHICH accounts this device has signed in, so the
+// switcher can offer them. Device-local, like theme/skin/mode.
+const ACCOUNTS_KEY = 'forage.accounts';
+
+const localStore = {
+  get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
+  set: (k, v) => { try { localStorage.setItem(k, v); } catch {} },
+  remove: (k) => { try { localStorage.removeItem(k); } catch {} },
+};
+
+export function createAccountRoster(store = localStore) {
+  const read = () => {
+    try {
+      const raw = store.get(ACCOUNTS_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed.filter((a) => a && a.did) : [];
+    } catch { return []; } // a corrupt roster is an empty roster, never a crash
+  };
+  const write = (list) => store.set(ACCOUNTS_KEY, JSON.stringify(list));
+  return {
+    list: read,
+    remember({ did, handle }) {
+      const list = read();
+      const at = list.findIndex((a) => a.did === did);
+      if (at === -1) list.push({ did, handle });
+      else list[at] = { did, handle };
+      write(list);
+      return list;
+    },
+    forget(did) {
+      const list = read().filter((a) => a.did !== did);
+      write(list);
+      return list;
+    },
+  };
+}
+
 // The session manager: a state machine over the client PORT
 // ({ init, signIn }) so tests drive a fake and production drives the real
 // vendored client. States: unknown → (restore) → signed-out | signed-in;
@@ -88,6 +127,19 @@ export function createSessionManager({ client }) {
         setState(session ? 'signed-in' : 'signed-out');
         throw e;
       }
+    },
+
+    // 3k: switch to another remembered account. The library restores that
+    // account's own session — the accounts never share state.
+    async switchTo(did) {
+      if (typeof client.restore !== 'function') {
+        throw new Error('this client cannot switch accounts (no restore support)');
+      }
+      const next = await client.restore(did);
+      if (!next) throw new Error(`could not restore ${did} — sign in again`);
+      session = next;
+      setState('signed-in');
+      return session;
     },
 
     async signOut() {

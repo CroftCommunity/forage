@@ -62,6 +62,8 @@ export async function run() {
       'getFeedGenerator?': { view: { uri: WHATS_HOT, displayName: "What's Hot", description: 'the hot stuff',
         likeCount: 99, creator: { handle: 'bsky.app' } }, isOnline: true, isValid: true },
       'putPreferences': {},
+      'getProfile': { did: 'did:plc:w2test', handle: 'wtest.bsky.social', displayName: 'W Tester',
+        avatar: 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==', description: 'a test bio', followersCount: 5, followsCount: 7, postsCount: 9 },
       'getTrendingTopics': { topics: [
         { topic: 'Meadow Fest', displayName: 'Meadow Fest', description: 'campers assemble',
           link: '/profile/did:plc:trends/feed/meadow1' } ] },
@@ -83,7 +85,7 @@ export async function run() {
   // card path: handle → button → (redirect-in-miniature) → signed-in identity
   await page.locator('input[placeholder="you.bsky.social"]').fill('wtest.bsky.social');
   await page.locator('button:has-text("Sign in with Bluesky")').click();
-  await page.waitForSelector('.masthead a[href="#/me"]', { timeout: 10000 });
+  await page.waitForSelector('.masthead a[title="Your Forage profile"]', { timeout: 10000 });
 
   // the personal surface opens: saved feeds in the sidebar; the identity and
   // moderation mirror live on /me, NOT the front page
@@ -93,10 +95,14 @@ export async function run() {
 
   // the masthead @handle IS the profile link
   await page.goto(`${s.origin}/#/`);
-  await page.locator('.masthead a[href="#/me"]').click();
+  await page.locator('.masthead a[title="Your Forage profile"]').click();
   await page.waitForSelector('text=@wtest.bsky.social');
   await page.waitForSelector('[data-moderation-panel]');
   await page.waitForSelector('text=Muted words');
+  // 3k: the account menu — this account listed active, add + sign out present
+  await page.waitForSelector('[data-account-menu]');
+  await page.waitForSelector('[data-switch-did] , button:has-text("(active)")');
+  await page.waitForSelector('button:has-text("+ Add another account")');
 
   // 3j: feed discovery — /feeds lists generators, searchable, each linkable
   await page.goto(`${s.origin}/#/feeds`);
@@ -128,7 +134,7 @@ export async function run() {
   // the masthead direct path: no local form — straight to the entryway (the
   // fake manager stamps and reloads, same shape as the real redirect)
   await page.locator('.masthead .who a:has-text("Sign in")').click();
-  await page.waitForSelector('.masthead a[href="#/me"]', { timeout: 10000 });
+  await page.waitForSelector('.masthead a[title="Your Forage profile"]', { timeout: 10000 });
 
   assert.deepEqual(await s.shimMisses(), [], 'every network read had a fixture');
   await s.close();

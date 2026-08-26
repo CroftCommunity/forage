@@ -603,6 +603,19 @@ export function createLens({ session = null, transport = fetch } = {}) {
     pinFeed(uri) { return this.setFeedSaved(uri, true); },
     unpinFeed(uri) { return this.setFeedSaved(uri, false); },
 
+    // 3k: a user's profile card — the persistent /u/<handle> surface. Read
+    // only: editing lives on bsky.app (the lens tenet).
+    async profile(actor) {
+      const v = await get('app.bsky.actor.getProfile', { actor });
+      return {
+        did: v.did, handle: v.handle, displayName: v.displayName || v.handle,
+        avatar: v.avatar || null, banner: v.banner || null, description: v.description || '',
+        followers: v.followersCount ?? 0, following: v.followsCount ?? 0, posts: v.postsCount ?? 0,
+        verified: v.verification?.verifiedStatus === 'valid' ? 'valid'
+          : v.verification?.trustedVerifierStatus === 'valid' ? 'trusted' : null,
+      };
+    },
+
     async search(q) {
       if (!session) throw new Error('lens: search needs a session (403 unauth — probe-verified)');
       const data = await get('app.bsky.feed.searchPosts', { q, limit: 30 });

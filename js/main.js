@@ -44,7 +44,14 @@ function masthead() {
       el('div', { class: 'who' }, themeBtn0,
         el('a', { href: '#/settings', class: 'small' }, 'Settings'),
         who === 'connecting' ? el('span', { class: 'small muted' }, '…')
-          : who ? el('a', { class: 'small', href: '#/me', title: 'Your Forage profile' }, who)
+          : who ? el('span', { class: 'row', style: 'gap:4px;align-items:center' },
+              el('a', { class: 'small', href: '#/me', title: 'Your Forage profile' }, who),
+              (() => {
+                // 3k: the account switcher — multiple separate accounts from
+                // one page (the menu itself lives on /me, which this opens).
+                const caret = el('a', { class: 'small', href: '#/me', title: 'Switch account, add another, sign out' }, '▾');
+                return caret;
+              })())
           : (() => {
               // 3i (owner): launch OAuth DIRECTLY — the entryway collects the
               // handle; no local form between you and the authorize screen.
@@ -97,7 +104,6 @@ router.route('/f/:slug/mod/log', memoryOnly(views.auditView));
 router.route('/f/:slug/mod/queue', memoryOnly(views.queueView));
 router.route('/f/:slug/p/:id', memoryOnly(views.threadView));
 router.route('/f/:slug/p/:id/:slug2', memoryOnly(views.threadView));
-router.route('/u/:handle', memoryOnly(views.profileView));
 router.route('/notifications', memoryOnly(views.notificationsView));
 router.route('/saved', memoryOnly((p, q) => views.profileView({ handle: store.getState().users[store.getPersonaId()]?.handle || '' }, { tab: 'saved' })));
 router.route('/search', memoryOnly(views.searchView));
@@ -109,6 +115,7 @@ router.route('/h/:tag', byMode(lensViews.lensHashtagView, views.tagStreamView));
 router.route('/p', blueskyOnly(lensViews.lensThreadView));
 router.route('/me', blueskyOnly(lensViews.lensProfileView));
 router.route('/feeds', blueskyOnly(lensViews.lensFeedsView));
+router.route('/u/:handle', byMode(lensViews.lensUserView, views.profileView));
 router.route('/about', views.aboutView);
 router.route('/signup', memoryOnly(views.signupView));
 // legacy /lens* deep links → the unified namespace
