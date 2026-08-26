@@ -129,4 +129,55 @@ export async function run() {
       await boot.close();
     }
   }
+
+  // --- the toggle swaps to the SIBLING, and says so when there isn't one (1E)
+  // The collapse's whole user-facing bargain: light/dark stops being a second
+  // axis, so the upper-right control now moves between a skin and its paired
+  // opposite. On a skin that ships one palette there is nowhere to go, and the
+  // control must LOOK unavailable rather than sit there doing nothing — a dead
+  // button is the failure this asserts against.
+  const tog = await scenario('seeded');
+  try {
+    const { page } = tog;
+    const toggle = () => page.locator('.themetoggle').first();
+    const bgOf = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    const schemeOf = () => page.evaluate(() => getComputedStyle(document.documentElement).colorScheme);
+
+    await page.goto(`${tog.origin}/popular`);
+    await page.waitForSelector('.masthead');
+    const lightBg = await bgOf();
+    assert.match(await schemeOf(), /light/, 'starts on the light default');
+    assert.equal(await toggle().isDisabled(), false, 'the light default HAS a sibling, so the toggle is live');
+
+    // light -> dark, through the pairing
+    await toggle().click();
+    await page.waitForFunction(() =>
+      getComputedStyle(document.documentElement).colorScheme.includes('dark'));
+    assert.notEqual(await bgOf(), lightBg, 'the toggle actually repainted the page');
+    assert.equal(await page.evaluate(() => localStorage.getItem('forage.skin')), 'forage-dark',
+      'the toggle records a SKIN choice — one key, not a second theme axis');
+
+    // and it survives reload, because it is an ordinary skin preference
+    await page.reload();
+    await page.waitForSelector('.masthead');
+    assert.match(await schemeOf(), /dark/, 'the toggled palette persists like any skin');
+
+    // dark -> light, back through the same pairing
+    await toggle().click();
+    await page.waitForFunction(() =>
+      getComputedStyle(document.documentElement).colorScheme.includes('light'));
+    assert.equal(await bgOf(), lightBg, 'toggling back restores the exact light ground');
+
+    // a single-palette skin has nowhere to toggle to, and shows it
+    await page.goto(`${tog.origin}/settings`);
+    await page.waitForSelector('text=Skin');
+    await page.locator('.field-row:has-text("Skin") select').selectOption('usenet');
+    await page.waitForFunction(() => document.getElementById('skin-sheet'));
+    assert.equal(await toggle().isDisabled(), true,
+      'usenet ships one palette — the toggle must read as unavailable, not merely inert');
+    const title = await toggle().getAttribute('title');
+    assert.match(title ?? '', /one palette/i, `the disabled toggle explains itself: ${title}`);
+  } finally {
+    await tog.close();
+  }
 }

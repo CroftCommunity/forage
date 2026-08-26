@@ -49,7 +49,7 @@ export async function run() {
   await cp.page.goto(`${cp.origin}/`);
   await cp.page.waitForSelector('text=The Lens');
   await cp.page.locator('a[href="/settings"]').first().click();
-  await cp.page.waitForSelector('text=Theme');
+  await cp.page.waitForSelector('text=Skin');
   assert.equal(new URL(cp.page.url()).pathname, '/settings', 'a click navigated without a page load');
   await cp.page.goBack();
   await cp.page.waitForSelector('text=The Lens');
