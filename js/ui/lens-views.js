@@ -10,6 +10,8 @@ import { el, timeAgo, fmtScore } from '../util.js';
 import { postRow, commentNode, voteBox, skeleton, emptyState, toast } from './components.js';
 import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow, affordanceFor, feedCardModel, threadNodeStyle } from '../substrates/lens.js';
 import { initSession, createAccountRoster } from '../auth/session.js';
+import * as mediaScale from '../media-scale.js';
+import { MEDIA_SCALE } from '../media-scale.js';
 
 let manager = null;        // null = not booted; 'unavailable' = origin has no OAuth client
 let session = null;        // the lens session shape, set after restore
@@ -252,9 +254,31 @@ function boardToolbar(onChange) {
   const viewSel = el('select', { title: 'Card shows previews and media; Compact is dense rows' },
     ...[['card', 'Card'], ['compact', 'Compact']].map(([v, l]) =>
       el('option', { value: v, selected: boardView() === v || false }, l)));
-  viewSel.addEventListener('change', () => { try { localStorage.setItem(VIEW_KEY, viewSel.value); } catch {} onChange(); });
-  return el('div', { class: 'row wrap', style: 'gap:6px;margin:6px 0', 'data-board-toolbar': '1' },
-    sortSel, tfSel, viewSel);
+
+  // 3t: how big previews should be is a per-screen judgement, so it is a
+  // slider rather than a setting. Card view only — compact renders no media,
+  // and a media control over a board with none is a lie. Applying it writes
+  // ONE CSS custom property, so a drag never refetches or repaints the board.
+  const slider = el('input', { type: 'range', 'data-media-scale': '1',
+    min: String(MEDIA_SCALE.min), max: String(MEDIA_SCALE.max), step: String(MEDIA_SCALE.step),
+    value: String(mediaScale.active()), title: 'Preview size' });
+  const syncSlider = () => { slider.style.display = boardView() === 'card' ? '' : 'none'; };
+  syncSlider();
+  slider.addEventListener('input', () => { mediaScale.set(slider.value); applyMediaScale(); });
+
+  viewSel.addEventListener('change', () => {
+    try { localStorage.setItem(VIEW_KEY, viewSel.value); } catch {}
+    syncSlider();
+    onChange();
+  });
+  return el('div', { class: 'row wrap', style: 'gap:6px;margin:6px 0;align-items:center', 'data-board-toolbar': '1' },
+    sortSel, tfSel, viewSel,
+    el('div', { class: 'row', style: 'gap:6px;align-items:center;margin-left:auto' }, slider));
+}
+
+// 3t: the slider's ONE output — the board reads --media-max in CSS.
+function applyMediaScale() {
+  document.documentElement.style.setProperty('--media-max', mediaScale.cssValue());
 }
 
 // One board renderer: applies the window sort and the view mode.

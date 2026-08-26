@@ -269,7 +269,10 @@ hr.rule { border: none; border-top: 1px solid var(--border); margin: var(--s4) 0
 .postrow.compact .posttitle { font-size: 0.95em; }
 .postrow.compact .postmeta { font-size: 0.75em; }
 .media-strip { display: flex; gap: 6px; margin: 6px 0; flex-wrap: wrap; }
-.media-strip img { max-height: 220px; max-width: 100%; border-radius: var(--radius-card); border: 1px solid var(--border); }
+/* 3t: --media-max is the slider's one output; 220px is what shipped, so an
+   untouched board looks exactly as it did. */
+.media-strip img { max-height: var(--media-max, 220px); max-width: 100%; border-radius: var(--radius-card); border: 1px solid var(--border); }
+input[type="range"][data-media-scale] { width: 110px; accent-color: var(--brand); }
 
 /* ---- 3i mobile-fit pass (croft-pwa lesson: no overflow at 320/360/390) ----
    Long unbroken tokens (handles, URLs, joke hashtags, feed names) are THE

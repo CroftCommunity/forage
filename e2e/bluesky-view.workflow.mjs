@@ -224,6 +224,30 @@ export async function run() {
   assert.equal(await page.locator('[data-feed-header] [data-feed-favorite]').count(), 1,
     '3s: and the favorite star rides beside it');
 
+  // 3t: the image-size slider. It rides on the sort row, belongs to CARD view
+  // only (compact shows no media, so a media control there is a lie), and a
+  // drag resizes the board without refetching or repainting it.
+  await page.waitForSelector('[data-board-toolbar] [data-media-scale]');
+  const beforeH = await page.locator('.media-strip img').first()
+    .evaluate((n) => parseFloat(getComputedStyle(n).maxHeight));
+  await page.locator('[data-board-toolbar] [data-media-scale]').fill('440');
+  await page.locator('[data-board-toolbar] [data-media-scale]').dispatchEvent('input');
+  await page.waitForFunction(() => {
+    const img = document.querySelector('.media-strip img');
+    return img && parseFloat(getComputedStyle(img).maxHeight) > 400;
+  });
+  const afterH = await page.locator('.media-strip img').first()
+    .evaluate((n) => parseFloat(getComputedStyle(n).maxHeight));
+  assert.ok(afterH > beforeH, `the slider grows the preview (${beforeH}px → ${afterH}px)`);
+  // it is remembered on this device (a trending board is not restorable by URL
+  // — its source registry is in-memory — so the preference itself is the check)
+  assert.equal(await page.evaluate(() => localStorage.getItem('forage.mediascale')), '440');
+  // and compact view hides it, because compact has no media to size
+  await page.locator('[data-board-toolbar] select').last().selectOption('compact');
+  await page.waitForSelector('[data-board-toolbar] [data-media-scale]', { state: 'hidden' });
+  await page.locator('[data-board-toolbar] select').last().selectOption('card');
+  await page.waitForSelector('[data-board-toolbar] [data-media-scale]');
+
   // 3i segment: the board toolbar — window sorts, honestly scoped
   await page.waitForSelector('[data-board-toolbar]');
   let btext = await page.locator('.card', { hasText: 'post tp1' }).first().innerText();
