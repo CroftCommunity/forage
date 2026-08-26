@@ -132,12 +132,16 @@ test('1A: a dangling pairedWith fails loudly, naming the missing id', () => {
   });
 });
 
-test('1A: a skin may not be its own sibling', () => {
+test('1A: a skin may not be its own sibling, and SAYS so — not "same palette"', () => {
   const selfPaired = {
     day: { label: 'Day', file: null, palette: 'light', pairedWith: 'day' },
   };
+  // A self-pair trivially shares its own palette, so the same-palette guard
+  // would also throw here. Assert the DISTINGUISHING words, or this test passes
+  // whether or not the self-pair check exists (found by mutation, 2026-08-26).
   assert.throws(() => validatePairing(selfPaired), (e) => {
     assert.match(e.message, /day/);
+    assert.match(e.message, /itself/, 'the self-pair guard must be the one that fires');
     return true;
   });
 });
