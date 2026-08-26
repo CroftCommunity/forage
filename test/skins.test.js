@@ -425,3 +425,20 @@ for (const page of BOOT_PAGES) {
       `${page} hardcodes a dark default that must equal siblingOf('default') = ${sibling}`);
   });
 }
+
+test('1G: every SHELL url resolves to a file that exists', () => {
+  // cache.addAll() is atomic: ONE missing url fails the whole install and the
+  // app silently loses offline support. Deleting a module without pruning the
+  // SHELL is the easy way to cause it — 1G deletes js/theme.js, so this is the
+  // guard that makes such a deletion safe from here on.
+  const sw = readFileSync(join(root, 'sw.js'), 'utf8');
+  const arr = sw.match(/const SHELL = \[([\s\S]*?)\];/);
+  assert.ok(arr, 'found the SHELL array');
+  const missing = [];
+  for (const m of arr[1].matchAll(/'(\/[^']*)'/g)) {
+    const url = m[1];
+    if (url === '/') continue; // the app shell itself, served as index.html
+    try { readFileSync(join(root, url.slice(1))); } catch { missing.push(url); }
+  }
+  assert.deepEqual(missing, [], 'SHELL urls with no file on disk break cache.addAll');
+});
