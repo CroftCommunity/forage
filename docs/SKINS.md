@@ -15,7 +15,7 @@ CSS could write `.card { display: none }` and hide a moderation notice or a
 gate. So: a skin restyles anything and restructures nothing.
 
 One consequence, stated plainly because it sets expectations: **a skin cannot
-change layout.** Row density is a registered frontier (`DL-027`), not a gap
+change layout.** Row density is a registered frontier (`DL-028`), not a gap
 waiting to be filled by accident.
 
 ## One skin, one palette
