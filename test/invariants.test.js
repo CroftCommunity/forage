@@ -47,10 +47,20 @@ test('the UI layer never imports a substrate or the routing config (lens read-on
   }
 });
 
-test('the lens exception holds: lens.js has no commit path', () => {
+test('the lens exception holds: the ONLY write path is the like pair (DL-013, narrowed 3c)', () => {
   const src = readFileSync(join(root, 'js/substrates/lens.js'), 'utf8');
-  assert.ok(!/\bcommit\s*\(/.test(src), 'lens.js must stay read-only');
-  assert.ok(!/createRecord|putRecord|deleteRecord/.test(src), 'lens.js must not write to the network');
+  assert.ok(!/\bcommit\s*\(/.test(src), 'lens.js never touches the memory fold');
+  assert.ok(!/putRecord/.test(src), 'no putRecord — the lens edits nothing');
+  // exactly ONE createRecord and ONE deleteRecord, both under the marked
+  // write-pair section, both bound to the like collection constant
+  assert.equal((src.match(/createRecord/g) || []).length, 1, 'exactly one createRecord (the like)');
+  assert.equal((src.match(/deleteRecord/g) || []).length, 1, 'exactly one deleteRecord (the unlike)');
+  const marker = src.indexOf('THE one write pair (DL-013)');
+  assert.ok(marker > 0, 'the write pair carries its marker comment');
+  assert.ok(src.indexOf('createRecord') > marker && src.indexOf('deleteRecord') > marker,
+    'both writes live under the marked section');
+  assert.match(src, /LIKE_COLLECTION = 'app\.bsky\.feed\.like'/, 'the collection is a named constant');
+  assert.equal((src.match(/collection: LIKE_COLLECTION/g) || []).length, 2, 'both writes bind to it');
 });
 
 // ---- behavioral: the probation gate finally binds at write time ----

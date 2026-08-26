@@ -39,6 +39,7 @@ export function shapeLensPost(post, src) {
     removed: false, deleted: false, held: false,
     ups: post.likeCount ?? 0, downs: 0, score: post.likeCount ?? 0, // DL-011: likes-only
     myVote: post.viewer?.like ? 1 : 0,
+    cid: post.cid ?? null, likeUri: post.viewer?.like ?? null, // 3c: the boost write pair's inputs
     saved: false, // bookmarks are not public API surface yet — frontier
     commentCount: post.replyCount ?? 0,
   };
@@ -116,7 +117,21 @@ const slugForSource = (source) => {
 // with a RELATIVE /xrpc path (the library owns auth headers, tokens, and
 // refresh; the lens builds none of it) and the personal surfaces (fields,
 // search, timeline) open up.
+// THE one write pair (DL-013): boost = a real Bluesky like. The ONLY records
+// the lens ever writes are its own likes — test/invariants.test.js narrows the
+// read-only proof to exactly this pair.
+const LIKE_COLLECTION = 'app.bsky.feed.like';
+
 export function createLens({ session = null, transport = fetch } = {}) {
+  async function post(path, body, verb) {
+    if (!session) throw new Error(`lens: ${verb} needs a session — sign in first`);
+    const res = await session.fetchHandler(`/xrpc/${path}`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`lens: ${verb} failed HTTP ${res.status}`);
+    return res.json();
+  }
+
   async function get(path, params = {}) {
     const qs = new URLSearchParams();
     for (const [k, v] of Object.entries(params)) if (v !== undefined) qs.set(k, v);
@@ -252,6 +267,24 @@ export function createLens({ session = null, transport = fetch } = {}) {
         ...(ringInfo.overflow ? { overflow: ringInfo.overflow } : {}),
         cursor: Object.keys(nextMap).length ? btoa(JSON.stringify({ m: nextMap })) : undefined,
       };
+    },
+
+    // boost: create MY like of the post (D1-pinned shape). Returns the like's
+    // at-uri so the UI can unboost without a refetch.
+    async like(uri, cid) {
+      const data = await post('com.atproto.repo.createRecord', {
+        repo: session?.did, collection: LIKE_COLLECTION,
+        record: { $type: LIKE_COLLECTION, subject: { uri, cid }, createdAt: new Date().toISOString() },
+      }, 'like');
+      return { likeUri: data.uri };
+    },
+
+    // unboost: delete MY like by its exact rkey.
+    async unlike(likeUri) {
+      const rkey = likeUri.split('/').pop();
+      return post('com.atproto.repo.deleteRecord', {
+        repo: session?.did, collection: LIKE_COLLECTION, rkey,
+      }, 'unlike');
     },
 
     async search(q) {
