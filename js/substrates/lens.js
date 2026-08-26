@@ -137,19 +137,36 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
   }
   // 3e inbound: a quote post carries its quoted original in the embed — the
   // context renders for free (D7); the uri links to the original's thread.
+  // 3i: media embeds surface as post.media (card mode renders them; compact
+  // and text-only surfaces skip them). recordWithMedia splits into both.
   const emb = post.embed;
-  const quoted = emb?.$type === 'app.bsky.embed.record#view' && emb.record?.uri
-    ? { uri: emb.record.uri, author: emb.record.author?.handle || '[unknown]',
-        excerpt: (emb.record.value?.text || '').slice(0, 200) }
+  const quoteRec = emb?.$type === 'app.bsky.embed.record#view' ? emb.record
+    : emb?.$type === 'app.bsky.embed.recordWithMedia#view' ? emb.record?.record : null;
+  const quoted = quoteRec?.uri
+    ? { uri: quoteRec.uri, author: quoteRec.author?.handle || '[unknown]',
+        excerpt: (quoteRec.value?.text || '').slice(0, 200) }
     : undefined;
+  const mediaEmb = emb?.$type === 'app.bsky.embed.recordWithMedia#view' ? emb.media : emb;
+  const media = mediaEmb?.$type === 'app.bsky.embed.images#view'
+    ? { kind: 'images', items: (mediaEmb.images || []).map((i) => ({ thumb: i.thumb, full: i.fullsize, alt: i.alt || '' })) }
+    : mediaEmb?.$type === 'app.bsky.embed.video#view'
+      ? { kind: 'video', thumb: mediaEmb.thumbnail || null }
+      : mediaEmb?.$type === 'app.bsky.embed.external#view' && mediaEmb.external?.thumb
+        ? { kind: 'external', thumb: mediaEmb.external.thumb, uri: mediaEmb.external.uri }
+        : undefined;
+  // an image/video-only post titles from its alt text, never renders blank
+  const displayTitle = text
+    || media?.items?.find((i) => i.alt)?.alt
+    || (media?.kind === 'images' ? '[image]' : media?.kind === 'video' ? '[video]' : text);
   return {
     ...base,
-    title: text, body: text, url: external?.uri || '',
+    title: displayTitle, body: text, url: external?.uri || '',
     author: post.author?.handle || '[unknown]', authorId: post.author?.did || null,
     removedReason: '',
     // 3i: rows never duplicate the title as a preview — bluesky text posts ARE
     // their title (300/300). Thread/comment rendering keeps using body.
     preview: text && external?.uri ? text : '',
+    ...(media ? { media } : {}),
     ...(quoted ? { quoted } : {}),
     ...(disp?.mode === 'warn' ? { warnLabels: disp.labels } : {}),
   };
@@ -262,6 +279,27 @@ export function computeMutuals(follows, followers) {
 export function slugifyFeedName(name) {
   const slug = String(name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   return slug || null;
+}
+
+// 3i: window sorts. A generator owns its feed's TRUE ranking (DL-010); what
+// we can do honestly client-side is re-sort THE FETCHED WINDOW — the loaded
+// pages, nothing more (whole-feed live sorts are the Jetstream v2 frontier,
+// E139). Pure; time injected.
+const TIMEFRAME_MS = { day: 86400_000, week: 7 * 86400_000, month: 30 * 86400_000, year: 365 * 86400_000 };
+
+export function sortWindow(posts, sort, timeframe, nowMs) {
+  if (!['feed', 'new', 'top'].includes(sort)) {
+    throw new Error(`unknown window sort: ${sort} (known: feed, new, top)`);
+  }
+  if (sort === 'feed') return posts;
+  let window = posts;
+  if (sort === 'top' && timeframe !== 'all') {
+    const span = TIMEFRAME_MS[timeframe];
+    if (!span) throw new Error(`unknown timeframe: ${timeframe} (known: day, week, month, year, all)`);
+    const cutoff = nowMs - span;
+    window = posts.filter((p) => p.createdTs >= cutoff);
+  }
+  return [...window].sort((a, b) => (sort === 'new' ? b.createdTs - a.createdTs : b.score - a.score));
 }
 
 // OQ1: a lens Field's slug is the feed/list rkey (or the author handle).

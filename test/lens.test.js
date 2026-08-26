@@ -234,3 +234,46 @@ test('3i: a same-author reply that BREAKS the chain (replies to someone else) is
   assert.equal(t.comments.length, 1);
   assert.equal(t.comments[0].children.length, 1);
 });
+
+// ---- 3i: media embeds (card mode renders images; compact does not) ----
+
+test('3i: an images embed becomes post.media with thumbs+alts; an image-only post titles from alt', () => {
+  const p = shapeLensPost(qPost('img1', 'did:plc:a', '2026-08-26T00:00:00Z', {
+    record: { text: '', createdAt: '2026-08-26T00:00:00Z' },
+    embed: { $type: 'app.bsky.embed.images#view', images: [
+      { thumb: 'https://cdn/th1.jpg', fullsize: 'https://cdn/f1.jpg', alt: 'a heron mid-strike' },
+      { thumb: 'https://cdn/th2.jpg', fullsize: 'https://cdn/f2.jpg', alt: '' },
+    ] } }), QSRC);
+  assert.equal(p.media.kind, 'images');
+  assert.equal(p.media.items.length, 2);
+  assert.equal(p.media.items[0].thumb, 'https://cdn/th1.jpg');
+  assert.equal(p.media.items[0].full, 'https://cdn/f1.jpg');
+  assert.equal(p.title, 'a heron mid-strike', 'an image-only post titles from its alt text');
+});
+
+test('3i: image-only with NO alt falls back to a named placeholder title', () => {
+  const p = shapeLensPost(qPost('img2', 'did:plc:a', '2026-08-26T00:00:00Z', {
+    record: { text: '', createdAt: '2026-08-26T00:00:00Z' },
+    embed: { $type: 'app.bsky.embed.images#view', images: [{ thumb: 't', fullsize: 'f', alt: '' }] } }), QSRC);
+  assert.equal(p.title, '[image]');
+});
+
+test('3i: video and recordWithMedia surface their media; external thumbs ride along', () => {
+  const vid = shapeLensPost(qPost('v1', 'did:plc:a', '2026-08-26T00:00:00Z', {
+    embed: { $type: 'app.bsky.embed.video#view', thumbnail: 'https://cdn/vt.jpg', playlist: 'https://cdn/pl.m3u8' } }), QSRC);
+  assert.equal(vid.media.kind, 'video');
+  assert.equal(vid.media.thumb, 'https://cdn/vt.jpg');
+
+  const rwm = shapeLensPost(qPost('rw1', 'did:plc:a', '2026-08-26T00:00:00Z', {
+    embed: { $type: 'app.bsky.embed.recordWithMedia#view',
+      media: { $type: 'app.bsky.embed.images#view', images: [{ thumb: 't', fullsize: 'f', alt: 'combo' }] },
+      record: { record: { $type: 'app.bsky.embed.record#viewRecord', uri: 'at://x/y/z', author: { handle: 'q' }, value: { text: 'quoted' } } } } }), QSRC);
+  assert.equal(rwm.media.kind, 'images');
+  assert.ok(rwm.quoted, 'the quoted half still surfaces');
+
+  const ext = shapeLensPost(qPost('e1', 'did:plc:a', '2026-08-26T00:00:00Z', {
+    embed: { $type: 'app.bsky.embed.external#view', external: { uri: 'https://x.test/a', title: 'X', thumb: 'https://cdn/et.jpg' } } }), QSRC);
+  assert.equal(ext.media.kind, 'external');
+  assert.equal(ext.media.thumb, 'https://cdn/et.jpg');
+  assert.equal(ext.format, 'link');
+});

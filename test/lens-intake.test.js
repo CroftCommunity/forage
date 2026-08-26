@@ -188,3 +188,25 @@ test('3g: trending maps unspecced topics to FEED-stream descriptors (link → at
   assert.equal(t[0].displayName, 'Big News');
   assert.equal(t[1].feedUri, null, 'a non-feed link keeps the topic, without a board');
 });
+
+// ---- 3i: window sorts (reddit-style bars, honest about scope) ----
+
+test('3i: sortWindow — feed keeps the generator order; new is by time; top is by score within the timeframe', async () => {
+  const { sortWindow } = await import('../js/substrates/lens.js');
+  const NOW = Date.parse('2026-08-26T12:00:00Z');
+  const mk = (id, hoursAgo, score) => ({ id, createdTs: NOW - hoursAgo * 3600_000, score });
+  const posts = [mk('a', 30, 5), mk('b', 1, 2), mk('c', 200, 90), mk('d', 4, 40)];
+
+  assert.deepEqual(sortWindow(posts, 'feed', 'all', NOW).map((p) => p.id), ['a', 'b', 'c', 'd'], 'feed order untouched');
+  assert.deepEqual(sortWindow(posts, 'new', 'all', NOW).map((p) => p.id), ['b', 'd', 'a', 'c']);
+  assert.deepEqual(sortWindow(posts, 'top', 'all', NOW).map((p) => p.id), ['c', 'd', 'a', 'b']);
+  // timeframe filters apply to top: day keeps b(1h) + d(4h) only
+  assert.deepEqual(sortWindow(posts, 'top', 'day', NOW).map((p) => p.id), ['d', 'b']);
+  assert.deepEqual(sortWindow(posts, 'top', 'week', NOW).map((p) => p.id), ['d', 'a', 'b'], '30h is inside a week');
+  // the boundary: exactly 24h old is INSIDE day (>= cutoff)
+  const edge = [mk('edge', 24, 1)];
+  assert.equal(sortWindow(edge, 'top', 'day', NOW).length, 1);
+  assert.equal(sortWindow([mk('out', 24.01, 1)], 'top', 'day', NOW).length, 0);
+  // unknown sort refuses with words
+  assert.throws(() => sortWindow(posts, 'bestest', 'all', NOW), /bestest/);
+});
