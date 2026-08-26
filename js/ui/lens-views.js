@@ -117,7 +117,7 @@ function facetedBody(p) {
     if (!seg.facet) return seg.text;
     if (seg.facet.type === 'link') return el('a', { href: seg.facet.value, target: '_blank', rel: 'noopener noreferrer' }, seg.text);
     if (seg.facet.type === 'mention') return el('a', { href: `https://bsky.app/profile/${seg.facet.value}`, target: '_blank', rel: 'noopener noreferrer', title: 'Profiles live on bsky.app — Forage is a lens' }, seg.text);
-    if (seg.facet.type === 'tag') return el('a', { href: `#/lens/h/${encodeURIComponent(seg.facet.value)}`, 'data-tag': seg.facet.value, title: 'Open this hashtag as a board' }, seg.text);
+    if (seg.facet.type === 'tag') return el('a', { href: `#/h/${encodeURIComponent(seg.facet.value)}`, 'data-tag': seg.facet.value, title: 'Open this hashtag as a board' }, seg.text);
     return seg.text;
   });
   const bodyEl = el('div', { class: 'clamp' }, ...nodes);
@@ -149,7 +149,7 @@ function lensSidebar() {
   if (!session) {
     for (const c of CURATED) {
       list.append(el('div', { class: 'row spread' },
-        el('a', { href: `#/lens/f/${c.slug}` }, `f/${c.slug}`),
+        el('a', { href: `#/f/${c.slug}` }, `f/${c.slug}`),
         el('span', { class: 'xs muted' }, c.kind)));
     }
     list.append(el('div', { class: 'xs muted', style: 'margin-top:6px' },
@@ -162,7 +162,7 @@ function lensSidebar() {
           source: f.kind === 'author' ? { kind: 'author', actor: f.id }
             : f.kind === 'timeline' ? { kind: 'timeline' } : { kind: f.kind, uri: f.id } });
         return el('div', { class: 'row spread' },
-          el('a', { href: `#/lens/f/${f.slug}` }, `f/${f.slug}`),
+          el('a', { href: `#/f/${f.slug}` }, `f/${f.slug}`),
           el('span', { class: 'xs muted' }, `${f.kind}${f.pinned ? ' · pinned' : ''}`));
       }));
     }).catch((e) => list.replaceChildren(el('div', { class: 'xs muted' }, 'Fields failed: ' + e.message)));
@@ -244,7 +244,7 @@ function ringBoard(ring, cursor) {
     for (const p of board.posts) card.append(lensRow(p));
     for (const a of card.querySelectorAll('a[href*="/p/at:"]')) {
       const m = a.getAttribute('href').match(/\/p\/(at:.+)$/);
-      if (m) a.setAttribute('href', `#/lens/p?uri=${encodeURIComponent(m[1])}&from=${board.fieldSlug}`);
+      if (m) a.setAttribute('href', `#/p?uri=${encodeURIComponent(m[1])}&from=${board.fieldSlug}`);
     }
     const more = board.cursor ? el('button', { class: 'btn sm' }, 'More') : null;
     if (more) more.addEventListener('click', () => { into.replaceChildren(ringBoard(ring, board.cursor)); });
@@ -274,13 +274,13 @@ export function lensHomeView() {
     el('div', { class: 'card' },
       el('h2', {}, 'Browse'),
       el('div', { class: 'stack' },
-        ...CURATED.map((c) => el('div', {}, el('a', { href: `#/lens/f/${c.slug}` }, `f/${c.slug}`), el('span', { class: 'xs muted' }, ` — ${c.title}`))))));
+        ...CURATED.map((c) => el('div', {}, el('a', { href: `#/f/${c.slug}` }, `f/${c.slug}`), el('span', { class: 'xs muted' }, ` — ${c.title}`))))));
   return { main, side: el('div', { class: 'side' }, sessionCard(), moderationPanel(), lensSidebar()) };
 }
 
 export function lensFieldView(params) {
   const entry = sources.get(params.slug);
-  if (!entry) return { main: emptyState('Unknown lens Field', 'Open the lens home first so its sources register.', el('a', { class: 'btn', href: '#/lens' }, 'Lens home')), side: null };
+  if (!entry) return { main: emptyState('Unknown lens Field', 'Open the lens home first so its sources register.', el('a', { class: 'btn', href: '#/' }, 'Lens home')), side: null };
   const main = el('div', {},
     el('div', { class: 'row spread wrap' },
       el('h1', {}, entry.title),
@@ -309,11 +309,11 @@ export function lensFieldView(params) {
           chip('likes-only scores (DL-011)'),
           chip('ranking: feed order (DL-010)'))),
       f.posts.length ? card : emptyState('Nothing here', 'This source returned no posts.'));
-    // thread links: lens posts route through #/lens/p?uri=
+    // thread links: lens posts route through #/p?uri=
     for (const a of card.querySelectorAll('a[href*="/p/at:"], a[href^="#/f/"]')) {
       const href = a.getAttribute('href');
       const m = href.match(/\/p\/(at:.+)$/);
-      if (m) a.setAttribute('href', `#/lens/p?uri=${encodeURIComponent(m[1])}&from=${entry.slug}`);
+      if (m) a.setAttribute('href', `#/p?uri=${encodeURIComponent(m[1])}&from=${entry.slug}`);
     }
   }).catch((e) => main.replaceChildren(emptyState('Lens fetch failed', e.message)));
   return { main, side: el('div', { class: 'side' }, sessionCard(), moderationPanel(), lensSidebar()) };
@@ -330,7 +330,7 @@ function quoteNode(node) {
       el('span', { class: 'muted' }, ` quoted this · ${timeAgo(node.createdTs)} ago · ${fmtScore(node.score)} likes`)),
     el('div', { class: 'cbody' }, node.maskedRemoved ? el('span', { class: 'muted' }, node.title || '[muted]') : node.body),
     el('div', { class: 'xs' },
-      el('a', { href: `#/lens/p?uri=${encodeURIComponent(node.quoteUri)}` }, 'open its thread ↳')));
+      el('a', { href: `#/p?uri=${encodeURIComponent(node.quoteUri)}` }, 'open its thread ↳')));
 }
 
 // 3e inbound: any post that IS a quote shows what it quotes, linked home.
@@ -339,7 +339,7 @@ function quotedContext(quoted) {
     el('div', { class: 'xs muted' }, '❝ quoting ',
       el('a', { href: `https://bsky.app/profile/${quoted.author}`, target: '_blank', rel: 'noopener noreferrer' }, quoted.author)),
     el('div', { class: 'small' }, quoted.excerpt),
-    el('div', { class: 'xs' }, el('a', { href: `#/lens/p?uri=${encodeURIComponent(quoted.uri)}` }, 'open the original ↳')));
+    el('div', { class: 'xs' }, el('a', { href: `#/p?uri=${encodeURIComponent(quoted.uri)}` }, 'open the original ↳')));
 }
 
 // 3g: the hashtag board — /h/ in the Bluesky view. Session-gated (search is
@@ -357,7 +357,7 @@ export function lensHashtagView(params) {
     for (const p of board.posts) card.append(lensRow(p));
     for (const a of card.querySelectorAll('a[href*="/p/at:"]')) {
       const mm = a.getAttribute('href').match(/\/p\/(at:.+)$/);
-      if (mm) a.setAttribute('href', `#/lens/p?uri=${encodeURIComponent(mm[1])}`);
+      if (mm) a.setAttribute('href', `#/p?uri=${encodeURIComponent(mm[1])}`);
     }
     main.replaceChildren(el('h1', {}, `#${tag}`),
       board.posts.length ? card : emptyState('A quiet tag', `No recent posts carry #${tag}.`));
@@ -374,7 +374,7 @@ function trendingRail() {
       if (!t.feedUri) return el('div', { class: 'xs muted' }, t.displayName);
       const slug = `trend-${t.feedUri.split('/').pop()}`;
       sources.set(slug, { slug, title: t.displayName, kind: 'feed', source: { kind: 'feed', uri: t.feedUri } });
-      return el('div', {}, el('a', { href: `#/lens/f/${slug}` }, t.displayName),
+      return el('div', {}, el('a', { href: `#/f/${slug}` }, t.displayName),
         t.description ? el('div', { class: 'xs muted' }, t.description) : null);
     });
     card.replaceChildren(el('h2', {}, 'Trending'),
@@ -398,7 +398,7 @@ export function lensThreadView(params, query) {
       voteBox('post', p.id, p, !!session, 'col', lensVote(p)),
       el('div', {},
       el('div', { class: 'row wrap', style: 'gap:6px' },
-        el('a', { href: `#/lens/f/${src.fieldSlug}`, class: 'xs' }, `f/${src.fieldSlug}`),
+        el('a', { href: `#/f/${src.fieldSlug}`, class: 'xs' }, `f/${src.fieldSlug}`),
         p.nsfw ? el('span', { class: 'chip badge-nsfw' }, 'NSFW') : null),
       el('h1', {}, p.title.slice(0, 300)),
       el('div', { class: 'postmeta' },

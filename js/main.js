@@ -12,6 +12,8 @@ import { setToaster } from './actions.js';
 import * as views from './ui/views.js';
 import * as lensViews from './ui/lens-views.js';
 import * as theme from './theme.js';
+import * as pmode from './mode.js';
+import { modeView, wrongPopulation } from './ui/mode-view.js';
 
 setToaster(toast);
 
@@ -26,6 +28,22 @@ app.append(devHost, mastHost, shell);
 if (!document.getElementById('toasts')) document.body.append(el('div', { id: 'toasts' }));
 
 function masthead() {
+  const dark0 = theme.resolvedDark();
+  const themeBtn0 = el('button', { class: 'themetoggle', title: dark0 ? 'Switch to light' : 'Switch to dark',
+    'aria-label': dark0 ? 'Switch to light mode' : 'Switch to dark mode' }, dark0 ? '☀' : '☾');
+  themeBtn0.addEventListener('click', () => theme.toggle());
+  // 3h: populations do not mix — the Bluesky masthead carries NO memory
+  // chrome (no persona, no notifications, no memory search).
+  if (pmode.active() === 'bluesky') {
+    return el('header', { class: 'masthead' },
+      el('a', { class: 'wordmark', href: '#/' },
+        el('img', { class: 'wordmark-glyph', src: './icons/icon-192.png', alt: '' }), 'Forage'),
+      el('nav', { class: 'row', style: 'gap:12px' },
+        el('a', { href: '#/', class: 'small' }, 'Home'),
+        el('a', { href: '#/mode', class: 'small' }, 'Mode'),
+        el('a', { href: '#/settings', class: 'small' }, 'Settings')),
+      el('div', { class: 'who' }, themeBtn0));
+  }
   const viewer = store.getPersonaId();
   const unread = sel.unreadCount(store.getState(), viewer);
   const search = el('input', { type: 'text', placeholder: 'Search Forage…', 'aria-label': 'Search' });
@@ -42,7 +60,7 @@ function masthead() {
       el('a', { href: '#/home', class: 'small' }, 'Home'),
       el('a', { href: '#/popular', class: 'small' }, 'Popular'),
       el('a', { href: '#/all', class: 'small' }, 'All'),
-      el('a', { href: '#/lens', class: 'small' }, 'Lens')),
+      el('a', { href: '#/mode', class: 'small' }, 'Mode')),
     el('div', { class: 'search' }, search),
     el('div', { class: 'who' },
       themeBtn,
@@ -52,32 +70,43 @@ function masthead() {
              : el('a', { class: 'small', href: '#/signup' }, 'Log in / Sign up')));
 }
 
-// ---------- routes ----------
-router.route('/home', (p, q) => views.feedView('home', 'Home', q));
-router.route('/popular', (p, q) => views.feedView('popular', 'Popular', q));
-router.route('/all', (p, q) => views.feedView('all', 'All', q));
-router.route('/f/:slug', views.fieldView);
-router.route('/f/:slug/settings', views.fieldSettingsView);
-router.route('/f/:slug/mod/log', views.auditView);
-router.route('/f/:slug/mod/queue', views.queueView);
-router.route('/f/:slug/p/:id', views.threadView);
-router.route('/f/:slug/p/:id/:slug2', views.threadView);
-router.route('/u/:handle', views.profileView);
-router.route('/notifications', views.notificationsView);
-router.route('/saved', (p, q) => views.profileView({ handle: store.getState().users[store.getPersonaId()]?.handle || '' }, { tab: 'saved' }));
-router.route('/search', views.searchView);
-router.route('/submit', views.submitView);
-router.route('/create-field', views.createFieldView);
+// ---------- routes (3h: ONE namespace, resolved by the active population) ----------
+const inBluesky = () => pmode.active() === 'bluesky';
+// a route that exists in both populations dispatches; one that exists in only
+// one gates WITH WORDS in the other (never a silent redirect)
+const byMode = (bluesky, memory) => (p, q) => (inBluesky() ? bluesky(p, q) : memory(p, q));
+const memoryOnly = (handler) => (p, q) => (inBluesky() ? wrongPopulation('memory') : handler(p, q));
+const blueskyOnly = (handler) => (p, q) => (inBluesky() ? handler(p, q) : wrongPopulation('bluesky'));
+
+router.route('/', byMode(lensViews.lensHomeView, (p, q) => views.feedView('popular', 'Popular', q)));
+router.route('/mode', modeView);
+router.route('/home', memoryOnly((p, q) => views.feedView('home', 'Home', q)));
+router.route('/popular', memoryOnly((p, q) => views.feedView('popular', 'Popular', q)));
+router.route('/all', memoryOnly((p, q) => views.feedView('all', 'All', q)));
+router.route('/f/:slug', byMode(lensViews.lensFieldView, views.fieldView));
+router.route('/f/:slug/settings', memoryOnly(views.fieldSettingsView));
+router.route('/f/:slug/mod/log', memoryOnly(views.auditView));
+router.route('/f/:slug/mod/queue', memoryOnly(views.queueView));
+router.route('/f/:slug/p/:id', memoryOnly(views.threadView));
+router.route('/f/:slug/p/:id/:slug2', memoryOnly(views.threadView));
+router.route('/u/:handle', memoryOnly(views.profileView));
+router.route('/notifications', memoryOnly(views.notificationsView));
+router.route('/saved', memoryOnly((p, q) => views.profileView({ handle: store.getState().users[store.getPersonaId()]?.handle || '' }, { tab: 'saved' })));
+router.route('/search', memoryOnly(views.searchView));
+router.route('/submit', memoryOnly(views.submitView));
+router.route('/create-field', memoryOnly(views.createFieldView));
 router.route('/settings', views.settingsView);
 router.route('/frontiers', views.frontiersView);
-router.route('/h/:tag', views.tagStreamView);
-router.route('/lens/h/:tag', lensViews.lensHashtagView);
-router.route('/lens', lensViews.lensHomeView);
-router.route('/lens/f/:slug', lensViews.lensFieldView);
-router.route('/lens/p', lensViews.lensThreadView);
+router.route('/h/:tag', byMode(lensViews.lensHashtagView, views.tagStreamView));
+router.route('/p', blueskyOnly(lensViews.lensThreadView));
 router.route('/about', views.aboutView);
-router.route('/signup', views.signupView);
-router.setNotFound(() => ({ main: el('div', { class: 'empty' }, el('h2', {}, 'Lost in the pasture'), el('p', { class: 'muted' }, 'No such page.'), el('a', { class: 'btn', href: '#/popular' }, 'Go home')), side: null }));
+router.route('/signup', memoryOnly(views.signupView));
+// legacy /lens* deep links → the unified namespace
+router.route('/lens', () => { location.hash = '/'; return { main: el('div', {}), side: null }; });
+router.route('/lens/f/:slug', (p) => { location.hash = `/f/${p.slug}`; return { main: el('div', {}), side: null }; });
+router.route('/lens/h/:tag', (p) => { location.hash = `/h/${p.tag}`; return { main: el('div', {}), side: null }; });
+router.route('/lens/p', (p, q) => { location.hash = `/p?uri=${encodeURIComponent(q.uri || '')}${q.from ? `&from=${q.from}` : ''}`; return { main: el('div', {}), side: null }; });
+router.setNotFound(() => ({ main: el('div', { class: 'empty' }, el('h2', {}, 'Lost in the pasture'), el('p', { class: 'muted' }, 'No such page.'), el('a', { class: 'btn', href: '#/' }, 'Go home')), side: null }));
 
 // ---------- render pipeline ----------
 let currentCleanup = null;
@@ -109,10 +138,6 @@ skins.onChange(render);
 
 // ---------- boot ----------
 const hadState = store.hydrate();
-// 3d: the front door. The unauth Bluesky view is forage.fyi's default route
-// (OQ4); the preference is a device-local Settings choice (theme.js
-// precedent — its own key, never forage.state).
-const frontPref = (() => { try { return localStorage.getItem('forage.front') || 'bluesky'; } catch { return 'bluesky'; } })();
 // An OAuth callback landing (code+state in the query OR the hash fragment —
 // atproto's browser default is response_mode=fragment) must complete the
 // exchange BEFORE the hash changes: boot the session first, then land on the
@@ -121,13 +146,14 @@ import('./auth/session.js').then(async ({ isOAuthCallback }) => {
   if (isOAuthCallback(location.search) || isOAuthCallback(location.hash)) {
     const lv = await import('./ui/lens-views.js');
     await lv.ensureAuthBoot();
-    location.hash = '/lens';
+    location.hash = '/';
   }
 });
-if (!location.hash) location.hash = frontPref === 'memory' ? '/popular' : '/lens';
-if (!hadState && !location.hash.startsWith('#/lens')) {
-  // First ever visit ON A MEMORY ROUTE: seed once so the demo has content.
-  // Seeding is a memory-mode entry event — the lens front door must write
+if (!location.hash) location.hash = '/';
+if (!hadState && pmode.active() === 'memory') {
+  // First ever visit IN THE MEMORY POPULATION: seed once so the sandbox has
+  // content. Seeding keys off the presentation mode now (3h) — the Bluesky
+  // population must write
   // NOTHING to forage.state (3d named check; the workflow pins it). After
   // Delete All the app shows the genuine cleared/empty state.
   import('../data/seed.js').then(({ buildSeed }) => { store.loadEvents(buildSeed()); });

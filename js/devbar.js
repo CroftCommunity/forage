@@ -32,7 +32,7 @@ export function devBar() {
   });
   const modeGrp = el('span', { class: 'grp' }, el('label', {}, 'Mode'), mode);
   if (!inMemory) modeGrp.append(el('span', { class: 'tag' }, `${store.activeMode()} · RAM only`));
-  modeGrp.append(el('a', { href: '#/lens', class: 'small', title: 'A view of the live network — not a store mode' }, 'Bluesky view'));
+  modeGrp.append(el('a', { href: '#/mode', class: 'small', title: 'The presentation mode — which population the app is (choose or clear at /mode)' }, 'Mode'));
   bar.append(modeGrp);
 
   bar.append(sep());
