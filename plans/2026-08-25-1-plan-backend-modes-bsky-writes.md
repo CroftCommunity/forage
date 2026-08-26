@@ -1,8 +1,9 @@
 # Plan: three modes — memory, the Bluesky view with a ring dial, and the private BBS
 
 date: 2026-08-25
-status: READY FOR EXECUTION — Pass 3 complete (2026-08-25); all open questions
-user-settled; execution in worktrees/forage/modes-bbs (branch claude/modes-bbs)
+status: EXECUTING — Phase 0 COMPLETE (D1–D10, four user-directed additions);
+amendments (3e/3f/3g, tenets) review-passed 2026-08-25; next unit: 1a.
+Execution in worktrees/forage/modes-bbs (branch claude/modes-bbs)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `10a8ade` (clean tree, pushed; forage.fyi deployed at forage-v11)
 prior plan: `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md` (CLOSED — built the
@@ -282,7 +283,7 @@ Firsthand, current tree (details in the prior plan where noted):
 ## Concurrency Map
 
 ```
-Sequential spine: Phase 0 → 1a → 1b → 1c → 2a → 2b → 2c → 3a → 3b → 3c → 3d → 4a → 4b → 5(split) → 6
+Sequential spine: Phase 0 → 1a → 1b → 1c → 2a → 2b → 2c → 3a → 3b → 3c → 3e → 3f → 3g → 3d → 4a → 4b → 5(split) → 6
 All phases sequential.
 ```
 Reason: single working tree (execution in ONE worktree per COORDINATION.md — the
@@ -421,8 +422,9 @@ Original task specs (all executed as written):
   N ∈ {5, 15, 25} members — wall time + request count. Output: the measured cap the
   UI ships with. **Disposition:** throwaway (numbers into VA).
 
-**Done when:** VA carries D1–D6 evidence; OQ6 resolves or escalates; phase 5's split
-has its factual basis; all live residue deleted.
+**Done when:** VA carries D1–D10 evidence; OQ6 resolves or escalates; phase 5's
+split has its factual basis; all live residue deleted. (Met 2026-08-25, incl. the
+four user-directed additions D7–D10.)
 
 ### Phase 1 — Modes foundation (survives the redirect intact)
 
@@ -502,7 +504,14 @@ round-trip with memory visibly unchanged. **Write-set:** `js/devbar.js`,
 Live validation (Moderate→Broad): real sign-in round-trip on localhost loopback with
 the test account; fields/search/timeline behind the session work. Multi-commit ≤3.
 
-### Phase 3 — The Bluesky view: ring dial, likes, polish
+### Phase 3 — The Bluesky view: ring dial, likes, quotes, honesty, streams, polish
+
+**Execution order (amendment review 2026-08-25): 3a → 3b → 3c → 3e → 3f → 3g → 3d.**
+3d is the phase capstone — it carries the front-door flip and the ONE live smoke
+that validates everything the phase built (rings, boost, a quoted thread, masking,
+a hashtag stream, the trending rail). Unit numbering is historical; the spine above
+is the order. 3e/3f/3g's "the 3d smoke extends" lines mean the capstone smoke
+covers them, not that 3d has already run.
 
 #### 3a: Ring computation
 - [ ] `js/substrates/lens.js` — `ringMembers(ring, {session, fetch})`: `mutuals` =
@@ -552,8 +561,12 @@ same commit. PHASE-GATE: OQ3 (own-test-post-only live validation, confirmed).
   seeding remains a memory-mode entry event; a test pins that arriving at `#/lens`
   with empty storage writes nothing to `forage.state`.
 - [ ] Author links → bsky.app profiles; pagination "More".
-- [ ] Live smoke (Broad): OAuth sign-in → ring dial through mutuals → boost/unboost
-  on own test post (evidence recorded); README updated (front door + modes + ring).
+- [ ] Live smoke (Broad, the phase capstone — runs AFTER 3e/3f/3g): OAuth sign-in →
+  ring dial through mutuals → boost/unboost on own test post → open a thread with
+  a known quote (own pair) → verified author + facet links visible → a muted word
+  set on the account masks in the board → trending rail opens a topic → hashtag
+  board opens signed-in (evidence recorded); README updated (front door + modes +
+  ring + streams).
 Multi-commit ≤3.
 
 #### 3e: Quotes as thread continuation (added 2026-08-25, user direction; D7-grounded)
@@ -619,8 +632,23 @@ official app reads, so a word muted on bsky.app is muted here with no forage UI.
   the adult-content master toggle OFF forcing hide; a muted author's posts are
   masked in board shapes; a blocked author never renders; verification states
   render for valid/none/trusted-verifier. Fixture-driven (D8/D9/D10 files).
-**Wiring:** hermetic tests + the 3d smoke visually confirms a verified author and
-a facet-linked post. Multi-commit ≤3.
+- [ ] `ledger/divergence.js` — divergence entry WITH its chip: the wide tier's
+  moderation posture is ACCOUNT-derived (preferences + graph) while the memory
+  tier's is event-derived (local mod events) — same masking semantics, different
+  source of authority; recorded so conformance tolerates it with a reason.
+- [ ] Hide-verification-badges: when the preferences blob carries the
+  verification pref (unseen on the test account, D10 — pin its `$type` shape on
+  first encounter), checkmarks are suppressed accordingly.
+**Wiring test (hermetic):** a fixture feed containing a muted-word post, a
+muted-author post, and a labeled post flows through the lens entry (home/stream
+shape) and the masked items are absent/warn-wrapped in the SHAPE — proving the
+posture is applied on the live path, not only in unit-tested helpers. Plus the
+3d capstone smoke visually confirms a verified author and a facet-linked post.
+**Write-set:** `js/substrates/lens.js`, `js/ui/lens-views.js`,
+`test/lens.test.js`, `ledger/divergence.js` (multi-commit, ≤3 per slice).
+**bsky.app link targets:** the Moderation panel's edit links point at the official
+app's moderation pages; exact client routes are verified at implementation time
+(they are SPA routes — assert them then, not now). Multi-commit ≤3.
 
 #### 3g: Content streams — /h/ hashtag boards + the trending rail
 (Added 2026-08-25, user direction: "/f for feed/field and /h for hashtag … treat
@@ -646,9 +674,11 @@ them as content streams either way"; trending promoted IN.)
   fixture topics into feed descriptors (link parsing boundary: the at-uri is
   derived from the `/profile/<did>/feed/<rkey>` link shape); memory tag
   selector returns cross-field tagged posts (empty tag → empty, not crash).
+**Depends on:** 2b (hashtag streams need the session); 3f (facet tags become the
+/h/ doorways); trending rail itself is unauth (D8).
 **Wiring:** `#/h/:tag` reachable from a rendered facet tag (3f) and from the
-trending rail; 3d live smoke extends: open a trending topic, open a hashtag
-board signed-in. Multi-commit ≤3.
+trending rail; the 3d capstone smoke covers: open a trending topic, open a
+hashtag board signed-in. Multi-commit ≤3.
 
 ### Phase 4 — Skins
 
@@ -706,7 +736,9 @@ member UI cannot rely on it); refusals are `UserNotAuthorized` (credential mint)
 
 ### Phase 6 — Close-out
 Docs truthful everywhere; final cross-mode browser smoke (memory untouched, ring
-dial live, a boost, the BBS in its skin); TODO/ledger reconciled; plan close-out.
+dial live, a boost, a quote-continued thread, account-posture masking, a hashtag
+stream + trending rail, the BBS in its skin); TODO/ledger reconciled; plan
+close-out.
 
 ## Open Questions
 
@@ -939,3 +971,29 @@ frontiers (forage composes no network posts). The piggy-back principle recorded 
 a Reasoning tenet. BBS-side board moderation (banned words as a space-owner
 concept) is a phase-5-split topic — the memory tier's moderation-as-masking is the
 shape it reuses.
+
+### Amendment review pass — 2026-08-25 (user-requested, over D7–D10 + 3e/3f/3g)
+The plan grew four probes and three phase-3 units after Pass 3 closed; this pass
+ran the Pass-3 quality gates over ONLY the amendments (extend-don't-rewrite).
+Found and fixed:
+- **Ordering defect (the real catch):** 3d is the live-validation capstone and the
+  front-door flip, but sat before 3e/3f/3g whose wiring lines lean on "the 3d
+  smoke". Execution order now explicit — 3a→3b→3c→3e→3f→3g→3d — with 3d's smoke
+  widened to cover quotes, masking, verification, streams, and trending. Phase 6's
+  final smoke widened to match.
+- **Concurrency Map spine** updated with 3e/3f/3g (was stale at 3c→3d→4a).
+- **3f hardening:** explicit hermetic wiring test (posture applied on the live
+  shape path, not only helpers); ledger divergence entry added (wide moderation =
+  account-derived vs memory = event-derived, tolerated with reason); hide-
+  verification-badges pref respected when encountered; write-set declared
+  (4 files, multi-commit ≤3 per slice); bsky.app link routes deliberately pinned
+  at implementation time (SPA routes — user-confirmed the link-out posture:
+  "we can link to the bsky.app pages for the moderation content that is shared
+  via the PDS").
+- **3g dependencies declared** (2b session; 3f facet doorways; trending unauth).
+- **Phase 0 Done-when** corrected D1–D6 → D1–D10; status header now reflects
+  EXECUTING with amendments reviewed.
+No violations found in: TDD ordering (all three units are RED-first with named
+boundary cases), dispositions (all four new probes declared + honored, residue
+deleted), doc impact (README/TODO/ledger lines map to owning units), ≤3-file rule
+(all multi-commit units sliced). Confirmed ready to resume at 1a.
