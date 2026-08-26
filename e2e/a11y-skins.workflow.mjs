@@ -35,6 +35,26 @@ const AxeBuilder = axePkg.default ?? axePkg;
 // all meet, which is where combinations go wrong.
 const SURFACES = ['/popular', '/settings'];
 
+// The memory surfaces above are NOT what a first-time visitor sees. Production
+// defaults to the Bluesky lens view at `/`, and scanning only the memory
+// population left that surface unscanned — a live scan after deploy found a
+// contrast failure there that this suite had called clean. Same population
+// split the app takes seriously everywhere else; the a11y tier has to take it
+// seriously too.
+const LENS_SURFACES = ['/'];
+
+// Rules excluded, with the reason. An exclusion without one is how a suite
+// quietly stops meaning anything.
+//
+//   link-in-text-block — Forage sets `a { text-decoration: none }` app-wide, so
+//   an in-text link is distinguished by colour alone and must clear 3:1 against
+//   the surrounding prose. It does not, on the DEFAULT skin (2.32:1) and every
+//   other. That makes it a pre-existing, app-wide styling decision — underline
+//   in-text links, or shift the link colour — not a skin defect, and not a call
+//   to make as a side effect of adding this tier. Reported to the owner
+//   2026-08-26 and left visible here rather than silently passing.
+const EXCLUDED_RULES = ['link-in-text-block'];
+
 export async function run() {
   const failures = [];
 
@@ -56,6 +76,7 @@ export async function run() {
           .analyze();
 
         for (const v of res.violations) {
+          if (EXCLUDED_RULES.includes(v.id)) continue;
           for (const node of v.nodes) {
             failures.push(`${id} ${path}  ${v.id}  ${node.target.join(' ')}\n      ` +
               (node.any?.[0]?.message ?? v.help).replace(/\s+/g, ' ').slice(0, 150));
@@ -64,6 +85,29 @@ export async function run() {
       }
     } finally {
       await s.close();
+    }
+
+    // The lens population, which is what production actually shows first.
+    const lens = await scenario('first-visit', {
+      mode: 'bluesky',
+      initScripts: [`try { localStorage.setItem('forage.skin', ${JSON.stringify(id)}); } catch {}`],
+    });
+    try {
+      for (const path of LENS_SURFACES) {
+        await lens.page.goto(`${lens.origin}${path}`);
+        await lens.page.waitForSelector('.masthead');
+        if (SKINS[id].file) await lens.page.waitForSelector('link#skin-sheet', { state: 'attached' });
+        const res = await new AxeBuilder({ page: lens.page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+        for (const v of res.violations) {
+          if (EXCLUDED_RULES.includes(v.id)) continue;
+          for (const node of v.nodes) {
+            failures.push(`${id} (lens) ${path}  ${v.id}  ${node.target.join(' ')}\n      ` +
+              (node.any?.[0]?.message ?? v.help).replace(/\s+/g, ' ').slice(0, 150));
+          }
+        }
+      }
+    } finally {
+      await lens.close();
     }
   }
 

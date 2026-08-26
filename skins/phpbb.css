@@ -27,7 +27,8 @@
      ink #323D4F on page #E5E5E5      10.0:1   body        AA
      ink on --row-odd #ECECEC          9.28:1  body        AA
      ink on --row-even #DCE1E5         8.32:1  body        AA
-     ink on --row-head #C0C8D0         6.48:1  body        AA
+     ink on --row-head #DBE0E5         8.25:1  body        AA
+     link #006597 on --row-head        4.78:1  body        AA
      link #006597 on card #FFFFFF      6.35:1  body        AA
      hover #BB5800 on card             4.66:1  body        AA
      band ink #FFFFFF on #4688CE       3.70:1  large/UI    AA (matches prosilver's own)
@@ -56,7 +57,7 @@
   --panel:       #FFFFFF;
   --row-odd:     #ECECEC;
   --row-even:    #DCE1E5;
-  --row-head:    #C0C8D0;
+  --row-head:    #DBE0E5;
 
   --boost:       #006597;
   --bury:        #BB5800;
