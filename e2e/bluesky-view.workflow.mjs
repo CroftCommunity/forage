@@ -114,6 +114,20 @@ export async function run() {
   const text = await page.locator('main, body').first().innerText();
   assert.ok(text.indexOf('post b1') < text.indexOf('post a1'), 'newest first across members (11:00 before 10:00)');
 
+  // 3x: the ring is computed ONCE. Dialing away and back must not re-walk the
+  // follow graph — mutuals+1 is one getFollows per mutual, and paying that on
+  // every visit is the difference between instant and several seconds.
+  const graphCalls = () => page.evaluate(() => window.__shimHits
+    .filter((h) => /getFollows|getFollowers/.test(h.url)).length);
+  const afterFirstDial = await graphCalls();
+  assert.ok(afterFirstDial > 0, 'the first dial did read the graph');
+  await page.locator('[data-ring-dial] button:has-text("World")').first().click();
+  await page.waitForTimeout(300);
+  await page.locator('[data-ring-dial] button:has-text("Mutuals")').first().click();
+  await page.waitForSelector('text=post b1');
+  assert.equal(await graphCalls(), afterFirstDial,
+    'dialing back re-used the remembered ring — no new graph reads');
+
   // 3c segment: boost the top post — a REAL like write, optimistically painted
   const row = page.locator('.postrow', { hasText: 'post b1' });
   const scoreBefore = await row.locator('.score').innerText();
@@ -156,23 +170,6 @@ export async function run() {
   assert.match(await qnode.innerText(), /post quote1/, 'the quote body renders in the thread');
   assert.ok(await qnode.locator('a:has-text("open its thread")').count(), 'a quote opens as its own room');
 
-  // 3w: a thread takes replies. The reply threads onto the post it answers —
-  // parent is what you clicked, root is the top of the thread — and both refs
-  // carry a cid, which the lexicon requires and a broken ref would not.
-  await page.waitForSelector('[data-reply-open]');
-  await page.locator('[data-reply-open]').first().click();
-  await page.waitForSelector('[data-composer]');
-  await page.locator('[data-composer] textarea').fill('mine came up early too');
-  await page.locator('[data-composer] button:has-text("Reply")').click();
-  await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('createRecord')
-    && JSON.parse(h.body).collection === 'app.bsky.feed.post'));
-  const reply = await page.evaluate(() => JSON.parse(window.__shimHits
-    .filter((h) => h.url.includes('createRecord')).at(-1).body));
-  assert.equal(reply.record.text, 'mine came up early too');
-  assert.ok(reply.record.reply.root.uri.endsWith('/b1'), 'the thread root is the post being read');
-  assert.ok(reply.record.reply.root.cid, 'root carries a cid');
-  assert.ok(reply.record.reply.parent.cid, 'so does parent');
-
   // 3q: the quote is WALLED — a left rule and its own tinted block — so it
   // reads as a top-level thread on the post instead of blending into the
   // replies beneath it. The replies keep the collapse gutter; never both.
@@ -208,6 +205,27 @@ export async function run() {
   const nested = page.locator('[data-kind="quote"][data-depth="1"]');
   assert.ok(await nested.evaluate((n) => parseFloat(getComputedStyle(n).borderLeftWidth) >= 2),
     'a wall nests inside a wall — the grammar holds at every depth');
+
+  // 3w: a thread takes replies. The reply threads onto the post it answers —
+  // parent is what you clicked, root is the top of the thread — and both refs
+  // carry a cid, which the lexicon requires and a broken ref would not.
+  await page.waitForSelector('[data-reply-open]');
+  await page.locator('[data-reply-open]').first().click();
+  await page.waitForSelector('[data-composer]');
+  await page.locator('[data-composer] textarea').fill('mine came up early too');
+  await page.locator('[data-composer] button:has-text("Reply")').click();
+  await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('createRecord')
+    && JSON.parse(h.body).collection === 'app.bsky.feed.post'));
+  const reply = await page.evaluate(() => JSON.parse(window.__shimHits
+    .filter((h) => h.url.includes('createRecord')).at(-1).body));
+  assert.equal(reply.record.text, 'mine came up early too');
+  assert.ok(reply.record.reply.root.uri.endsWith('/b1'), 'the thread root is the post being read');
+  assert.ok(reply.record.reply.root.cid, 'root carries a cid');
+  assert.ok(reply.record.reply.parent.cid, 'so does parent');
+  // the reply refetches the thread, so wait for it to come back before
+  // anything else reads the DOM — a rerender mid-read detaches the nodes
+  // under a running query (this flaked before the segment moved here).
+  await page.waitForSelector('[data-kind="quote"][data-depth="0"]', { timeout: 15000 });
 
   // …and the facet #tag in a board post is a doorway into /h/
   await page.goto(`${s.origin}/`);

@@ -477,6 +477,15 @@ const POST_COLLECTION = 'app.bsky.feed.post';
 
 export function createLens({ session = null, transport = fetch } = {}) {
   let posture = EMPTY_POSTURE;
+  // 3x: rings are expensive — mutuals+1 is one getFollows per mutual, so a
+  // full ring is 26+ graph reads before a single post loads, and it was paid
+  // again on every visit to the dial. The follow graph changes slowly, so the
+  // answer is remembered for the life of this lens (i.e. this session on this
+  // device; a sign-out builds a new lens). The PROMISE is cached, not the
+  // result, so two callers racing a cold ring share one computation — and a
+  // rejected promise is dropped, because a transient 502 must never be
+  // remembered as an empty ring.
+  const ringCache = new Map();
 
   async function post(path, body, verb) {
     if (!session) throw new Error(`lens: ${verb} needs a session — sign in first`);
@@ -630,12 +639,26 @@ export function createLens({ session = null, transport = fetch } = {}) {
     // bypass the graph (their boards come from sources/timeline). mutuals =
     // follows ∩ followers; mutuals+1 adds each mutual's follows under
     // RING_CAP with HONEST overflow (the true pre-cap count — never silent).
-    async ringMembers(ring) {
-      if (ring === 'world' || ring === 'following') return { members: null };
+    ringMembers(ring) {
+      if (ring === 'world' || ring === 'following') return Promise.resolve({ members: null });
       if (ring !== 'mutuals' && ring !== 'mutuals+1') {
-        throw new Error(`lens: unknown ring: ${ring} (known: world, following, mutuals, mutuals+1)`);
+        return Promise.reject(new Error(`lens: unknown ring: ${ring} (known: world, following, mutuals, mutuals+1)`));
       }
-      if (!session) throw new Error('lens: rings are computed from YOUR graph — needs a session');
+      if (!session) return Promise.reject(new Error('lens: rings are computed from YOUR graph — needs a session'));
+      const cached = ringCache.get(ring);
+      if (cached) return cached;
+      const pending = this.computeRing(ring)
+        .catch((e) => { ringCache.delete(ring); throw e; }); // a failure is not an answer
+      ringCache.set(ring, pending);
+      return pending;
+    },
+
+    // 3x: forget the remembered rings — sign-out, account switch, or an
+    // explicit refresh. The graph belongs to an account, not to a device.
+    forgetRings() { ringCache.clear(); },
+
+    // The actual graph walk, cached by ringMembers above.
+    async computeRing(ring) {
       const [follows, followers] = await Promise.all([
         pagedGraph('getFollows', session.did),
         pagedGraph('getFollowers', session.did),

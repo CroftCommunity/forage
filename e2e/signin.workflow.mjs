@@ -52,6 +52,10 @@ export async function run() {
     initScripts: [FAKE_MANAGER],
     responses: {
       'describeRepo': { did: 'did:plc:w2test', handle: 'wtest.bsky.social', didDoc: {}, collections: [] },
+      // 3x: signing in warms the mutuals ring in the background, so the graph
+      // is read here now — the journey declares it rather than hiding it.
+      'getFollows': { follows: [] },
+      'getFollowers': { followers: [] },
       'getPreferences': { preferences: [{ $type: 'app.bsky.actor.defs#savedFeedsPrefV2',
         items: [{ type: 'feed', value: WHATS_HOT, pinned: false, id: '1' }, // 3s: joined, not favorited
                 { type: 'timeline', value: 'following', pinned: true, id: '2' }] }] },

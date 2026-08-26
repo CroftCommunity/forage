@@ -103,6 +103,10 @@ async function adoptSession(s) {
   savedFeedUris.clear();
   pinnedFeedUris.clear();
   savedFeedsPromise = null;
+  // 3x: warm the ring the dial will most likely ask for, while the board is
+  // still painting. Fire-and-forget: a failure here must never break sign-in,
+  // and the dial will simply compute it the normal way.
+  lens.ringMembers('mutuals').catch(() => {});
   roster.remember({ did: s.did, handle }); // 3k: this device knows this account now
   // 3f: mirror the account's moderation posture — mute a word on bsky.app and
   // it is muted here. A failure runs unfiltered WITH WORDS, never silently.
@@ -398,6 +402,8 @@ function sessionCard() {
       pinnedFeedUris.clear();
       savedFeedsPromise = null;
       activeRing = 'world';
+      // (the new lens above has no ring memory — the graph belongs to the
+      // account that just left)
       toast('Signed out.', 'ok');
       rerender();
     });

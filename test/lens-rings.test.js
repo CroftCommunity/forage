@@ -247,3 +247,84 @@ test('3l: a member whose feed never answers is timed out and REPORTED; the board
   assert.deepEqual(board.posts.map((p) => p.id.split('/').pop()), ['a1']);
   assert.deepEqual(board.failures, ['did:plc:hang'], 'the timeout is reported, not swallowed');
 });
+
+// ---- 3x: the ring is remembered ----
+// mutuals+1 costs one getFollows per mutual, so a 25-member ring is 26+ graph
+// calls before a single post loads. Recomputing that on every visit to the
+// dial is the difference between instant and several seconds. The graph
+// changes slowly; the cache is per session, in memory, and keyed by ring.
+
+test('3x: ringMembers is computed once per ring and reused', async () => {
+  const calls = [];
+  const json = (d) => ({ ok: true, status: 200, json: async () => d });
+  const fetchHandler = async (path) => {
+    calls.push(path);
+    if (path.includes('getFollows?actor=did%3Aplc%3Ame')) return json({ follows: [{ did: 'did:plc:a' }, { did: 'did:plc:b' }] });
+    if (path.includes('getFollowers')) return json({ followers: [{ did: 'did:plc:a' }] });
+    if (path.includes('getFollows')) return json({ follows: [{ did: 'did:plc:c' }] });
+    return json({});
+  };
+  const lens = createLens({ session: { did: 'did:plc:me', handle: 'me', fetchHandler } });
+
+  const first = await lens.ringMembers('mutuals');
+  const graphCallsAfterFirst = calls.length;
+  assert.deepEqual(first.members, ['did:plc:a']);
+
+  const second = await lens.ringMembers('mutuals');
+  assert.deepEqual(second.members, ['did:plc:a'], 'same answer');
+  assert.equal(calls.length, graphCallsAfterFirst, 'and NO new graph calls — the ring is remembered');
+
+  // a different ring is a different question, so it is computed
+  const plus = await lens.ringMembers('mutuals+1');
+  assert.ok(calls.length > graphCallsAfterFirst, 'mutuals+1 does its own work');
+  assert.deepEqual(plus.members.sort(), ['did:plc:a', 'did:plc:c']);
+  const afterPlus = calls.length;
+  await lens.ringMembers('mutuals+1');
+  assert.equal(calls.length, afterPlus, 'and is then remembered too');
+});
+
+test('3x: two callers racing the same cold ring share ONE computation', async () => {
+  let graphCalls = 0;
+  const json = (d) => ({ ok: true, status: 200, json: async () => d });
+  const fetchHandler = async (path) => {
+    graphCalls += 1;
+    await new Promise((r) => setTimeout(r, 5));
+    if (path.includes('getFollowers')) return json({ followers: [{ did: 'did:plc:a' }] });
+    return json({ follows: [{ did: 'did:plc:a' }] });
+  };
+  const lens = createLens({ session: { did: 'did:plc:me', handle: 'me', fetchHandler } });
+  const [a, b] = await Promise.all([lens.ringMembers('mutuals'), lens.ringMembers('mutuals')]);
+  assert.deepEqual(a.members, b.members);
+  assert.equal(graphCalls, 2, 'follows + followers, once — not twice over');
+});
+
+test('3x: a FAILED ring is not cached — the next visit tries again', async () => {
+  let attempt = 0;
+  const json = (d) => ({ ok: true, status: 200, json: async () => d });
+  const fetchHandler = async (path) => {
+    attempt += 1;
+    if (attempt <= 2) return { ok: false, status: 502, json: async () => ({}) };
+    if (path.includes('getFollowers')) return json({ followers: [{ did: 'did:plc:a' }] });
+    return json({ follows: [{ did: 'did:plc:a' }] });
+  };
+  const lens = createLens({ session: { did: 'did:plc:me', handle: 'me', fetchHandler } });
+  await assert.rejects(() => lens.ringMembers('mutuals'));
+  const ok = await lens.ringMembers('mutuals');
+  assert.deepEqual(ok.members, ['did:plc:a'], 'a transient failure must not be remembered as an empty ring');
+});
+
+test('3x: forgetRings clears the memory — a new account is a new graph', async () => {
+  let graphCalls = 0;
+  const json = (d) => ({ ok: true, status: 200, json: async () => d });
+  const fetchHandler = async (path) => {
+    graphCalls += 1;
+    if (path.includes('getFollowers')) return json({ followers: [{ did: 'did:plc:a' }] });
+    return json({ follows: [{ did: 'did:plc:a' }] });
+  };
+  const lens = createLens({ session: { did: 'did:plc:me', handle: 'me', fetchHandler } });
+  await lens.ringMembers('mutuals');
+  const before = graphCalls;
+  lens.forgetRings();
+  await lens.ringMembers('mutuals');
+  assert.ok(graphCalls > before, 'after forgetting, the graph is read again');
+});
