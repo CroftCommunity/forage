@@ -264,6 +264,9 @@ Firsthand, current tree (details in the prior plan where noted):
   lens writes (3d); quotes-as-continuation ledger proposal (3e); honest-rendering
   note (3f); `/h/` streams + trending rail (3g); skins (4b); BBS mode + its alpha
   caveat (5, at split).
+- `.github/workflows/ci.yml` + `package.json` — the workflow-test lane (1d),
+  gate-shaped per CI-PATTERN (pull_request trigger).
+- `AGENTS.md` — Verification section gains `npm run workflows` (1d).
 - `TODO.md` — Jetstream v2 stream-freshness investigation added as a named
   follow-up (this session, doc commit); OAuth/DL-013 closures as before.
 - `index.html` — if the front-door flip or Settings pref needs head-inline changes
@@ -283,7 +286,7 @@ Firsthand, current tree (details in the prior plan where noted):
 ## Concurrency Map
 
 ```
-Sequential spine: Phase 0 → 1a → 1b → 1c → 2a → 2b → 2c → 3a → 3b → 3c → 3e → 3f → 3g → 3d → 4a → 4b → 5(split) → 6
+Sequential spine: Phase 0 → 1a → 1b → 1c → 1d → 2a → 2b → 2c → 3a → 3b → 3c → 3e → 3f → 3g → 3d → 4a → 4b → 5(split) → 6
 All phases sequential.
 ```
 Reason: single working tree (execution in ONE worktree per COORDINATION.md — the
@@ -467,6 +470,54 @@ AGENTS.md line; TODO note recording the scoped-wiring deferral. Browser smoke: m
 round-trip with memory visibly unchanged. **Write-set:** `js/devbar.js`,
 `README.md` (+`AGENTS.md`/`TODO.md` — multi-commit, ≤3 per slice).
 
+#### 1d: Workflow-test harness + W1 (added 2026-08-25, user direction; udm-patterned)
+Full-workflow testing joins the gate NOW so the corpus grows with each phase
+instead of arriving as an afterthought. Pattern source: `l360/sdlc/udm/e2e`
+(read 2026-08-25) — a scenario COMPOSER (tests declare a named app state; the
+harness wires server + browser + network shim), TWO BACKENDS behind one front,
+a one-question fitness rule, and SCENARIO-LIFETIME error collectors.
+- [ ] `e2e/harness/` — `serve.mjs` (static server over the repo root),
+  `shim.mjs` (init-script faking `fetch` to the bsky hosts with our probe
+  fixture corpus + a declared session state — the headless backend),
+  `scenario.mjs` (`scenario(state, opts)` → handle with `open()`/`close()`;
+  collectors for `pageerror` AND console errors scoped to the SCENARIO
+  lifetime, not per-open — udm's lesson: the bug class fires after boot, and
+  CSP breakage is a console message, not a pageerror). Options forwarded by
+  SPREAD, never re-listed (udm hit the allowlist-shaped drop trap four times).
+- [ ] `e2e/mode-roundtrip.workflow.mjs` — **W1**: seeded memory → enter a
+  network mode → act (RAM) → exit → `forage.state` BYTE-IDENTICAL read back
+  through the page; the 1b invariant proven at the workflow level, in a real
+  browser, through the real UI.
+- [ ] `e2e/run.mjs` + `npm run workflows`; `ci.yml` gains the workflow lane
+  (npm ci + chromium install, still a gate per CI-PATTERN — pull_request
+  trigger included); `@playwright/test` as a devDependency (runtime stays
+  zero-dep; Stryker set the devDep precedent).
+**Fitness rule (recorded for every later workflow):** if it needs real Bluesky —
+credentials, live data, writes — it is LIVE-only (`LIVE=1`, never CI, own test
+account only); otherwise it is workflow-fit (shim backend, fixture-fed, CI-run).
+Live and Docker-backed workflows SKIP-REPORT loudly when not enabled — never
+silently absent.
+**Wiring test:** W1 itself — it drives the real entry point end to end.
+**Write-set:** `e2e/` (new), `package.json`, `.github/workflows/ci.yml`,
+`README.md`/`AGENTS.md` verification lines (multi-commit, ≤3 per slice).
+
+**The corpus plan (one workflow per phase capstone, landing WITH its phase):**
+- **W2 (at 2c):** sign-in journey on the shim (faked session-module boundary:
+  signed-out → pending → signed-in → sign-out, identity in the masthead); the
+  REAL loopback OAuth round-trip stays 2c's live validation.
+- **W3 (at 3d):** the capstone smoke SCRIPTED — guest front door → thread with
+  quote-continuation → signed-in ring dial → board renders → boost optimistic
+  flip (shim asserts the like-create call shape) → muted word masks → trending
+  rail opens a topic → guest `/h/` refusal with words. The live variant remains
+  the credentialed manual smoke.
+- **W4 (at 4b):** skin swap → persists across reload → applies across modes →
+  default skin byte-identical look (token check).
+- **W5 (at phase-5 split):** the BBS journey against the LOCAL Docker spaces
+  PDS (a third backend: real PDS, hermetic-ish, `DOCKER=1` opt-in) — create/
+  join → post → member reads → outsider refused.
+- **Phase 6:** the full corpus green (headless subset in CI) is part of the
+  close-out gate.
+
 ### Phase 2 — OAuth (the identity seam, arecipe-precedent)
 
 #### 2a: Vendored client + drift check
@@ -501,6 +552,7 @@ round-trip with memory visibly unchanged. **Write-set:** `js/devbar.js`,
   masthead/lens show signed-in identity; sign-out. Session errors and expiry
   surface with words in the existing lens error states (no silent signed-out flips).
 - [ ] `README.md`/`TODO.md` — OAuth documented, OAuth TODO line closed.
+- [ ] **W2 joins the corpus** (see 1d): shim sign-in journey workflow.
 Live validation (Moderate→Broad): real sign-in round-trip on localhost loopback with
 the test account; fields/search/timeline behind the session work. Multi-commit ≤3.
 
@@ -567,6 +619,8 @@ same commit. PHASE-GATE: OQ3 (own-test-post-only live validation, confirmed).
   set on the account masks in the board → trending rail opens a topic → hashtag
   board opens signed-in (evidence recorded); README updated (front door + modes +
   ring + streams).
+- [ ] **W3 joins the corpus** (see 1d): the capstone smoke scripted on the shim
+  backend; the live credentialed pass stays manual.
 Multi-commit ≤3.
 
 #### 3e: Quotes as thread continuation (added 2026-08-25, user direction; D7-grounded)
@@ -705,6 +759,7 @@ Multi-commit ≤3.
   stack, box-drawing borders, dense rows; readable, not a costume that breaks WCAG
   contrast (tokens carry recorded ratios).
 - [ ] second skin per OQ8; README skins section; browser smoke across modes.
+- [ ] **W4 joins the corpus** (see 1d): skin swap/persist/cross-mode workflow.
 
 ### Phase 5 — The private BBS on Spaces (coarse; MANDATORY split after D5)
 
@@ -997,3 +1052,18 @@ No violations found in: TDD ordering (all three units are RED-first with named
 boundary cases), dispositions (all four new probes declared + honored, residue
 deleted), doc impact (README/TODO/ledger lines map to owning units), ≤3-file rule
 (all multi-commit units sliced). Confirmed ready to resume at 1a.
+
+### Workflow-test corpus added — 2026-08-25 (user direction, udm-patterned)
+User: TDD alone is not enough — "not just isolated testing but full workflow
+testing … this is a good stage to get started on that corpus," with
+`l360/sdlc/udm/e2e` as the pattern source (read this session). Adopted: unit 1d
+builds the harness (scenario composer over serve + Playwright + a fetch-shim fed
+by our probe fixture corpus; scenario-lifetime pageerror AND console-error
+collectors; options spread-forwarded, never allowlisted) and lands W1 (the 1b
+byte-identical invariant driven through the real UI). One workflow per phase
+capstone thereafter (W2 sign-in, W3 the scripted phase-3 arc, W4 skins, W5 BBS
+against the Docker PDS at the phase-5 split), full corpus green at close-out.
+Fitness rule recorded: needs real Bluesky → LIVE-only (never CI); else shim.
+Decisions: `@playwright/test` becomes a devDependency (runtime stays zero-dep;
+Stryker precedent) and ci.yml gains a browser lane — both flagged to the user in
+chat, override open. Spine and Documentation Impact updated (1d inserted).
