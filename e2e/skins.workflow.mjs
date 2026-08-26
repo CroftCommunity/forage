@@ -239,4 +239,54 @@ export async function run() {
   } finally {
     await inert.close();
   }
+
+  // --- the phpBB skin actually looks like a board (3A) -------------------
+  // The chrome vocabulary exists so a skin can express a FORUM, not just
+  // recolour Forage. This asserts the things that make it read as phpBB:
+  // a filled category band, striped rows, and square corners — none of which
+  // any skin could reach before Phase 2.
+  const board = await scenario('seeded');
+  try {
+    const { page } = board;
+    await page.goto(`${board.origin}/settings`);
+    await page.waitForSelector('text=Skin');
+    await page.locator('.field-row:has-text("Skin") select').selectOption('phpbb');
+    await page.waitForFunction(() =>
+      document.getElementById('skin-sheet')?.getAttribute('href')?.includes('phpbb'));
+
+    await page.goto(`${board.origin}/popular`);
+    await page.waitForSelector('.postrow');
+
+    const look = await page.evaluate(() => {
+      const g = (sel, prop) => {
+        const n = document.querySelector(sel);
+        return n ? getComputedStyle(n)[prop] : null;
+      };
+      const rows = [...document.querySelectorAll('.postrow')].slice(0, 2)
+        .map((n) => getComputedStyle(n).backgroundColor);
+      return {
+        band: g('.masthead', 'backgroundColor'),
+        cardRadius: g('.card', 'borderRadius'),
+        font: g('body', 'fontFamily'),
+        link: g('.postmeta .domain', 'color') ?? g('a', 'color'),
+        rows,
+      };
+    });
+
+    assert.equal(look.band, 'rgb(70, 136, 206)', 'the category band carries prosilver blue #4688CE');
+    assert.equal(look.cardRadius, '0px', 'a board has corners — the radii tokenised in Phase 2 are squared');
+    assert.match(look.font, /Lucida Grande|Verdana/, 'the subsilver2 font stack');
+    assert.equal(look.rows[0], 'rgb(236, 236, 236)', 'odd rows carry subsilver2 .row1 #ECECEC');
+    if (look.rows[1]) {
+      assert.equal(look.rows[1], 'rgb(220, 225, 229)', 'even rows carry subsilver2 .row2 #DCE1E5');
+    }
+
+    // 3A ships phpbb with no dark sibling ON PURPOSE, which exercises the
+    // disabled-toggle path in production rather than only in a fixture.
+    // Phase 3B adds phpbb-dark and this expectation flips.
+    assert.equal(await page.locator('.themetoggle').first().isDisabled(), true,
+      'phpbb has no sibling yet, so the toggle reads as unavailable');
+  } finally {
+    await board.close();
+  }
 }
