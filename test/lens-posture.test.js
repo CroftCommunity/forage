@@ -72,6 +72,79 @@ test('4a: the GUEST posture is adult-off — no session, no preferences, no adul
   assert.equal(EMPTY_POSTURE.adultEnabled, false);
 });
 
+// ---- OQ5: the logged-out floor (owner, 2026-08-26) ----
+// A guest has no account to mirror, so instead of a permissive default they
+// get the STRICTEST stance: a fixed floor of labels that hide unconditionally.
+// Modelled on bluebird's label floor (CroftC/bluebird/src/feed/labels.ts) —
+// same set, same three rules: hide rather than blur-with-reveal ("a tap to
+// reveal control is a decoy door"), honour negated labels, and read the
+// AUTHOR's labels as well as the post's.
+//
+// Signed in, the floor does NOT apply: the account's own settings govern, which
+// is the piggy-back principle. A guest has nothing to piggy-back on.
+
+test('OQ5: the guest floor hides mature labels the old adult switch let through', () => {
+  for (const val of ['graphic-media', 'gore', 'self-harm', 'torture', 'corpse',
+                     'porn', 'sexual', 'nudity', 'sexual-figurative',
+                     '!hide', '!takedown', '!warn']) {
+    const p = shapeLensPost(mkPost({ labels: [{ val }] }), SRC, EMPTY_POSTURE);
+    assert.equal(p.hidden, true, `${val} must not reach a logged-out visitor`);
+  }
+});
+
+test('OQ5: the guest floor HIDES — it never warns, because there is no reveal', () => {
+  const p = shapeLensPost(mkPost({ labels: [{ val: 'gore' }] }), SRC, EMPTY_POSTURE);
+  assert.equal(p.hidden, true);
+  assert.equal(p.warnLabels, undefined, 'a veil with a reveal control is a decoy door');
+});
+
+test('OQ5: a NEGATED label is a retraction — it must not hide anything', () => {
+  const p = shapeLensPost(mkPost({ labels: [{ val: 'porn', neg: true }] }), SRC, EMPTY_POSTURE);
+  assert.equal(p.hidden, undefined, 'the labeller took it back; treating it as live is simply wrong');
+});
+
+test('OQ5: a labeled AUTHOR hides their unlabeled post', () => {
+  const p = shapeLensPost(
+    mkPost({ author: { labels: [{ val: 'porn' }] } }), SRC, EMPTY_POSTURE);
+  assert.equal(p.hidden, true, 'the post carries no label of its own — the account does');
+});
+
+test('OQ5: an ordinary post is untouched by the floor', () => {
+  const p = shapeLensPost(mkPost({}), SRC, EMPTY_POSTURE);
+  assert.equal(p.hidden, undefined);
+  assert.equal(p.warnLabels, undefined);
+});
+
+test('OQ5: SIGNED IN, the account governs — the floor does not override its choices', () => {
+  // an account that has explicitly said "show me graphic-media"
+  const signedIn = buildPosture({ preferences: [
+    { $type: 'app.bsky.actor.defs#contentLabelPref', label: 'graphic-media', visibility: 'show' },
+    { $type: 'app.bsky.actor.defs#adultContentPref', enabled: true },
+  ] }, NOW);
+  const p = shapeLensPost(mkPost({ labels: [{ val: 'graphic-media' }] }), SRC, signedIn);
+  assert.equal(p.hidden, undefined, 'mirroring the account is the whole point (piggy-back)');
+  const adult = shapeLensPost(mkPost({ labels: [{ val: 'porn' }] }), SRC, signedIn);
+  assert.equal(adult.hidden, undefined, 'they turned adult content on; we do not second-guess it');
+});
+
+test('OQ5: signed in, a negated label is still a retraction', () => {
+  const signedIn = buildPosture({ preferences: [
+    { $type: 'app.bsky.actor.defs#contentLabelPref', label: 'spam', visibility: 'hide' },
+  ] }, NOW);
+  const p = shapeLensPost(mkPost({ labels: [{ val: 'spam', neg: true }] }), SRC, signedIn);
+  assert.equal(p.hidden, undefined);
+});
+
+test('OQ5: the floor reaches FEEDS too — a guest sees no mature feed in discovery', () => {
+  assert.deepEqual(feedDisposition({ labels: [{ val: 'graphic-media' }] }, EMPTY_POSTURE), { mode: 'hide' });
+  assert.deepEqual(feedDisposition({ labels: [{ val: 'gore' }] }, EMPTY_POSTURE), { mode: 'hide' });
+  assert.equal(feedDisposition({ labels: [{ val: 'gore', neg: true }] }, EMPTY_POSTURE), null);
+  // a feed whose CREATOR is labeled
+  assert.deepEqual(
+    feedDisposition({ labels: [], creator: { labels: [{ val: 'porn' }] } }, EMPTY_POSTURE),
+    { mode: 'hide' });
+});
+
 // ---- 4a: feed generators go through the SAME label rules as posts ----
 // A feed generator view carries `labels` exactly as a post does (3 of the top
 // 100 popular feeds carry `porn`, 2 carry `sexual` — measured 2026-08-26), and
@@ -107,11 +180,36 @@ const posture = (over = {}) => ({
   mutedDids: new Set(), blockedDids: new Set(), hideBadges: false, ...over,
 });
 
-test('a muted WORD in the text masks the post; the author survives as [muted content]', () => {
+// OWNER, 2026-08-26: a muted word must make the post ABSENT, not present-with-a-
+// label. Rendering "[muted — matches your muted words]" leaves the row in the
+// feed AND announces what it is hiding, which defeats the mute twice over. A
+// muted word is client-side rendering guidance — the account said "do not show
+// me this" — so the honest rendering is nothing at all.
+test('a muted WORD removes the post from the board entirely — no placeholder row', () => {
   const p = shapeLensPost(mkPost({ text: 'big spoiler ahead' }), SRC,
     posture({ mutedWords: [{ value: 'spoiler', targets: ['content', 'tag'], actorTarget: 'all' }] }));
-  assert.equal(p.maskedRemoved, true);
-  assert.match(p.title, /muted/i);
+  assert.equal(p.hidden, true, 'boards filter on hidden — this is what makes it absent');
+});
+
+test('a muted-word post never announces itself in a board', () => {
+  const pos = posture({ mutedWords: [{ value: 'spoiler', targets: ['content'], actorTarget: 'all' }] });
+  const feed = { feed: [{ post: mkPost({ text: 'big spoiler ahead' }) }, { post: mkPost({ text: 'ordinary' }) }] };
+  const shaped = shapeLensFeed(feed, SRC, {}, pos);
+  assert.equal(shaped.posts.length, 1, 'one post in, one post out — the muted one is gone');
+  assert.equal(shaped.posts[0].body.includes('spoiler'), false);
+  assert.equal(JSON.stringify(shaped).toLowerCase().includes('muted'), false,
+    'the word "muted" appears nowhere — a label naming the mute is still a tell');
+});
+
+test('a MUTED ACCOUNT is absent from a board too, for the same reason', () => {
+  const pos = posture({ mutedDids: new Set(['did:plc:mutedguy']) });
+  const feed = { feed: [
+    { post: mkPost({ post: { uri: 'at://did:plc:mutedguy/app.bsky.feed.post/p1' }, author: { did: 'did:plc:mutedguy', handle: 'm.test' } }) },
+    { post: mkPost({}) },
+  ] };
+  const shaped = shapeLensFeed(feed, SRC, {}, pos);
+  assert.equal(shaped.posts.length, 1);
+  assert.equal(shaped.posts[0].authorId, 'did:plc:auth');
 });
 
 test('targets:[tag] masks a TAGGED post but NOT a plain text mention of the word', () => {
@@ -149,7 +247,7 @@ test('adult toggle OFF forces adult labels to hide regardless of per-label prefs
   assert.equal(p.hidden, true);
 });
 
-test('the feed shape FILTERS hidden and blocked posts; muted authors mask in place', () => {
+test('the feed shape filters EVERY masked kind — blocked, muted, and label-hidden alike', () => {
   const pos = posture({
     blockedDids: new Set(['did:plc:blockedguy']),
     mutedDids: new Set(['did:plc:mutedguy']),
@@ -163,8 +261,9 @@ test('the feed shape FILTERS hidden and blocked posts; muted authors mask in pla
   ] };
   const shaped = shapeLensFeed(feed, SRC, {}, pos);
   const ids = shaped.posts.map((p) => p.id.split('/').pop());
-  assert.deepEqual(ids, ['p1', 'p3'], 'blocked and hidden are GONE; muted stays masked');
-  assert.equal(shaped.posts[1].maskedRemoved, true, 'the muted author masks in place');
+  // OWNER, 2026-08-26: muted no longer "masks in place". Blocked, muted and
+  // label-hidden all resolve to the same thing on a board — absent.
+  assert.deepEqual(ids, ['p1'], 'only the ordinary post survives');
 });
 
 // ---- facets: BYTE-indexed spans ----
@@ -232,7 +331,7 @@ test('3f wiring: loadPosture() pulls the D10 surfaces and the board masks throug
   const board = await lens.feed({ kind: 'author', actor: 'auth.test' });
   const ids = board.posts.map((p) => p.id.split('/').pop());
   assert.ok(!ids.includes('never'), 'the blocked author never renders');
-  const masked = board.posts.find((p) => p.id.endsWith('masked'));
-  assert.equal(masked.maskedRemoved, true, 'the muted word masks ON THE LIVE PATH');
+  assert.ok(!ids.includes('masked'), 'the muted word makes it ABSENT on the live path too');
+  assert.deepEqual(ids, ['p1'], 'what is left is the post that matched nothing');
   assert.ok(calls.some((c) => c.includes('getListMutes')), 'list subscriptions consulted');
 });

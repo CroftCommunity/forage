@@ -168,9 +168,16 @@ export async function run() {
   const del = await page.evaluate(() => JSON.parse(window.__shimHits.find((h) => h.url.includes('deleteRecord')).body));
   assert.deepEqual(del, { repo: 'did:plc:me', collection: 'app.bsky.feed.like', rkey: '3w3like' });
 
-  // 3f segment: the account-side muted word masks IN THE BOARD; ✓ renders
-  await page.waitForSelector('text=[muted — matches your muted words]');
+  // 3f segment: the account-side muted word removes the post from the board.
+  // OWNER, 2026-08-26: this used to assert a visible "[muted — matches your
+  // muted words]" row. That defeated the mute twice over — the row still cost a
+  // line of attention AND announced what was being withheld. A mute is
+  // rendering guidance meaning "do not show me this"; absent is the only
+  // rendering that honours it.
   assert.equal(await page.locator('text=kryptonite').count(), 0, 'the muted text never renders');
+  const boardText = await page.locator('body').innerText();
+  assert.ok(!/muted/i.test(boardText),
+    'and the board says nothing about a mute — naming it is still a tell');
   assert.ok(await page.locator('.postrow:has-text("post a1") span[title="Verified on Bluesky"]').count(),
     'the verified author carries the checkmark');
 

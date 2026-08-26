@@ -27,9 +27,33 @@ const NSFW_LABELS = new Set(['porn', 'sexual', 'nudity', 'graphic-media', 'gore'
 
 const ADULT_LABELS = new Set(['porn', 'sexual', 'nudity', 'sexual-figurative']);
 
+// OQ5 (owner, 2026-08-26): a LOGGED-OUT visitor gets the strictest stance, not
+// a permissive default. They have no account to mirror, so the piggy-back
+// principle has nothing to piggy-back on — and the honest answer to "what would
+// this person have chosen" is "the safe thing", not "everything".
+//
+// This floor is bluebird's, deliberately: same set, same rules
+// (CroftC/bluebird/src/feed/labels.ts, the "label floor"). Its reasoning holds
+// here too — we HIDE rather than blur-with-reveal, because a tap-to-reveal
+// control is a decoy door: it presents the material as one gesture away while
+// pretending to withhold it.
+//
+// Signed in, this does NOT apply. The account's own settings govern, including
+// the choice to turn things ON. Mirroring that is the whole point.
+export const GUEST_FLOOR = Object.freeze(new Set([
+  // adult / sexual
+  'porn', 'sexual', 'nudity', 'sexual-figurative',
+  // violence / graphic / self-harm
+  'graphic-media', 'gore', 'self-harm', 'torture', 'corpse',
+  // system-level moderation actions
+  '!hide', '!takedown', '!warn',
+]));
+
 export const EMPTY_POSTURE = Object.freeze({
   mutedWords: [], labelPrefs: new Map(), adultEnabled: false,
   mutedDids: new Set(), blockedDids: new Set(), hideBadges: false,
+  // OQ5: the guest posture IS the floor. A session replaces this wholesale.
+  floor: GUEST_FLOOR,
 });
 
 // Pure: the D10 payloads → one posture object. Expired muted words drop at
@@ -49,6 +73,8 @@ export function buildPosture({ preferences = [], mutes = [], blocks = [], listMu
     mutedDids: new Set(mutes.map((u) => u.did)),
     blockedDids: new Set(blocks.map((u) => u.did)),
     hideBadges: !!verifPref?.hideBadges,
+    // OQ5: a signed-in account carries NO floor — its own settings govern.
+    floor: null,
     listMuteCount: listMutes.length, listBlockCount: listBlocks.length,
   };
 }
@@ -67,13 +93,28 @@ function mutedWordHits(w, post) {
 // Label disposition under the posture: 'hide' | 'warn' | null. Takes anything
 // that carries atproto `labels` — a post view OR a feed-generator view; the
 // rules are identical by construction, which is the point (4a).
+// Effective label values on a thing AND on whoever authored it. Two rules that
+// were missing before OQ5:
+//   - `neg: true` is a RETRACTION. The labeller took it back; treating it as
+//     live is simply wrong, and it was silently over-hiding.
+//   - an account can be labeled without its individual posts being labeled, so
+//     the author's labels count as much as the post's. A feed generator's
+//     creator is the same relationship.
+function effectiveLabels(labelled) {
+  const own = labelled.labels || [];
+  const byAuthor = labelled.author?.labels || labelled.creator?.labels || [];
+  return [...own, ...byAuthor].filter((l) => !l.neg).map((l) => l.val);
+}
+
 function labelDisposition(labelled, posture) {
   let warn = null;
-  for (const l of labelled.labels || []) {
-    if (ADULT_LABELS.has(l.val) && !posture.adultEnabled) return { mode: 'hide' };
-    const v = posture.labelPrefs.get(l.val);
+  for (const val of effectiveLabels(labelled)) {
+    // OQ5: the guest floor comes FIRST and admits no reveal.
+    if (posture.floor?.has(val)) return { mode: 'hide' };
+    if (ADULT_LABELS.has(val) && !posture.adultEnabled) return { mode: 'hide' };
+    const v = posture.labelPrefs.get(val);
     if (v === 'hide') return { mode: 'hide' };
-    if (v === 'warn') warn = warn ? { mode: 'warn', labels: [...warn.labels, l.val] } : { mode: 'warn', labels: [l.val] };
+    if (v === 'warn') warn = warn ? { mode: 'warn', labels: [...warn.labels, val] } : { mode: 'warn', labels: [val] };
   }
   return warn;
 }
@@ -142,13 +183,20 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
   // 3f: the posture applies here — policy in the shape layer, never components.
   const disp = labelDisposition(post, posture);
   if (disp?.mode === 'hide') {
-    return { ...base, title: '[hidden by your filters]', body: '', url: '', author: null, authorId: null, maskedRemoved: true, hidden: true };
+    return { ...base, title: '', body: '', url: '', author: null, authorId: null, maskedRemoved: true, hidden: true };
   }
+  // OWNER, 2026-08-26: muting makes content ABSENT, never present-with-a-label.
+  // The old rendering left a row reading "[muted — matches your muted words]",
+  // which defeats the mute twice: the row still costs the reader a line of
+  // attention, and it announces exactly what is being withheld. A muted word or
+  // a muted account is client-side rendering guidance — "do not show me this" —
+  // and the only rendering that honours it is nothing at all. `hidden` is what
+  // the boards filter on, which is how blocked authors already disappear.
   if (maskedByViewer(post) || posture.mutedDids.has(post.author?.did)) {
-    return { ...base, title: '[muted account]', body: '', url: '', author: null, authorId: null, maskedRemoved: true };
+    return { ...base, title: '', body: '', url: '', author: null, authorId: null, maskedRemoved: true, hidden: true };
   }
   if (posture.mutedWords.some((w) => mutedWordHits(w, post))) {
-    return { ...base, title: '[muted — matches your muted words]', body: '', url: '', author: null, authorId: null, maskedRemoved: true };
+    return { ...base, title: '', body: '', url: '', author: null, authorId: null, maskedRemoved: true, hidden: true };
   }
   // 3e inbound: a quote post carries its quoted original in the embed — the
   // context renders for free (D7); the uri links to the original's thread.
@@ -236,8 +284,12 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
   const build = (nodes, depth) => (nodes || []).map((n) => {
     if (!n.post) return null; // blocked / notFound stubs
     if (posture.blockedDids.has(n.post.author?.did)) return null; // never renders
-    total += 1;
     const p = shapeLensPost(n.post, src, posture);
+    // Muted and label-floored nodes vanish here the same way a blocked author
+    // already does — subtree included. Keeping a named placeholder in a thread
+    // would re-announce what the mute asked us not to show.
+    if (p.hidden) return null;
+    total += 1;
     return {
       ...node(p, depth),
       children: depth >= 10 ? [] : build(n.replies, depth + 1),

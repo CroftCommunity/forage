@@ -783,15 +783,13 @@ test('4a: discovery applies the account posture to FEEDS — adult-labelled feed
   ] }) });
   // A guest has no preferences to mirror, so adult content is OFF (4a).
   const feeds = await createLens({ transport }).discoverFeeds();
-  assert.deepEqual(feeds.map((f) => f.title), ['Garden Talk', 'Graphic Feed'],
-    'the adult feed is gone; a non-adult label with no pref against it is NOT hidden');
-  // A guest carries no contentLabelPref, so only the adult master switch fires.
-  // `graphic-media` therefore passes through unveiled — Forage invents no
-  // default warn the account never asked for. (Bluesky's own logged-out view
-  // does warn on it; whether to match that is an owner decision, not a silent
-  // one — see the plan's OQ5.)
-  assert.equal(feeds[1].warnLabels, undefined);
-  assert.equal(feeds[0].warnLabels, undefined);
+  // OQ5 DECIDED (owner, 2026-08-26): a logged-out visitor gets the strictest
+  // stance, so `graphic-media` is on the guest floor and goes too. Before the
+  // decision this test asserted the opposite — that a non-adult label with no
+  // pref against it passed through. It no longer does.
+  assert.deepEqual(feeds.map((f) => f.title), ['Garden Talk'],
+    'a guest sees neither the adult feed nor the graphic one');
+  assert.equal(feeds[0].warnLabels, undefined, 'and what remains is not veiled');
 });
 
 test('4a: a JOINED adult feed drops out of the Fields list too — one rule on every feed surface', async () => {

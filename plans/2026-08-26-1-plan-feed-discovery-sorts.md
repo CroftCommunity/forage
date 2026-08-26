@@ -508,12 +508,23 @@ packs", with TID-decoded windows.
   was being treated as adult-on. One change fixes both: **absent preference means
   adult content is off**, for guests and accounts alike.
 
-- **OQ5 — non-adult label defaults for guests (new, surfaced by 4a's tests).** The
-  adult master switch is now correct, but per-label prefs only exist when the account
-  set them. A guest therefore gets no verdict on `graphic-media` and it renders
-  unveiled; bsky.app's own logged-out view warns on it. Forage currently invents no
-  default the account never asked for, which is defensible but is a *choice*. Worth
-  an explicit answer before more label-bearing surfaces land.
+- ~~**OQ5 — non-adult label defaults for guests.**~~ **DECIDED 2026-08-26 (owner):
+  logged out means the STRICTEST stance — no adult and no mature content — modelled on
+  the bluebird project in this workspace.** Landed as `GUEST_FLOOR` (DL-035): the same
+  twelve labels bluebird floors, hidden unconditionally, with its three rules carried
+  over — hide rather than blur-with-reveal, honour negated labels as retractions, and
+  read the AUTHOR's labels as well as the item's. Two of those were latent bugs: a
+  RETRACTED label was being treated as live (silently over-hiding), and a labeled
+  ACCOUNT's unlabeled post passed straight through. Signed in the floor does not
+  apply — the account governs, including its choice to turn things on.
+
+- **Muted content is absent, not labelled (owner, 2026-08-26; DL-036).** Raised while
+  reviewing the deploy: *"muted words and content still rendered but as literal 'this
+  matches a muted word' — that defeats the purpose."* Correct, and doubly so: the
+  placeholder row still cost a line of attention and announced what it withheld.
+  Muting is client-side rendering guidance; the only rendering that honours it is
+  nothing. Muted words and muted accounts now disappear from boards, search and
+  threads, exactly as a blocked author already did.
 - ~~**OQ2 — Constellation as a dependency.**~~ **RECORDED 2026-08-26 as
   `docs/adr/0004-constellation-backlinks.md`**, on the owner's "tier 2 sounds
   awesome" (2026-08-26). The ADR narrows the dependency to backlink counts on feed

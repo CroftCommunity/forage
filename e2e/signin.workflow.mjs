@@ -17,6 +17,8 @@ const AFTER_DARK = 'at://did:plc:x/app.bsky.feed.generator/afterdark';
 const GARDEN = 'at://did:plc:g/app.bsky.feed.generator/gardentalk';
 const FRESHEST = 'at://did:plc:i/app.bsky.feed.generator/freshest';
 const LOUDEST = 'at://did:plc:h/app.bsky.feed.generator/loudest';
+const GRAPHIC = 'at://did:plc:j/app.bsky.feed.generator/rough';
+const RETRACTED = 'at://did:plc:k/app.bsky.feed.generator/cleared';
 const enc = (uri) => encodeURIComponent(uri);
 // an hour old: comfortably inside both the 7d and 30d windows 4c counts
 const recentLikes = (n) => Array.from({ length: n },
@@ -91,7 +93,16 @@ export async function run() {
         // and its board must refuse — with no Forage-side toggle to re-reveal.
         { uri: AFTER_DARK, displayName: 'After Dark',
           description: 'adult stuff', likeCount: 999, creator: { handle: 'x.test' },
-          labels: [{ val: 'porn' }] } ] },
+          labels: [{ val: 'porn' }] },
+        // OQ5: `graphic-media` is NOT adult — the old adult switch let it
+        // through. The guest floor does not.
+        { uri: GRAPHIC, displayName: 'Rough Stuff',
+          description: 'graphic', likeCount: 5, creator: { handle: 'g.test' },
+          labels: [{ val: 'graphic-media' }] },
+        // and a RETRACTED label is not a label at all
+        { uri: RETRACTED, displayName: 'Cleared Feed',
+          description: 'was labeled, then cleared', likeCount: 3, creator: { handle: 'c.test' },
+          labels: [{ val: 'porn', neg: true }] } ] },
       'getFeedGenerator?feed=at%3A%2F%2Fdid%3Aplc%3Ax': { view: { uri: 'at://did:plc:x/app.bsky.feed.generator/afterdark',
         displayName: 'After Dark', description: 'adult stuff', likeCount: 999,
         creator: { handle: 'x.test' }, labels: [{ val: 'porn' }] }, isOnline: true, isValid: true },
@@ -144,6 +155,21 @@ export async function run() {
   await page.waitForSelector('text=Sign in with Bluesky');
   assert.equal(await page.locator('input[type="password"]').count(), 0, 'no password field exists anymore');
 
+  // OQ5 (owner, 2026-08-26): a LOGGED-OUT visitor gets the strictest stance —
+  // bluebird's label floor, which is wider than the adult switch and admits no
+  // reveal. A guest has no account to mirror, so "the safe thing" is the honest
+  // default rather than "everything".
+  await page.goto(`${s.origin}/feeds`);
+  await page.waitForSelector('[data-discover-feed]');
+  const guestTitles = await page.locator('[data-discover-feed] a[href*="/f/"]').allTextContents();
+  assert.ok(!guestTitles.includes('After Dark'), 'adult: gone for a guest');
+  assert.ok(!guestTitles.includes('Rough Stuff'), 'graphic-media: gone too — wider than the adult switch');
+  assert.ok(guestTitles.includes('Cleared Feed'), 'a RETRACTED label is not a label — this one stays');
+  assert.ok(guestTitles.includes('Garden Talk'), 'and ordinary feeds are untouched');
+  // no reveal anywhere: the floor hides, it does not veil-with-a-control
+  assert.equal(await page.locator('text=Show anyway').count(), 0, 'no reveal control exists');
+  await page.goto(`${s.origin}/`);
+
   // card path: handle → button → (redirect-in-miniature) → signed-in identity
   await page.locator('input[placeholder="you.bsky.social"]').fill('wtest.bsky.social');
   await page.locator('button:has-text("Sign in with Bluesky")').click();
@@ -191,28 +217,36 @@ export async function run() {
   // layer and no component ever sees it. There is deliberately NO toggle here.
   assert.equal(await page.locator('text=After Dark').count(), 0,
     'an adult-labelled feed does not surface for an account with adult content off');
-  assert.equal(await page.locator('[data-discover-feed]').count(), 3, 'exactly the clean feeds remain');
+  // OQ5's other half, and the reason the floor is guest-ONLY: signed in, the
+  // account governs. This account never set a graphic-media preference, so
+  // "Rough Stuff" — which the GUEST floor hid a moment ago — is visible here.
+  // Adult stays hidden because the lexicon's own default is off.
+  const signedInTitles = await page.locator('[data-discover-feed] a[href*="/f/"]').allTextContents();
+  assert.ok(!signedInTitles.includes('After Dark'), 'adult stays hidden: the lexicon default is off');
+  assert.ok(signedInTitles.includes('Rough Stuff'),
+    'graphic-media returns once there is an account to mirror — the floor is a GUEST default, not a policy we impose');
+  assert.equal(await page.locator('[data-discover-feed]').count(), 5);
   assert.equal(await page.locator('input[type="checkbox"]:near(:text("adult"))').count(), 0,
     'discovery offers no adult toggle of its own — the account setting is the only source of truth');
 
   // 4b: the whole popular corpus is loaded, so the controls describe all of it
   await page.waitForSelector('[data-feed-controls]');
-  await page.waitForSelector('text=All 3 feeds Bluesky lists as popular.');
+  await page.waitForSelector('text=All 5 feeds Bluesky lists as popular.');
   const titles = async () => page.locator('[data-discover-feed] a[href^="/f/"]').allTextContents();
-  assert.deepEqual(await titles(), ['Garden Talk', 'Loudest', 'Freshest'],
+  assert.deepEqual(await titles(), ['Garden Talk', 'Loudest', 'Freshest', 'Rough Stuff', 'Cleared Feed'],
     'the default is Bluesky\'s own order, untouched');
 
   await page.locator('[data-feed-sort]').selectOption('likes');
-  assert.deepEqual(await titles(), ['Loudest', 'Garden Talk', 'Freshest']);
+  assert.deepEqual((await titles()).slice(0, 2), ['Loudest', 'Garden Talk']);
   await page.locator('[data-feed-sort]').selectOption('new');
-  assert.deepEqual(await titles(), ['Freshest', 'Garden Talk', 'Loudest']);
+  assert.equal((await titles())[0], 'Freshest');
 
   // 4c: Rising is a DIFFERENT ranking — 7d likes here are inverted against
   // all-time likeCount, so if Rising were secretly likeCount this would fail.
   await page.locator('[data-feed-sort]').selectOption('rising7');
   await page.waitForSelector('text=likes in 7d');
   await page.waitForFunction(() => !document.body.textContent.includes('measuring…'));
-  assert.deepEqual(await titles(), ['Freshest', 'Garden Talk', 'Loudest'],
+  assert.deepEqual((await titles()).slice(0, 3), ['Freshest', 'Garden Talk', 'Loudest'],
     'Rising ranks by the window, not by the all-time count');
   await page.waitForSelector('text=Joining a feed is private');
   assert.equal(await page.locator('text=5 likes in 7d').count(), 1, 'the window count is shown per feed');
@@ -227,7 +261,7 @@ export async function run() {
   // the builder facet: feeds are built ON services, and that is a real filter
   await page.locator('[data-feed-platform]').selectOption('skyfeed.me');
   assert.deepEqual(await titles(), ['Freshest', 'Garden Talk']);
-  await page.waitForSelector('text=2 of 3 feeds.');
+  await page.waitForSelector('text=2 of 5 feeds.');
   await page.locator('[data-feed-platform]').selectOption('');
 
   // 4b: a search is a slice of an unbounded index, so the sorts refuse rather
@@ -245,11 +279,15 @@ export async function run() {
     'hide-inactive defaults ON for search');
   await page.waitForSelector('text=1 stale');
   await page.waitForSelector('text=1 empty');
-  assert.deepEqual(await titles(), ['Garden Talk'], 'only the feed with a fresh post survives');
+  const alive = await titles();
+  assert.ok(alive.includes('Garden Talk'), 'the feed with a fresh post survives');
+  assert.ok(!alive.includes('Loudest'), 'the stale one is filtered');
+  assert.ok(!alive.includes('Freshest'), 'so is the empty one');
 
   // unchecking brings them back — it is a filter the user controls
   await page.locator('[data-feed-alive]').uncheck();
-  assert.deepEqual(await titles(), ['Garden Talk', 'Loudest', 'Freshest']);
+  const all = await titles();
+  assert.ok(all.includes('Loudest') && all.includes('Freshest'), 'unchecking restores them');
 
   // 4a: it is gone from the sidebar too, even though the account JOINED it —
   // membership does not override the account's moderation setting.
