@@ -116,15 +116,24 @@ router.route('/home', memoryOnly((p, q) => views.feedView('home', 'Home', q)));
 router.route('/popular', memoryOnly((p, q) => views.feedView('popular', 'Popular', q)));
 router.route('/all', memoryOnly((p, q) => views.feedView('all', 'All', q)));
 router.route('/f/:slug', byMode(lensViews.lensFieldView, views.fieldView));
-// 3v: the SHAREABLE feed path — /f/@creator/<rkey> resolves cold, which the
-// bare-rkey form cannot (an rkey has no did). Bluesky population only; the
-// memory tier's Fields are local and need no creator.
-router.route('/f/:handle/:rkey', byMode(lensViews.lensFieldView, views.fieldView));
+// ORDER MATTERS BELOW. The router returns the FIRST pattern that matches, and
+// `/f/:handle/:rkey` is two segments under /f/ — the same shape as
+// `/f/:slug/settings`. Registered above it, the generic form swallowed it and
+// Field settings was unreachable in both modes on production (2026-08-26): the
+// memory tier answered "No such Field", the lens tier fired resolveHandle at
+// the literal string "settings" and 400'd. So every SPECIFIC sub-route is
+// registered first, and the creator-qualified shape is the fallback.
+// test/routes.test.js proves each route is reachable, because a route table
+// cannot show you this by inspection — every line looks correct.
 router.route('/f/:slug/settings', memoryOnly(views.fieldSettingsView));
 router.route('/f/:slug/mod/log', memoryOnly(views.auditView));
 router.route('/f/:slug/mod/queue', memoryOnly(views.queueView));
 router.route('/f/:slug/p/:id', memoryOnly(views.threadView));
 router.route('/f/:slug/p/:id/:slug2', memoryOnly(views.threadView));
+// 3v: the SHAREABLE feed path — /f/@creator/<rkey> resolves cold, which the
+// bare-rkey form cannot (an rkey has no did). Bluesky population only; the
+// memory tier's Fields are local and need no creator.
+router.route('/f/:handle/:rkey', byMode(lensViews.lensFieldView, views.fieldView));
 router.route('/notifications', memoryOnly(views.notificationsView));
 router.route('/saved', memoryOnly((p, q) => views.profileView({ handle: store.getState().users[store.getPersonaId()]?.handle || '' }, { tab: 'saved' })));
 router.route('/search', memoryOnly(views.searchView));
