@@ -1,7 +1,7 @@
 # Plan: three modes — memory, the Bluesky view with a ring dial, and the private BBS
 
 date: 2026-08-25
-status: EXECUTING — Phase 1 complete; 2a SHIPPED; next unit: 2b (session module).
+status: EXECUTING — Phase 1 complete; 2a–2b SHIPPED; next unit: 2c (sign-in UI + lens integration).
 Execution in worktrees/forage/modes-bbs (branch claude/modes-bbs)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `10a8ade` (clean tree, pushed; forage.fyi deployed at forage-v11)
@@ -529,7 +529,7 @@ corpus is JOURNEY files that grow, not one file per feature:**
 
 ### Phase 2 — OAuth (the identity seam, arecipe-precedent)
 
-#### 2a: Vendored client + drift check — ✅ SHIPPED
+#### 2a: Vendored client + drift check — ✅ SHIPPED (`17fb7a5`)
 - [ ] `vendor/atproto-oauth-client-browser.js` — the D4 bundle, committed with a
   header recording package name/version/build command.
 - [ ] `test/vendor.test.js` — RED first: pinned sha256 + version string match (the
@@ -538,7 +538,7 @@ corpus is JOURNEY files that grow, not one file per feature:**
 - [ ] `sw.js` — SHELL + bump (registry gate forces it).
 **Wiring:** consumed by 2b; this unit proves integrity, not usage.
 
-#### 2b: The session module
+#### 2b: The session module — ✅ SHIPPED
 - [ ] `js/auth/session.js` — init from vendored client (client-metadata for
   forage.fyi; loopback metadata for localhost dev, arecipe pattern), `signIn(handle)`
   (authorize redirect), callback completion, `currentSession()`, `signOut()`,
