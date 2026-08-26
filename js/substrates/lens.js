@@ -101,16 +101,19 @@ const slugForSource = (source) => {
 };
 
 // A lens over the AppView. Guest (no session): the unauth-200 surface only.
-// With a session {service, did, accessJwt}: reads route through the PDS proxy
-// and the personal surfaces (fields, search, timeline) open up.
+// With a session — the OAUTH shape { did, handle, fetchHandler } from
+// js/auth/session.js — every read flows through the DPoP-bound fetchHandler
+// with a RELATIVE /xrpc path (the library owns auth headers, tokens, and
+// refresh; the lens builds none of it) and the personal surfaces (fields,
+// search, timeline) open up.
 export function createLens({ session = null, transport = fetch } = {}) {
-  const base = session ? session.service : GUEST_APPVIEW;
-  const headers = session ? { authorization: `Bearer ${session.accessJwt}` } : {};
-
   async function get(path, params = {}) {
-    const url = new URL(`${base}/xrpc/${path}`);
-    for (const [k, v] of Object.entries(params)) if (v !== undefined) url.searchParams.set(k, v);
-    const res = await transport(url.toString(), { headers });
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) if (v !== undefined) qs.set(k, v);
+    const suffix = qs.toString() ? `?${qs}` : '';
+    const res = session
+      ? await session.fetchHandler(`/xrpc/${path}${suffix}`)
+      : await transport(`${GUEST_APPVIEW}/xrpc/${path}${suffix}`, { headers: {} });
     if (!res.ok) throw new Error(`lens: ${path} failed HTTP ${res.status}`);
     return res.json();
   }
