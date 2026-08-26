@@ -33,6 +33,11 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 
 ## Scoped-tier deployment (the "ten friends" instance)
 
+> DEFERRED BY REDIRECT (2026-08-25): the all-public scoped mode is NOT wired
+> into the app for now — the small-group experience ships as the private BBS on
+> Spaces instead (plan 2026-08-25-1, phase 5). The machinery below stays live
+> (codec, intake, writer, conformance world); wiring it in-app is wanted-later.
+
 - Register a session-bound atproto substrate in `js/config/routing.js` (the codec,
   intake, and writer all exist and are live-proven; what's missing is session plumbing
   and a deploy story).

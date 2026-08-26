@@ -12,7 +12,9 @@ in the workspace). One behavioral contract, substrates per capability, scope as 
 tier dial. This page is the law agents execute against; it is deliberately short.
 
 Sources of truth, in order: `js/schema.js`, `scenarios/`, `js/config/routing.js`,
-`ledger/divergence.js`. (The latter two arrive in phases 3–4 of
+`ledger/divergence.js`. Modes are named routing tables (`MODES` there) with a
+store-side lifecycle: network modes are RAM-only and `forage.state` is written by
+the memory mode alone (`test/store-modes.test.js` is the teeth). (The latter two arrive in phases 3–4 of
 `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md`; until then the plan is the
 routing/ledger authority.) When these disagree with any document **including this
 one**, they win; fix the document.
