@@ -19,7 +19,10 @@
 export const SKIN_KEY = 'forage.skin';
 
 export const SKINS = Object.freeze({
-  default: { label: 'Forage (default)', file: null, palette: 'light' },
+  // `default` IS Forage light: file null means "the palette already in
+  // tokens.css", so the common case loads no extra sheet and cannot flash.
+  default: { label: 'Forage (light)', file: null, palette: 'light', pairedWith: 'forage-dark' },
+  'forage-dark': { label: 'Forage (dark)', file: 'skins/forage-dark.css', palette: 'dark', pairedWith: 'default' },
   bbs: { label: 'Classic BBS (amber terminal)', file: 'skins/bbs.css', palette: 'dark' },
   usenet: { label: 'Usenet gray (newsprint)', file: 'skins/usenet.css', palette: 'light' },
 });

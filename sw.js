@@ -9,7 +9,7 @@
 
 const CACHE = 'forage-v25';
 const SHELL = [
-  '/', '/404.html', '/skins/bbs.css', '/skins/usenet.css',
+  '/', '/404.html', '/skins/bbs.css', '/skins/usenet.css', '/skins/forage-dark.css',
   '/vendor/atproto-oauth-client-browser.js', '/js/auth/session.js', '/js/skins.js',
   '/js/version.js', '/js/mode.js', '/js/media-scale.js', '/js/lang.js', '/js/compose.js', '/js/ui/mode-view.js', '/css/tokens.css', '/css/app.css',
   '/js/main.js', '/js/router.js', '/js/store.js', '/js/storage.js', '/js/schema.js',

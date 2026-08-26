@@ -162,13 +162,15 @@ test('1A: the REAL registry passes pairing validation', () => {
 });
 
 test('1A: OS preference picks the default palette via the default skin\'s sibling', () => {
-  // Before Phase 1B there is no forage-dark, so `default` has no sibling and the
-  // dark branch must fall back to `default` — today's behaviour, unchanged.
-  assert.equal(resolveDefault(false, SKINS), 'default', 'light OS -> default');
-  assert.equal(resolveDefault(true, SKINS), 'default',
-    'dark OS with no sibling registered yet -> still default (1A changes nothing visible)');
+  // The MECHANISM, tested against fixtures so it stays true whatever the real
+  // registry holds. (Until Phase 1C registered forage-dark, this also asserted
+  // that the real registry's dark branch fell back to `default`; 1C changed
+  // that by design, and test 1C covers the live registry now.)
+  const noSibling = { default: { label: 'D', file: null, palette: 'light' } };
+  assert.equal(resolveDefault(false, noSibling), 'default', 'light OS -> default');
+  assert.equal(resolveDefault(true, noSibling), 'default',
+    'dark OS with no sibling -> falls back to default rather than throwing');
 
-  // With a sibling registered (what Phase 1B lands), the dark branch follows it.
   const withDark = {
     default:      { label: 'Forage', file: null,                    palette: 'light', pairedWith: 'forage-dark' },
     'forage-dark': { label: 'Forage dark', file: 'skins/forage-dark.css', palette: 'dark', pairedWith: 'default' },
@@ -216,8 +218,8 @@ test('1A WIRING: activeSkin() resolves stored -> transient -> OS, in that order'
     assert.equal(activeSkin(), 'default', 'nothing stored, OS light -> default');
 
     osDark = true;
-    assert.equal(activeSkin(), 'default',
-      'nothing stored, OS dark -> default until a dark sibling is registered (Phase 1B)');
+    assert.equal(activeSkin(), 'forage-dark',
+      'nothing stored, OS dark -> the default skin\'s registered dark sibling');
 
     setTransient('bbs');
     assert.equal(activeSkin(), 'bbs', 'a mode\'s transient dress beats the OS preference');
@@ -266,4 +268,76 @@ test('1B: tokens.css no longer hard-sets color-scheme past the token', () => {
   const raw = [...tokensCss.matchAll(/(^|[;{]\s*)color-scheme\s*:\s*(?!var\()/g)];
   assert.equal(raw.length, 0,
     `tokens.css still sets color-scheme directly ${raw.length}x — route it through --color-scheme`);
+});
+
+// ---------------------------------------------------------------------------
+// Phase 1C — forage-dark becomes a real skin, paired with the light default.
+// ---------------------------------------------------------------------------
+
+// Pull the token -> value map out of one CSS block, given a selector.
+function blockTokens(css, selectorStartsWith) {
+  const clean = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const out = new Map();
+  let depth = 0, buf = '', sel = '';
+  for (const c of clean) {
+    if (c === '{') { if (depth === 0) { sel = buf.trim(); buf = ''; } else buf += c; depth++; }
+    else if (c === '}') {
+      depth--;
+      if (depth === 0) {
+        if (sel.replace(/\s+/g, ' ').startsWith(selectorStartsWith)) {
+          for (const d of buf.split(';')) {
+            const i = d.indexOf(':');
+            if (i < 0) continue;
+            const k = d.slice(0, i).trim();
+            if (k.startsWith('--')) out.set(k, d.slice(i + 1).trim());
+          }
+        }
+        buf = ''; sel = '';
+      } else buf += c;
+    } else buf += c;
+  }
+  return out;
+}
+
+test('1C: forage-dark is registered, dark, and paired with the light default', () => {
+  assert.ok(SKINS['forage-dark'], 'forage-dark is registered');
+  assert.equal(SKINS['forage-dark'].palette, 'dark');
+  assert.equal(SKINS.default.palette, 'light');
+  assert.equal(siblingOf('default'), 'forage-dark');
+  assert.equal(siblingOf('forage-dark'), 'default');
+  validatePairing(SKINS);
+});
+
+test('1C: the OS dark preference now resolves THROUGH the registry to forage-dark', () => {
+  assert.equal(resolveDefault(true, SKINS), 'forage-dark');
+  assert.equal(resolveDefault(false, SKINS), 'default');
+});
+
+test('1C: forage-dark carries the legacy dark palette VERBATIM — no drift while copying', () => {
+  const tokensCss = readFileSync(join(root, 'css/tokens.css'), 'utf8');
+  const legacy = blockTokens(tokensCss, ':root[data-theme="dark"]');
+  const skin = blockTokens(readFileSync(join(root, 'skins/forage-dark.css'), 'utf8'), ':root');
+
+  assert.ok(legacy.size > 20, 'found the legacy dark block to compare against');
+  for (const [k, v] of legacy) {
+    assert.equal(skin.get(k), v, `${k} drifted: legacy ${v} vs skin ${skin.get(k)}`);
+  }
+  assert.equal(skin.size, legacy.size, 'the skin declares exactly the legacy dark tokens, no more');
+});
+
+test('1C: the service-worker SHELL caches every skin file, exactly once', () => {
+  const sw = readFileSync(join(root, 'sw.js'), 'utf8');
+  // Scope to the SHELL array. Scanning the whole file also catches
+  // `caches.match('/')` in the fetch handler and reports a phantom duplicate.
+  const arr = sw.match(/const SHELL = \[([\s\S]*?)\];/);
+  assert.ok(arr, 'found the SHELL array');
+  const shell = [...arr[1].matchAll(/'(\/[^']*)'/g)].map((m) => m[1]);
+  const dupes = shell.filter((u, i) => shell.indexOf(u) !== i);
+  // f6012bf — this branch's ancestor — is a fix for duplicate SHELL urls
+  // breaking service-worker install. Keep that from recurring.
+  assert.deepEqual([...new Set(dupes)], [], 'duplicate SHELL urls break SW install');
+  for (const [id, s] of Object.entries(SKINS)) {
+    if (!s.file) continue;
+    assert.ok(shell.includes(`/${s.file}`), `${id}: /${s.file} missing from the SW SHELL`);
+  }
 });
