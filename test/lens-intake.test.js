@@ -351,3 +351,32 @@ test('3m: affordanceFor(hashtag) promises a DETERMINISTIC way in; feeds promise 
   assert.match(bare.detail, /does not say|no description/i);
   assert.equal(bare.targetable, false);
 });
+
+// ---- 3p: ONE box above a feed board ----
+
+test('3p: feedCardModel never restates the feed title — the <h1> above it already does', async () => {
+  const { feedCardModel } = await import('../js/substrates/lens.js');
+
+  const info = { uri: 'at://did:x/app.bsky.feed.generator/funny', title: 'Funny', creator: 'alexismadd.bsky.social',
+    likeCount: 16, avatar: 'https://cdn.test/a.png',
+    description: 'Just funny stuff. Add to feed by tagging #funny, #lol, #comedy, or #standup' };
+  const m = feedCardModel(info);
+
+  // the dupe observed 2026-08-26: the card said "Funny" under a heading that
+  // already said "Funny", and then a SECOND box repeated the description.
+  assert.equal(m.title, undefined, 'the card carries no title field at all — it cannot drift back');
+  assert.doesNotMatch(m.headline, /Funny/, 'the headline says who curates, not what it is called');
+  assert.equal(m.headline, 'Curated by @alexismadd.bsky.social.');
+  assert.equal(m.avatar, 'https://cdn.test/a.png', 'the logo stays — it is the one thing worth the space');
+  assert.equal(m.likeCount, 16);
+  assert.equal(m.blurb, info.description, 'the feed’s own words, verbatim (DL-025)');
+  assert.equal(m.blurbIsOwnWords, true, 'quotable: this text came FROM the feed');
+});
+
+test('3p: a feed with no description still gets one box, and the blurb is ours — not quotable', async () => {
+  const { feedCardModel } = await import('../js/substrates/lens.js');
+  const m = feedCardModel({ uri: 'at://x/y/z', title: 'X', creator: 'a.test', likeCount: 0, description: '' });
+  assert.equal(m.blurbIsOwnWords, false, 'we must not quote OUR fallback as if the feed said it');
+  assert.match(m.blurb, /does not say/i);
+  assert.equal(m.avatar, null);
+});

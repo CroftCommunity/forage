@@ -116,7 +116,7 @@ export async function run() {
   // 3j: a feed board carries its header card, and Join writes preferences
   await page.goto(`${s.origin}/f/whats-hot`);
   await page.waitForSelector('[data-feed-header]');
-  await page.waitForSelector('text=feed by @bsky.app');
+  await page.waitForSelector('text=Curated by @bsky.app.');
   const joinBtn = page.locator('[data-feed-header] button');
   assert.equal(await joinBtn.innerText(), 'Leave', 'an already-saved feed offers Leave');
   await joinBtn.click();

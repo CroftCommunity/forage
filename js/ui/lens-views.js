@@ -8,7 +8,7 @@
 
 import { el, timeAgo, fmtScore } from '../util.js';
 import { postRow, commentNode, voteBox, skeleton, emptyState, toast } from './components.js';
-import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow, affordanceFor } from '../substrates/lens.js';
+import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow, affordanceFor, feedCardModel } from '../substrates/lens.js';
 import { initSession, createAccountRoster } from '../auth/session.js';
 
 let manager = null;        // null = not booted; 'unavailable' = origin has no OAuth client
@@ -466,8 +466,7 @@ export function lensFieldView(params) {
   const headerHost = el('div', {});
   if (entry.source.kind === 'feed' && entry.source.uri) {
     Promise.all([lens.feedInfo(entry.source.uri), ensureSavedFeeds()])
-      .then(([info]) => headerHost.replaceChildren(
-        feedHeaderCard(info), affordanceStrip({ kind: 'feed', info })))
+      .then(([info]) => headerHost.replaceChildren(feedHeaderCard(info)))
       .catch(() => {}); // the board still works without its card
   }
   lens.feed(entry.source, { title: entry.title }).then((f) => {
@@ -612,10 +611,14 @@ export function lensUserView(params) {
   return { main, side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()) };
 }
 
-// 3j: the feed's card — avatar, description (where "post #tag to appear here"
-// lives, since feeds publish NO machine-readable criteria — probe-verified),
-// creator, likes, and Join/Leave.
+// 3j/3p: the feed's ONE box. It used to be two — this card and a separate
+// affordance strip — which restated the <h1>'s title and then the description
+// twice (observed 2026-08-26). Now: logo, who curates it, likes, Join/Leave on
+// the same line, and the feed's own description QUOTED beneath, because that
+// prose is the only inclusion rule that exists (DL-025). feedCardModel decides
+// what belongs; this function only draws it.
 function feedHeaderCard(info, onChange) {
+  const m = feedCardModel(info);
   const savedNow = () => savedFeedUris.has(info.uri);
   const btn = el('button', { class: 'btn sm' + (savedNow() ? '' : ' primary') }, savedNow() ? 'Leave' : 'Join');
   btn.addEventListener('click', async () => {
@@ -630,17 +633,17 @@ function feedHeaderCard(info, onChange) {
     } catch (e) { toast((want ? 'Join' : 'Leave') + ' failed: ' + e.message, 'err'); }
     finally { btn.disabled = false; btn.replaceChildren(savedNow() ? 'Leave' : 'Join'); btn.classList.toggle('primary', !savedNow()); }
   });
-  return el('div', { class: 'card', 'data-feed-header': '1' },
+  return el('div', { class: 'card', 'data-feed-header': '1', 'data-affordance': 'curated' },
     el('div', { class: 'row spread wrap', style: 'gap:10px;align-items:center' },
       el('div', { class: 'row', style: 'gap:10px;align-items:center;min-width:0' },
-        info.avatar ? el('img', { src: info.avatar, alt: '', class: 'feed-avatar', loading: 'lazy' }) : null,
+        m.avatar ? el('img', { src: m.avatar, alt: '', class: 'feed-avatar', loading: 'lazy' }) : null,
         el('div', { style: 'min-width:0' },
-          el('h2', { style: 'margin:0' }, info.title),
-          el('div', { class: 'xs muted' }, `feed by @${info.creator} · ${fmtScore(info.likeCount)} likes`))),
+          el('div', { class: 'small' }, el('strong', {}, m.headline)),
+          el('div', { class: 'xs muted' }, `${fmtScore(m.likeCount)} likes`))),
       btn),
-    info.description ? el('p', { class: 'small', style: 'margin:8px 0 0' }, info.description) : null,
-    info.online === false || info.valid === false
-      ? el('div', { class: 'xs muted' }, 'This feed’s server is not responding right now.') : null);
+    el('div', { class: 'feed-blurb' + (m.blurbIsOwnWords ? '' : ' muted'), 'data-feed-blurb': m.blurbIsOwnWords ? 'feed' : 'ours' },
+      m.blurb),
+    m.degraded ? el('div', { class: 'xs muted' }, 'This feed’s server is not responding right now.') : null);
 }
 
 // 3j: feed discovery — /feeds. Popular generators, searchable (unauth-200),

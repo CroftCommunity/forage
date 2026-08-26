@@ -344,6 +344,25 @@ export function affordanceFor(stream) {
   };
 }
 
+// 3p: ONE box above a feed board, not two (dupe observed 2026-08-26). The
+// <h1> already names the feed, so the card never restates it; what the card
+// adds is the logo, WHO curates it, how many like it, and the feed's own
+// description — which is quoted, because it is the feed's words and the only
+// inclusion rule that exists anywhere (DL-025). When the feed says nothing we
+// substitute our own sentence, and blurbIsOwnWords goes false so the view
+// does not put OUR prose in quotation marks.
+export function feedCardModel(info) {
+  const a = affordanceFor({ kind: 'feed', info });
+  return {
+    avatar: info.avatar || null,
+    headline: a.headline,
+    likeCount: info.likeCount || 0,
+    blurb: a.detail,
+    blurbIsOwnWords: Boolean(info.description),
+    degraded: info.online === false || info.valid === false,
+  };
+}
+
 // OQ1: a lens Field's slug is the feed/list rkey (or the author handle).
 const slugForSource = (source) => {
   if (source.kind === 'author') return source.actor;

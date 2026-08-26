@@ -162,11 +162,18 @@ export async function run() {
   await page.waitForSelector('text=post tp1');
 
   // 3m: a FEED promises nothing — curator + verbatim description, no compose
+  // 3p: and it is ONE box, which never restates the <h1> above it
   await page.waitForSelector('[data-affordance="curated"]');
   await page.waitForSelector('text=Curated by @curator.test.');
-  await page.waitForSelector('text=Post with #meadow to be considered.');
+  await page.waitForSelector('[data-feed-blurb="feed"]:has-text("Post with #meadow to be considered.")');
   assert.equal(await page.locator('[data-affordance="curated"] [data-compose]').count(), 0,
     'no post-to button on a feed — it would be a lie (DL-025)');
+  assert.equal(await page.locator('[data-feed-header]').count(), 1, 'one header box, not two');
+  const feedTitle = await page.locator('h1').first().innerText();
+  assert.equal(await page.locator('[data-feed-header]').innerText().then((t) => t.includes(feedTitle)), false,
+    'the card never repeats the title the heading already carries');
+  assert.match(await page.locator('[data-feed-header] button').innerText(), /Join|Leave/,
+    'Join/Leave rides on the headline row');
 
   // 3i segment: the board toolbar — window sorts, honestly scoped
   await page.waitForSelector('[data-board-toolbar]');
