@@ -20,13 +20,48 @@ export const routing = {
 
 export const CAPABILITIES = Object.freeze(Object.keys(routing));
 
+// A MODE is a named routing table over the same capabilities (plan
+// 2026-08-25-1, 1a). memory IS today's table; bbs flips every wire capability
+// at once (no partial tier — imported decision 2026-08-24). The bbs substrate
+// registers at runtime (phase 5); until then resolving in bbs mode refuses
+// with words.
+export const MODES = Object.freeze({
+  memory: routing,
+  bbs: Object.freeze(Object.fromEntries(CAPABILITIES.map((c) => [c, 'bbs']))),
+});
+
+let activeMode = 'memory';
+
+export function currentMode() { return activeMode; }
+
+export function setMode(name) {
+  if (!MODES[name]) {
+    throw new Error(`unknown mode: ${name} (known: ${Object.keys(MODES).join(', ')})`);
+  }
+  activeMode = name;
+}
+
 const SUBSTRATES = { memory };
+
+// Runtime registration for network substrates. Collisions refuse (the memory
+// baseline is never silently clobbered); a module without write() refuses
+// early rather than failing at first dispatch.
+export function registerSubstrate(name, module) {
+  if (SUBSTRATES[name]) {
+    throw new Error(`substrate already registered: ${name} (known: ${Object.keys(SUBSTRATES).join(', ')})`);
+  }
+  if (typeof module?.write !== 'function') {
+    throw new Error(`substrate ${name} has no write() function`);
+  }
+  SUBSTRATES[name] = module;
+}
 
 // Resolve a capability to its substrate. Fail loud with words: a typo'd
 // capability or substrate name must self-diagnose from the error alone.
-// The `table` override is the seam the conformance harness (phase 4) uses
-// to evaluate the same scenario against two substrates.
-export function substrateFor(capability, table = routing) {
+// With no explicit table the ACTIVE MODE's table applies; the `table`
+// override is the seam the conformance harness uses to evaluate the same
+// scenario against two substrates regardless of mode.
+export function substrateFor(capability, table = MODES[activeMode]) {
   const name = table[capability];
   if (!name) {
     throw new Error(`unknown capability: ${capability} (known: ${Object.keys(table).join(', ')})`);

@@ -1,8 +1,7 @@
 # Plan: three modes — memory, the Bluesky view with a ring dial, and the private BBS
 
 date: 2026-08-25
-status: EXECUTING — Phase 0 COMPLETE (D1–D10, four user-directed additions);
-amendments (3e/3f/3g, tenets) review-passed 2026-08-25; next unit: 1a.
+status: EXECUTING — Phase 0 COMPLETE (D1–D10); 1a SHIPPED; next unit: 1b.
 Execution in worktrees/forage/modes-bbs (branch claude/modes-bbs)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `10a8ade` (clean tree, pushed; forage.fyi deployed at forage-v11)
@@ -431,7 +430,7 @@ four user-directed additions D7–D10.)
 
 ### Phase 1 — Modes foundation (survives the redirect intact)
 
-#### 1a: Named mode tables + substrate registration
+#### 1a: Named mode tables + substrate registration — ✅ SHIPPED
 As pre-redirect draft: `MODES` (now `{ memory, bbs }`), `setMode`/`currentMode`,
 `registerSubstrate`, active-table default in `substrateFor`, refusals with words;
 `test/modes.test.js` RED-first incl. the stub-substrate wiring test through
