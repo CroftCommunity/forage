@@ -7,7 +7,7 @@
 // Bump CACHE whenever you want to force a clean re-cache on the very next load
 // (asset URLs are hashless, so the name is the version).
 
-const CACHE = 'forage-v34';
+const CACHE = 'forage-v35';
 const SHELL = [
   '/', '/404.html', '/skins/bbs.css', '/skins/usenet.css', '/skins/usenet-dark.css', '/skins/forage-dark.css', '/skins/phpbb.css', '/skins/phpbb-dark.css',
   '/vendor/atproto-oauth-client-browser.js', '/js/auth/session.js', '/js/skins.js',
