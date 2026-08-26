@@ -789,7 +789,13 @@ function composerCard({ tag, replyTo, onDone }) {
 
   const drawStrip = () => {
     strip.replaceChildren(...picked.map((p, i) => {
+      // aria-label, not the placeholder alone: a placeholder is not a reliable
+      // accessible name — it disappears the moment someone types, and screen
+      // readers treat it inconsistently. Alt text is REQUIRED to post, so an
+      // unnamed control here blocks publishing rather than just annoying.
+      // Named per image because the strip repeats this input once per attachment.
       const alt = el('input', { type: 'text', 'data-image-alt': String(i),
+        'aria-label': `Alt text for image ${i + 1} of ${picked.length} (required)`,
         placeholder: 'Describe this image (required)', value: p.alt });
       alt.addEventListener('input', () => { p.alt = alt.value; sync(); });
       const drop = el('button', { class: 'btn sm', title: 'Remove this image' }, '×');
