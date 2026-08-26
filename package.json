@@ -11,7 +11,8 @@
     "test": "node --test",
     "conformance": "node conformance/run.js",
     "workflows": "node e2e/run.mjs",
-    "preview": "node scripts/preview.mjs"
+    "preview": "node scripts/preview.mjs",
+    "import-phpbb": "node scripts/import-phpbb-style.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
