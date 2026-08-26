@@ -309,7 +309,7 @@ test('3j: discoverFeeds lists popular generators and searches by query; guests g
   assert.ok(calls[1].includes('query=garden'), 'the query rides through');
 });
 
-// ---- 4g: adoption signals from Constellation (ADR-003) ----
+// ---- 4g: adoption signals from Constellation (ADR-004) ----
 // The AppView exposes ONE popularity signal for a feed (likeCount, plus the
 // windows 4c counts). It exposes nothing about how a feed is recommended, and
 // DL-029 records why that gap is permanent. Constellation's backlink index
@@ -365,10 +365,10 @@ test('4g: adoption degrades to ABSENT when the host is down — never to zero', 
   const transport = async () => ({ ok: false, status: 503, json: async () => ({}) });
   const out = await createLens({ transport }).adoption('at://did:plc:a/app.bsky.feed.generator/x');
   assert.equal(out, null,
-    'a signal we could not fetch must not render as "0 shares" — ADR-003 point 2');
+    'a signal we could not fetch must not render as "0 shares" — ADR-004 point 2');
 });
 
-test('4g: adoption sends nothing about the viewer — ADR-003 point 4', async () => {
+test('4g: adoption sends nothing about the viewer — ADR-004 point 4', async () => {
   const seen = [];
   const transport = async (url, init) => {
     seen.push({ url, headers: init?.headers || {} });

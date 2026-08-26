@@ -378,14 +378,14 @@ export function searchWindow(sort, timeframe, nowMs) {
   return { sort: 'top', since: new Date(nowMs - span).toISOString() };
 }
 
-// ---- 4g: adoption signals from Constellation (ADR-003) ----
+// ---- 4g: adoption signals from Constellation (ADR-004) ----
 // The AppView counts likes on a feed and nothing else about how it is USED —
 // and DL-029 records why that gap is permanent. Constellation indexes atproto
 // backlinks, so it can answer "how many people quoted this feed" and "how many
 // starter packs include it": a recommendation in someone's own words, and a
 // curator staking their pack on it. Neither exists anywhere in app.bsky.
 //
-// ADR-003 bounds the dependency: counts on feed generators only (never an
+// ADR-004 bounds the dependency: counts on feed generators only (never an
 // intake path), degrade-to-ABSENT always, no viewer identity ever, and a
 // user-agent that says who we are because the operator asks.
 export const CONSTELLATION = 'https://constellation.microcosm.blue';
@@ -1037,7 +1037,7 @@ export function createLens({ session = null, transport = fetch } = {}) {
 
     // 4g: the two adoption counts for one feed. Goes through the PLAIN
     // transport, never the session — a third-party host learns nothing about
-    // who is looking (ADR-003 point 4). Returns null, never zeroes, when the
+    // who is looking (ADR-004 point 4). Returns null, never zeroes, when the
     // host will not answer: an absent signal must not render as "0 shares".
     async adoption(uri, { nowMs = Date.now(), timeoutMs = 6000 } = {}) {
       try {
@@ -1054,7 +1054,7 @@ export function createLens({ session = null, transport = fetch } = {}) {
           total: pages[i].total ?? 0,
         }]));
       } catch {
-        return null;   // ADR-003 point 2: degrade to absent, with words upstairs
+        return null;   // ADR-004 point 2: degrade to absent, with words upstairs
       }
     },
 

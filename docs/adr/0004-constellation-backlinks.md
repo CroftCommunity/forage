@@ -1,4 +1,4 @@
-# ADR-003: Feed-adoption signals read from Constellation, a second read host
+# ADR-004: Feed-adoption signals read from Constellation, a second read host
 
 Tags: appview, atproto, backlinks, third-party
 

@@ -3,7 +3,7 @@
 date: 2026-08-26
 status: **4a–4g SHIPPED — the plan is complete.** OQ1/OQ2/OQ3/OQ4 closed; OQ5 open
 (owner), plus 4g's scope cut for the owner to accept or reverse.
-Gate green: 339 unit tests, 5/5 workflows. DL-027–DL-030 landed; ADR-003 recorded.
+Gate green: 339 unit tests, 5/5 workflows. DL-027–DL-030 landed; ADR-004 recorded.
 Execution in worktrees/forage/feed-discovery-sorts (branch claude/feed-discovery-sorts)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `f08fa9d` (clean tree)
@@ -471,7 +471,7 @@ the **plain transport, never the session**, and returns `null` — never zeroes 
 host does not answer. The feed card renders "4.3k shares (5 this week) · 965 starter
 packs", or renders nothing at all. `constellation.microcosm.blue` is now FENCED in the
 workflow shim, which immediately caught an unfixtured read in a second journey.
-ADR-003 + DL-030 record the dependency. 6 unit tests + a journey segment.
+ADR-004 + DL-030 record the dependency. 6 unit tests + a journey segment.
 
 **THE SCOPE CUT — owner's call to reverse.** The plan said "Most shared" and "In
 starter packs" as corpus-wide *sorts*. Built as sorts, each would fire ~222 requests at
@@ -515,7 +515,7 @@ packs", with TID-decoded windows.
   default the account never asked for, which is defensible but is a *choice*. Worth
   an explicit answer before more label-bearing surfaces land.
 - ~~**OQ2 — Constellation as a dependency.**~~ **RECORDED 2026-08-26 as
-  `docs/adr/0003-constellation-backlinks.md`**, on the owner's "tier 2 sounds
+  `docs/adr/0004-constellation-backlinks.md`**, on the owner's "tier 2 sounds
   awesome" (2026-08-26). The ADR narrows the dependency to backlink counts on feed
   generators — not an intake path, so ADR-002 stands for everything it actually
   decided — and makes degrade-to-absent non-negotiable. Registry row owed in

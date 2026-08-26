@@ -785,11 +785,11 @@ function feedHeaderCard(info, onChange) {
     } catch (e) { toast((want ? 'Join' : 'Leave') + ' failed: ' + e.message, 'err'); }
     finally { btn.disabled = false; btn.replaceChildren(savedNow() ? 'Leave' : 'Join'); btn.classList.toggle('primary', !savedNow()); }
   });
-  // 4g (ADR-003): adoption signals no Bluesky endpoint exposes — how many
+  // 4g (ADR-004): adoption signals no Bluesky endpoint exposes — how many
   // people QUOTED this feed, how many starter packs include it. Two requests
   // to Constellation for the one feed you are looking at, never a fan-out over
   // a corpus. It renders only if it answers: an absent signal must never read
-  // as "0 shares" (ADR-003 point 2), so this line simply does not appear.
+  // as "0 shares" (ADR-004 point 2), so this line simply does not appear.
   const adoption = el('div', { class: 'xs muted', 'data-adoption': 'pending' });
   lens.adoption(info.uri).then((a) => {
     if (!a) { adoption.remove(); return; }
