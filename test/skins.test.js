@@ -68,3 +68,166 @@ test('every REGISTERED skin file passes the scan against the real tokens', () =>
     assert.deepEqual(r.violations, [], `${id} must only assign declared tokens`);
   }
 });
+
+// ---------------------------------------------------------------------------
+// Phase 1A (plan 2026-08-26-1) — skins subsume themes.
+// One skin carries ONE palette. Light/dark stop being a second axis and become
+// registry entries; the upper-right toggle swaps to a declared SIBLING and is
+// disabled where none exists. These tests pin the registry metadata and the
+// resolution order (stored -> transient -> OS preference) before any UI moves.
+// ---------------------------------------------------------------------------
+
+import { siblingOf, validatePairing, resolveDefault, prefersDark,
+         activeSkin, setTransient, clearTransient } from '../js/skins.js';
+
+test('1A: every registered skin declares which palette it IS', () => {
+  for (const [id, s] of Object.entries(SKINS)) {
+    assert.ok(['light', 'dark'].includes(s.palette),
+      `${id} must declare palette light|dark (got ${JSON.stringify(s.palette)})`);
+  }
+});
+
+test('1A: no sibling is LEGAL and reports as null — that is what disables the toggle', () => {
+  const reg = { solo: { label: 'Solo', file: null, palette: 'light' } };
+  assert.equal(siblingOf('solo', reg), null,
+    'a single-palette skin reports no sibling rather than throwing');
+});
+
+test('1A: a declared sibling resolves in both directions', () => {
+  const reg = {
+    day:   { label: 'Day',   file: null,            palette: 'light', pairedWith: 'night' },
+    night: { label: 'Night', file: 'skins/n.css',   palette: 'dark',  pairedWith: 'day' },
+  };
+  assert.equal(siblingOf('day', reg), 'night');
+  assert.equal(siblingOf('night', reg), 'day');
+});
+
+test('1A: siblingOf names the skin it does not know, like hrefFor does', () => {
+  assert.throws(() => siblingOf('neon-dreams', SKINS), (e) => {
+    assert.match(e.message, /neon-dreams/);
+    return true;
+  });
+});
+
+test('1A: pairing must be SYMMETRIC — a one-sided pair fails loudly, naming both ids', () => {
+  const oneSided = {
+    day:   { label: 'Day',   file: null,          palette: 'light', pairedWith: 'night' },
+    night: { label: 'Night', file: 'skins/n.css', palette: 'dark' }, // does not point back
+  };
+  assert.throws(() => validatePairing(oneSided), (e) => {
+    assert.match(e.message, /day/);
+    assert.match(e.message, /night/);
+    return true;
+  });
+});
+
+test('1A: a dangling pairedWith fails loudly, naming the missing id', () => {
+  const dangling = {
+    day: { label: 'Day', file: null, palette: 'light', pairedWith: 'nonesuch' },
+  };
+  assert.throws(() => validatePairing(dangling), (e) => {
+    assert.match(e.message, /nonesuch/);
+    assert.match(e.message, /day/);
+    return true;
+  });
+});
+
+test('1A: a skin may not be its own sibling', () => {
+  const selfPaired = {
+    day: { label: 'Day', file: null, palette: 'light', pairedWith: 'day' },
+  };
+  assert.throws(() => validatePairing(selfPaired), (e) => {
+    assert.match(e.message, /day/);
+    return true;
+  });
+});
+
+test('1A: siblings must differ in palette — pairing two lights is a mistake', () => {
+  const sameTone = {
+    a: { label: 'A', file: null,          palette: 'light', pairedWith: 'b' },
+    b: { label: 'B', file: 'skins/b.css', palette: 'light', pairedWith: 'a' },
+  };
+  assert.throws(() => validatePairing(sameTone), (e) => {
+    assert.match(e.message, /palette/);
+    return true;
+  });
+});
+
+test('1A: the REAL registry passes pairing validation', () => {
+  validatePairing(SKINS); // throws on any asymmetry, dangle, self-pair, or same-tone pair
+});
+
+test('1A: OS preference picks the default palette via the default skin\'s sibling', () => {
+  // Before Phase 1B there is no forage-dark, so `default` has no sibling and the
+  // dark branch must fall back to `default` — today's behaviour, unchanged.
+  assert.equal(resolveDefault(false, SKINS), 'default', 'light OS -> default');
+  assert.equal(resolveDefault(true, SKINS), 'default',
+    'dark OS with no sibling registered yet -> still default (1A changes nothing visible)');
+
+  // With a sibling registered (what Phase 1B lands), the dark branch follows it.
+  const withDark = {
+    default:      { label: 'Forage', file: null,                    palette: 'light', pairedWith: 'forage-dark' },
+    'forage-dark': { label: 'Forage dark', file: 'skins/forage-dark.css', palette: 'dark', pairedWith: 'default' },
+  };
+  assert.equal(resolveDefault(true, withDark), 'forage-dark', 'dark OS -> the sibling');
+  assert.equal(resolveDefault(false, withDark), 'default', 'light OS -> still the light skin');
+});
+
+test('1A: prefersDark is safe where matchMedia does not exist', () => {
+  const saved = globalThis.matchMedia;
+  delete globalThis.matchMedia;
+  assert.equal(prefersDark(), false, 'no matchMedia -> light, never a throw');
+  globalThis.matchMedia = () => ({ matches: true });
+  assert.equal(prefersDark(), true);
+  globalThis.matchMedia = () => ({ matches: false });
+  assert.equal(prefersDark(), false);
+  if (saved === undefined) delete globalThis.matchMedia; else globalThis.matchMedia = saved;
+});
+
+test('1A WIRING: activeSkin() resolves stored -> transient -> OS, in that order', () => {
+  // The wiring test for Phase 1A: not that the helpers work in isolation, but
+  // that the boot entry point actually reaches OS resolution. Stub the two
+  // ambient inputs (storage, media query) plus the minimum DOM apply() touches.
+  const saved = {
+    ls: globalThis.localStorage, mm: globalThis.matchMedia, doc: globalThis.document,
+  };
+  const store = {};
+  let osDark = false;
+  globalThis.localStorage = {
+    getItem: (k) => (k in store ? store[k] : null),
+    setItem: (k, v) => { store[k] = String(v); },
+    removeItem: (k) => { delete store[k]; },
+  };
+  globalThis.matchMedia = () => ({ matches: osDark });
+  globalThis.document = {
+    getElementById: () => null,
+    createElement: () => ({ _a: {}, setAttribute(k, v) { this._a[k] = v; }, getAttribute(k) { return this._a[k] ?? null; }, remove() {} }),
+    head: { append() {} },
+  };
+
+  try {
+    clearTransient();
+
+    osDark = false;
+    assert.equal(activeSkin(), 'default', 'nothing stored, OS light -> default');
+
+    osDark = true;
+    assert.equal(activeSkin(), 'default',
+      'nothing stored, OS dark -> default until a dark sibling is registered (Phase 1B)');
+
+    setTransient('bbs');
+    assert.equal(activeSkin(), 'bbs', 'a mode\'s transient dress beats the OS preference');
+
+    store[SKIN_KEY] = 'usenet';
+    assert.equal(activeSkin(), 'usenet', 'an explicit stored choice beats transient AND a dark OS');
+
+    osDark = false;
+    assert.equal(activeSkin(), 'usenet',
+      'and beats a light OS too — the stored choice wins in BOTH directions');
+  } finally {
+    clearTransient();
+    for (const [k, v] of [['localStorage', saved.ls], ['matchMedia', saved.mm], ['document', saved.doc]]) {
+      if (v === undefined) delete globalThis[k]; else globalThis[k] = v;
+    }
+  }
+});
