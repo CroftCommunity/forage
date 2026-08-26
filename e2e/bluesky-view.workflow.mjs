@@ -3,7 +3,8 @@
 //   3c: boost = like (optimistic flip; the write's exact shape asserted)
 //   3e: a thread where a reply AND a quote are one continuation
 //   3f: the account's muted word masks in the board; a verified author ✓
-// Later units append: trending + /h/ (3g), the front-door arc (3d).
+//   3g: the trending rail opens a topic board; a facet #tag opens /h/
+// The 3d front-door arc lands last.
 import assert from 'node:assert/strict';
 import { scenario } from './harness/scenario.mjs';
 
@@ -40,6 +41,9 @@ export async function run() {
       'describeRepo': { handle: 'me.test' },
       'getPreferences': { preferences: [{ $type: 'app.bsky.actor.defs#mutedWordsPref',
         items: [{ value: 'kryptonite', targets: ['content'], actorTarget: 'all' }] }] },
+      'getTrendingTopics': { topics: [
+        { topic: 'Meadow Fest', displayName: 'Meadow Fest', description: 'campers assemble',
+          link: '/profile/did:plc:trends/feed/meadow1' } ] },
       'getMutes': { mutes: [] },
       'getBlocks': { blocks: [] },
       'getListMutes': { lists: [] },
@@ -49,12 +53,18 @@ export async function run() {
       'getFollowers': { followers: [{ did: 'did:plc:aa' }, { did: 'did:plc:bb' }] },
       'getAuthorFeed?actor=did%3Aplc%3Aaa': { feed: [post('a1', 'did:plc:aa', '2026-08-25T10:00:00Z')] },
       'getAuthorFeed?actor=did%3Aplc%3Abb': { feed: [
-        post('b1', 'did:plc:bb', '2026-08-25T11:00:00Z'),
+        { post: { ...post('b1', 'did:plc:bb', '2026-08-25T11:00:00Z').post,
+          record: { text: 'post b1 #camp', createdAt: '2026-08-25T11:00:00Z',
+            facets: [{ index: { byteStart: 8, byteEnd: 13 },
+              features: [{ $type: 'app.bsky.richtext.facet#tag', tag: 'camp' }] }] } } },
         { post: { ...post('b2', 'did:plc:bb', '2026-08-25T09:00:00Z').post,
           record: { text: 'my kryptonite take', createdAt: '2026-08-25T09:00:00Z' } } },
       ] },
       'com.atproto.repo.createRecord': { uri: 'at://did:plc:me/app.bsky.feed.like/3w3like', cid: 'lc' },
       'com.atproto.repo.deleteRecord': {},
+      'searchPosts': { posts: [post('tagged1', 'did:plc:cc', '2026-08-25T13:00:00Z').post] },
+      'getAuthorFeed?actor=did%3Aplc%3Atrends': { feed: [post('trendpost', 'did:plc:cc', '2026-08-25T14:00:00Z')] },
+      'getFeed': { feed: [post('trendpost', 'did:plc:cc', '2026-08-25T14:00:00Z')] },
       'getPostThread': { thread: {
         post: { ...post('b1', 'did:plc:bb', '2026-08-25T11:00:00Z').post, quoteCount: 1 },
         replies: [{ post: post('reply1', 'did:plc:aa', '2026-08-25T11:30:00Z').post, replies: [] }],
@@ -111,6 +121,21 @@ export async function run() {
   assert.match(await qnode.innerText(), /❝/, 'the quote marker distinguishes the kind');
   assert.match(await qnode.innerText(), /post quote1/, 'the quote body renders in the thread');
   assert.ok(await qnode.locator('a:has-text("open its thread")').count(), 'a quote opens as its own room');
+
+  // 3g segment: back home on the WORLD ring — the trending rail is live
+  await page.goto(`${s.origin}/#/lens`);
+  await page.locator('[data-ring-dial] button:has-text("World")').first().click();
+  await page.waitForSelector('[data-trending] a:has-text("Meadow Fest")');
+  await page.locator('[data-trending] a:has-text("Meadow Fest")').click();
+  await page.waitForSelector('text=post trendpost');
+
+  // …and the facet #tag in a board post is a doorway into /h/
+  await page.goto(`${s.origin}/#/lens`);
+  await page.locator('[data-ring-dial] button:has-text("Mutuals")').first().click();
+  await page.waitForSelector('a[data-tag="camp"]');
+  await page.locator('a[data-tag="camp"]').first().click();
+  await page.waitForSelector('h1:has-text("#camp")');
+  await page.waitForSelector('text=post tagged1');
 
   assert.deepEqual(await s.shimMisses(), [], 'every network read had a fixture');
   await s.close();

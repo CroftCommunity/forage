@@ -56,6 +56,9 @@ export async function run() {
         items: [{ type: 'feed', value: WHATS_HOT, pinned: true, id: '1' },
                 { type: 'timeline', value: 'following', pinned: true, id: '2' }] }] },
       'getFeedGenerators': { feeds: [{ uri: WHATS_HOT, displayName: "What's Hot", likeCount: 1 }] },
+      'getTrendingTopics': { topics: [
+        { topic: 'Meadow Fest', displayName: 'Meadow Fest', description: 'campers assemble',
+          link: '/profile/did:plc:trends/feed/meadow1' } ] },
       'getMutes': { mutes: [] },
       'getBlocks': { blocks: [] },
       'getListMutes': { lists: [] },

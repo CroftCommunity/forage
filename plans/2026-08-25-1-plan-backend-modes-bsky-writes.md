@@ -1,7 +1,7 @@
 # Plan: three modes — memory, the Bluesky view with a ring dial, and the private BBS
 
 date: 2026-08-25
-status: EXECUTING — 3a–3f SHIPPED (posture mirror live); next: 3g (content streams: /h/ + trending).
+status: EXECUTING — 3a–3g SHIPPED; next: 3d (the phase-3 capstone: front door + live smoke).
 Execution in worktrees/forage/modes-bbs (branch claude/modes-bbs)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `10a8ade` (clean tree, pushed; forage.fyi deployed at forage-v11)
@@ -657,7 +657,7 @@ actor-centered view scatters quotes onto the quoter's profile). Also the BBS idi
 **Wiring:** hermetic thread tests + the 3d live smoke extends to open a thread with
 a known quote (own test post pair). Multi-commit ≤3.
 
-#### 3f: Honest rendering — the account's own moderation posture, mirrored — ✅ SHIPPED
+#### 3f: Honest rendering — the account's own moderation posture, mirrored — ✅ SHIPPED (`e209bc4`+`5c3e957`+`b7cb908`)
 (Added 2026-08-25, user-ratified tier 1 + verification; EXPANDED same day on user
 direction: "mirror the standard moderation controls … piggy back anywhere we can".)
 Correctness, not features: a lens that drops these misrepresents the network.
@@ -713,7 +713,7 @@ posture is applied on the live path, not only in unit-tested helpers. Plus the
 app's moderation pages; exact client routes are verified at implementation time
 (they are SPA routes — assert them then, not now). Multi-commit ≤3.
 
-#### 3g: Content streams — /h/ hashtag boards + the trending rail
+#### 3g: Content streams — /h/ hashtag boards + the trending rail — ✅ SHIPPED
 (Added 2026-08-25, user direction: "/f for feed/field and /h for hashtag … treat
 them as content streams either way"; trending promoted IN.)
 - [ ] `js/substrates/lens.js` — the field/board fetch generalizes to
