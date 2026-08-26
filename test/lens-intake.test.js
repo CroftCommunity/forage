@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createLens, sortFeeds, filterFeeds, platforms } from '../js/substrates/lens.js';
+import { createLens, sortFeeds, filterFeeds, platforms, likeWindow } from '../js/substrates/lens.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const fixture = (n) => JSON.parse(readFileSync(join(root, 'test/fixtures/atproto', `${n}.json`), 'utf8'));
@@ -307,6 +307,77 @@ test('3j: discoverFeeds lists popular generators and searches by query; guests g
   assert.ok(calls[0].includes('getPopularFeedGenerators'));
   await lens.discoverFeeds({ query: 'garden' });
   assert.ok(calls[1].includes('query=garden'), 'the query rides through');
+});
+
+// ---- 4c: Rising — time-windowed like counts, one request per feed ----
+// app.bsky.feed.getLikes accepts a FEED GENERATOR uri and returns likes
+// newest-first with timestamps (probed 2026-08-26, plan D2). So the windows are
+// OURS, counted here: there is no time-bucketed aggregate anywhere in the API,
+// only the cumulative likeCount. Two measured bounds shape this:
+//   - a 24h window is nearly signal-free (9 of 117 feeds had >=2 likes), so it
+//     is not offered;
+//   - the page caps at 100, so a count that fills the page is a FLOOR, not a
+//     number, and must say so.
+
+test('4c: likeWindow counts 7d and 30d off one page, using indexedAt', () => {
+  const now = Date.parse('2026-08-26T12:00:00Z');
+  const at = (h) => ({ indexedAt: new Date(now - h * 3600_000).toISOString() });
+  const w = likeWindow([at(1), at(20), at(100), at(400), at(900)], now);
+  assert.equal(w.d7, 3, 'three inside 168h');
+  assert.equal(w.d30, 4, 'four inside 720h');
+  assert.equal(w.capped, false);
+});
+
+test('4c: a full page is a FLOOR — capped says so rather than reporting a number', () => {
+  const now = Date.parse('2026-08-26T12:00:00Z');
+  const likes = Array.from({ length: 100 }, () => ({ indexedAt: new Date(now - 3600_000).toISOString() }));
+  const w = likeWindow(likes, now);
+  assert.equal(w.d7, 100);
+  assert.equal(w.capped, true, 'the 101st like exists but this page cannot see it');
+});
+
+test('4c: an empty like list is zero, not an error', () => {
+  const w = likeWindow([], Date.parse('2026-08-26T12:00:00Z'));
+  assert.deepEqual({ ...w }, { d7: 0, d30: 0, capped: false });
+});
+
+test('4c: risingSort orders by the window and keeps unmeasured feeds last', () => {
+  const feeds = [
+    { uri: 'a', likeCount: 999 },
+    { uri: 'b', likeCount: 1 },
+    { uri: 'c', likeCount: 50 },
+  ];
+  const windows = new Map([['a', { d7: 2, d30: 9 }], ['b', { d7: 30, d30: 40 }]]);
+  assert.deepEqual(sortFeeds(feeds, 'rising7', windows).map((f) => f.uri), ['b', 'a', 'c'],
+    'c has no measurement yet, so it waits at the back rather than claiming zero');
+  assert.deepEqual(sortFeeds(feeds, 'rising30', windows).map((f) => f.uri), ['b', 'a', 'c']);
+});
+
+test('4c: likeWindows fans out one getLikes per feed and tolerates a feed that fails', async () => {
+  const calls = [];
+  const now = Date.parse('2026-08-26T12:00:00Z');
+  const transport = async (url) => {
+    const uri = new URL(url).searchParams.get('uri');
+    calls.push(uri);
+    if (uri.endsWith('boom')) return { ok: false, status: 502, json: async () => ({}) };
+    return { ok: true, status: 200, json: async () => ({ likes: [
+      { indexedAt: new Date(now - 3600_000).toISOString() },
+      { indexedAt: new Date(now - 400 * 3600_000).toISOString() },
+    ] }) };
+  };
+  const lens = createLens({ transport });
+  const seen = [];
+  const windows = await lens.likeWindows(
+    ['at://x/app.bsky.feed.generator/one', 'at://x/app.bsky.feed.generator/boom'],
+    { nowMs: now, onWindow: (uri, w) => seen.push([uri, w.d7]) },
+  );
+  assert.equal(calls.length, 2, 'one request per feed');
+  assert.ok(calls.every((u) => u.includes('app.bsky.feed.generator')));
+  assert.equal(windows.get('at://x/app.bsky.feed.generator/one').d7, 1);
+  assert.equal(windows.has('at://x/app.bsky.feed.generator/boom'), false,
+    'a feed that fails to answer is UNMEASURED, never a silent zero');
+  assert.deepEqual(seen, [['at://x/app.bsky.feed.generator/one', 1]],
+    'each measurement is announced as it lands, so the board can paint progressively');
 });
 
 // ---- 4b: sorts and filters over the browse corpus (T0 — no new requests) ----

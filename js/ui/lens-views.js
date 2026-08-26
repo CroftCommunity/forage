@@ -782,6 +782,11 @@ export function lensFeedsView() {
   let sort = 'popular';
   let platform = '';
   let videoOnly = false;
+  // 4c: uri → { d7, d30, capped }. Measured lazily, ONCE per page load, the
+  // first time a Rising sort is chosen — 117 requests is not something to spend
+  // on arrival for a sort nobody may pick.
+  let windows = new Map();
+  let measuring = false;
 
   const card = (f) => {
     registerSource({ slug: f.uri.split('/').pop(), humanSlug: slugifyFeedName(f.title), title: f.title,
@@ -794,23 +799,41 @@ export function lensFeedsView() {
             el('a', { href: `/f/${f.uri.split('/').pop()}` }, f.title),
             el('div', { class: 'xs muted' },
               `by @${f.creator} · ${fmtScore(f.likeCount)} likes`,
+              risingNote(f),
               f.platform ? ` · built on ${f.platform}` : '',
               f.video ? ' · video' : '')))),
       f.description ? el('div', { class: 'xs muted', style: 'margin-top:4px' }, f.description) : null);
   };
 
+  const risingNote = (f) => {
+    const w = windows.get(f.uri);
+    if (!sort.startsWith('rising')) return '';
+    if (!w) return measuring ? ' · measuring…' : ' · not measured';
+    const n = sort === 'rising7' ? w.d7 : w.d30;
+    const span = sort === 'rising7' ? '7d' : '30d';
+    // a full page is a floor, not a number (D2)
+    return ` · ${w.capped && n >= 100 ? '100+' : n} likes in ${span}`;
+  };
+
   const paint = () => {
-    const shown = searching ? corpus : sortFeeds(filterFeeds(corpus, { platform, video: videoOnly }), sort);
+    const shown = searching ? corpus : sortFeeds(filterFeeds(corpus, { platform, video: videoOnly }), sort, windows);
     results.replaceChildren(...(shown.length
       ? shown.map(card)
       : [emptyState('No feeds found', searching
           ? 'Nothing matched that search.'
           : 'No feed in the list matches those filters. Widen them and it comes back.')]));
-    countLine.replaceChildren(searching
+    const base = searching
       ? `${shown.length} result${shown.length === 1 ? '' : 's'} — in the order Bluesky's search ranked them.`
       : shown.length === corpus.length
         ? `All ${corpus.length} feeds Bluesky lists as popular.`
-        : `${shown.length} of ${corpus.length} feeds.`);
+        : `${shown.length} of ${corpus.length} feeds.`;
+    // 4c: say what Rising is counting, and that joins are not countable at all
+    const note = sort.startsWith('rising')
+      ? ` Ranked by likes gained in the last ${sort === 'rising7' ? '7 days' : '30 days'}` +
+        `${measuring ? ` — measured ${windows.size} of ${corpus.length} so far…` : ''}. ` +
+        'Joining a feed is private, so likes are the only public signal there is.'
+      : '';
+    countLine.replaceChildren(base + note);
   };
 
   // 4b: sorting a search slice would claim to rank everything that matched, so
@@ -818,9 +841,10 @@ export function lensFeedsView() {
   const buildControls = () => {
     const sortSel = el('select', { 'data-feed-sort': '1', disabled: searching || undefined,
       title: searching ? 'Search results keep Bluesky\'s relevance order' : 'Orders the whole popular list' },
-      ...[['popular', 'Popular'], ['likes', 'Most liked'], ['new', 'Newest'], ['old', 'Oldest']]
+      ...[['popular', 'Popular'], ['likes', 'Most liked'], ['rising7', 'Rising · 7 days'],
+          ['rising30', 'Rising · 30 days'], ['new', 'Newest'], ['old', 'Oldest']]
         .map(([v, l]) => el('option', { value: v, selected: sort === v || false }, l)));
-    sortSel.addEventListener('change', () => { sort = sortSel.value; paint(); });
+    sortSel.addEventListener('change', () => { sort = sortSel.value; ensureWindows(); paint(); });
 
     const hosts = platforms(corpus);
     const platSel = el('select', { 'data-feed-platform': '1', disabled: searching || undefined,
@@ -838,6 +862,21 @@ export function lensFeedsView() {
     controls.replaceChildren(sortSel, platSel, vid);
   };
 
+  // 4c: 24h is NOT offered. Measured over the whole corpus, only 9 of 117 feeds
+  // got 2 or more likes in a day — the window is mostly ties at zero and would
+  // present noise as a ranking. 7d and 30d separate them.
+  const ensureWindows = () => {
+    if (!sort.startsWith('rising') || measuring || windows.size) return;
+    measuring = true;
+    paint();
+    lens.likeWindows(corpus.map((f) => f.uri), {
+      nowMs: Date.now(),
+      // progressive: each measurement lands in the map the view is already
+      // rendering from, so the list reorders as the counts arrive (3l's idiom)
+      onWindow: (uri, w) => { windows.set(uri, w); paint(); },
+    }).finally(() => { measuring = false; paint(); });
+  };
+
   const run = (query) => {
     searching = !!query;
     results.replaceChildren(skeleton(3));
@@ -845,8 +884,11 @@ export function lensFeedsView() {
     lens.discoverFeeds({ query })
       .then((feeds) => {
         corpus = feeds;
+        windows = new Map();   // a new corpus invalidates the measurements
         if (!searching) { platform = ''; videoOnly = false; }
+        if (searching && sort.startsWith('rising')) sort = 'popular';
         buildControls();
+        ensureWindows();
         paint();
       })
       .catch((e) => {

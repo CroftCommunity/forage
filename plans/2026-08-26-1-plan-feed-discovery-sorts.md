@@ -1,8 +1,8 @@
 # Plan: sorting, filtering and time windows — for feed discovery and for boards
 
 date: 2026-08-26
-status: IN PROGRESS — research filed; **4a and 4b SHIPPED**. 4c (Rising) next.
-Gate green: 317 unit tests, 5/5 workflows.
+status: IN PROGRESS — research filed; **4a, 4b and 4c SHIPPED**. 4d (liveness on
+search) next. Gate green: 322 unit tests, 5/5 workflows.
 Execution in worktrees/forage/feed-discovery-sorts (branch claude/feed-discovery-sorts)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `f08fa9d` (clean tree)
@@ -335,7 +335,21 @@ client-side: Popular (server order, default) · Most liked · Newest · Oldest. 
 builder platform (`did`), video-only (`contentMode`), creator. Reuses the
 `boardToolbar` idiom. No new network shape at all.
 
-**4c — T1 Rising.** `getLikes` fan-out with a concurrency cap and a short-lived
+**4c — T1 Rising. ✅ SHIPPED 2026-08-26.**
+Landed as: pure `likeWindow(likes, nowMs)` (counts d7/d30 off one page, flags `capped`);
+`sortFeeds` gained `rising7`/`rising30` taking a windows map, with **unmeasured feeds
+sorting last rather than as zero** — "we have not asked" and "nobody liked it" are
+different facts; `lens.likeWindows()` fans out one `getLikes` per feed at concurrency 8
+with an 8s per-feed timeout, announcing each measurement as it lands so the list
+reorders progressively (3l's idiom). Measurement is lazy — 117 requests is not spent on
+arrival for a sort nobody may pick. A capped count renders `100+`, never a number.
+**24h is deliberately not offered** (D2: only 9 of 117 feeds got ≥2 likes in a day),
+and the option list is asserted in the journey so it cannot quietly reappear. The count
+line says what is being counted and that joins are private. 5 unit tests + a journey
+segment whose fixture counts are INVERTED against `likeCount`, so a Rising that was
+secretly likeCount would fail it. Original description follows.
+
+ `getLikes` fan-out with a concurrency cap and a short-lived
 cache; sorts "Rising · 7 days" and "Rising · 30 days". 24h is NOT offered (D2). 30d
 counts at the cap display `100+`. Words on the control, in the `sortWindow` spirit:
 likes gained in the window; joins are private, so likes are the only public signal.

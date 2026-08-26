@@ -14,6 +14,12 @@ const fixture = (n) => JSON.parse(readFileSync(join(root, 'test/fixtures/atproto
 
 const WHATS_HOT = 'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot';
 const AFTER_DARK = 'at://did:plc:x/app.bsky.feed.generator/afterdark';
+const GARDEN = 'at://did:plc:g/app.bsky.feed.generator/gardentalk';
+const FRESHEST = 'at://did:plc:i/app.bsky.feed.generator/freshest';
+const enc = (uri) => encodeURIComponent(uri);
+// an hour old: comfortably inside both the 7d and 30d windows 4c counts
+const recentLikes = (n) => Array.from({ length: n },
+  () => ({ indexedAt: new Date(Date.now() - 3600_000).toISOString() }));
 
 const FAKE_MANAGER = `(() => {
   const KEY = 'w2.signed-in';
@@ -63,7 +69,7 @@ export async function run() {
         { uri: WHATS_HOT, displayName: "What's Hot", likeCount: 1, labels: [] },
         { uri: AFTER_DARK, displayName: 'After Dark', likeCount: 999, labels: [{ val: 'porn' }] }] },
       'getPopularFeedGenerators': { feeds: [
-        { uri: 'at://did:plc:g/app.bsky.feed.generator/gardentalk', displayName: 'Garden Talk',
+        { uri: GARDEN, displayName: 'Garden Talk',
           description: 'Post with #gardening to appear here.', likeCount: 12, creator: { handle: 'grower.test' },
           did: 'did:web:skyfeed.me', indexedAt: '2024-01-01T00:00:00Z' },
         // 4b: T0 dimensions with real variety, so the sorts and the builder
@@ -71,7 +77,7 @@ export async function run() {
         { uri: 'at://did:plc:h/app.bsky.feed.generator/loudest', displayName: 'Loudest',
           description: 'most liked', likeCount: 900, creator: { handle: 'loud.test' },
           did: 'did:web:api.graze.social', indexedAt: '2023-01-01T00:00:00Z' },
-        { uri: 'at://did:plc:i/app.bsky.feed.generator/freshest', displayName: 'Freshest',
+        { uri: FRESHEST, displayName: 'Freshest',
           description: 'newest', likeCount: 1, creator: { handle: 'new.test' },
           did: 'did:web:skyfeed.me', indexedAt: '2026-08-01T00:00:00Z' },
         // 4a: this account carries NO adultContentPref, which the lexicon says
@@ -85,6 +91,14 @@ export async function run() {
         creator: { handle: 'x.test' }, labels: [{ val: 'porn' }] }, isOnline: true, isValid: true },
       'getFeedGenerator?': { view: { uri: WHATS_HOT, displayName: "What's Hot", description: 'the hot stuff',
         likeCount: 99, creator: { handle: 'bsky.app' } }, isOnline: true, isValid: true },
+      // 4c: Rising rides one getLikes per feed. The counts are deliberately
+      // INVERTED against likeCount so the journey proves Rising is a different
+      // ranking and not likeCount wearing a hat. Shim routing is by URL
+      // substring, first match wins — so the per-feed keys precede the
+      // catch-all, and each names its feed's DID inside the encoded uri param.
+      [`getLikes?uri=${enc(FRESHEST)}`]: { likes: recentLikes(5) },
+      [`getLikes?uri=${enc(GARDEN)}`]: { likes: recentLikes(2) },
+      'getLikes': { likes: recentLikes(1) },
       'putPreferences': {},
       'getProfile': { did: 'did:plc:w2test', handle: 'wtest.bsky.social', displayName: 'W Tester',
         avatar: 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==', description: 'a test bio', followersCount: 5, followsCount: 7, postsCount: 9 },
@@ -164,6 +178,23 @@ export async function run() {
   assert.deepEqual(await titles(), ['Loudest', 'Garden Talk', 'Freshest']);
   await page.locator('[data-feed-sort]').selectOption('new');
   assert.deepEqual(await titles(), ['Freshest', 'Garden Talk', 'Loudest']);
+
+  // 4c: Rising is a DIFFERENT ranking — 7d likes here are inverted against
+  // all-time likeCount, so if Rising were secretly likeCount this would fail.
+  await page.locator('[data-feed-sort]').selectOption('rising7');
+  await page.waitForSelector('text=likes in 7d');
+  await page.waitForFunction(() => !document.body.textContent.includes('measuring…'));
+  assert.deepEqual(await titles(), ['Freshest', 'Garden Talk', 'Loudest'],
+    'Rising ranks by the window, not by the all-time count');
+  await page.waitForSelector('text=Joining a feed is private');
+  assert.equal(await page.locator('text=5 likes in 7d').count(), 1, 'the window count is shown per feed');
+
+  // 24h is deliberately absent: measured, only 9 of 117 feeds got >=2 likes in
+  // a day, so the window would present ties-at-zero as a ranking.
+  const sortOptions = await page.locator('[data-feed-sort] option').allTextContents();
+  assert.deepEqual(sortOptions, ['Popular', 'Most liked', 'Rising · 7 days', 'Rising · 30 days', 'Newest', 'Oldest']);
+
+  await page.locator('[data-feed-sort]').selectOption('new');
 
   // the builder facet: feeds are built ON services, and that is a real filter
   await page.locator('[data-feed-platform]').selectOption('skyfeed.me');

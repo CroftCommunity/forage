@@ -364,6 +364,28 @@ export function sortWindow(posts, sort, timeframe, nowMs) {
 // Pure; no time input needed — indexedAt strings sort lexicographically as
 // ISO-8601, which is why they are compared as strings and never parsed.
 
+// 4c: the windows are OURS. There is no time-bucketed aggregate anywhere in
+// the API — only the cumulative likeCount — so we count a page of likes here.
+// getLikes returns newest-first with both createdAt and indexedAt; indexedAt is
+// the AppView's own clock and the two agreed to a median 0.0s in probing, while
+// post createdAt values are sometimes in the FUTURE. So: indexedAt.
+export const LIKE_PAGE = 100;
+const WINDOW_MS = { d7: 7 * 86400_000, d30: 30 * 86400_000 };
+
+const withTimeout = (promise, ms) => Promise.race([promise,
+  new Promise((_, rej) => setTimeout(() => rej(new Error(`timed out after ${ms}ms`)), ms))]);
+
+export function likeWindow(likes, nowMs) {
+  const ages = likes.map((l) => nowMs - Date.parse(l.indexedAt));
+  return {
+    d7: ages.filter((a) => a < WINDOW_MS.d7).length,
+    d30: ages.filter((a) => a < WINDOW_MS.d30).length,
+    // A full page is a FLOOR: the 101st like exists and this page cannot see
+    // it. Measured, exactly 1 of 117 popular feeds hits this inside 7 days.
+    capped: likes.length >= LIKE_PAGE,
+  };
+}
+
 const FEED_SORTS = {
   // 'popular' is the AppView's own opaque score. We render it untouched rather
   // than re-deriving it — DL-010's principle applied one level up, to the list
@@ -372,11 +394,28 @@ const FEED_SORTS = {
   likes: (a, b) => (b.likeCount ?? 0) - (a.likeCount ?? 0),
   new: (a, b) => String(b.indexedAt || '').localeCompare(String(a.indexedAt || '')),
   old: (a, b) => String(a.indexedAt || '').localeCompare(String(b.indexedAt || '')),
+  // 4c: measured against a window. A feed with no measurement yet sorts LAST
+  // rather than as a zero — "we have not asked" and "nobody liked it" are
+  // different facts, and the progressive paint depends on the distinction.
+  rising7: null,
+  rising30: null,
 };
+const RISING_KEY = { rising7: 'd7', rising30: 'd30' };
 
-export function sortFeeds(feeds, sort) {
+export function sortFeeds(feeds, sort, windows) {
   if (!(sort in FEED_SORTS)) {
     throw new Error(`unknown feed sort: ${sort} (known: ${Object.keys(FEED_SORTS).join(', ')})`);
+  }
+  const key = RISING_KEY[sort];
+  if (key) {
+    const score = (f) => windows?.get(f.uri)?.[key];
+    return [...feeds].sort((a, b) => {
+      const x = score(a); const y = score(b);
+      if (x === undefined && y === undefined) return 0;
+      if (x === undefined) return 1;
+      if (y === undefined) return -1;
+      return y - x;
+    });
   }
   const cmp = FEED_SORTS[sort];
   return cmp ? [...feeds].sort(cmp) : feeds;
@@ -827,6 +866,27 @@ export function createLens({ session = null, transport = fetch } = {}) {
           ...(disp?.mode === 'warn' ? { warnLabels: disp.labels } : {}),
         };
       }).filter((f) => !f.hidden);
+    },
+
+    // 4c: one getLikes per feed, bounded concurrency, announced as each lands
+    // so the view can repaint progressively (the ring board's idiom, 3l). A
+    // feed that fails or times out stays UNMEASURED — never a silent zero.
+    async likeWindows(uris, { nowMs = Date.now(), onWindow, concurrency = 8, timeoutMs = 8000 } = {}) {
+      const out = new Map();
+      const queue = [...uris];
+      const worker = async () => {
+        for (let uri = queue.shift(); uri !== undefined; uri = queue.shift()) {
+          try {
+            const data = await withTimeout(
+              get('app.bsky.feed.getLikes', { uri, limit: LIKE_PAGE }), timeoutMs);
+            const w = likeWindow(data.likes || [], nowMs);
+            out.set(uri, w);
+            onWindow?.(uri, w);
+          } catch { /* unmeasured: the sort keeps it at the back, with words */ }
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(concurrency, uris.length) }, worker));
+      return out;
     },
 
     // 3j: join / leave a feed — the SECOND lens write (preferences, not
