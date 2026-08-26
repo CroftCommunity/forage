@@ -45,6 +45,12 @@ test('the SHELL precaches the app shell itself so clean-path deep links work off
   readFileSync(join(root, '404.html')); // throws if missing
 });
 
+test('the preview server mirrors the Pages fallback (so local deep links behave like production)', () => {
+  const src = readFileSync(join(root, 'scripts/preview.mjs'), 'utf8');
+  assert.match(src, /404\.html/, 'preview serves the shell for unknown paths');
+  assert.match(src, /extname\(file\)/, 'a missing ASSET is still a plain 404');
+});
+
 test('404.html is byte-identical to index.html (Pages serves it for every deep link)', () => {
   assert.equal(readFileSync(join(root, '404.html'), 'utf8'), readFileSync(join(root, 'index.html'), 'utf8'),
     'regenerate: cp index.html 404.html');

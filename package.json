@@ -10,7 +10,8 @@
   "scripts": {
     "test": "node --test",
     "conformance": "node conformance/run.js",
-    "workflows": "node e2e/run.mjs"
+    "workflows": "node e2e/run.mjs",
+    "preview": "node scripts/preview.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.61.0",
