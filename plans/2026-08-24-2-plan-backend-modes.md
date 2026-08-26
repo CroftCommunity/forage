@@ -1,3 +1,11 @@
+> **SUPERSEDED (2026-08-25).** This was a parallel session's Pass-1+2 draft on the
+> pre-redirect scope (mode dial, live scoped session, first lens write). Its seven
+> user-confirmed open-question decisions were IMPORTED into
+> `2026-08-25-1-plan-backend-modes-bsky-writes.md` (see its "Peer-plan
+> reconciliation" Review Log entry), which then shipped phases 1–4. Kept as
+> history; nothing here is current. (It entered the tree by being swept into a
+> doc commit — the exact hazard COORDINATION.md Rule 1 names.)
+
 # Plan: backend modes — the runtime tier dial, the live scoped session, and the first lens write
 
 date: 2026-08-24

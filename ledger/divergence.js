@@ -90,6 +90,10 @@ export const LEDGER = [
     description: 'Bundles of feeds + people — a Field collection. Deferred until list-backed Fields exist.',
     date: '2026-08-25', status: 'open' },
 
+  { id: 'DL-024', kind: 'frontier', capability: 'moderation', tier: 'wide', label: 'Manage moderation FROM forage',
+    description: 'The Moderation panel is read-only by design (mirror + edit-on-bsky.app links, the lens tenet). Managing the posture from forage via putPreferences — round-trip proven at D10 — is this frontier.',
+    date: '2026-08-25', status: 'open' },
+
   // ---- the ring dial (plan 2026-08-25-1, 3b) ----
   { id: 'DL-016', kind: 'frontier', capability: 'feeds', tier: 'wide', label: 'Ring beyond the cap',
     description: 'mutuals+1 draws the first 25 members (D6-measured cap; latency is not the bound — board noise is). The chip reports the TRUE member count; drawing the full ring (sampling, rotation, or paging members) is this frontier.',
