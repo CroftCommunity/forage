@@ -17,10 +17,15 @@ import { fetchShim } from './shim.mjs';
 
 const STATES = ['first-visit', 'seeded'];
 
-export async function scenario(state, { initScripts = [], ...shimOpts } = {}) {
+export async function scenario(state, { initScripts = [], mode, ...shimOpts } = {}) {
   if (!STATES.includes(state)) {
     throw new Error(`unknown scenario state: ${state} (known: ${STATES.join(', ')})`);
   }
+  // 3h: the presentation mode is a declared part of the scenario. 'seeded'
+  // implies the memory population (seeding only happens there); 'first-visit'
+  // defaults to the domain default (bluesky) unless the workflow says.
+  const presentation = mode ?? (state === 'seeded' ? 'memory' : null);
+  if (presentation) initScripts = [`try { localStorage.setItem('forage.mode', '${presentation}'); } catch {}`, ...initScripts];
   const server = await serve();
   const browser = await chromium.launch({ headless: !process.env.HEADED });
   const context = await browser.newContext();

@@ -48,7 +48,7 @@ const FAKE_MANAGER = `(() => {
 })();`;
 
 export async function run() {
-  const s = await scenario('seeded', {
+  const s = await scenario('first-visit', {
     initScripts: [FAKE_MANAGER],
     responses: {
       'describeRepo': { did: 'did:plc:w2test', handle: 'wtest.bsky.social', didDoc: {}, collections: [] },
@@ -70,7 +70,7 @@ export async function run() {
   const { page } = s;
 
   // signed-out: the OAuth card, no app-password field anywhere
-  await page.goto(`${s.origin}/#/lens`);
+  await page.goto(`${s.origin}/#/`);
   await page.waitForSelector('text=Sign in with Bluesky');
   assert.equal(await page.locator('input[type="password"]').count(), 0, 'no password field exists anymore');
 
@@ -80,8 +80,8 @@ export async function run() {
   await page.waitForSelector('text=@wtest.bsky.social', { timeout: 10000 });
 
   // the personal surface opens: saved feeds become Fields in the sidebar
-  await page.waitForSelector('a[href="#/lens/f/whats-hot"]');
-  await page.waitForSelector('a[href="#/lens/f/following"]');
+  await page.waitForSelector('a[href="#/f/whats-hot"]');
+  await page.waitForSelector('a[href="#/f/following"]');
 
   // sign out returns to the signed-out card
   await page.locator('button:has-text("Sign out")').click();

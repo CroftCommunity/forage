@@ -27,10 +27,10 @@ export async function run() {
   await page.waitForSelector('.devbar');
   assert.match(await fontOf(), /mono/i, 'the skin survives reload (device-local)');
 
-  // …and follows into the Bluesky view (skins × modes are independent axes)
-  await page.goto(`${s.origin}/#/lens`);
-  await page.waitForSelector('text=The Lens');
-  assert.match(await fontOf(), /mono/i, 'the BBS skin dresses the Bluesky view too');
+  // …and follows across surfaces (skins ride the shell, not a population)
+  await page.goto(`${s.origin}/#/about`);
+  await page.waitForSelector('.masthead');
+  assert.match(await fontOf(), /mono/i, 'the BBS skin dresses every surface');
 
   // back to default: the look is exactly today's (no sheet at all)
   await page.goto(`${s.origin}/#/settings`);

@@ -112,15 +112,23 @@ Above the header, dashed to mark it as scaffolding:
 | Volunteer moderator | **Steward** |
 | Public mod log | **Audit log** |
 
-## The front door
+## The front door, and the two populations
 
-forage.fyi lands on the **Bluesky view** (`#/lens`): live network content,
-topic-first, no account needed. Signed in (OAuth), the **ring dial** chooses how
-far out your world goes — World / Following / Mutuals / Mutuals +1 (capped at 25
-with honest overflow) — boosts are real likes, threads continue through replies
-AND quotes, your account's moderation posture applies everywhere, `#tags` open
-`/h/` boards, and the trending rail opens topics as feed streams. The front-door
-preference (Settings) is device-local; the memory sandbox is one setting away.
+Forage is **one of two things at a time** — full populations, never mixed
+(`#/mode` switches; the routes `/`, `/f/`, `/h/`, `/p` mean whichever is
+active):
+
+- **Bluesky view** (the domain default): live network content, topic-first, no
+  account needed. Signed in (OAuth), the **ring dial** chooses how far out your
+  world goes — World / Following / Mutuals / Mutuals +1 (capped at 25 with
+  honest overflow) — boosts are real likes, threads continue through replies
+  AND quotes, your account's moderation posture applies everywhere, `#tags`
+  open `/h/` boards, and the trending rail opens topics as feed streams.
+- **Memory sandbox**: the local, seeded instrument — nothing leaves the device.
+
+Your choice at `#/mode` is device-local, and CLEARING it means the device
+follows the domain default. A route that belongs to the other population gates
+with words — no silent redirects, no mixed chrome.
 
 ## Modes
 
@@ -140,8 +148,8 @@ The running app has **modes** — named routing tables over the same capabilitie
   Forage, and the session survives reloads. Works on forage.fyi and localhost
   (the OAuth client is origin-bound; other origins are read-only).
 
-The dev bar's Mode control is a scaffolding mirror; the canonical preference
-lands in Settings (plan 2026-08-25-1, phase 3).
+The dev bar's store-mode control is scaffolding; the PRESENTATION mode
+(which population the app is) lives at `#/mode`.
 
 ## The tiers
 

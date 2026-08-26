@@ -1170,3 +1170,28 @@ Phase 5's MANDATORY split drafted above on D5 evidence — 5a–5d with two spli
 decisions (sandbox session = direct createSession on the spaces host; space
 connect card UX). EXECUTION PAUSED for user review of the split before
 implementing phase 5.
+
+### Amendment: 3h — mutually exclusive presentation modes + /mode (2026-08-26, user iteration)
+User review of the deployed build: "bluesky mode and memory mode are mixed in
+together and bluesky is just one page view — they are both full modes/
+populations and should not overlap." Directed design: a `/mode` surface where
+the user flips between populations via a persisted device-local choice, plus
+CLEAR-to-domain-default (default = Bluesky, the front-door decision). Cookie →
+localStorage (static Pages site; same theme/skin pattern). Unit 3h:
+- `js/mode.js` — the presentation-mode module: DOMAIN_DEFAULT='bluesky',
+  stored()/active()/set()/clear(), key `forage.mode` (replaces `forage.front`,
+  pre-1.0 no migration), worded refusals.
+- ONE route namespace, population-resolved: `/` home, `/f/:slug`, `/h/:tag`,
+  `/p` dispatch to the ACTIVE population; memory-only routes gate with words
+  under bluesky (and vice versa) linking `/mode`; legacy `/lens*` redirects.
+- Mode-aware masthead (no cross-population chrome: bluesky shows no persona/
+  notifications/memory-search; memory loses the 'Lens' nav item; both link
+  Mode); auto-seed keys off mode==='memory'; switching reloads for a clean
+  population swap.
+- `js/ui/mode-view.js` — the /mode surface: both populations described,
+  choose/clear, provenance line (your choice vs domain default).
+- Workflows: scenario() gains a `mode` option; W1 gains the presentation-
+  switch arc (default bluesky → choose memory → seeded population → clear →
+  default again); W2/W3/W4 re-pointed at the unified routes.
+Iteration posture: LOCAL preview only (owner: "we can iterate local quicker")
+— no landing/deploy until the owner says so.

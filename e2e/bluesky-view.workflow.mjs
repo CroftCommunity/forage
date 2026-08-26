@@ -36,7 +36,7 @@ const post = (rkey, did, ts) => ({ post: {
 } });
 
 export async function run() {
-  const s = await scenario('seeded', {
+  const s = await scenario('first-visit', {
     initScripts: [FAKE_SIGNED_IN],
     responses: {
       'describeRepo': { handle: 'me.test' },
@@ -76,7 +76,7 @@ export async function run() {
   const { page } = s;
 
   // 3b segment: signed-in → dial to Mutuals → the merged board renders
-  await page.goto(`${s.origin}/#/lens`);
+  await page.goto(`${s.origin}/#/`);
   await page.waitForSelector('text=@me.test');
   await page.waitForSelector('[data-ring-dial]');
   await page.locator('[data-ring-dial] button:has-text("Mutuals")').first().click();
@@ -115,7 +115,7 @@ export async function run() {
     'the verified author carries the checkmark');
 
   // 3e segment: open b1's thread — reply and quote are ONE continuation
-  await page.locator('.postrow', { hasText: 'post b1' }).locator('a[href*="/lens/p?uri="]').first().click();
+  await page.locator('.postrow', { hasText: 'post b1' }).locator('a[href*="/p?uri="]').first().click();
   await page.waitForSelector('text=post reply1');
   await page.waitForSelector('[data-kind="quote"]');
   const qnode = page.locator('[data-kind="quote"]');
@@ -124,14 +124,14 @@ export async function run() {
   assert.ok(await qnode.locator('a:has-text("open its thread")').count(), 'a quote opens as its own room');
 
   // 3g segment: back home on the WORLD ring — the trending rail is live
-  await page.goto(`${s.origin}/#/lens`);
+  await page.goto(`${s.origin}/#/`);
   await page.locator('[data-ring-dial] button:has-text("World")').first().click();
   await page.waitForSelector('[data-trending] a:has-text("Meadow Fest")');
   await page.locator('[data-trending] a:has-text("Meadow Fest")').click();
   await page.waitForSelector('text=post trendpost');
 
   // …and the facet #tag in a board post is a doorway into /h/
-  await page.goto(`${s.origin}/#/lens`);
+  await page.goto(`${s.origin}/#/`);
   await page.locator('[data-ring-dial] button:has-text("Mutuals")').first().click();
   await page.waitForSelector('a[data-tag="camp"]');
   await page.locator('a[data-tag="camp"]').first().click();
@@ -141,18 +141,17 @@ export async function run() {
   assert.deepEqual(await s.shimMisses(), [], 'every network read had a fixture');
   await s.close();
 
-  // 3d segment: the front door, from a truly first visit
+  // 3d/3h segment: the front door, from a truly first visit — and the
+  // populations are EXCLUSIVE: a memory route in the bluesky population gates
   const fd = await scenario('first-visit', {
     responses: { 'getTrendingTopics': { topics: [] } },
   });
   await fd.page.goto(fd.origin); // no hash at all — the true front door
-  await fd.page.waitForFunction(() => location.hash.startsWith('#/lens'), null, { timeout: 10000 });
+  await fd.page.waitForFunction(() => location.hash === '#/', null, { timeout: 10000 });
   await fd.page.waitForSelector('text=The Lens');
-  assert.equal(await fd.key(), null, 'the lens front door writes NOTHING to forage.state (the named check)');
-  // first MEMORY-route visit seeds — a deliberate entry into the sandbox
+  assert.equal(await fd.key(), null, 'the bluesky front door writes NOTHING to forage.state (the named check)');
   await fd.page.goto(`${fd.origin}/#/popular`);
-  await fd.page.reload(); // boot runs the seed guard on a memory route
-  await fd.waitForSeed();
-  assert.ok((await fd.key()).length > 1000, 'the memory entry seeds the sandbox');
+  await fd.page.waitForSelector('text=That page lives in the Memory sandbox');
+  assert.equal(await fd.key(), null, 'gated — and still nothing written');
   await fd.close();
 }
