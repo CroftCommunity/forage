@@ -99,7 +99,7 @@ export function postRow(p, viewerCanVote, opts = {}) {
     el('div', { class: 'posttitle' }, titleLink),
     body, meta,
   );
-  const row = el('div', { class: 'postrow' + (p.pinned ? ' pinned-row' : '') },
+  const row = el('div', { class: 'postrow' + (p.pinned ? ' pinned-row' : '') + (opts.compact ? ' compact' : '') },
     voteBox('post', p.id, p, viewerCanVote, 'col', opts.onVote), right);
   return row;
 }

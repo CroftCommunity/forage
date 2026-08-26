@@ -8,7 +8,7 @@
 
 import { el, timeAgo, fmtScore } from '../util.js';
 import { postRow, commentNode, voteBox, skeleton, emptyState, toast } from './components.js';
-import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName } from '../substrates/lens.js';
+import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow } from '../substrates/lens.js';
 import { initSession } from '../auth/session.js';
 
 let manager = null;        // null = not booted; 'unavailable' = origin has no OAuth client
@@ -21,6 +21,18 @@ const rerender = () => window.dispatchEvent(new HashChangeEvent('hashchange'));
 // 3i: the OAuth identity, for the bluesky masthead. null = signed out;
 // 'connecting' while restore is in flight (the masthead must never ask for a
 // sign-in it is about to restore).
+// 3i (owner: "launch oauth directly"): the masthead control starts the
+// authorize redirect via the ENTRYWAY — bsky.social collects the handle; no
+// local form. The sidebar card keeps the handle-first path.
+export async function startDirectSignIn() {
+  await ensureAuthBoot();
+  if (!manager || manager === 'unavailable') {
+    return toast('Sign-in is origin-bound — works on forage.fyi and localhost.', 'err');
+  }
+  try { await manager.signIn('https://bsky.social'); }
+  catch (e) { toast('Sign-in failed: ' + e.message, 'err'); }
+}
+
 export function sessionIdentity() {
   if (session) return `@${session.handle}`;
   if (manager && manager !== 'unavailable' && manager.state && ['unknown', 'pending'].includes(manager.state())) return 'connecting';
@@ -162,12 +174,83 @@ function verifiedBadge(p) {
   return '';
 }
 
-const lensRow = (p) => postRow(p, !!session, {
+// 3i: media in card mode — images as lazy thumbs (fullsize behind a click),
+// video as its thumbnail linking out (playback is bsky.app's job for now).
+function mediaNode(p) {
+  if (!p.media) return null;
+  if (p.media.kind === 'images') {
+    return el('div', { class: 'media-strip' },
+      ...p.media.items.map((i) => el('a', { href: i.full, target: '_blank', rel: 'noopener noreferrer' },
+        el('img', { src: i.thumb, alt: i.alt, loading: 'lazy' }))));
+  }
+  if (p.media.kind === 'video') {
+    const link = `https://bsky.app/profile/${p.author}/post/${p.id.split('/').pop()}`;
+    return el('div', { class: 'media-strip' },
+      el('a', { href: link, target: '_blank', rel: 'noopener noreferrer', title: 'Video — plays on bsky.app' },
+        p.media.thumb ? el('img', { src: p.media.thumb, alt: '[video]', loading: 'lazy' }) : el('span', { class: 'tag' }, '▶ video')));
+  }
+  if (p.media.kind === 'external') {
+    return el('div', { class: 'media-strip' },
+      el('a', { href: p.media.uri, target: '_blank', rel: 'noopener noreferrer' },
+        el('img', { src: p.media.thumb, alt: '', loading: 'lazy' })));
+  }
+  return null;
+}
+
+// The board view preference (card | compact) — device-local, like theme/skin.
+const VIEW_KEY = 'forage.boardview';
+const boardView = () => { try { return localStorage.getItem(VIEW_KEY) === 'compact' ? 'compact' : 'card'; } catch { return 'card'; } };
+
+// Per-page-load sort state (a view concern, like the ring).
+let boardSort = 'feed';
+let boardTimeframe = 'day';
+
+// The reddit-style toolbar: sort · timeframe (under Top) · view. Sorting is
+// HONEST about scope — it re-orders the loaded window only (the generator
+// owns the true ranking, DL-010; whole-feed live sorts are the Jetstream v2
+// frontier, E139).
+function boardToolbar(onChange) {
+  const sortSel = el('select', { title: 'Sorts the LOADED posts — the feed itself is ranked by its generator (DL-010)' },
+    ...[['feed', 'Feed order'], ['new', 'New'], ['top', 'Top']].map(([v, l]) =>
+      el('option', { value: v, selected: boardSort === v || false }, l)));
+  const tfSel = el('select', { title: 'Timeframe for Top' },
+    ...[['day', 'Today'], ['week', 'This week'], ['month', 'This month'], ['year', 'This year'], ['all', 'All time']].map(([v, l]) =>
+      el('option', { value: v, selected: boardTimeframe === v || false }, l)));
+  if (boardSort !== 'top') tfSel.style.display = 'none';
+  sortSel.addEventListener('change', () => { boardSort = sortSel.value; tfSel.style.display = boardSort === 'top' ? '' : 'none'; onChange(); });
+  tfSel.addEventListener('change', () => { boardTimeframe = tfSel.value; onChange(); });
+  const viewSel = el('select', { title: 'Card shows previews and media; Compact is dense rows' },
+    ...[['card', 'Card'], ['compact', 'Compact']].map(([v, l]) =>
+      el('option', { value: v, selected: boardView() === v || false }, l)));
+  viewSel.addEventListener('change', () => { try { localStorage.setItem(VIEW_KEY, viewSel.value); } catch {} onChange(); });
+  return el('div', { class: 'row wrap', style: 'gap:6px;margin:6px 0', 'data-board-toolbar': '1' },
+    sortSel, tfSel, viewSel);
+}
+
+// One board renderer: applies the window sort and the view mode.
+function renderBoard(card, posts) {
+  const view = boardView();
+  const ordered = sortWindow(posts, boardSort, boardTimeframe, Date.now());
+  card.replaceChildren(...ordered.map((p) => lensRow(p, view)));
+  if (boardSort !== 'feed' || (boardSort === 'top' && boardTimeframe !== 'all')) {
+    card.append(el('div', { class: 'xs muted', style: 'padding:6px' },
+      'Sorted within the loaded posts — load More to widen the window.'));
+  }
+  for (const a of card.querySelectorAll('a[href*="/p/at:"]')) {
+    const mm = a.getAttribute('href').match(/\/p\/(at:.+)$/);
+    if (mm) a.setAttribute('href', `#/p?uri=${encodeURIComponent(mm[1])}`);
+  }
+}
+
+const lensRow = (p, view = 'card') => postRow(p, !!session, {
   onVote: lensVote(p),
   // 3i: never duplicate the title — a preview renders only when it adds
-  // content; otherwise the row carries just the tag doorways.
-  bodyNode: p.preview ? facetedBody({ ...p, body: p.preview }) : tagChips(p),
+  // content. Card mode carries media and tag doorways; compact is dense.
+  bodyNode: view === 'compact' ? null
+    : (p.media && !p.maskedRemoved) ? el('div', {}, mediaNode(p), tagChips(p) || '')
+    : p.preview ? facetedBody({ ...p, body: p.preview }) : tagChips(p),
   authorBadge: verifiedBadge(p),
+  compact: view === 'compact',
 });
 
 function lensSidebar() {
@@ -190,9 +273,10 @@ function lensSidebar() {
           source: f.kind === 'author' ? { kind: 'author', actor: f.id }
             : f.kind === 'timeline' ? { kind: 'timeline' } : { kind: f.kind, uri: f.id } };
         registerSource(entry);
-        const linkSlug = f.humanSlug ?? f.slug;
+        // share links carry the FIXED identity (the rkey); the human alias
+        // still routes when typed
         return el('div', { class: 'row spread' },
-          el('a', { href: `#/f/${linkSlug}`, title: `#/f/${linkSlug}` }, `f/${f.title}`),
+          el('a', { href: `#/f/${f.slug}`, title: f.humanSlug ? `also #/f/${f.humanSlug}` : `#/f/${f.slug}` }, `f/${f.title}`),
           el('span', { class: 'xs muted' }, `${f.kind}${f.pinned ? ' · pinned' : ''}`));
       }));
     }).catch((e) => list.replaceChildren(el('div', { class: 'xs muted' }, 'Feeds failed: ' + e.message)));
@@ -295,7 +379,7 @@ export function lensHomeView() {
   if (activeRing !== 'world') {
     const title = activeRing === 'following' ? 'Following' : activeRing === 'mutuals' ? 'Mutuals' : 'Mutuals +1';
     return { main: el('div', {}, el('h1', {}, title), ringDial(), ringBoard(activeRing)),
-      side: el('div', { class: 'side' }, sessionCard(), moderationPanel(), lensSidebar()) };
+      side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()) };
   }
   const main = el('div', {},
     el('h1', {}, 'The Lens'),
@@ -311,7 +395,7 @@ export function lensHomeView() {
       el('h2', {}, 'Browse'),
       el('div', { class: 'stack' },
         ...CURATED.map((c) => el('div', {}, el('a', { href: `#/f/${c.slug}` }, `f/${c.slug}`), el('span', { class: 'xs muted' }, ` — ${c.title}`))))));
-  return { main, side: el('div', { class: 'side' }, sessionCard(), moderationPanel(), lensSidebar()) };
+  return { main, side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()) };
 }
 
 export function lensFieldView(params) {
@@ -322,29 +406,36 @@ export function lensFieldView(params) {
       el('h1', {}, entry.title),
       chip('ranking: the feed’s own order (DL-010)', 'The generator ranks; our hot/top do not apply here')),
     skeleton(6));
-  const renderPage = (f, card) => {
-    for (const p of f.posts) card.append(lensRow(p));
-    if (f.cursor) {
+  const allPosts = [];
+  let nextCursor = null;
+  const card = el('div', { class: 'card' });
+  const moreHost = el('div', {});
+  const repaint = () => {
+    renderBoard(card, allPosts);
+    moreHost.replaceChildren();
+    if (nextCursor) {
       const more = el('button', { class: 'btn sm', style: 'margin:8px' }, 'More');
       more.addEventListener('click', () => {
-        more.remove();
-        lens.feed(entry.source, { title: entry.title, cursor: f.cursor, slug: entry.humanSlug ?? entry.slug })
-          .then((next) => renderPage(next, card))
+        lens.feed(entry.source, { title: entry.title, cursor: nextCursor })
+          .then((next) => { allPosts.push(...next.posts); nextCursor = next.cursor || null; repaint(); })
           .catch((e) => toast('More failed: ' + e.message, 'err'));
       });
-      card.append(more);
+      moreHost.append(more);
     }
   };
-  lens.feed(entry.source, { title: entry.title, slug: entry.humanSlug ?? entry.slug }).then((f) => {
-    const card = el('div', { class: 'card' });
-    renderPage(f, card);
+  lens.feed(entry.source, { title: entry.title }).then((f) => {
+    allPosts.push(...f.posts);
+    nextCursor = f.cursor || null;
     main.replaceChildren(
       el('div', { class: 'row spread wrap' },
         el('h1', {}, entry.title),
         el('div', { class: 'row', style: 'gap:6px' },
           chip('likes-only scores (DL-011)'),
           chip('ranking: feed order (DL-010)'))),
-      f.posts.length ? card : emptyState('Nothing here', 'This source returned no posts.'));
+      boardToolbar(repaint),
+      f.posts.length ? card : emptyState('Nothing here', 'This source returned no posts.'),
+      moreHost);
+    repaint();
     // thread links: lens posts route through #/p?uri=
     for (const a of card.querySelectorAll('a[href*="/p/at:"], a[href^="#/f/"]')) {
       const href = a.getAttribute('href');
@@ -352,7 +443,7 @@ export function lensFieldView(params) {
       if (m) a.setAttribute('href', `#/p?uri=${encodeURIComponent(m[1])}&from=${entry.slug}`);
     }
   }).catch((e) => main.replaceChildren(emptyState('Lens fetch failed', e.message)));
-  return { main, side: el('div', { class: 'side' }, sessionCard(), moderationPanel(), lensSidebar()) };
+  return { main, side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()) };
 }
 
 // 3e: a quote-response rendered as thread continuation — the ❝ marker carries
@@ -385,20 +476,17 @@ export function lensHashtagView(params) {
   if (!session) {
     return { main: emptyState(`#${tag} needs a session`,
       'Hashtag boards ride search, which Bluesky gates behind sign-in (DL-021). Sign in and this becomes a live board.'),
-      side: el('div', { class: 'side' }, sessionCard(), moderationPanel(), lensSidebar()) };
+      side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()) };
   }
   const main = el('div', {}, el('h1', {}, `#${tag}`), skeleton(6));
   lens.stream({ kind: 'hashtag', key: tag }).then((board) => {
     const card = el('div', { class: 'card' });
-    for (const p of board.posts) card.append(lensRow(p));
-    for (const a of card.querySelectorAll('a[href*="/p/at:"]')) {
-      const mm = a.getAttribute('href').match(/\/p\/(at:.+)$/);
-      if (mm) a.setAttribute('href', `#/p?uri=${encodeURIComponent(mm[1])}`);
-    }
-    main.replaceChildren(el('h1', {}, `#${tag}`),
+    const repaint = () => renderBoard(card, board.posts);
+    main.replaceChildren(el('h1', {}, `#${tag}`), boardToolbar(repaint),
       board.posts.length ? card : emptyState('A quiet tag', `No recent posts carry #${tag}.`));
+    repaint();
   }).catch((e) => main.replaceChildren(el('h1', {}, `#${tag}`), emptyState('Hashtag fetch failed', e.message)));
-  return { main, side: el('div', { class: 'side' }, sessionCard(), moderationPanel(), lensSidebar()) };
+  return { main, side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()) };
 }
 
 // 3g: the trending rail — unspecced API; absent WITH WORDS when it breaks,
@@ -419,6 +507,24 @@ function trendingRail() {
   }).catch(() => card.replaceChildren(el('h2', {}, 'Trending'),
     el('div', { class: 'xs muted' }, 'Trending is unavailable (it rides an unstable API — DL-020). The rest of the lens is unaffected.')));
   return card;
+}
+
+// 3i (owner): the signed-in identity + moderation mirror live on YOUR page,
+// not the front page. The masthead @handle links here.
+export function lensProfileView() {
+  if (!session) {
+    return { main: el('div', {}, el('h1', {}, 'Your profile'),
+      el('p', { class: 'muted small' }, 'Sign in and this page carries your session and your moderation mirror.'),
+      sessionCard()), side: null };
+  }
+  return {
+    main: el('div', {}, el('h1', {}, `@${session.handle}`),
+      sessionCard(), moderationPanel(),
+      el('div', { class: 'xs muted', style: 'margin-top:8px' },
+        el('a', { href: `https://bsky.app/profile/${session.handle}`, target: '_blank', rel: 'noopener noreferrer' },
+          'Your public profile lives on bsky.app ↗'))),
+    side: null,
+  };
 }
 
 export function lensThreadView(params, query) {
@@ -460,5 +566,5 @@ export function lensThreadView(params, query) {
     }
     main.replaceChildren(head, t.comments.length ? commentsCard : emptyState('No replies', 'Nothing below this post yet.'));
   }).catch((e) => main.replaceChildren(emptyState('Lens fetch failed', e.message)));
-  return { main, side: el('div', { class: 'side' }, sessionCard(), moderationPanel(), lensSidebar()) };
+  return { main, side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()) };
 }

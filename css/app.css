@@ -250,3 +250,10 @@ hr.rule { border: none; border-top: 1px solid var(--border); margin: var(--s4) 0
 .grow { flex: 1; }
 .stack > * + * { margin-top: var(--s2); }
 .hidden { display: none !important; }
+
+/* 3i: board view modes + media */
+.postrow.compact { padding: 4px 8px; }
+.postrow.compact .posttitle { font-size: 0.95em; }
+.postrow.compact .postmeta { font-size: 0.75em; }
+.media-strip { display: flex; gap: 6px; margin: 6px 0; flex-wrap: wrap; }
+.media-strip img { max-height: 220px; max-width: 100%; border-radius: var(--radius-card); border: 1px solid var(--border); }

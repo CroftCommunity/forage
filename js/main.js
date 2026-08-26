@@ -40,13 +40,18 @@ function masthead() {
       el('a', { class: 'wordmark', href: '#/' },
         el('img', { class: 'wordmark-glyph', src: './icons/icon-192.png', alt: '' }), 'Forage'),
       el('nav', { class: 'row', style: 'gap:12px' },
-        el('a', { href: '#/', class: 'small' }, 'Home'),
-        el('a', { href: '#/mode', class: 'small' }, 'Mode'),
-        el('a', { href: '#/settings', class: 'small' }, 'Settings')),
+        el('a', { href: '#/', class: 'small' }, 'Home')),
       el('div', { class: 'who' }, themeBtn0,
+        el('a', { href: '#/settings', class: 'small' }, 'Settings'),
         who === 'connecting' ? el('span', { class: 'small muted' }, '…')
-          : who ? el('span', { class: 'small', title: 'Your Bluesky session' }, who)
-          : el('a', { class: 'small', href: '#/' }, 'Sign in')));
+          : who ? el('a', { class: 'small', href: '#/me', title: 'Your Forage profile' }, who)
+          : (() => {
+              // 3i (owner): launch OAuth DIRECTLY — the entryway collects the
+              // handle; no local form between you and the authorize screen.
+              const b = el('a', { class: 'small', href: '#/', role: 'button' }, 'Sign in');
+              b.addEventListener('click', (e) => { e.preventDefault(); lensViews.startDirectSignIn(); });
+              return b;
+            })()));
   }
   const viewer = store.getPersonaId();
   const unread = sel.unreadCount(store.getState(), viewer);
@@ -63,8 +68,7 @@ function masthead() {
     el('nav', { class: 'row', style: 'gap:12px' },
       el('a', { href: '#/home', class: 'small' }, 'Home'),
       el('a', { href: '#/popular', class: 'small' }, 'Popular'),
-      el('a', { href: '#/all', class: 'small' }, 'All'),
-      el('a', { href: '#/mode', class: 'small' }, 'Mode')),
+      el('a', { href: '#/all', class: 'small' }, 'All')),
     el('div', { class: 'search' }, search),
     el('div', { class: 'who' },
       themeBtn,
@@ -103,6 +107,7 @@ router.route('/settings', views.settingsView);
 router.route('/frontiers', views.frontiersView);
 router.route('/h/:tag', byMode(lensViews.lensHashtagView, views.tagStreamView));
 router.route('/p', blueskyOnly(lensViews.lensThreadView));
+router.route('/me', blueskyOnly(lensViews.lensProfileView));
 router.route('/about', views.aboutView);
 router.route('/signup', memoryOnly(views.signupView));
 // legacy /lens* deep links → the unified namespace
