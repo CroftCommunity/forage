@@ -1,7 +1,7 @@
 # Plan: three modes — memory, the Bluesky view with a ring dial, and the private BBS
 
 date: 2026-08-25
-status: EXECUTING — PHASES 1–4 COMPLETE; next: phase 5 SPLIT (BBS on Spaces — plan-edit + user review before implementation).
+status: PHASES 1–4 COMPLETE AND LANDING (user 2026-08-25: pause before the Spaces pilot; commit, deploy, document). Phase 5 split approved, implementation awaits the owner's go.
 Execution in worktrees/forage/modes-bbs (branch claude/modes-bbs)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `10a8ade` (clean tree, pushed; forage.fyi deployed at forage-v11)
@@ -798,7 +798,7 @@ session auth; `getSpace` is owner-only on this build (lexicon divergence — the
 member UI cannot rely on it); refusals are `UserNotAuthorized` (credential mint),
 `RepoNotFound` (reads — deliberately ambiguous), 401 (anon).
 
-#### THE SPLIT (drafted 2026-08-25 on D5 evidence — awaiting user review before implementation)
+#### THE SPLIT (drafted 2026-08-25 on D5 evidence — USER-APPROVED 2026-08-25: "1 yes, 2 sounds good"; implementation PAUSED at the owner's request, phases 1–4 deployed first)
 
 **Split decision — the sandbox session:** the BBS mode's session is a DIRECT
 `createSession` against the spaces host with throwaway credentials — NOT the

@@ -9,6 +9,12 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 
 ## Needs the owner
 
+- **Phase 5 — the private BBS on Spaces** (plan 2026-08-25-1): PAUSED by the owner
+  2026-08-25 with phases 1–4 deployed. The split is drafted and user-approved
+  (5a–5d: space-credential module, bbs substrate, mode UI, DOCKER-gated W5);
+  implementation starts on the owner's go. Local rehearsal rig:
+  `ghcr.io/bluesky-social/atproto:pds-spaces-alpha` (D5 facts in the plan).
+
 - ~~Push `main` + pull the `workflow_dispatch` hatch once~~ — DONE 2026-08-25: pushed
   `9f1cff4`; push-gate run 32792641974 and dispatched run 32792652759 both green;
   forage.fyi verified serving the new modules (sw at forage-v11).
@@ -26,8 +32,10 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 
 ## Ledgered (see `ledger/divergence.js`)
 
-- **DL-013 boost-as-like** — the first lens WRITE; promote when write-scope opens.
-- **DL-014 guest lens search** — chip until a session; real search works signed-in.
+- ~~DL-013 boost-as-like~~ — SHIPPED 2026-08-25 (plan 2026-08-25-1, 3c): boosts
+  are real likes on the OAuth session; the invariant scan names the pair.
+- **DL-014 guest lens search** — chip until a session; real search works signed-in
+  (and /h/ hashtag boards ride it, session-gated — DL-021).
 - **DL-015 lens saves** — bookmarks aren't public API surface yet.
 - **DL-009 deleted-post title retention** (proposal) — decide when a scenario cares.
 
@@ -49,9 +57,10 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 - ~~Real OAuth replaces the in-memory app-password sign-in~~ — DONE 2026-08-25
   (plan 2026-08-25-1, 2a–2c): vendored official client, `js/auth/session.js`,
   app-password card deleted; live loopback round-trip validated.
-- Comment author links inside lens threads still point at `#/u/<handle>` (memory
-  profiles) — route them to bsky.app profiles or a lens profile view.
-- Lens pagination (cursors are plumbed through `lens.feed`, UI has no "more" yet).
+- ~~Comment author links inside lens threads~~ — DONE 2026-08-25 (3d): they link
+  OUT to bsky.app (the lens tenet).
+- ~~Lens pagination~~ — DONE 2026-08-25 (3d): field boards and ring boards page
+  with More.
 
 ## Small
 
