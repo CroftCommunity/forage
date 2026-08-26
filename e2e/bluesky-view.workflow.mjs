@@ -4,7 +4,8 @@
 //   3e: a thread where a reply AND a quote are one continuation
 //   3f: the account's muted word masks in the board; a verified author ✓
 //   3g: the trending rail opens a topic board; a facet #tag opens /h/
-// The 3d front-door arc lands last.
+//   3d: the front-door arc — a first visit lands on the lens and writes
+//       NOTHING to forage.state; the first memory-route visit seeds.
 import assert from 'node:assert/strict';
 import { scenario } from './harness/scenario.mjs';
 
@@ -139,4 +140,19 @@ export async function run() {
 
   assert.deepEqual(await s.shimMisses(), [], 'every network read had a fixture');
   await s.close();
+
+  // 3d segment: the front door, from a truly first visit
+  const fd = await scenario('first-visit', {
+    responses: { 'getTrendingTopics': { topics: [] } },
+  });
+  await fd.page.goto(fd.origin); // no hash at all — the true front door
+  await fd.page.waitForFunction(() => location.hash.startsWith('#/lens'), null, { timeout: 10000 });
+  await fd.page.waitForSelector('text=The Lens');
+  assert.equal(await fd.key(), null, 'the lens front door writes NOTHING to forage.state (the named check)');
+  // first MEMORY-route visit seeds — a deliberate entry into the sandbox
+  await fd.page.goto(`${fd.origin}/#/popular`);
+  await fd.page.reload(); // boot runs the seed guard on a memory route
+  await fd.waitForSeed();
+  assert.ok((await fd.key()).length > 1000, 'the memory entry seeds the sandbox');
+  await fd.close();
 }

@@ -1,7 +1,7 @@
 # Plan: three modes — memory, the Bluesky view with a ring dial, and the private BBS
 
 date: 2026-08-25
-status: EXECUTING — 3a–3g SHIPPED; next: 3d (the phase-3 capstone: front door + live smoke).
+status: EXECUTING — PHASE 3 COMPLETE (capstone live smoke: all 7 arcs green on real Bluesky); next: 4a (skins mechanism).
 Execution in worktrees/forage/modes-bbs (branch claude/modes-bbs)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `10a8ade` (clean tree, pushed; forage.fyi deployed at forage-v11)
@@ -612,7 +612,7 @@ proof changes terms in the SAME commit: the exception is exactly the like
 create+delete pair (any other write through lens.js stays red). DL-013 → shipped,
 same commit. PHASE-GATE: OQ3 (own-test-post-only live validation, confirmed).
 
-#### 3d: Polish, the front door, and live validation
+#### 3d: Polish, the front door, and live validation — ✅ SHIPPED (phase capstone)
 - [ ] OQ4 consequences land HERE (scheduled, not just recorded in the OQ):
   `js/main.js` empty-hash default flips `#/popular` → `#/lens` (the unauth Bluesky
   view is the front door); the Settings view gains the mode/front-door preference
@@ -713,7 +713,7 @@ posture is applied on the live path, not only in unit-tested helpers. Plus the
 app's moderation pages; exact client routes are verified at implementation time
 (they are SPA routes — assert them then, not now). Multi-commit ≤3.
 
-#### 3g: Content streams — /h/ hashtag boards + the trending rail — ✅ SHIPPED
+#### 3g: Content streams — /h/ hashtag boards + the trending rail — ✅ SHIPPED (`eaccbe1`+`156cd13`+`b7654ee`)
 (Added 2026-08-25, user direction: "/f for feed/field and /h for hashtag … treat
 them as content streams either way"; trending promoted IN.)
 - [ ] `js/substrates/lens.js` — the field/board fetch generalizes to
