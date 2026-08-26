@@ -88,7 +88,7 @@ modern styles inline colour, some author in SCSS).
 An imported skin is faithful in **palette, typography and chrome — never in
 layout.** Forage keeps its own DOM, so a phpBB template targets markup that does
 not exist here. The result reads as that theme's colours on Forage's structure;
-row density is a registered frontier (DL-027), not an oversight.
+row density is a registered frontier (DL-028), not an oversight.
 
 Every generated file states its own provenance: source, licence, and per-role
 whether each value was read from the theme (`direct`), resolved through a

@@ -983,7 +983,7 @@ each recorded at the time:
 | 3A/3B | `phpbb` + `phpbb-dark`, hand-authored, paired |
 | 4A/4B | GPL fixtures with provenance; the importer |
 | 5 | The skins journey, built phase-by-phase per owner direction |
-| 6 | ADR-003, DL-027, README, `docs/SKINS.md` |
+| 6 | ADR-003, DL-028, README, `docs/SKINS.md` |
 
 **Three plan defects surfaced during execution, all in the same class — a phase
 that named a change but not the file it lived in:**
@@ -1012,7 +1012,7 @@ third is the argument for the browser tier existing at all.
 
 **Not done, deliberately:** `@axe-core/playwright` (a dependency + version
 override decision for the owner, trap recorded in Phase 5); the OQ3 structural
-layer (DL-027).
+layer (DL-028).
 
 **Owner decisions honoured:** registry-only phpbb (OQ2), density deferred as a
 frontier (OQ3), GPL-only in-repo with the importer as a local tool (OQ1),

@@ -24,7 +24,7 @@ export const LEDGER = [
     description: 'Build spec §11 out-of-scope list. Requires the scaled side.' },
   { id: 'DL-007', kind: 'frontier', capability: 'moderation', label: 'ML spam filtering',
     description: 'Build spec §11 out-of-scope list. Requires the scaled side.' },
-  { id: 'DL-027', kind: 'frontier', capability: 'skins', label: 'Structural skinning (row density)',
+  { id: 'DL-028', kind: 'frontier', capability: 'skins', label: 'Structural skinning (row density)',
     description: 'A skin can change palette, typography and chrome, but never LAYOUT: post rows keep Forage\'s roomy card shape, so an imported phpBB theme reads as that board\'s colours on Forage\'s structure, not as a dense board table. Deferred by the owner 2026-08-26 (plan 2026-08-26-1, OQ3) rather than built: letting a skin move layout widens what a skin can do to the page, and needs its own decision about what a skin must never be able to hide.' },
 
   // ---- proposals ----
