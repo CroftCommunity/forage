@@ -1,7 +1,8 @@
 # Plan: sorting, filtering and time windows — for feed discovery and for boards
 
 date: 2026-08-26
-status: DRAFT — research filed, phases proposed, awaiting owner Pass 2. No code written.
+status: IN PROGRESS — research filed; **4a SHIPPED** (posture on every feed surface,
+guest default decided by the owner). 4b next. Gate green: 311 unit tests, 5/5 workflows.
 Execution in worktrees/forage/feed-discovery-sorts (branch claude/feed-discovery-sorts)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `f08fa9d` (clean tree)
@@ -297,7 +298,18 @@ paths, so most add selectors + characterization instead) and invariant 6b (a
 workflow journey in `e2e/`, or an explicit note that the unit has no workflow
 surface).
 
-**4a — feed labels reach the posture (the bug).** `discoverFeeds` and `feedInfo`
+**4a — feed labels reach the posture (the bug). ✅ SHIPPED 2026-08-26.**
+Landed as: `feedDisposition` exported from the substrate (one rule, delegating to the
+same internal `labelDisposition` posts use); `adultEnabled` defaults to **false** in
+both `EMPTY_POSTURE` and `buildPosture` (lexicon-verified); posture applied in
+`discoverFeeds`, `feedInfo`, **and `fields()`** — the last one found during the
+journey: a feed JOINED before adult content was turned off was still sitting in the
+sidebar, so membership was silently overriding the account setting. Board render now
+waits on `Promise.all([feedInfo, feed])` so a gated feed cannot flash content before
+the verdict lands. 7 unit tests + a journey segment in `e2e/signin.workflow.mjs`.
+Original description follows.
+
+ `discoverFeeds` and `feedInfo`
 carry `labels` through; a shared `feedDisposition(feed, posture)` applies the same
 `ADULT_LABELS` / `labelPrefs` rules `labelDisposition` applies to posts. Hidden feeds
 do not render; warned feeds render behind the existing warn affordance. No toggle,
@@ -351,12 +363,21 @@ packs", with TID-decoded windows.
 
 ## Open questions — owner
 
-- **OQ1 — the guest adult default.** With no session there is no imported posture:
-  `EMPTY_POSTURE` sets `adultEnabled: true`, so a signed-out visitor would see
-  adult-labelled feeds. The "no separate toggle" rule is unambiguous for a signed-in
-  account and silent for a guest. Options: default guests to adult-off (matches
-  bsky.app logged-out behaviour, and is a *default* rather than a toggle), or leave
-  permissive. **Not inventing an answer — AGENTS.md escalation.**
+- ~~**OQ1 — the guest adult default.**~~ **DECIDED 2026-08-26 (owner): "logged
+  out/guests should see no adult content by default."** Implemented in 4a, and it
+  turned out to be the protocol's own answer as well: the official lexicon
+  `app.bsky.actor.defs#adultContentPref` declares `enabled` with **default false**
+  (fetched live 2026-08-26). So `buildPosture`'s old `adult ? !!adult.enabled : true`
+  was wrong for signed-in accounts too — an account that never touched the setting
+  was being treated as adult-on. One change fixes both: **absent preference means
+  adult content is off**, for guests and accounts alike.
+
+- **OQ5 — non-adult label defaults for guests (new, surfaced by 4a's tests).** The
+  adult master switch is now correct, but per-label prefs only exist when the account
+  set them. A guest therefore gets no verdict on `graphic-media` and it renders
+  unveiled; bsky.app's own logged-out view warns on it. Forage currently invents no
+  default the account never asked for, which is defensible but is a *choice*. Worth
+  an explicit answer before more label-bearing surfaces land.
 - **OQ2 — Constellation as a dependency.** T2 is the only tier that reaches a
   non-Bluesky host. ADR-002 fixed lens intake as AppView pull; adding
   `constellation.microcosm.blue` is an amendment to that, not a quiet addition.

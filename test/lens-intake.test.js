@@ -309,6 +309,58 @@ test('3j: discoverFeeds lists popular generators and searches by query; guests g
   assert.ok(calls[1].includes('query=garden'), 'the query rides through');
 });
 
+test('4a: discovery applies the account posture to FEEDS — adult-labelled feeds do not surface for a guest', async () => {
+  const transport = async () => ({ ok: true, status: 200, json: async () => ({ feeds: [
+    { uri: 'at://did:plc:a/app.bsky.feed.generator/clean', displayName: 'Garden Talk',
+      description: 'plants', likeCount: 9, creator: { handle: 'grower.test' }, labels: [] },
+    { uri: 'at://did:plc:a/app.bsky.feed.generator/adult', displayName: 'NSFW Feed',
+      description: 'x', likeCount: 99, creator: { handle: 'x.test' }, labels: [{ val: 'porn' }] },
+    { uri: 'at://did:plc:a/app.bsky.feed.generator/gore', displayName: 'Graphic Feed',
+      description: 'y', likeCount: 5, creator: { handle: 'y.test' }, labels: [{ val: 'graphic-media' }] },
+  ] }) });
+  // A guest has no preferences to mirror, so adult content is OFF (4a).
+  const feeds = await createLens({ transport }).discoverFeeds();
+  assert.deepEqual(feeds.map((f) => f.title), ['Garden Talk', 'Graphic Feed'],
+    'the adult feed is gone; a non-adult label with no pref against it is NOT hidden');
+  // A guest carries no contentLabelPref, so only the adult master switch fires.
+  // `graphic-media` therefore passes through unveiled — Forage invents no
+  // default warn the account never asked for. (Bluesky's own logged-out view
+  // does warn on it; whether to match that is an owner decision, not a silent
+  // one — see the plan's OQ5.)
+  assert.equal(feeds[1].warnLabels, undefined);
+  assert.equal(feeds[0].warnLabels, undefined);
+});
+
+test('4a: a JOINED adult feed drops out of the Fields list too — one rule on every feed surface', async () => {
+  const ADULT = 'at://did:plc:x/app.bsky.feed.generator/afterdark';
+  const CLEAN = 'at://did:plc:g/app.bsky.feed.generator/gardentalk';
+  const fetchHandler = async (path) => {
+    const json = (d) => ({ ok: true, status: 200, json: async () => d });
+    if (path.includes('getPreferences')) return json({ preferences: [{
+      $type: 'app.bsky.actor.defs#savedFeedsPrefV2',
+      items: [{ type: 'feed', value: CLEAN, pinned: true, id: '1' },
+              { type: 'feed', value: ADULT, pinned: true, id: '2' },
+              { type: 'timeline', value: 'following', pinned: true, id: '3' }] }] });
+    if (path.includes('getFeedGenerators')) return json({ feeds: [
+      { uri: CLEAN, displayName: 'Garden Talk', labels: [] },
+      { uri: ADULT, displayName: 'After Dark', labels: [{ val: 'porn' }] }] });
+    return { ok: false, status: 404, json: async () => ({}) };
+  };
+  const fields = await createLens({ session: { did: 'did:plc:me', handle: 'me.test', fetchHandler } }).fields();
+  assert.deepEqual(fields.map((f) => f.title), ['Garden Talk', 'Following'],
+    'the adult feed is gone from the sidebar; joining it earlier does not override the account setting');
+});
+
+test('4a: feedInfo carries the label verdict so a board header can veil its own feed', async () => {
+  const URI = 'at://did:plc:a/app.bsky.feed.generator/aaa111';
+  const transport = async () => ({ ok: true, status: 200, json: async () => ({ view: {
+    uri: URI, displayName: 'Graphic Feed', description: 'y', likeCount: 1,
+    creator: { handle: 'y.test' }, labels: [{ val: 'porn' }],
+  }, isOnline: true, isValid: true }) });
+  const info = await createLens({ transport }).feedInfo(URI);
+  assert.equal(info.hidden, true, 'adult-off means the board itself is a refusal, not a render');
+});
+
 test('3j/3s: joinFeed and favoriteFeed write through putPreferences and refuse without a session', async () => {
   const URI = 'at://did:plc:a/app.bsky.feed.generator/aaa111';
   await assert.rejects(() => createLens({}).joinFeed(URI), /session|sign/i);

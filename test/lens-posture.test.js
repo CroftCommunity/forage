@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   createLens, shapeLensPost, shapeLensFeed, buildPosture, facetSegments,
+  feedDisposition, EMPTY_POSTURE,
 } from '../js/substrates/lens.js';
 
 const SRC = { fieldId: 'lens:x', fieldSlug: 'x', fieldTitle: 'X' };
@@ -44,6 +45,59 @@ test('buildPosture reads muted words, label prefs, adult toggle, mutes, blocks',
   assert.equal(p.adultEnabled, false);
   assert.ok(p.mutedDids.has('did:plc:mutedguy'));
   assert.ok(p.blockedDids.has('did:plc:blockedguy'));
+});
+
+// ---- 4a: absent preference means adult content is OFF ----
+// The official lexicon (app.bsky.actor.defs#adultContentPref, verified live
+// 2026-08-26) declares `enabled` with DEFAULT FALSE. An account that never
+// touched the setting has adult content off, and a guest — who has no
+// preferences at all to mirror — must get the same answer. Owner direction
+// 2026-08-26: "logged out/guests should see no adult content by default."
+// There is no Forage-side toggle anywhere; the account's own setting is the
+// only source of truth, and its absence is a real answer, not a gap.
+
+test('4a: buildPosture with NO adultContentPref → adult OFF (the lexicon default)', () => {
+  const p = buildPosture({ preferences: [] }, NOW);
+  assert.equal(p.adultEnabled, false);
+});
+
+test('4a: buildPosture still honours an explicit enable', () => {
+  const p = buildPosture({ preferences: [
+    { $type: 'app.bsky.actor.defs#adultContentPref', enabled: true },
+  ] }, NOW);
+  assert.equal(p.adultEnabled, true);
+});
+
+test('4a: the GUEST posture is adult-off — no session, no preferences, no adult content', () => {
+  assert.equal(EMPTY_POSTURE.adultEnabled, false);
+});
+
+// ---- 4a: feed generators go through the SAME label rules as posts ----
+// A feed generator view carries `labels` exactly as a post does (3 of the top
+// 100 popular feeds carry `porn`, 2 carry `sexual` — measured 2026-08-26), and
+// discovery used to drop them on the floor.
+
+test('4a: feedDisposition hides an adult-labelled feed when the account has adult off', () => {
+  const view = { uri: 'at://did:plc:a/app.bsky.feed.generator/x', labels: [{ val: 'porn' }] };
+  assert.deepEqual(feedDisposition(view, posture({ adultEnabled: false })), { mode: 'hide' });
+});
+
+test('4a: feedDisposition obeys per-label prefs, and passes a clean feed', () => {
+  const warned = feedDisposition({ labels: [{ val: 'graphic-media' }] },
+    posture({ labelPrefs: new Map([['graphic-media', 'warn']]) }));
+  assert.deepEqual(warned, { mode: 'warn', labels: ['graphic-media'] });
+  const hidden = feedDisposition({ labels: [{ val: 'spam' }] },
+    posture({ labelPrefs: new Map([['spam', 'hide']]) }));
+  assert.deepEqual(hidden, { mode: 'hide' });
+  assert.equal(feedDisposition({ labels: [] }, posture()), null);
+});
+
+test('4a: a feed and a post with the same label reach the same verdict — ONE rule, not two', () => {
+  const pos = posture({ adultEnabled: false });
+  const post = shapeLensPost(mkPost({ labels: [{ val: 'sexual' }] }), SRC, pos);
+  const feed = feedDisposition({ labels: [{ val: 'sexual' }] }, pos);
+  assert.equal(post.hidden, true);
+  assert.deepEqual(feed, { mode: 'hide' });
 });
 
 // ---- muted words: targets, actorTarget, tags-vs-text ----

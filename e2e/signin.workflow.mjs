@@ -13,6 +13,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const fixture = (n) => JSON.parse(readFileSync(join(root, 'test/fixtures/atproto', `${n}.json`), 'utf8'));
 
 const WHATS_HOT = 'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot';
+const AFTER_DARK = 'at://did:plc:x/app.bsky.feed.generator/afterdark';
 
 const FAKE_MANAGER = `(() => {
   const KEY = 'w2.signed-in';
@@ -54,11 +55,25 @@ export async function run() {
       'describeRepo': { did: 'did:plc:w2test', handle: 'wtest.bsky.social', didDoc: {}, collections: [] },
       'getPreferences': { preferences: [{ $type: 'app.bsky.actor.defs#savedFeedsPrefV2',
         items: [{ type: 'feed', value: WHATS_HOT, pinned: false, id: '1' }, // 3s: joined, not favorited
+                // 4a: joined BEFORE adult content was off — membership is not
+                // consent, so it must still leave the sidebar.
+                { type: 'feed', value: AFTER_DARK, pinned: true, id: '3' },
                 { type: 'timeline', value: 'following', pinned: true, id: '2' }] }] },
-      'getFeedGenerators': { feeds: [{ uri: WHATS_HOT, displayName: "What's Hot", likeCount: 1 }] },
+      'getFeedGenerators': { feeds: [
+        { uri: WHATS_HOT, displayName: "What's Hot", likeCount: 1, labels: [] },
+        { uri: AFTER_DARK, displayName: 'After Dark', likeCount: 999, labels: [{ val: 'porn' }] }] },
       'getPopularFeedGenerators': { feeds: [
         { uri: 'at://did:plc:g/app.bsky.feed.generator/gardentalk', displayName: 'Garden Talk',
-          description: 'Post with #gardening to appear here.', likeCount: 12, creator: { handle: 'grower.test' } } ] },
+          description: 'Post with #gardening to appear here.', likeCount: 12, creator: { handle: 'grower.test' } },
+        // 4a: this account carries NO adultContentPref, which the lexicon says
+        // means adult content is off. The feed must not appear in discovery
+        // and its board must refuse — with no Forage-side toggle to re-reveal.
+        { uri: AFTER_DARK, displayName: 'After Dark',
+          description: 'adult stuff', likeCount: 999, creator: { handle: 'x.test' },
+          labels: [{ val: 'porn' }] } ] },
+      'getFeedGenerator?feed=at%3A%2F%2Fdid%3Aplc%3Ax': { view: { uri: 'at://did:plc:x/app.bsky.feed.generator/afterdark',
+        displayName: 'After Dark', description: 'adult stuff', likeCount: 999,
+        creator: { handle: 'x.test' }, labels: [{ val: 'porn' }] }, isOnline: true, isValid: true },
       'getFeedGenerator?': { view: { uri: WHATS_HOT, displayName: "What's Hot", description: 'the hot stuff',
         likeCount: 99, creator: { handle: 'bsky.app' } }, isOnline: true, isValid: true },
       'putPreferences': {},
@@ -123,6 +138,28 @@ export async function run() {
   await page.locator('[data-feed-search]').fill('garden');
   await page.locator('button:has-text("Search")').click();
   await page.waitForSelector('text=Garden Talk');
+
+  // 4a: the adult-labelled generator is absent from discovery entirely — the
+  // account never enabled adult content, so the posture hides it in the shape
+  // layer and no component ever sees it. There is deliberately NO toggle here.
+  assert.equal(await page.locator('text=After Dark').count(), 0,
+    'an adult-labelled feed does not surface for an account with adult content off');
+  assert.equal(await page.locator('[data-discover-feed]').count(), 1, 'exactly the clean feed remains');
+  assert.equal(await page.locator('input[type="checkbox"]:near(:text("adult"))').count(), 0,
+    'discovery offers no adult toggle of its own — the account setting is the only source of truth');
+
+  // 4a: it is gone from the sidebar too, even though the account JOINED it —
+  // membership does not override the account's moderation setting.
+  assert.equal(await page.locator('.side >> text=After Dark').count(), 0,
+    'a joined adult feed does not appear in Fields');
+
+  // 4a: and its board never paints. The slug never registers (nothing that can
+  // reach it survives the posture), so a direct URL lands on the unknown-source
+  // state rather than leaking the feed's content or name.
+  await page.goto(`${s.origin}/f/afterdark`);
+  await page.waitForSelector('text=Unknown lens Field');
+  assert.equal(await page.locator('[data-board-toolbar]').count(), 0, 'no board painted');
+  assert.equal(await page.locator('text=adult stuff').count(), 0, 'no description leaks either');
 
   // 3j: a feed board carries its header card, and Join writes preferences
   await page.goto(`${s.origin}/f/whats-hot`);

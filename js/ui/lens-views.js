@@ -521,12 +521,24 @@ export function lensFieldView(params) {
     }
   };
   const headerHost = el('div', {});
-  if (entry.source.kind === 'feed' && entry.source.uri) {
-    Promise.all([lens.feedInfo(entry.source.uri), ensureSavedFeeds()])
-      .then(([info]) => headerHost.replaceChildren(feedHeaderCard(info)))
-      .catch(() => {}); // the board still works without its card
-  }
-  lens.feed(entry.source, { title: entry.title }).then((f) => {
+  // 4a: for a FEED source the card is also the moderation gate — an
+  // adult-labelled generator must not paint its board when the account (or a
+  // guest, who has no preferences to mirror) has adult content off. Both reads
+  // fly in parallel and the paint waits on the pair, so the gate costs latency
+  // = max(info, feed), never sum, and there is no flash of gated content.
+  const isFeedSource = entry.source.kind === 'feed' && !!entry.source.uri;
+  const infoReady = isFeedSource
+    ? Promise.all([lens.feedInfo(entry.source.uri), ensureSavedFeeds()])
+        .then(([info]) => info)
+        .catch(() => null)   // the board still works without its card
+    : Promise.resolve(null);
+  Promise.all([infoReady, lens.feed(entry.source, { title: entry.title })]).then(([info, f]) => {
+    if (info?.hidden) {
+      main.replaceChildren(emptyState('This feed is hidden by your moderation settings',
+        'It carries an adult content label and your Bluesky account has adult content turned off. Forage mirrors that setting and adds no switch of its own — change it in your Bluesky settings if you want it back.'));
+      return;
+    }
+    if (info) headerHost.replaceChildren(feedHeaderCard(info));
     allPosts.push(...f.posts);
     nextCursor = f.cursor || null;
     main.replaceChildren(

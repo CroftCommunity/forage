@@ -26,7 +26,7 @@ const NSFW_LABELS = new Set(['porn', 'sexual', 'nudity', 'graphic-media', 'gore'
 const ADULT_LABELS = new Set(['porn', 'sexual', 'nudity', 'sexual-figurative']);
 
 export const EMPTY_POSTURE = Object.freeze({
-  mutedWords: [], labelPrefs: new Map(), adultEnabled: true,
+  mutedWords: [], labelPrefs: new Map(), adultEnabled: false,
   mutedDids: new Set(), blockedDids: new Set(), hideBadges: false,
 });
 
@@ -43,7 +43,7 @@ export function buildPosture({ preferences = [], mutes = [], blocks = [], listMu
   const verifPref = preferences.find((p) => t(p) === 'verificationPrefs');
   return {
     mutedWords, labelPrefs,
-    adultEnabled: adult ? !!adult.enabled : true,
+    adultEnabled: adult ? !!adult.enabled : false,
     mutedDids: new Set(mutes.map((u) => u.did)),
     blockedDids: new Set(blocks.map((u) => u.did)),
     hideBadges: !!verifPref?.hideBadges,
@@ -62,10 +62,12 @@ function mutedWordHits(w, post) {
   return false;
 }
 
-// Label disposition under the posture: 'hide' | 'warn' | null.
-function labelDisposition(post, posture) {
+// Label disposition under the posture: 'hide' | 'warn' | null. Takes anything
+// that carries atproto `labels` — a post view OR a feed-generator view; the
+// rules are identical by construction, which is the point (4a).
+function labelDisposition(labelled, posture) {
   let warn = null;
-  for (const l of post.labels || []) {
+  for (const l of labelled.labels || []) {
     if (ADULT_LABELS.has(l.val) && !posture.adultEnabled) return { mode: 'hide' };
     const v = posture.labelPrefs.get(l.val);
     if (v === 'hide') return { mode: 'hide' };
@@ -73,6 +75,13 @@ function labelDisposition(post, posture) {
   }
   return warn;
 }
+
+// 4a: the feed-facing name for the same rule. A feed generator publishes
+// `labels` exactly as a post does, and discovery used to drop them — so an
+// account with adult content off still saw adult-labelled feeds. There is no
+// Forage-side adult toggle: the account's imported posture decides, and for a
+// guest (EMPTY_POSTURE) the answer is off.
+export const feedDisposition = (view, posture) => labelDisposition(view, posture);
 
 // ---- 3f: facets are BYTE-indexed (UTF-8), not UTF-16 — decode via bytes ----
 // Returns [{text, facet?}] where facet = {type:'link'|'mention'|'tag', value}.
@@ -576,8 +585,12 @@ export function createLens({ session = null, transport = fetch } = {}) {
         ? (await get('app.bsky.feed.getFeedGenerators', Object.fromEntries(feedUris.map((u, i) => [`feeds[${i}]`, u])))).feeds || []
         : [];
       const titleOf = new Map(gens.map((g) => [g.uri, g.displayName]));
+      // 4a: the SAME label rule the boards and discovery use. A feed joined
+      // before the account turned adult content off still leaves the sidebar —
+      // membership is not consent, and there is no Forage-side override.
+      const hiddenUris = new Set(gens.filter((g) => feedDisposition(g, posture)?.mode === 'hide').map((g) => g.uri));
       const taken = new Set();
-      return items.map((i) => {
+      return items.filter((i) => !hiddenUris.has(i.value)).map((i) => {
         const slug = slugForSource(i.type === 'author' ? { kind: 'author', actor: i.value } : i.type === 'timeline' ? { kind: 'timeline' } : { kind: i.type, uri: i.value });
         const title = i.type === 'timeline' ? 'Following' : titleOf.get(i.value) || i.value.split('/').pop();
         // the human alias: first feed with a name keeps it; a collision (or a
@@ -726,22 +739,33 @@ export function createLens({ session = null, transport = fetch } = {}) {
     async feedInfo(uri) {
       const data = await get('app.bsky.feed.getFeedGenerator', { feed: uri });
       const v = data.view || {};
+      const disp = feedDisposition(v, posture);
       return {
         uri: v.uri, title: v.displayName || v.uri?.split('/').pop(), description: v.description || '',
         avatar: v.avatar || null, likeCount: v.likeCount ?? 0,
         creator: v.creator?.handle || '[unknown]',
         online: data.isOnline !== false, valid: data.isValid !== false,
+        ...(disp?.mode === 'hide' ? { hidden: true } : {}),
+        ...(disp?.mode === 'warn' ? { warnLabels: disp.labels } : {}),
       };
     },
 
     // 3j: discovery — popular generators, optionally searched. Unauth-200
     // (probe-verified), so guests browse too.
+    // 4a: the account's posture applies HERE, in the shape layer, exactly as it
+    // does to posts — a hidden feed never reaches a component, so there is
+    // nothing for a discovery-local toggle to re-reveal.
     async discoverFeeds({ query, limit = 30 } = {}) {
       const data = await get('app.bsky.unspecced.getPopularFeedGenerators', { limit, query });
-      return (data.feeds || []).map((f) => ({
-        uri: f.uri, title: f.displayName || f.uri.split('/').pop(), description: f.description || '',
-        avatar: f.avatar || null, likeCount: f.likeCount ?? 0, creator: f.creator?.handle || '[unknown]',
-      }));
+      return (data.feeds || []).map((f) => {
+        const disp = feedDisposition(f, posture);
+        return {
+          uri: f.uri, title: f.displayName || f.uri.split('/').pop(), description: f.description || '',
+          avatar: f.avatar || null, likeCount: f.likeCount ?? 0, creator: f.creator?.handle || '[unknown]',
+          ...(disp?.mode === 'hide' ? { hidden: true } : {}),
+          ...(disp?.mode === 'warn' ? { warnLabels: disp.labels } : {}),
+        };
+      }).filter((f) => !f.hidden);
     },
 
     // 3j: join / leave a feed — the SECOND lens write (preferences, not
