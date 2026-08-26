@@ -656,7 +656,7 @@ export function aboutView() {
   }
   main.append(el('p', { class: 'small muted', style: 'margin-top:16px' },
     'Related: ', el('a', { href: '/frontiers' }, 'Frontiers'), ' (what v1 defers) and ',
-    el('a', { href: '/settings' }, 'Preferences'), ' (theme, comment threshold, default sort).'));
+    el('a', { href: '/settings' }, 'Preferences'), ' (skin, comment threshold, default sort).'));
   return { main, side: null };
 }
 

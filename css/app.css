@@ -17,6 +17,36 @@ body {
 }
 a { color: var(--link); text-decoration: none; }
 a:hover { text-decoration: underline; color: var(--link-hover); }
+
+/* WCAG 1.4.1 (Use of Color): a link sitting inside a run of text has to be
+   distinguishable by more than colour. Forage's default is
+   `text-decoration: none`, which is right for CHROME links — nav, tabs,
+   buttons, the wordmark — where position and shape carry the affordance, and
+   where an underline would strike through every control on the page. It is
+   wrong for a link inside prose, where colour is the only cue left.
+
+   So: scoped to prose containers rather than inverting the global default.
+   The containers below are the ones a census of every link in the app found
+   holding text AROUND a link (e2e/a11y-skins.workflow.mjs enforces the result;
+   the `link-in-text-block` exclusion it used to carry is gone). Standalone
+   links — a post title, a settings row value, a heading — are their block's
+   entire content, are not "in a text block", and stay bare.
+
+   `.stack > div:not(.row)` is deliberately narrow. The first attempt was
+   `.stack > div`, which also caught the Fields sidebar: that list is
+   `div.row.spread` holding a link and a member count pushed apart, i.e.
+   NAVIGATION, and axe never flagged it. Underlining a whole nav list is the
+   noise this rule exists to avoid. The lens browse row is a bare div where a
+   descriptive span follows the link in one run of text, and that one does
+   qualify. */
+p a,
+.clamp a,
+.comment-text a,
+.collapse-note a,
+.notice a,
+.empty a,
+.frontier-item a,
+.stack > div:not(.row) > a { text-decoration: underline; }
 button { font-family: inherit; }
 h1, h2, h3 { font-family: var(--font-display); font-weight: 600; line-height: 1.2; }
 h1 { font-size: var(--t-xl); margin: 0 0 var(--s3); }
