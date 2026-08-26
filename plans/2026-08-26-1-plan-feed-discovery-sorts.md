@@ -1,9 +1,9 @@
 # Plan: sorting, filtering and time windows — for feed discovery and for boards
 
 date: 2026-08-26
-status: IN PROGRESS — research filed; **4a–4e SHIPPED**; DL-027/028/029 landed.
-4f (`/f/` budgeted deepening) next; 4g still gated on OQ2.
-Gate green: 329 unit tests, 5/5 workflows.
+status: **4a–4f SHIPPED** — everything in this plan that is not gated on an owner
+decision. 4g (Constellation) remains blocked on OQ2; OQ3–OQ5 open.
+Gate green: 333 unit tests, 5/5 workflows. DL-027/028/029 landed.
 Execution in worktrees/forage/feed-discovery-sorts (branch claude/feed-discovery-sorts)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `f08fa9d` (clean tree)
@@ -420,7 +420,18 @@ loaded posts" line must NOT render on this path — it would now be a lie. Needs
 tolerance (below) because `/f/` and `/h/` boards no longer mean the same thing by
 "Top."
 
-**4f — `/f/` budgeted deepening.** Page `getFeed` until the window is covered or a
+**4f — `/f/` budgeted deepening. ✅ SHIPPED 2026-08-26.**
+Landed as: `lens.deepen(source, { toHours, maxPages = 8, timeoutMs })` pages backwards,
+de-duplicating (a generator may repeat a post across pages), and returns one of three
+verdicts the board reads out verbatim: **covered** ("ranked every post this feed served
+in the last week"), **exhausted** ("this feed only goes back 40h — that is everything
+it has"), **budget** ("this feed posts faster than we can page: ranked the last 15h of
+it, not the whole week"). A page that fails ends the walk with what it has rather than
+throwing the board away — deep paging is measurably unreliable (two feeds errored
+mid-run in D4). The /f/ board never renders the whole-corpus note; that belongs to the
+surface that earned it. 4 unit tests + a journey segment. Original description follows.
+
+ Page `getFeed` until the window is covered or a
 budget (pages + wall-clock) is hit, then sort locally and report which of the three
 outcomes happened (D4). Exhausted and budget-hit get distinct words.
 

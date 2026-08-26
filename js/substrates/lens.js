@@ -945,6 +945,50 @@ export function createLens({ session = null, transport = fetch } = {}) {
       return out;
     },
 
+    // 4f: widen a /f/ board's window by paging BACKWARDS, on a budget. A
+    // generator publishes no window lever (getFeedSkeleton takes only limit and
+    // cursor — DL-028), so this is the only way, and its cost varies by two
+    // orders of magnitude between feeds: measured, Astronomy covered 24h in ONE
+    // page while Blacksky reached 3.6h in forty. Deep paging is also not
+    // reliable — two feeds errored mid-run — so a page that fails ends the walk
+    // with what we have rather than throwing the board away.
+    //
+    // Three honest endings, and the caller renders whichever happened:
+    //   covered   — we reached past the requested window
+    //   exhausted — the feed ran out first (not a failure: it has no more)
+    //   budget    — it posts faster than we can page
+    async deepen(source, { toHours, nowMs = Date.now(), maxPages = 8, timeoutMs = 12000 } = {}) {
+      const wantMs = toHours * 3600_000;
+      const seen = new Set();
+      const posts = [];
+      let cursor;
+      let pages = 0;
+      let reachedMs = 0;
+      let outcome = 'budget';
+      const started = Date.now();
+      while (pages < maxPages) {
+        let batch;
+        try {
+          batch = await withTimeout(this.feed(source, { cursor }), timeoutMs);
+        } catch {
+          // a page that will not load ends the walk with what we already have
+          break;
+        }
+        pages += 1;
+        for (const p of batch.posts) {
+          if (seen.has(p.id)) continue;
+          seen.add(p.id);
+          posts.push(p);
+        }
+        if (posts.length) reachedMs = Math.max(...posts.map((p) => nowMs - p.createdTs));
+        cursor = batch.cursor;
+        if (!cursor || !batch.posts.length) { outcome = 'exhausted'; break; }
+        if (reachedMs >= wantMs) { outcome = 'covered'; break; }
+        if (Date.now() - started > timeoutMs) break;
+      }
+      return { posts, cursor, pages, outcome, reachedHours: Math.round(reachedMs / 3600_000) };
+    },
+
     // 4d: one getFeed per feed, limit=1 — freshness needs the newest post, not
     // a page. Same bounded-concurrency, announce-as-it-lands shape as 4c.
     async liveness(uris, { nowMs = Date.now(), onState, concurrency = 8, timeoutMs = 8000 } = {}) {

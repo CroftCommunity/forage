@@ -120,7 +120,11 @@ export async function run() {
       'getListMutes': { lists: [] },
       'getListBlocks': { lists: [] },
 
-      'getFeed': fixture('wide-getFeed'),
+      // 4f: the /f/ board widens by paging backwards. This feed answers with a
+      // cursor, so the walk continues; the fixture's posts are old enough that
+      // one more page reaches past 24h and the walk ends COVERED.
+      [`getFeed?feed=${enc(WHATS_HOT)}&limit=30&cursor=`]: fixture('wide-getFeed'),
+      'getFeed': { ...fixture('wide-getFeed'), cursor: 'page2' },
     },
   });
   const { page } = s;
@@ -250,6 +254,28 @@ export async function run() {
   await page.goto(`${s.origin}/f/whats-hot`);
   await page.waitForSelector('[data-feed-header]');
   await page.waitForSelector('text=Curated by @bsky.app.');
+  // 4f: Top + a window on a /f/ board pages BACKWARDS on a budget and reports
+  // which of the three ways it ended — covered, exhausted, or out of budget.
+  // A generator has no server window (DL-028), so this is the honest substitute.
+  await page.locator('[data-board-toolbar] select').first().selectOption('top');
+  await page.waitForSelector('[data-deepen]');
+  await page.waitForFunction(() => {
+    const t = document.querySelector('[data-deepen]')?.textContent || '';
+    return t && !t.includes('Widening');
+  });
+  const verdict = await page.locator('[data-deepen]').textContent();
+  assert.ok(/ranked|goes back|faster than we can page/i.test(verdict),
+    `the board says how the widening ended, got: ${verdict}`);
+  // the distinction from /h/: a /f/ board NEVER claims whole-corpus scope. It
+  // either carries the loaded-window caveat or says nothing fell in the window
+  // — but the server-ranked note belongs only to the surface that earned it.
+  assert.equal(await page.locator('[data-whole-corpus]').count(), 0,
+    'a /f/ board never claims the whole-corpus scope /h/ has');
+  const board = await page.locator('#main, main, body').first().innerText();
+  assert.ok(/Sorted within the loaded posts|Nothing in the loaded posts/.test(board),
+    'it says which posts it ranked, one way or the other');
+  await page.locator('[data-board-toolbar] select').first().selectOption('feed');
+
   // 3s: Favorite is its own control — pinning is the top row of the official
   // app, joining is the list. Forage must not conflate them.
   const star = page.locator('[data-feed-favorite]');

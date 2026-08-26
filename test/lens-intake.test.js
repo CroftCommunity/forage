@@ -309,6 +309,71 @@ test('3j: discoverFeeds lists popular generators and searches by query; guests g
   assert.ok(calls[1].includes('query=garden'), 'the query rides through');
 });
 
+// ---- 4f: /f/ boards deepen on a BUDGET, and say which way it ended ----
+// A generator has no window lever (getFeedSkeleton takes only limit/cursor —
+// DL-028), so the only way to widen a /f/ board's window is to page backwards.
+// Measured cost varies by 100x (plan D4): Astronomy covered 24h in 1 page,
+// Blacksky reached 3.6h in 40 pages. So the honest shape is a budget plus a
+// verdict the UI can read out.
+
+const feedPage = (rkeys, nowMs, hoursAgo, cursor) => ({
+  feed: rkeys.map((k, i) => ({ post: {
+    uri: `at://did:plc:a/app.bsky.feed.post/${k}`, cid: `c${k}`,
+    author: { did: 'did:plc:a', handle: 'a.test' },
+    record: { text: k, createdAt: new Date(nowMs - (hoursAgo + i) * 3600_000).toISOString() },
+    indexedAt: new Date(nowMs - (hoursAgo + i) * 3600_000).toISOString(),
+    likeCount: 1, replyCount: 0,
+  } })),
+  ...(cursor ? { cursor } : {}),
+});
+
+test('4f: deepen stops as soon as the window is COVERED', async () => {
+  const now = Date.parse('2026-08-26T12:00:00Z');
+  const pages = [feedPage(['a', 'b'], now, 1, 'p2'), feedPage(['c', 'd'], now, 30, 'p3')];
+  let n = 0;
+  const transport = async () => ({ ok: true, status: 200, json: async () => pages[n++] });
+  const out = await createLens({ transport })
+    .deepen({ kind: 'feed', uri: 'at://x' }, { toHours: 24, nowMs: now, maxPages: 8 });
+  assert.equal(out.outcome, 'covered');
+  assert.equal(out.pages, 2, 'it stops the moment it reaches past the window, not at the budget');
+  assert.equal(out.posts.length, 4);
+  assert.ok(out.reachedHours >= 24);
+});
+
+test('4f: deepen reports EXHAUSTED when the feed simply runs out', async () => {
+  const now = Date.parse('2026-08-26T12:00:00Z');
+  const transport = async () => ({ ok: true, status: 200, json: async () => feedPage(['a', 'b'], now, 1) });
+  const out = await createLens({ transport })
+    .deepen({ kind: 'feed', uri: 'at://x' }, { toHours: 168, nowMs: now, maxPages: 8 });
+  assert.equal(out.outcome, 'exhausted', 'the feed has no more to give — that is not a failure');
+  assert.equal(out.pages, 1);
+});
+
+test('4f: deepen reports BUDGET when the feed posts faster than we can page', async () => {
+  const now = Date.parse('2026-08-26T12:00:00Z');
+  let i = 0;
+  const transport = async () => {
+    const p = feedPage([`a${i}`, `b${i}`], now, i * 0.1, `cur${i}`);
+    i += 1;
+    return { ok: true, status: 200, json: async () => p };
+  };
+  const out = await createLens({ transport })
+    .deepen({ kind: 'feed', uri: 'at://x' }, { toHours: 168, nowMs: now, maxPages: 3 });
+  assert.equal(out.outcome, 'budget');
+  assert.equal(out.pages, 3);
+  assert.ok(out.reachedHours < 168, 'and it says how far it actually got');
+});
+
+test('4f: deepen de-duplicates posts that repeat across pages', async () => {
+  const now = Date.parse('2026-08-26T12:00:00Z');
+  const pages = [feedPage(['a', 'b'], now, 1, 'p2'), feedPage(['b', 'c'], now, 30, undefined)];
+  let n = 0;
+  const transport = async () => ({ ok: true, status: 200, json: async () => pages[n++] });
+  const out = await createLens({ transport })
+    .deepen({ kind: 'feed', uri: 'at://x' }, { toHours: 24, nowMs: now, maxPages: 8 });
+  assert.equal(out.posts.length, 3, 'a generator may repeat a post across pages; the board must not');
+});
+
 // ---- 4e: /h/ boards get a TRUE top window, not a re-sort of what loaded ----
 // searchPosts takes sort=top|latest plus since/until SERVER-SIDE (probed with a
 // session 2026-08-26, plan D3), so "Top · this week" on a hashtag board is one

@@ -527,6 +527,32 @@ export function lensFieldView(params) {
     }
   };
   const headerHost = el('div', {});
+  // 4f: a /f/ board has no server window (DL-028), so "Top · this week" widens
+  // by paging backwards on a budget and then says which of the three ways it
+  // ended. The note is part of the answer, not decoration.
+  const deepNote = el('div', { class: 'xs muted', style: 'padding:6px', 'data-deepen': '1' });
+  let deepening = false;
+  const deepen = () => {
+    if (deepening || boardSort !== 'top' || boardTimeframe === 'all') { deepNote.replaceChildren(''); return; }
+    const hours = { day: 24, week: 168, month: 720, year: 8760 }[boardTimeframe];
+    deepening = true;
+    deepNote.replaceChildren(`Widening to the last ${boardTimeframe}…`);
+    lens.deepen(entry.source, { toHours: hours, nowMs: Date.now() })
+      .then((out) => {
+        allPosts.length = 0;
+        allPosts.push(...out.posts);
+        nextCursor = out.cursor || null;
+        repaint();
+        deepNote.replaceChildren(
+          out.outcome === 'covered'
+            ? `Ranked every post this feed served in the last ${boardTimeframe} (${out.pages} page${out.pages === 1 ? '' : 's'}).`
+            : out.outcome === 'exhausted'
+              ? `This feed only goes back ${out.reachedHours}h — that is everything it has, ranked.`
+              : `This feed posts faster than we can page: ranked the last ${out.reachedHours}h of it, not the whole ${boardTimeframe}.`);
+      })
+      .catch((e) => deepNote.replaceChildren(`Could not widen the window: ${e.message}`))
+      .finally(() => { deepening = false; });
+  };
   // 4a: for a FEED source the card is also the moderation gate — an
   // adult-labelled generator must not paint its board when the account (or a
   // guest, who has no preferences to mirror) has adult content off. Both reads
@@ -554,8 +580,9 @@ export function lensFieldView(params) {
           chip('likes-only scores (DL-011)'),
           chip('ranking: feed order (DL-010)'))),
       headerHost,
-      boardToolbar(repaint),
+      boardToolbar(() => { repaint(); deepen(); }),
       f.posts.length ? card : emptyState('Nothing here', 'This source returned no posts.'),
+      deepNote,
       moreHost);
     repaint();
     // thread links: lens posts route through #/p?uri=
