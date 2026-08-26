@@ -54,56 +54,45 @@ const EXCLUDED_RULES = [];
 export async function run() {
   const failures = [];
 
-  for (const id of Object.keys(SKINS)) {
-    const s = await scenario('seeded', {
-      initScripts: [`try { localStorage.setItem('forage.skin', ${JSON.stringify(id)}); } catch {}`],
-    });
+  // ONE browser per population, not one per skin. This used to open a fresh
+  // scenario for each of the seven skins in each of two populations — fourteen
+  // chromium launches and fourteen servers, before the next workflow in the
+  // sequential runner even started. The skin is applied by the pre-paint boot
+  // script from localStorage, so switching it is a setItem plus a reload, which
+  // exercises exactly the same path a returning visitor takes.
+  const populations = [
+    { name: 'memory', state: 'seeded', mode: undefined, paths: SURFACES },
+    { name: 'lens', state: 'first-visit', mode: 'bluesky', paths: LENS_SURFACES },
+  ];
+
+  for (const pop of populations) {
+    const s = await scenario(pop.state, pop.mode ? { mode: pop.mode } : {});
     try {
-      for (const path of SURFACES) {
-        await s.page.goto(`${s.origin}${path}`);
-        await s.page.waitForSelector('.masthead');
-        // The skin sheet is injected pre-paint for non-default skins; wait for
-        // it so axe never measures the unskinned page and reports a pass that
-        // belongs to a different palette.
-        if (SKINS[id].file) await s.page.waitForSelector('link#skin-sheet', { state: 'attached' });
+      for (const id of Object.keys(SKINS)) {
+        for (const path of pop.paths) {
+          await s.page.goto(`${s.origin}${path}`);
+          await s.page.evaluate((skin) => localStorage.setItem('forage.skin', skin), id);
+          await s.page.reload();
+          await s.page.waitForSelector('.masthead');
+          // Non-default skins load a sheet; wait for it, or axe measures the
+          // unskinned page and reports a pass belonging to another palette.
+          if (SKINS[id].file) await s.page.waitForSelector('link#skin-sheet', { state: 'attached' });
 
-        const res = await new AxeBuilder({ page: s.page })
-          .withTags(['wcag2a', 'wcag2aa'])
-          .analyze();
+          const res = await new AxeBuilder({ page: s.page })
+            .withTags(['wcag2a', 'wcag2aa'])
+            .analyze();
 
-        for (const v of res.violations) {
-          if (EXCLUDED_RULES.includes(v.id)) continue;
-          for (const node of v.nodes) {
-            failures.push(`${id} ${path}  ${v.id}  ${node.target.join(' ')}\n      ` +
-              (node.any?.[0]?.message ?? v.help).replace(/\s+/g, ' ').slice(0, 150));
+          for (const v of res.violations) {
+            if (EXCLUDED_RULES.includes(v.id)) continue;
+            for (const node of v.nodes) {
+              failures.push(`${id} (${pop.name}) ${path}  ${v.id}  ${node.target.join(' ')}\n      ` +
+                (node.any?.[0]?.message ?? v.help).replace(/\s+/g, ' ').slice(0, 150));
+            }
           }
         }
       }
     } finally {
       await s.close();
-    }
-
-    // The lens population, which is what production actually shows first.
-    const lens = await scenario('first-visit', {
-      mode: 'bluesky',
-      initScripts: [`try { localStorage.setItem('forage.skin', ${JSON.stringify(id)}); } catch {}`],
-    });
-    try {
-      for (const path of LENS_SURFACES) {
-        await lens.page.goto(`${lens.origin}${path}`);
-        await lens.page.waitForSelector('.masthead');
-        if (SKINS[id].file) await lens.page.waitForSelector('link#skin-sheet', { state: 'attached' });
-        const res = await new AxeBuilder({ page: lens.page }).withTags(['wcag2a', 'wcag2aa']).analyze();
-        for (const v of res.violations) {
-          if (EXCLUDED_RULES.includes(v.id)) continue;
-          for (const node of v.nodes) {
-            failures.push(`${id} (lens) ${path}  ${v.id}  ${node.target.join(' ')}\n      ` +
-              (node.any?.[0]?.message ?? v.help).replace(/\s+/g, ' ').slice(0, 150));
-          }
-        }
-      }
-    } finally {
-      await lens.close();
     }
   }
 
