@@ -7,7 +7,7 @@
 // sign-in survives reloads. The lens consumes { did, handle, fetchHandler }.
 
 import { el, timeAgo, fmtScore } from '../util.js';
-import { postRow, commentNode, skeleton, emptyState, toast } from './components.js';
+import { postRow, commentNode, voteBox, skeleton, emptyState, toast } from './components.js';
 import { createLens, LENS_PERMS, RING_CAP, facetSegments } from '../substrates/lens.js';
 import { initSession } from '../auth/session.js';
 
@@ -286,9 +286,22 @@ export function lensFieldView(params) {
       el('h1', {}, entry.title),
       chip('ranking: the feed’s own order (DL-010)', 'The generator ranks; our hot/top do not apply here')),
     skeleton(6));
+  const renderPage = (f, card) => {
+    for (const p of f.posts) card.append(lensRow(p));
+    if (f.cursor) {
+      const more = el('button', { class: 'btn sm', style: 'margin:8px' }, 'More');
+      more.addEventListener('click', () => {
+        more.remove();
+        lens.feed(entry.source, { title: entry.title, cursor: f.cursor })
+          .then((next) => renderPage(next, card))
+          .catch((e) => toast('More failed: ' + e.message, 'err'));
+      });
+      card.append(more);
+    }
+  };
   lens.feed(entry.source, { title: entry.title }).then((f) => {
     const card = el('div', { class: 'card' });
-    for (const p of f.posts) card.append(lensRow(p));
+    renderPage(f, card);
     main.replaceChildren(
       el('div', { class: 'row spread wrap' },
         el('h1', {}, entry.title),
@@ -315,7 +328,7 @@ function quoteNode(node) {
       el('span', { title: 'A quote-response: this author quoted the post above' }, '❝ '),
       node.author ? el('a', { href: `https://bsky.app/profile/${node.author}`, target: '_blank', rel: 'noopener noreferrer' }, node.author) : '[muted]',
       el('span', { class: 'muted' }, ` quoted this · ${timeAgo(node.createdTs)} ago · ${fmtScore(node.score)} likes`)),
-    el('div', { class: 'cbody' }, node.body),
+    el('div', { class: 'cbody' }, node.maskedRemoved ? el('span', { class: 'muted' }, node.title || '[muted]') : node.body),
     el('div', { class: 'xs' },
       el('a', { href: `#/lens/p?uri=${encodeURIComponent(node.quoteUri)}` }, 'open its thread ↳')));
 }
@@ -381,7 +394,9 @@ export function lensThreadView(params, query) {
   const main = el('div', {}, skeleton(8));
   lens.thread(uri, src).then((t) => {
     const p = t.post;
-    const head = el('div', { class: 'card' },
+    const head = el('div', { class: 'card', style: 'display:flex;gap:10px' },
+      voteBox('post', p.id, p, !!session, 'col', lensVote(p)),
+      el('div', {},
       el('div', { class: 'row wrap', style: 'gap:6px' },
         el('a', { href: `#/lens/f/${src.fieldSlug}`, class: 'xs' }, `f/${src.fieldSlug}`),
         p.nsfw ? el('span', { class: 'chip badge-nsfw' }, 'NSFW') : null),
@@ -391,8 +406,9 @@ export function lensThreadView(params, query) {
         ` · ${fmtScore(p.score)} likes · ${timeAgo(p.createdTs)} ago · ${p.commentCount} replies`),
       p.quoted ? quotedContext(p.quoted) : null,
       t.quotesFailed ? el('div', { class: 'row', style: 'gap:6px;margin-top:6px' },
-        chip(`${t.quoteCount} quote${t.quoteCount === 1 ? '' : 's'} — couldn't fetch`, 'getQuotes failed; replies still render. Reload to retry.')) : null);
-    const ctx = { ...LENS_PERMS, locked: true }; // read-only: reply/vote/save/mod all gate
+        chip(`${t.quoteCount} quote${t.quoteCount === 1 ? '' : 's'} — couldn't fetch`, 'getQuotes failed; replies still render. Reload to retry.')) : null));
+    const ctx = { ...LENS_PERMS, locked: true, // read-only: reply/vote/save/mod all gate
+      authorHref: (n) => `https://bsky.app/profile/${n.author}` }; // 3d: authors link OUT (the tenet)
     const commentsCard = el('div', { class: 'card' });
     for (const node of t.comments) {
       commentsCard.append(node.kind === 'quote' ? quoteNode(node) : commentNode(node, ctx));

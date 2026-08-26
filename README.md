@@ -102,6 +102,16 @@ Above the header, dashed to mark it as scaffolding:
 | Volunteer moderator | **Steward** |
 | Public mod log | **Audit log** |
 
+## The front door
+
+forage.fyi lands on the **Bluesky view** (`#/lens`): live network content,
+topic-first, no account needed. Signed in (OAuth), the **ring dial** chooses how
+far out your world goes — World / Following / Mutuals / Mutuals +1 (capped at 25
+with honest overflow) — boosts are real likes, threads continue through replies
+AND quotes, your account's moderation posture applies everywhere, `#tags` open
+`/h/` boards, and the trending rail opens topics as feed streams. The front-door
+preference (Settings) is device-local; the memory sandbox is one setting away.
+
 ## Modes
 
 The running app has **modes** — named routing tables over the same capabilities

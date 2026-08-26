@@ -169,7 +169,7 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
     removed: false, deleted: false,
     ups: p.ups, downs: 0, score: p.score, myVote: p.myVote, saved: false,
     body: p.body, author: p.author, authorId: p.authorId,
-    ...(p.maskedRemoved ? { maskedRemoved: true } : { removedReason: '' }),
+    ...(p.maskedRemoved ? { maskedRemoved: true, title: p.title } : { removedReason: '' }),
     depth,
     autoCollapsed: false,
     children: [], deferred: 0,
