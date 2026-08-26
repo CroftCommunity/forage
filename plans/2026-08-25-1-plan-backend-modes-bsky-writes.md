@@ -501,20 +501,30 @@ silently absent.
 **Write-set:** `e2e/` (new), `package.json`, `.github/workflows/ci.yml`,
 `README.md`/`AGENTS.md` verification lines (multi-commit, ≤3 per slice).
 
-**The corpus plan (one workflow per phase capstone, landing WITH its phase):**
-- **W2 (at 2c):** sign-in journey on the shim (faked session-module boundary:
-  signed-out → pending → signed-in → sign-out, identity in the masthead); the
-  REAL loopback OAuth round-trip stays 2c's live validation.
-- **W3 (at 3d):** the capstone smoke SCRIPTED — guest front door → thread with
-  quote-continuation → signed-in ring dial → board renders → boost optimistic
-  flip (shim asserts the like-create call shape) → muted word masks → trending
-  rail opens a topic → guest `/h/` refusal with words. The live variant remains
-  the credentialed manual smoke.
-- **W4 (at 4b):** skin swap → persists across reload → applies across modes →
-  default skin byte-identical look (token check).
-- **W5 (at phase-5 split):** the BBS journey against the LOCAL Docker spaces
-  PDS (a third backend: real PDS, hermetic-ish, `DOCKER=1` opt-in) — create/
-  join → post → member reads → outsider refused.
+**The corpus convention (user-upgraded 2026-08-25: "maybe even we should try to
+do some for every milestone/feature"):** every unit that ships USER-VISIBLE
+behavior either adds a workflow scenario or extends an existing journey file —
+named in the unit's spec, landing WITH the unit, segment RED-first. Pure-internal
+units record "no workflow surface" instead. This is the browser-level sibling of
+AGENTS.md invariant 6 (every mutation lands with a contract scenario); 1d adds
+the convention line to AGENTS.md so it outlives this plan. The contract-level
+`scenarios/` library keeps growing in parallel (BBS mode brings its own). The
+corpus is JOURNEY files that grow, not one file per feature:**
+- `mode-roundtrip.workflow.mjs` — lands at 1d (W1); 1c's control mirrors in it.
+- `signin.workflow.mjs` — lands at 2c (W2): signed-out → pending → signed-in →
+  sign-out over the faked session boundary; the REAL loopback round-trip stays
+  2c's live validation.
+- `bluesky-view.workflow.mjs` — GROWS unit by unit: 3b adds the dial→board
+  segment; 3c the boost optimistic-flip (shim asserts the like-create call
+  shape); 3e the quote-continued thread; 3f the muted-word mask + verified
+  badge; 3g the trending rail + guest `/h/` refusal; 3d the front-door arc that
+  strings them together (W3 complete). The live variant remains the
+  credentialed manual capstone smoke.
+- `skins.workflow.mjs` — 4a the swap/persist mechanism; 4b per-skin cross-mode
+  application (W4).
+- `bbs.workflow.mjs` — at the phase-5 split, against the LOCAL Docker spaces
+  PDS (third backend, `DOCKER=1` opt-in): create/join → post → member reads →
+  outsider refused (W5).
 - **Phase 6:** the full corpus green (headless subset in CI) is part of the
   close-out gate.
 
@@ -1067,3 +1077,14 @@ Fitness rule recorded: needs real Bluesky → LIVE-only (never CI); else shim.
 Decisions: `@playwright/test` becomes a devDependency (runtime stays zero-dep;
 Stryker precedent) and ci.yml gains a browser lane — both flagged to the user in
 chat, override open. Spine and Documentation Impact updated (1d inserted).
+
+### Corpus convention upgraded to per-unit — 2026-08-25
+User confirmed both 1d decisions (Playwright devDep, CI browser lane) and raised
+the cadence: workflow scenarios for every milestone/feature, not just phase
+capstones. Recorded as a convention in 1d — every user-visible unit adds or
+extends a journey file, segment RED-first, landing with the unit; internal units
+record "no workflow surface". Corpus restructured from capstone-workflows to
+GROWING JOURNEY FILES (bluesky-view.workflow.mjs accretes a segment per phase-3
+unit rather than landing whole at 3d). The convention goes into AGENTS.md at 1d
+as the browser-level sibling of invariant 6, so it outlives this plan; the
+contract-level scenarios/ library keeps growing in parallel.
