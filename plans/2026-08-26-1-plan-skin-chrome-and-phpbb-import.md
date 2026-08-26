@@ -651,6 +651,14 @@ printed rather than inferred.
 
 **Goal:** Prove the skin path at browser level (invariant 6b).
 **Changes:**
+- [ ] **Trap, recorded ahead of time (peer session, 2026-08-26):** if this phase adds
+      `@axe-core/playwright` (the workspace WEB-TESTING dimension specifies
+      "Playwright `^1.61.1` + axe"), it pulls its own `playwright-core`, which npm
+      hoists to 1.62.0 while `@playwright/test` nests 1.61.1 — two copies whose `Page`
+      types are incompatible under `exactOptionalPropertyTypes`. Fix is
+      `overrides: {"playwright-core": "1.61.1"}` in `package.json`. forage has no
+      axe-core today, so the trap is dormant until this phase springs it. Adding the
+      override moves `package.json` into this phase's write-set (1 file → 2).
 - [ ] **Extend** `e2e/skins.workflow.mjs` — it already exists (verified 2026-08-26);
       this phase adds the `phpbb` case: select → applies → persists across reload →
       applies in another mode. Hermetic tier only; never live (workspace WEB-TESTING).
