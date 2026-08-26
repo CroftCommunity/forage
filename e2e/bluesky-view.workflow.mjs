@@ -1,8 +1,9 @@
 // W3 — the Bluesky-view journey. GROWS a segment per phase-3 unit:
 //   3b: signed-in ring dial → merged mutuals board
 //   3c: boost = like (optimistic flip; the write's exact shape asserted)
-// Later units append: quote-continued thread (3e), masking + verification
-// (3f), trending + /h/ (3g), the front-door arc (3d).
+//   3e: a thread where a reply AND a quote are one continuation
+// Later units append: masking + verification (3f), trending + /h/ (3g), the
+// front-door arc (3d).
 import assert from 'node:assert/strict';
 import { scenario } from './harness/scenario.mjs';
 
@@ -43,6 +44,11 @@ export async function run() {
       'getAuthorFeed?actor=did%3Aplc%3Abb': { feed: [post('b1', 'did:plc:bb', '2026-08-25T11:00:00Z')] },
       'com.atproto.repo.createRecord': { uri: 'at://did:plc:me/app.bsky.feed.like/3w3like', cid: 'lc' },
       'com.atproto.repo.deleteRecord': {},
+      'getPostThread': { thread: {
+        post: { ...post('b1', 'did:plc:bb', '2026-08-25T11:00:00Z').post, quoteCount: 1 },
+        replies: [{ post: post('reply1', 'did:plc:aa', '2026-08-25T11:30:00Z').post, replies: [] }],
+      } },
+      'getQuotes': { posts: [post('quote1', 'did:plc:cc', '2026-08-25T12:00:00Z').post] },
     },
   });
   const { page } = s;
@@ -79,6 +85,15 @@ export async function run() {
   await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('deleteRecord')));
   const del = await page.evaluate(() => JSON.parse(window.__shimHits.find((h) => h.url.includes('deleteRecord')).body));
   assert.deepEqual(del, { repo: 'did:plc:me', collection: 'app.bsky.feed.like', rkey: '3w3like' });
+
+  // 3e segment: open b1's thread — reply and quote are ONE continuation
+  await page.locator('.postrow', { hasText: 'post b1' }).locator('a[href*="/lens/p?uri="]').first().click();
+  await page.waitForSelector('text=post reply1');
+  await page.waitForSelector('[data-kind="quote"]');
+  const qnode = page.locator('[data-kind="quote"]');
+  assert.match(await qnode.innerText(), /❝/, 'the quote marker distinguishes the kind');
+  assert.match(await qnode.innerText(), /post quote1/, 'the quote body renders in the thread');
+  assert.ok(await qnode.locator('a:has-text("open its thread")').count(), 'a quote opens as its own room');
 
   assert.deepEqual(await s.shimMisses(), [], 'every network read had a fixture');
   await s.close();

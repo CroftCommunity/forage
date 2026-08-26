@@ -46,38 +46,68 @@ export function shapeLensPost(post, src) {
   if (maskedByViewer(post)) {
     return { ...base, title: '[muted account]', body: '', url: '', author: null, authorId: null, maskedRemoved: true };
   }
+  // 3e inbound: a quote post carries its quoted original in the embed — the
+  // context renders for free (D7); the uri links to the original's thread.
+  const emb = post.embed;
+  const quoted = emb?.$type === 'app.bsky.embed.record#view' && emb.record?.uri
+    ? { uri: emb.record.uri, author: emb.record.author?.handle || '[unknown]',
+        excerpt: (emb.record.value?.text || '').slice(0, 200) }
+    : undefined;
   return {
     ...base,
     title: text, body: text, url: external?.uri || '',
     author: post.author?.handle || '[unknown]', authorId: post.author?.did || null,
     removedReason: '',
+    ...(quoted ? { quoted } : {}),
   };
 }
 
 // One bsky threadViewPost tree -> our thread result shape.
-export function shapeLensThread(threadResponse, src) {
+// 3e: replies AND quotes are ONE continuation — a quote is a response the
+// actor-centered view scattered onto the quoter's profile; the topic-centered
+// view brings it home. Top-level nodes interleave time-ascending with a
+// deterministic tie order (createdTs, authorId, id). A quote node carries
+// quoteUri so it opens as its own thread. Detached quotes never appear: we
+// render exactly what the appview returned, never re-derive.
+export function shapeLensThread(threadResponse, src, { quotes } = {}) {
   const root = threadResponse.thread;
   const post = shapeLensPost(root.post, src);
   let total = 0;
+  const node = (p, depth, extra = {}) => ({
+    id: p.id, postId: post.id, parentId: null,
+    createdTs: p.createdTs, createdSec: p.createdSec, edited: false,
+    removed: false, deleted: false,
+    ups: p.ups, downs: 0, score: p.score, myVote: p.myVote, saved: false,
+    body: p.body, author: p.author, authorId: p.authorId,
+    ...(p.maskedRemoved ? { maskedRemoved: true } : { removedReason: '' }),
+    depth,
+    autoCollapsed: false,
+    children: [], deferred: 0,
+    kind: 'reply',
+    ...extra,
+  });
   const build = (nodes, depth) => (nodes || []).map((n) => {
     if (!n.post) return null; // blocked / notFound stubs
     total += 1;
     const p = shapeLensPost(n.post, src);
     return {
-      id: p.id, postId: post.id, parentId: null,
-      createdTs: p.createdTs, createdSec: p.createdSec, edited: false,
-      removed: false, deleted: false,
-      ups: p.ups, downs: 0, score: p.score, myVote: p.myVote, saved: false,
-      body: p.body, author: p.author, authorId: p.authorId,
-      ...(p.maskedRemoved ? { maskedRemoved: true } : { removedReason: '' }),
-      depth,
-      autoCollapsed: false,
+      ...node(p, depth),
       children: depth >= 10 ? [] : build(n.replies, depth + 1),
       deferred: depth >= 10 ? (n.replies || []).length : 0,
     };
   }).filter(Boolean);
-  const comments = build(root.replies, 0);
-  return { post, perms: LENS_PERMS, sort: 'lens', locked: false, comments, total };
+  const replies = build(root.replies, 0);
+  const quoteNodes = (quotes || []).map((q) => {
+    total += 1;
+    const p = shapeLensPost(q, src);
+    return node(p, 0, { kind: 'quote', quoteUri: p.id, quoted: p.quoted });
+  });
+  const comments = [...replies, ...quoteNodes].sort((a, b) =>
+    (a.createdTs - b.createdTs)
+    || String(a.authorId).localeCompare(String(b.authorId))
+    || String(a.id).localeCompare(String(b.id)));
+  return { post, perms: LENS_PERMS, sort: 'lens', locked: false, comments, total,
+    quoteCount: root.post.quoteCount ?? 0 };
 }
 
 // One bsky feed page -> our feed result shape.
@@ -176,8 +206,14 @@ export function createLens({ session = null, transport = fetch } = {}) {
     },
 
     async thread(uri, src) {
-      const data = await get('app.bsky.feed.getPostThread', { uri, depth: 10 });
-      return shapeLensThread(data, src || { fieldId: 'lens:thread', fieldSlug: 'thread', fieldTitle: 'Thread' });
+      const [data, quotesRes] = await Promise.all([
+        get('app.bsky.feed.getPostThread', { uri, depth: 10 }),
+        get('app.bsky.feed.getQuotes', { uri, limit: 50 }).catch(() => null), // degrade, never break the thread
+      ]);
+      const shaped = shapeLensThread(data,
+        src || { fieldId: 'lens:thread', fieldSlug: 'thread', fieldTitle: 'Thread' },
+        { quotes: quotesRes?.posts });
+      return quotesRes === null ? { ...shaped, quotesFailed: true } : shaped;
     },
 
     // The lens Fields list: pinned/saved feeds + lists from preferences,

@@ -10,7 +10,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { emptyState, reduce } from '../js/reducers.js';
 import { feed, thread } from '../js/selectors.js';
-import { shapeLensPost, shapeLensThread, shapeLensFeed, LENS_PERMS } from '../js/substrates/lens.js';
+import { shapeLensPost, shapeLensThread, shapeLensFeed, LENS_PERMS, createLens } from '../js/substrates/lens.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const fixture = (n) => JSON.parse(readFileSync(join(root, 'test/fixtures/atproto', `${n}.json`), 'utf8'));
@@ -106,4 +106,87 @@ test('link embeds shape as link posts; plain text shapes as text', () => {
   assert.equal(linkShaped.url, 'https://example.com/x');
   delete post.embed;
   assert.equal(shapeLensPost(post, SRC).format, 'text');
+});
+
+// ---- 3e: quotes as thread continuation (D7-grounded) ----
+
+const QSRC = { fieldId: 'lens:q', fieldSlug: 'q', fieldTitle: 'Q' };
+const qPost = (rkey, did, ts, extra = {}) => ({
+  uri: `at://${did}/app.bsky.feed.post/${rkey}`, cid: 'cid-' + rkey,
+  author: { did, handle: did.slice(8) + '.test' },
+  record: { text: 'text ' + rkey, createdAt: ts }, indexedAt: ts,
+  replyCount: 0, repostCount: 0, likeCount: 0, ...extra,
+});
+
+test('3e: replies and quotes interleave time-ordered as ONE continuation; ties break deterministically', () => {
+  const threadResponse = { thread: {
+    post: qPost('root', 'did:plc:op', '2026-08-25T08:00:00Z', { quoteCount: 2 }),
+    replies: [
+      { post: qPost('r1', 'did:plc:aa', '2026-08-25T09:00:00Z'), replies: [] },
+      { post: qPost('r2', 'did:plc:cc', '2026-08-25T11:00:00Z'), replies: [] },
+    ],
+  } };
+  const quotes = [
+    qPost('q1', 'did:plc:bb', '2026-08-25T10:00:00Z'),
+    qPost('q2', 'did:plc:aa', '2026-08-25T09:00:00Z'), // TIE with r1 at 09:00 — did:plc:aa equal, id decides
+  ];
+  const t = shapeLensThread(threadResponse, QSRC, { quotes });
+  const order = t.comments.map((c) => `${c.kind}:${c.id.split('/').pop()}`);
+  assert.deepEqual(order, ['quote:q2', 'reply:r1', 'quote:q1', 'reply:r2'],
+    'ascending time; the 09:00 tie (same author) breaks by id — q2 < r1. The rule is (createdTs, authorId, id), pinned.');
+  assert.equal(t.quoteCount, 2);
+  const q = t.comments.find((c) => c.kind === 'quote');
+  assert.equal(q.quoteUri, q.id, 'a quote node opens as its own thread root');
+  assert.equal(t.comments.filter((c) => c.kind === 'quote').length, quotes.length,
+    'exactly what the appview returned — a detached quote simply is not in the list');
+});
+
+test('3e: reply nodes carry kind=reply and nested children keep working', () => {
+  const threadResponse = { thread: {
+    post: qPost('root', 'did:plc:op', '2026-08-25T08:00:00Z'),
+    replies: [{ post: qPost('r1', 'did:plc:aa', '2026-08-25T09:00:00Z'),
+      replies: [{ post: qPost('r1a', 'did:plc:bb', '2026-08-25T09:30:00Z'), replies: [] }] }],
+  } };
+  const t = shapeLensThread(threadResponse, QSRC);
+  assert.equal(t.comments[0].kind, 'reply');
+  assert.equal(t.comments[0].children[0].kind, 'reply');
+  assert.equal(t.quoteCount, 0);
+});
+
+test('3e: inbound quoted context — an embed record#view becomes post.quoted', () => {
+  const p = shapeLensPost(qPost('quoter', 'did:plc:aa', '2026-08-25T10:00:00Z', {
+    embed: { $type: 'app.bsky.embed.record#view', record: {
+      $type: 'app.bsky.embed.record#viewRecord',
+      uri: 'at://did:plc:orig/app.bsky.feed.post/orig1', cid: 'oc',
+      author: { did: 'did:plc:orig', handle: 'orig.test' },
+      value: { text: 'the original words', createdAt: '2026-08-25T09:00:00Z' },
+    } },
+  }), QSRC);
+  assert.deepEqual(p.quoted, {
+    uri: 'at://did:plc:orig/app.bsky.feed.post/orig1',
+    author: 'orig.test',
+    excerpt: 'the original words',
+  });
+});
+
+test('3e: thread() fetches quotes alongside; a quotes failure degrades to the honest count', async () => {
+  const mk = (quotesFail) => async (path) => {
+    const json = (d) => ({ ok: true, status: 200, json: async () => d });
+    if (path.includes('getPostThread')) return json({ thread: { post: qPost('root', 'did:plc:op', '2026-08-25T08:00:00Z', { quoteCount: 3 }), replies: [{ post: qPost('r1', 'did:plc:aa', '2026-08-25T09:00:00Z'), replies: [] }] } });
+    if (path.includes('getQuotes')) {
+      if (quotesFail) return { ok: false, status: 500, json: async () => ({}) };
+      return json({ posts: [qPost('q1', 'did:plc:bb', '2026-08-25T10:00:00Z')] });
+    }
+    return { ok: false, status: 404, json: async () => ({}) };
+  };
+  const session = (fail) => ({ did: 'did:plc:me', handle: 'me', fetchHandler: mk(fail) });
+
+  const ok = await createLens({ session: session(false) }).thread('at://did:plc:op/app.bsky.feed.post/root', QSRC);
+  assert.deepEqual(ok.comments.map((c) => c.kind), ['reply', 'quote']);
+  assert.equal(ok.quotesFailed, undefined);
+
+  const degraded = await createLens({ session: session(true) }).thread('at://did:plc:op/app.bsky.feed.post/root', QSRC);
+  assert.deepEqual(degraded.comments.map((c) => c.kind), ['reply'], 'replies still render');
+  assert.equal(degraded.quotesFailed, true, 'the failure is named, not silent');
+  assert.equal(degraded.quoteCount, 3, 'the honest count survives for the chip');
 });

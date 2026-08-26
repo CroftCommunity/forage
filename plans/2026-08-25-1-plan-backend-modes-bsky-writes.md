@@ -1,7 +1,7 @@
 # Plan: three modes — memory, the Bluesky view with a ring dial, and the private BBS
 
 date: 2026-08-25
-status: EXECUTING — 3a–3c SHIPPED (the lens' first write is live under the narrowed invariant); next: 3e (quotes as continuation).
+status: EXECUTING — 3a–3c + 3e SHIPPED; next: 3f (the moderation-posture mirror).
 Execution in worktrees/forage/modes-bbs (branch claude/modes-bbs)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `10a8ade` (clean tree, pushed; forage.fyi deployed at forage-v11)
@@ -600,7 +600,7 @@ cases named RED: timestamp ties keep a deterministic order (author-DID
 tiebreak, pinned); one member's feed exhausted mid-merge; cursor round-trip
 resumes without duplicates.
 
-#### 3c: Boost = like (DL-013), OAuth-bound — ✅ SHIPPED
+#### 3c: Boost = like (DL-013), OAuth-bound — ✅ SHIPPED (`3e02979`+`8c86862`+`6e19d04`)
 Self-contained (the pre-redirect draft text no longer exists in this doc): lens
 shapes gain `cid` + `likeUri`; `lens.like(uri,cid)` creates `app.bsky.feed.like`
 via the OAuth DPoP fetch and `lens.unlike(likeUri)` deletes it (record shapes per
@@ -632,7 +632,7 @@ same commit. PHASE-GATE: OQ3 (own-test-post-only live validation, confirmed).
   backend; the live credentialed pass stays manual.
 Multi-commit ≤3.
 
-#### 3e: Quotes as thread continuation (added 2026-08-25, user direction; D7-grounded)
+#### 3e: Quotes as thread continuation — ✅ SHIPPED (D7-grounded)
 The user's observation: on Bluesky people respond by replying AND by quoting, and a
 topic-centered lens should present BOTH as the thread's continuation (the network's
 actor-centered view scatters quotes onto the quoter's profile). Also the BBS idiom.

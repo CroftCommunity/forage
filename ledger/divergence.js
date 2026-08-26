@@ -63,6 +63,11 @@ export const LEDGER = [
     tolerance: 'set-equality',
     date: '2026-08-24', status: 'active' },
 
+  { id: 'DL-018', kind: 'proposal', capability: 'commenting', tier: 'wide',
+    description: 'Quote-respond as a first-class schema event: the wide tier renders quotes as thread continuation (3e) but the memory/BBS contract has replies only. The BBS idiom (quote-to-reply) wants this as a schema event; until then it is wide-tier-only rendering.',
+    reason: 'Invariant 8 — behavior present at one tier carries a proposal before it renders. Decide when the BBS mode (phase 5) or a scenario cares.',
+    date: '2026-08-25', status: 'open' },
+
   // ---- the ring dial (plan 2026-08-25-1, 3b) ----
   { id: 'DL-016', kind: 'frontier', capability: 'feeds', tier: 'wide', label: 'Ring beyond the cap',
     description: 'mutuals+1 draws the first 25 members (D6-measured cap; latency is not the bound — board noise is). The chip reports the TRUE member count; drawing the full ring (sampling, rotation, or paging members) is this frontier.',

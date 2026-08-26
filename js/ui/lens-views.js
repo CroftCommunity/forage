@@ -243,6 +243,29 @@ export function lensFieldView(params) {
   return { main, side: el('div', { class: 'side' }, sessionCard(), lensSidebar()) };
 }
 
+// 3e: a quote-response rendered as thread continuation — the ❝ marker carries
+// the distinction; the node opens as its own thread (the conversation
+// branched into a new room, honestly).
+function quoteNode(node) {
+  return el('div', { class: 'comment', 'data-kind': 'quote' },
+    el('div', { class: 'cmeta' },
+      el('span', { title: 'A quote-response: this author quoted the post above' }, '❝ '),
+      node.author ? el('a', { href: `https://bsky.app/profile/${node.author}`, target: '_blank', rel: 'noopener noreferrer' }, node.author) : '[muted]',
+      el('span', { class: 'muted' }, ` quoted this · ${timeAgo(node.createdTs)} ago · ${fmtScore(node.score)} likes`)),
+    el('div', { class: 'cbody' }, node.body),
+    el('div', { class: 'xs' },
+      el('a', { href: `#/lens/p?uri=${encodeURIComponent(node.quoteUri)}` }, 'open its thread ↳')));
+}
+
+// 3e inbound: any post that IS a quote shows what it quotes, linked home.
+function quotedContext(quoted) {
+  return el('div', { class: 'card', style: 'margin-top:6px', 'data-quoted': '1' },
+    el('div', { class: 'xs muted' }, '❝ quoting ',
+      el('a', { href: `https://bsky.app/profile/${quoted.author}`, target: '_blank', rel: 'noopener noreferrer' }, quoted.author)),
+    el('div', { class: 'small' }, quoted.excerpt),
+    el('div', { class: 'xs' }, el('a', { href: `#/lens/p?uri=${encodeURIComponent(quoted.uri)}` }, 'open the original ↳')));
+}
+
 export function lensThreadView(params, query) {
   const uri = query.uri ? decodeURIComponent(query.uri) : null;
   if (!uri) return { main: emptyState('No thread', 'Missing post uri.'), side: null };
@@ -260,11 +283,14 @@ export function lensThreadView(params, query) {
       el('div', { class: 'postmeta' },
         p.author ? el('a', { href: `https://bsky.app/profile/${p.author}`, target: '_blank', rel: 'noopener noreferrer' }, p.author) : '[muted]',
         ` · ${fmtScore(p.score)} likes · ${timeAgo(p.createdTs)} ago · ${p.commentCount} replies`),
-      el('div', { class: 'row', style: 'gap:6px;margin-top:6px' },
-        chip('boost = like: deferred (DL-013)')));
+      p.quoted ? quotedContext(p.quoted) : null,
+      t.quotesFailed ? el('div', { class: 'row', style: 'gap:6px;margin-top:6px' },
+        chip(`${t.quoteCount} quote${t.quoteCount === 1 ? '' : 's'} — couldn't fetch`, 'getQuotes failed; replies still render. Reload to retry.')) : null);
     const ctx = { ...LENS_PERMS, locked: true }; // read-only: reply/vote/save/mod all gate
     const commentsCard = el('div', { class: 'card' });
-    for (const node of t.comments) commentsCard.append(commentNode(node, ctx));
+    for (const node of t.comments) {
+      commentsCard.append(node.kind === 'quote' ? quoteNode(node) : commentNode(node, ctx));
+    }
     main.replaceChildren(head, t.comments.length ? commentsCard : emptyState('No replies', 'Nothing below this post yet.'));
   }).catch((e) => main.replaceChildren(emptyState('Lens fetch failed', e.message)));
   return { main, side: el('div', { class: 'side' }, sessionCard(), lensSidebar()) };
