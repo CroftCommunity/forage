@@ -44,8 +44,21 @@ export async function scenario(state, { initScripts = [], mode, ...shimOpts } = 
   const consoleErrors = [];
   const page = await context.newPage();
   page.on('pageerror', (e) => pageErrors.push(String(e?.stack || e)));
+  // 3n: a clean-path deep link is served by 404.html with a 404 STATUS — that
+  // is GitHub Pages' real behavior (the service worker upgrades it to 200 once
+  // installed) and the browser logs it as a resource error. Track those exact
+  // responses so their console noise can be ignored; ASSET 404s still fail the
+  // scenario, which is the case worth catching.
+  let shellFallbacks = 0;
+  page.on('response', (r) => {
+    if (r.status() !== 404) return;
+    const p = new URL(r.url()).pathname;
+    if (r.url().startsWith(server.origin) && !/\.[a-z0-9]+$/i.test(p)) shellFallbacks++;
+  });
   page.on('console', (m) => {
-    if (m.type() === 'error') consoleErrors.push(m.text());
+    if (m.type() !== 'error') return;
+    if (/Failed to load resource/.test(m.text()) && shellFallbacks > 0) { shellFallbacks--; return; }
+    consoleErrors.push(m.text());
   });
 
   const handle = {

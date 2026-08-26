@@ -37,6 +37,30 @@ export async function run() {
   assert.deepEqual(await s.shimMisses(), [], 'no unexpected network calls');
   await s.close(); // asserts zero page/console errors across the whole journey
 
+  // ---- 3n arc: clean paths ----
+  const cp = await scenario('first-visit', { responses: { 'getTrendingTopics': { topics: [] } } });
+  // a deep link loads the app directly — no hash, no redirect hop
+  await cp.page.goto(`${cp.origin}/feeds`);
+  await cp.page.waitForSelector('h1:has-text("Discover feeds")');
+  assert.equal(new URL(cp.page.url()).pathname, '/feeds', 'the URL stays clean');
+  assert.equal(new URL(cp.page.url()).hash, '', 'no hash fragment anywhere');
+
+  // in-app navigation pushes real history — back returns to the previous page
+  await cp.page.goto(`${cp.origin}/`);
+  await cp.page.waitForSelector('text=The Lens');
+  await cp.page.locator('a[href="/settings"]').first().click();
+  await cp.page.waitForSelector('text=Theme');
+  assert.equal(new URL(cp.page.url()).pathname, '/settings', 'a click navigated without a page load');
+  await cp.page.goBack();
+  await cp.page.waitForSelector('text=The Lens');
+  assert.equal(new URL(cp.page.url()).pathname, '/', 'back works');
+
+  // the OLD shared hash links still land in the right place
+  await cp.page.goto(`${cp.origin}/#/feeds`);
+  await cp.page.waitForSelector('h1:has-text("Discover feeds")');
+  assert.equal(new URL(cp.page.url()).pathname, '/feeds', 'a legacy #/ link is rewritten to its clean path');
+  await cp.close();
+
   // ---- 3h arc: the presentation switch ----
   const p = await scenario('first-visit', { responses: { 'getTrendingTopics': { topics: [] } } });
   await p.page.goto(p.origin);
@@ -48,7 +72,7 @@ export async function run() {
     'the utility bar is memory-only (user 2026-08-26)');
 
   // choose the memory sandbox at /mode — a full population swap
-  await p.page.goto(`${p.origin}/#/mode`);
+  await p.page.goto(`${p.origin}/mode`);
   await p.page.waitForSelector('[data-mode-card="memory"]');
   await p.page.locator('[data-mode-card="memory"] button').click();
   await p.page.waitForSelector('.masthead a:has-text("Popular")', { timeout: 10000 });
@@ -57,7 +81,7 @@ export async function run() {
   assert.equal(await p.page.locator('text=The Lens').count(), 0, 'no bluesky chrome in memory');
 
   // /mode shows the provenance, and clearing returns to the domain default
-  await p.page.goto(`${p.origin}/#/mode`);
+  await p.page.goto(`${p.origin}/mode`);
   await p.page.waitForSelector('text=your choice on this device');
   await p.page.locator('button:has-text("Clear my choice")').click();
   await p.page.waitForSelector('text=The Lens', { timeout: 10000 });

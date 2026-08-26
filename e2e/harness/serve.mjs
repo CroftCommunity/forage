@@ -24,7 +24,15 @@ export async function serve() {
       res.writeHead(200, { 'content-type': TYPES[extname(file)] || 'application/octet-stream' });
       res.end(body);
     } catch {
-      res.writeHead(404).end('not found');
+      // 3n: mirror GitHub Pages — an unknown PATH gets 404.html (the app
+      // shell, 404 status); a missing ASSET stays a plain 404. Faithful to
+      // production, including the status code.
+      if (extname(file)) { res.writeHead(404).end('not found'); return; }
+      try {
+        const shell = await readFile(join(ROOT, '404.html'));
+        res.writeHead(404, { 'content-type': 'text/html' });
+        res.end(shell);
+      } catch { res.writeHead(404).end('not found'); }
     }
   });
   await new Promise((r) => server.listen(0, '127.0.0.1', r));

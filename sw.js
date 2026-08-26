@@ -7,8 +7,9 @@
 // Bump CACHE whenever you want to force a clean re-cache on the very next load
 // (asset URLs are hashless, so the name is the version).
 
-const CACHE = 'forage-v19';
+const CACHE = 'forage-v20';
 const SHELL = [
+  '/', '/404.html',
   './skins/bbs.css', './skins/usenet.css',
   './vendor/atproto-oauth-client-browser.js', './js/auth/session.js', './js/skins.js', './js/mode.js', './js/ui/mode-view.js',
   './', './index.html',
@@ -52,8 +53,16 @@ self.addEventListener('fetch', (e) => {
   if (url.origin !== location.origin) return;
 
   if (request.mode === 'navigate') {
-    // network-first for navigations, fall back to cached shell (offline reload)
-    e.respondWith(fetch(request).catch(() => caches.match('./index.html')));
+    // 3n: clean paths on GitHub Pages. A deep link like /h/gardening is not a
+    // file, so Pages answers 404.html (right shell, wrong status). Once this
+    // worker is installed we answer navigations from the cached shell first —
+    // deep links become real 200s, work offline, and never flash the 404 body.
+    e.respondWith((async () => {
+      const shell = await caches.match('/');
+      if (shell) return shell;
+      try { return await fetch(request); }
+      catch { return (await caches.match('/404.html')) || Response.error(); }
+    })());
     return;
   }
   // stale-while-revalidate for same-origin assets

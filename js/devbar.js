@@ -32,7 +32,7 @@ export function devBar() {
   });
   const modeGrp = el('span', { class: 'grp' }, el('label', {}, 'Mode'), mode);
   if (!inMemory) modeGrp.append(el('span', { class: 'tag' }, `${store.activeMode()} · RAM only`));
-  modeGrp.append(el('a', { href: '#/mode', class: 'small', title: 'The presentation mode — which population the app is (choose or clear at /mode)' }, 'Mode'));
+  modeGrp.append(el('a', { href: '/mode', class: 'small', title: 'The presentation mode — which population the app is (choose or clear at /mode)' }, 'Mode'));
   bar.append(modeGrp);
 
   bar.append(sep());
@@ -89,7 +89,7 @@ export function devBar() {
   bar.append(sep());
 
   // Meta: what every control above does, and when to use it.
-  const about = el('a', { class: 'about', href: '#/about', title: 'What do these controls do?' }, '? About this demo');
+  const about = el('a', { class: 'about', href: '/about', title: 'What do these controls do?' }, '? About this demo');
   bar.append(about);
 
   return bar;

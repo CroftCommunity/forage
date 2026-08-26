@@ -138,7 +138,7 @@ forum contract — membership, gatekeeping, posting into a place — becomes rea
 ## The front door, and the two populations
 
 Forage is **one of two things at a time** — full populations, never mixed
-(`#/mode` switches; the routes `/`, `/f/`, `/h/`, `/p` mean whichever is
+(`/mode` switches; the routes `/`, `/f/`, `/h/`, `/p` mean whichever is
 active):
 
 - **Bluesky view** (the domain default): live network content, topic-first, no
@@ -149,15 +149,26 @@ active):
   open `/h/` boards, and the trending rail opens topics as feed streams.
 - **Memory sandbox**: the local, seeded instrument — nothing leaves the device.
 
-Your choice at `#/mode` is device-local, and CLEARING it means the device
+Your choice at `/mode` is device-local, and CLEARING it means the device
 follows the domain default. A route that belongs to the other population gates
 with words — no silent redirects, no mixed chrome.
 
-**Identity surfaces** (Bluesky population): `#/me` carries your session, the
+**Identity surfaces** (Bluesky population): `/me` carries your session, the
 account switcher (several fully separate accounts, one page), and the
-moderation mirror; `#/u/<handle>` is any user's profile — avatar, banner,
+moderation mirror; `/u/<handle>` is any user's profile — avatar, banner,
 counts, bio, and their posts — with editing linked out to bsky.app.
-`#/feeds` is feed discovery (searchable); every feed board carries its card.
+`/feeds` is feed discovery (searchable); every feed board carries its card.
+
+## URLs
+
+Real paths, not hash fragments: `forage.fyi/h/gardening`, `forage.fyi/f/whats-hot`,
+`forage.fyi/u/alice.test`. GitHub Pages has no rewrite rules, so `404.html` is a
+copy of `index.html` (a test asserts they stay identical) and serves every deep
+link; the service worker answers navigations from the cached shell, which makes
+those links real 200s and works offline. Links already shared in the old `#/`
+form are bridged to their clean path at boot AND live, so they keep working.
+Every asset reference must be absolute — a route-relative `./icons/x.png`
+resolves against `/f/` on a deep link, so `test/invariants.test.js` scans for it.
 
 ## Modes
 
@@ -169,7 +180,7 @@ The running app has **modes** — named routing tables over the same capabilitie
 - **bbs** (experimental, phase 5): the private-board mode. RAM-only: entering it
   suspends persistence structurally, the dataset dies on exit/reload, and
   `forage.state` is provably untouched (byte-identical round-trip under test).
-- The **Bluesky view** (`#/lens`) is deliberately NOT a mode — it is a read
+- The **Bluesky view** (`/`) is deliberately NOT a mode — it is a read
   surface over the live network with its own session; nothing from it enters the
   event fold. Identity is **Sign in with Bluesky** (the official OAuth flow via
   the vendored `@atproto/oauth-client-browser`, drift-checked in

@@ -78,12 +78,12 @@ function postBadges(p) {
 
 // ---------- post row (feed) ----------
 export function postRow(p, viewerCanVote, opts = {}) {
-  const link = `#/f/${p.fieldSlug}/p/${p.id}`;
+  const link = `/f/${p.fieldSlug}/p/${p.id}`;
   const titleLink = p.format === 'link' && p.url
     ? el('a', { href: p.url, target: '_blank', rel: 'noopener noreferrer' }, p.title)
     : el('a', { href: link }, p.title);
   const meta = el('div', { class: 'postmeta' },
-    el('a', { href: `#/f/${p.fieldSlug}` }, `f/${p.fieldSlug}`),
+    el('a', { href: `/f/${p.fieldSlug}` }, `f/${p.fieldSlug}`),
     p.author ? el('span', {}, `by ${p.author}`, opts.authorBadge || '') : el('span', { class: 'muted' }, 'by [removed]'),
     el('span', {}, timeAgo(p.createdTs) + ' ago'),
     p.format === 'link' && p.url ? el('span', { class: 'domain' }, domainOf(p.url)) : null,
@@ -120,7 +120,7 @@ export function commentNode(node, ctx) {
   const author = node.author
     ? (ctx.authorHref
       ? el('a', { href: ctx.authorHref(node), target: '_blank', rel: 'noopener noreferrer', title: 'Profiles live on bsky.app — Forage is a lens' }, node.author)
-      : el('a', { href: `#/u/${node.author}` }, node.author))
+      : el('a', { href: `/u/${node.author}` }, node.author))
     : el('span', { class: 'removed-stub' }, node.deleted ? '[deleted]' : '[removed]');
   const note = el('span', { class: 'collapse-note' });
   const meta = el('div', { class: 'comment-meta' },
@@ -173,7 +173,7 @@ function renderChildren(container, node, ctx) {
 
   // continuation stub past depth 10 (spec §9 / acceptance)
   if (node.deferred > 0) {
-    container.append(el('a', { class: 'continue-stub', href: `#/f/${ctx.fieldSlug}/p/${node.postId}?focus=${node.id}` },
+    container.append(el('a', { class: 'continue-stub', href: `/f/${ctx.fieldSlug}/p/${node.postId}?focus=${node.id}` },
       `→ continue this thread (${node.deferred} more)`));
   }
 }

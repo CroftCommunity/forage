@@ -69,6 +69,20 @@ test('the lens exception holds: exactly TWO write paths, both named (DL-013 like
   assert.equal((src.match(/collection: LIKE_COLLECTION/g) || []).length, 2, 'both writes bind to it');
 });
 
+// 3n: clean paths mean relative asset URLs resolve against the ROUTE, so
+// './icons/x.png' becomes '/f/icons/x.png' on a deep link. Every runtime asset
+// reference must be absolute. (A journey caught exactly this; the scan keeps
+// it caught.)
+test('runtime asset references are absolute, never route-relative', () => {
+  for (const file of ALL_JS) {
+    const src = readFileSync(join(root, file), 'utf8');
+    const bad = [...src.matchAll(/(src|href):\s*[`'"]\.\//g)].map((m) => m[0]);
+    assert.deepStrictEqual(bad, [], `${file} has route-relative asset refs: ${bad}`);
+  }
+  const html = readFileSync(join(root, 'index.html'), 'utf8');
+  assert.ok(!/(src|href)="\.\//.test(html), 'index.html has route-relative asset refs');
+});
+
 // ---- behavioral: the probation gate finally binds at write time ----
 
 const boot = async () => {

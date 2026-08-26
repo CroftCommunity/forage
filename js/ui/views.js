@@ -27,12 +27,12 @@ function fieldsSidebar() {
   return el('div', { class: 'card' },
     el('h2', {}, 'Fields'),
     el('div', { class: 'stack' }, ...list.map((f) => el('div', { class: 'row spread' },
-      el('a', { href: `#/f/${f.slug}` }, `f/${f.slug}`),
+      el('a', { href: `/f/${f.slug}` }, `f/${f.slug}`),
       el('span', { class: 'xs muted' }, `${f.memberCount}${f.joined ? ' · joined' : ''}`)))),
     el('hr', { class: 'rule' }),
-    el('a', { class: 'btn sm', href: '#/create-field' }, '+ Create a Field'),
+    el('a', { class: 'btn sm', href: '/create-field' }, '+ Create a Field'),
     ' ',
-    el('a', { class: 'btn sm', href: '#/frontiers' }, 'Frontiers'));
+    el('a', { class: 'btn sm', href: '/frontiers' }, 'Frontiers'));
 }
 
 function limitsSidebar() {
@@ -57,26 +57,26 @@ export function feedView(scope, title, query) {
   // Logged-out banner with the primary tagline (acceptance §12).
   if (!V()) {
     main.append(el('div', { class: 'notice gate hero-gate' },
-      el('img', { class: 'hero-art', src: './assets/logo-wordmark.jpg', alt: 'Forage — a rook in a wreath as the O' }),
+      el('img', { class: 'hero-art', src: '/assets/logo-wordmark.jpg', alt: 'Forage — a rook in a wreath as the O' }),
       el('div', { class: 'hero-copy' },
         el('strong', { style: 'font-family:var(--font-display);font-size:18px' }, 'Forage the open web.'),
         el('div', { class: 'xs muted' }, 'You are browsing logged out. Join a Field to start posting.')),
-      el('a', { class: 'btn primary sm', href: '#/signup' }, 'Sign up')));
+      el('a', { class: 'btn primary sm', href: '/signup' }, 'Sign up')));
   }
 
   main.append(el('div', { class: 'row spread wrap' },
     el('h1', {}, title),
     scope.startsWith('field:') && data.perms.canPost
-      ? el('a', { class: 'btn primary sm', href: `#/submit?f=${scope.slice(6)}` }, '+ New post') : null));
+      ? el('a', { class: 'btn primary sm', href: `/submit?f=${scope.slice(6)}` }, '+ New post') : null));
 
-  const base = scope.startsWith('field:') ? `#/f/${scope.slice(6)}` : `#/${scope}`;
+  const base = scope.startsWith('field:') ? `/f/${scope.slice(6)}` : `/${scope}`;
   main.append(el('div', { class: 'tabs' }, ...SORTS.map((s) =>
     el('a', { class: 'tab' + (s === sort ? ' active' : ''), href: `${base}?sort=${s}` }, s[0].toUpperCase() + s.slice(1)))));
 
   if (!data.posts.length) {
     main.append(emptyState('Nothing growing here yet',
       scope === 'home' ? 'Join a Field to fill your Home.' : 'Be the first to post.',
-      el('a', { class: 'btn primary', href: scope === 'home' ? '#/all' : '#/create-field' },
+      el('a', { class: 'btn primary', href: scope === 'home' ? '/all' : '/create-field' },
         scope === 'home' ? 'Discover Fields' : 'Create a Field')));
   } else {
     const card = el('div', { class: 'card' });
@@ -95,7 +95,7 @@ export function fieldView(params, query) {
   const banNotice = f.perms.bannedHere
     ? el('div', { class: 'notice ban' }, el('strong', {}, 'You are banned from this Field. '),
         `Reason: ${esc(f.perms.banInfo.reason || 'unspecified')}. You can read but not participate. `,
-        el('a', { href: `#/f/${f.slug}/mod/log` }, 'See the public audit log.'))
+        el('a', { href: `/f/${f.slug}/mod/log` }, 'See the public audit log.'))
     : null;
 
   const joinBtn = el('button', { class: 'btn' + (f.joined ? '' : ' primary') }, f.joined ? 'Joined ✓' : 'Join');
@@ -111,9 +111,9 @@ export function fieldView(params, query) {
     el('div', { class: 'xs muted' }, `Owner: ${esc(f.owner || '—')} · Stewards: ${f.stewards.map(esc).join(', ') || '—'}`),
     f.settings.requireTags ? el('div', { class: 'xs' }, el('span', { class: 'tag' }, 'tags required')) : null,
     el('div', { class: 'row wrap', style: 'margin-top:8px;gap:6px' },
-      el('a', { class: 'btn sm', href: `#/f/${f.slug}/mod/log` }, 'Audit log'),
-      f.perms.canModerate ? el('a', { class: 'btn sm', href: `#/f/${f.slug}/mod/queue` }, 'Mod queue') : null,
-      f.perms.canManageField ? el('a', { class: 'btn sm', href: `#/f/${f.slug}/settings` }, 'Field settings') : null));
+      el('a', { class: 'btn sm', href: `/f/${f.slug}/mod/log` }, 'Audit log'),
+      f.perms.canModerate ? el('a', { class: 'btn sm', href: `/f/${f.slug}/mod/queue` }, 'Mod queue') : null,
+      f.perms.canManageField ? el('a', { class: 'btn sm', href: `/f/${f.slug}/settings` }, 'Field settings') : null));
 
   const rules = f.rules.length ? el('div', { class: 'card' }, el('h2', {}, 'Rules'),
     el('ol', { style: 'margin:0;padding-left:18px' }, ...f.rules.map((r) =>
@@ -136,7 +136,7 @@ export function threadView(params, query) {
       voteBox('post', p.id, p, t.perms.canVote),
       el('div', { class: 'grow' },
         el('div', { class: 'row wrap', style: 'gap:6px' },
-          el('a', { href: `#/f/${p.fieldSlug}`, class: 'xs' }, `f/${p.fieldSlug}`),
+          el('a', { href: `/f/${p.fieldSlug}`, class: 'xs' }, `f/${p.fieldSlug}`),
           p.pinned ? el('span', { class: 'chip badge-pin' }, '📌 pinned') : null,
           p.locked ? el('span', { class: 'chip badge-locked' }, '🔒 locked') : null,
           p.nsfw ? el('span', { class: 'chip badge-nsfw' }, 'NSFW') : null,
@@ -146,7 +146,7 @@ export function threadView(params, query) {
         p.format === 'link' && p.url ? el('div', {}, el('a', { href: p.url, target: '_blank', rel: 'noopener noreferrer', class: 'domain' }, `${p.url} (${domainOf(p.url)})`)) : null,
         p.body && !p.maskedRemoved ? el('div', { class: 'small', html: mdLite(p.body) }) : null,
         el('div', { class: 'postmeta' },
-          p.author ? el('a', { href: `#/u/${p.author}` }, p.author) : el('span', { class: 'muted' }, '[removed]'),
+          p.author ? el('a', { href: `/u/${p.author}` }, p.author) : el('span', { class: 'muted' }, '[removed]'),
           el('span', {}, timeAgo(p.createdTs) + ' ago'),
           el('span', {}, `${p.commentCount} comments`),
           t.perms.canReport ? linkAction('report', () => doReport('post', p.id, p.fieldId)) : null,
@@ -164,8 +164,8 @@ export function threadView(params, query) {
   // comments
   const ctx = { canVote: t.perms.canVote, canComment: t.perms.canComment, canReport: t.perms.canReport,
     canModerate: t.perms.canModerate, locked: t.locked, fieldId: p.fieldId, fieldSlug: p.fieldSlug };
-  const sortRow = tabs([['Best', `#/f/${p.fieldSlug}/p/${p.id}?sort=best`], ['Top', `#/f/${p.fieldSlug}/p/${p.id}?sort=top`],
-    ['New', `#/f/${p.fieldSlug}/p/${p.id}?sort=new`], ['Controversial', `#/f/${p.fieldSlug}/p/${p.id}?sort=controversial`]],
+  const sortRow = tabs([['Best', `/f/${p.fieldSlug}/p/${p.id}?sort=best`], ['Top', `/f/${p.fieldSlug}/p/${p.id}?sort=top`],
+    ['New', `/f/${p.fieldSlug}/p/${p.id}?sort=new`], ['Controversial', `/f/${p.fieldSlug}/p/${p.id}?sort=controversial`]],
     (query.sort || 'best'));
   main.append(el('div', { class: 'card' },
     el('div', { class: 'row spread' }, el('h2', {}, `${t.total} comments`), null), sortRow,
@@ -264,7 +264,7 @@ export function queueView(params) {
   render(); main.append(list);
   return wrapSide(main, params.slug);
 }
-function wrapSide(main, slug) { return { main, side: el('div', { class: 'side' }, el('div', { class: 'card' }, el('a', { href: `#/f/${slug}` }, '← back to Field'), el('br'), el('a', { href: `#/f/${slug}/mod/log` }, 'Public audit log')), fieldsSidebar()) }; }
+function wrapSide(main, slug) { return { main, side: el('div', { class: 'side' }, el('div', { class: 'card' }, el('a', { href: `/f/${slug}` }, '← back to Field'), el('br'), el('a', { href: `/f/${slug}/mod/log` }, 'Public audit log')), fieldsSidebar()) }; }
 
 async function actOn(item, evType, slug) {
   const subjectType = item.kind === 'report' ? item.r.subjectType : 'post';
@@ -305,8 +305,8 @@ export function profileView(params, query) {
       el('div', {}, el('div', { class: 'n' }, fmtScore(pr.rep.comment)), el('div', { class: 'xs muted' }, 'comment reputation')),
       el('div', {}, el('div', { class: 'xs muted', style: 'margin-top:18px' }, `joined ${timeAgo(pr.registeredTs)} ago`)))));
 
-  const tlist = [['Overview', `#/u/${pr.handle}?tab=overview`], ['Posts', `#/u/${pr.handle}?tab=posts`], ['Comments', `#/u/${pr.handle}?tab=comments`]];
-  if (pr.canSeeSaved) tlist.push(['Saved', `#/u/${pr.handle}?tab=saved`]);
+  const tlist = [['Overview', `/u/${pr.handle}?tab=overview`], ['Posts', `/u/${pr.handle}?tab=posts`], ['Comments', `/u/${pr.handle}?tab=comments`]];
+  if (pr.canSeeSaved) tlist.push(['Saved', `/u/${pr.handle}?tab=saved`]);
   main.append(el('div', { class: 'tabs' }, ...tlist.map(([l, h]) => el('a', { class: 'tab' + (l.toLowerCase() === tab ? ' active' : ''), href: h }, l))));
 
   const card = el('div', { class: 'card' });
@@ -323,7 +323,7 @@ export function profileView(params, query) {
 function profileComment(c) {
   return el('div', { class: 'postrow' }, el('div', {}),
     el('div', {}, el('div', { class: 'small', html: c.maskedRemoved ? '[removed]' : mdLite(c.body) }),
-      el('div', { class: 'postmeta' }, el('span', {}, `${fmtScore(c.score)} pts`), c.postTitle ? el('a', { href: `#/f/x/p/${c.postId}` }, `on “${esc(c.postTitle).slice(0, 48)}”`) : null, el('span', {}, timeAgo(c.createdTs) + ' ago'))));
+      el('div', { class: 'postmeta' }, el('span', {}, `${fmtScore(c.score)} pts`), c.postTitle ? el('a', { href: `/f/x/p/${c.postId}` }, `on “${esc(c.postTitle).slice(0, 48)}”`) : null, el('span', {}, timeAgo(c.createdTs) + ' ago'))));
 }
 
 // ---------- notifications ----------
@@ -336,7 +336,7 @@ export function notificationsView() {
   if (!n.items.length) { main.append(emptyState('Nothing growing here yet', 'You have no notifications.')); return { main, side: null }; }
   const card = el('div', { class: 'card' });
   for (const item of n.items) {
-    const href = item.subjectType === 'comment' && item.postId ? `#/f/x/p/${item.postId}` : '#';
+    const href = item.subjectType === 'comment' && item.postId ? `/f/x/p/${item.postId}` : '#';
     card.append(el('div', { class: 'logrow' + (item.read ? '' : ''), style: item.read ? '' : 'font-weight:600' },
       el('span', { class: 'when' }, timeAgo(item.ts) + ' ago'),
       el('span', { class: 'grow small' }, `${esc(item.from)} ${NOTIF_LABEL[item.kind] || item.kind}`),
@@ -356,8 +356,8 @@ export function searchView(params, query) {
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(`/search?q=${encodeURIComponent(input.value)}&type=${type}`); });
   main.append(el('div', { class: 'card' }, input,
     el('div', { class: 'tabs', style: 'margin-top:10px' },
-      el('a', { class: 'tab' + (type === 'post' ? ' active' : ''), href: `#/search?q=${encodeURIComponent(q)}&type=post` }, 'Posts'),
-      el('a', { class: 'tab' + (type === 'comment' ? ' active' : ''), href: `#/search?q=${encodeURIComponent(q)}&type=comment` }, 'Comments')),
+      el('a', { class: 'tab' + (type === 'post' ? ' active' : ''), href: `/search?q=${encodeURIComponent(q)}&type=post` }, 'Posts'),
+      el('a', { class: 'tab' + (type === 'comment' ? ' active' : ''), href: `/search?q=${encodeURIComponent(q)}&type=comment` }, 'Comments')),
     el('span', { class: 'frontier-chip' }, 'facets: frontier')));
   if (!q) main.append(el('div', { class: 'muted small', style: 'padding:16px' }, 'Type a query and press Enter.'));
   else if (!res.results.length) main.append(emptyState('No results', `Nothing matched “${esc(q)}”.`));
@@ -605,7 +605,7 @@ const DEVBAR_DOCS = [
 
 export function aboutView() {
   const main = el('div', {},
-    el('img', { class: 'about-banner', src: './assets/banner-forum.jpg', alt: 'Forage — forum and community' }),
+    el('img', { class: 'about-banner', src: '/assets/banner-forum.jpg', alt: 'Forage — forum and community' }),
     el('h1', {}, 'About this demo'),
     el('div', { class: 'card' },
       el('p', { class: 'small' }, 'The dashed strip across the top is the ',
@@ -630,8 +630,8 @@ export function aboutView() {
     main.append(card);
   }
   main.append(el('p', { class: 'small muted', style: 'margin-top:16px' },
-    'Related: ', el('a', { href: '#/frontiers' }, 'Frontiers'), ' (what v1 defers) and ',
-    el('a', { href: '#/settings' }, 'Preferences'), ' (theme, comment threshold, default sort).'));
+    'Related: ', el('a', { href: '/frontiers' }, 'Frontiers'), ' (what v1 defers) and ',
+    el('a', { href: '/settings' }, 'Preferences'), ' (theme, comment threshold, default sort).'));
   return { main, side: null };
 }
 
@@ -650,7 +650,7 @@ export function signupView() {
   const handle = el('input', { type: 'text', placeholder: 'handle' });
   const email = el('input', { type: 'email', placeholder: 'email (optional)' });
   return { main: el('div', {},
-    el('img', { class: 'signup-art', src: './assets/logo-wordmark.jpg', alt: 'Forage — a rook in a wreath as the O' }),
+    el('img', { class: 'signup-art', src: '/assets/logo-wordmark.jpg', alt: 'Forage — a rook in a wreath as the O' }),
     el('h1', {}, 'Join Forage'),
     el('p', { class: 'muted' }, 'Forage the open web.'),
     el('div', { class: 'card' },

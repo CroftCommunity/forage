@@ -12,8 +12,7 @@ export function modeView() {
 
   const swap = (m) => {
     mode.set(m);
-    location.hash = '/';
-    location.reload(); // a population swap is a fresh boot — no half-worlds
+    location.assign('/'); // a population swap is a fresh boot — no half-worlds
   };
 
   const card = (id) => {
@@ -36,8 +35,7 @@ export function modeView() {
         const b = el('button', { class: 'btn sm' }, `Clear my choice — follow the domain default (${mode.PRESENTATIONS[mode.DOMAIN_DEFAULT].label})`);
         b.addEventListener('click', () => {
           mode.clear();
-          location.hash = '/';
-          location.reload();
+          location.assign('/');
         });
         return el('div', { class: 'card' },
           el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
@@ -68,9 +66,9 @@ export function wrongPopulation(wanted) {
       el('h2', {}, `That page lives in the ${p.label}`),
       el('p', { class: 'muted' },
         `You are in the ${mode.PRESENTATIONS[mode.active()].label}. Populations do not mix — switch modes to see it.`),
-      el('a', { class: 'btn primary', href: '#/mode' }, 'Open Mode'),
+      el('a', { class: 'btn primary', href: '/mode' }, 'Open Mode'),
       ' ',
-      el('a', { class: 'btn', href: '#/' }, 'Go home')),
+      el('a', { class: 'btn', href: '/' }, 'Go home')),
     side: null,
   };
 }

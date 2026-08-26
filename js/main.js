@@ -37,25 +37,25 @@ function masthead() {
   if (pmode.active() === 'bluesky') {
     const who = lensViews.sessionIdentity();
     return el('header', { class: 'masthead' },
-      el('a', { class: 'wordmark', href: '#/' },
-        el('img', { class: 'wordmark-glyph', src: './icons/icon-192.png', alt: '' }), 'Forage'),
+      el('a', { class: 'wordmark', href: '/' },
+        el('img', { class: 'wordmark-glyph', src: '/icons/icon-192.png', alt: '' }), 'Forage'),
       el('nav', { class: 'row', style: 'gap:12px' },
-        el('a', { href: '#/', class: 'small' }, 'Home')),
+        el('a', { href: '/', class: 'small' }, 'Home')),
       el('div', { class: 'who' }, themeBtn0,
-        el('a', { href: '#/settings', class: 'small' }, 'Settings'),
+        el('a', { href: '/settings', class: 'small' }, 'Settings'),
         who === 'connecting' ? el('span', { class: 'small muted' }, '…')
           : who ? el('span', { class: 'row', style: 'gap:4px;align-items:center' },
-              el('a', { class: 'small', href: '#/me', title: 'Your Forage profile' }, who),
+              el('a', { class: 'small', href: '/me', title: 'Your Forage profile' }, who),
               (() => {
                 // 3k: the account switcher — multiple separate accounts from
                 // one page (the menu itself lives on /me, which this opens).
-                const caret = el('a', { class: 'small', href: '#/me', title: 'Switch account, add another, sign out' }, '▾');
+                const caret = el('a', { class: 'small', href: '/me', title: 'Switch account, add another, sign out' }, '▾');
                 return caret;
               })())
           : (() => {
               // 3i (owner): launch OAuth DIRECTLY — the entryway collects the
               // handle; no local form between you and the authorize screen.
-              const b = el('a', { class: 'small', href: '#/', role: 'button' }, 'Sign in');
+              const b = el('a', { class: 'small', href: '/', role: 'button' }, 'Sign in');
               b.addEventListener('click', (e) => { e.preventDefault(); lensViews.startDirectSignIn(); });
               return b;
             })()));
@@ -70,19 +70,19 @@ function masthead() {
     'aria-label': dark ? 'Switch to light mode' : 'Switch to dark mode' }, dark ? '☀' : '☾');
   themeBtn.addEventListener('click', () => theme.toggle());
   return el('header', { class: 'masthead' },
-    el('a', { class: 'wordmark', href: '#/popular' },
-      el('img', { class: 'wordmark-glyph', src: './icons/icon-192.png', alt: '' }), 'Forage'),
+    el('a', { class: 'wordmark', href: '/popular' },
+      el('img', { class: 'wordmark-glyph', src: '/icons/icon-192.png', alt: '' }), 'Forage'),
     el('nav', { class: 'row', style: 'gap:12px' },
-      el('a', { href: '#/home', class: 'small' }, 'Home'),
-      el('a', { href: '#/popular', class: 'small' }, 'Popular'),
-      el('a', { href: '#/all', class: 'small' }, 'All')),
+      el('a', { href: '/home', class: 'small' }, 'Home'),
+      el('a', { href: '/popular', class: 'small' }, 'Popular'),
+      el('a', { href: '/all', class: 'small' }, 'All')),
     el('div', { class: 'search' }, search),
     el('div', { class: 'who' },
       themeBtn,
-      viewer ? el('a', { class: 'bell small', href: '#/notifications', title: 'Notifications' }, '🔔',
+      viewer ? el('a', { class: 'bell small', href: '/notifications', title: 'Notifications' }, '🔔',
         unread ? el('span', { class: 'badge' }, unread) : null) : null,
-      viewer ? el('a', { class: 'small', href: `#/u/${who?.handle}` }, who?.handle || 'me')
-             : el('a', { class: 'small', href: '#/signup' }, 'Log in / Sign up')));
+      viewer ? el('a', { class: 'small', href: `/u/${who?.handle}` }, who?.handle || 'me')
+             : el('a', { class: 'small', href: '/signup' }, 'Log in / Sign up')));
 }
 
 // ---------- routes (3h: ONE namespace, resolved by the active population) ----------
@@ -119,11 +119,12 @@ router.route('/u/:handle', byMode(lensViews.lensUserView, views.profileView));
 router.route('/about', views.aboutView);
 router.route('/signup', memoryOnly(views.signupView));
 // legacy /lens* deep links → the unified namespace
-router.route('/lens', () => { location.hash = '/'; return { main: el('div', {}), side: null }; });
-router.route('/lens/f/:slug', (p) => { location.hash = `/f/${p.slug}`; return { main: el('div', {}), side: null }; });
-router.route('/lens/h/:tag', (p) => { location.hash = `/h/${p.tag}`; return { main: el('div', {}), side: null }; });
-router.route('/lens/p', (p, q) => { location.hash = `/p?uri=${encodeURIComponent(q.uri || '')}${q.from ? `&from=${q.from}` : ''}`; return { main: el('div', {}), side: null }; });
-router.setNotFound(() => ({ main: el('div', { class: 'empty' }, el('h2', {}, 'Lost in the pasture'), el('p', { class: 'muted' }, 'No such page.'), el('a', { class: 'btn', href: '#/' }, 'Go home')), side: null }));
+const redirectTo = (path) => { history.replaceState({}, '', path); return router.dispatch(path); };
+router.route('/lens', () => redirectTo('/'));
+router.route('/lens/f/:slug', (p) => redirectTo(`/f/${p.slug}`));
+router.route('/lens/h/:tag', (p) => redirectTo(`/h/${p.tag}`));
+router.route('/lens/p', (p, q) => redirectTo(`/p?uri=${encodeURIComponent(q.uri || '')}${q.from ? `&from=${q.from}` : ''}`));
+router.setNotFound(() => ({ main: el('div', { class: 'empty' }, el('h2', {}, 'Lost in the pasture'), el('p', { class: 'muted' }, 'No such page.'), el('a', { class: 'btn', href: '/' }, 'Go home')), side: null }));
 
 // ---------- render pipeline ----------
 let currentCleanup = null;
@@ -145,7 +146,16 @@ function render() {
 
 // re-render on any store change (persona switch, dispatch, dev flags)
 store.subscribe(render);
-window.addEventListener('hashchange', render);
+window.addEventListener('popstate', render);
+router.interceptLinks(render); // real hrefs, no page loads
+// A legacy '#/...' link followed while the app is ALREADY open is a
+// same-document change — boot never re-runs, so bridge it here too.
+window.addEventListener('hashchange', () => {
+  const path = router.legacyHashPath(location.hash);
+  if (!path) return;
+  history.replaceState({}, '', path);
+  render();
+});
 
 // ---------- theme + skin ----------
 theme.apply();
@@ -163,10 +173,14 @@ import('./auth/session.js').then(async ({ isOAuthCallback }) => {
   if (isOAuthCallback(location.search) || isOAuthCallback(location.hash)) {
     const lv = await import('./ui/lens-views.js');
     await lv.ensureAuthBoot();
-    location.hash = '/';
+    history.replaceState({}, '', '/'); // drop the callback params from the bar
+    render();
   }
 });
-if (!location.hash) location.hash = '/';
+// 3n: bridge the hash URLs already shared from the deployed site. Runs AFTER
+// the OAuth check so a fragment response is never mistaken for a route.
+const legacy = router.legacyHashPath(location.hash);
+if (legacy) history.replaceState({}, '', legacy);
 if (!hadState && pmode.active() === 'memory') {
   // First ever visit IN THE MEMORY POPULATION: seed once so the sandbox has
   // content. Seeding keys off the presentation mode now (3h) — the Bluesky

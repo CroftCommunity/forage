@@ -90,7 +90,7 @@ export async function run() {
   const { page } = s;
 
   // 3b segment: signed-in → dial to Mutuals → the merged board renders
-  await page.goto(`${s.origin}/#/`);
+  await page.goto(`${s.origin}/`);
   await page.waitForSelector('text=@me.test');
   await page.waitForSelector('[data-ring-dial]');
   await page.locator('[data-ring-dial] button:has-text("Mutuals")').first().click();
@@ -142,7 +142,7 @@ export async function run() {
   assert.ok(await qnode.locator('a:has-text("open its thread")').count(), 'a quote opens as its own room');
 
   // …and the facet #tag in a board post is a doorway into /h/
-  await page.goto(`${s.origin}/#/`);
+  await page.goto(`${s.origin}/`);
   await page.locator('[data-ring-dial] button:has-text("Mutuals")').first().click();
   await page.waitForSelector('a[data-tag="camp"]');
   await page.locator('a[data-tag="camp"]').first().click();
@@ -155,7 +155,7 @@ export async function run() {
   await page.waitForSelector('text=Include #camp in your post');
 
   // 3g segment: the trending rail (world ring) opens a topic as a FEED board
-  await page.goto(`${s.origin}/#/`);
+  await page.goto(`${s.origin}/`);
   await page.locator('[data-ring-dial] button:has-text("World")').first().click();
   await page.waitForSelector('[data-trending] a:has-text("Meadow Fest")');
   await page.locator('[data-trending] a:has-text("Meadow Fest")').click();
@@ -204,10 +204,10 @@ export async function run() {
     responses: { 'getTrendingTopics': { topics: [] } },
   });
   await fd.page.goto(fd.origin); // no hash at all — the true front door
-  await fd.page.waitForFunction(() => location.hash === '#/', null, { timeout: 10000 });
+  await fd.page.waitForFunction(() => location.pathname === '/', null, { timeout: 10000 });
   await fd.page.waitForSelector('text=The Lens');
   assert.equal(await fd.key(), null, 'the bluesky front door writes NOTHING to forage.state (the named check)');
-  await fd.page.goto(`${fd.origin}/#/popular`);
+  await fd.page.goto(`${fd.origin}/popular`);
   await fd.page.waitForSelector('text=That page lives in the Memory sandbox');
   assert.equal(await fd.key(), null, 'gated — and still nothing written');
   await fd.close();

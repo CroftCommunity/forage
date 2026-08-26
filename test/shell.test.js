@@ -37,6 +37,19 @@ test('every runtime module on disk is precached in sw.js SHELL', () => {
   }
 });
 
+test('the SHELL precaches the app shell itself so clean-path deep links work offline (3n)', () => {
+  const sw = readFileSync(join(root, 'sw.js'), 'utf8');
+  const shell = sw.match(/const SHELL = \[([\s\S]*?)\];/)[1];
+  assert.ok(shell.includes("'/'"), "sw.js SHELL precaches '/' (the navigation fallback)");
+  assert.ok(shell.includes("'/404.html'"), 'sw.js SHELL precaches /404.html (the Pages deep-link shell)');
+  readFileSync(join(root, '404.html')); // throws if missing
+});
+
+test('404.html is byte-identical to index.html (Pages serves it for every deep link)', () => {
+  assert.equal(readFileSync(join(root, '404.html'), 'utf8'), readFileSync(join(root, 'index.html'), 'utf8'),
+    'regenerate: cp index.html 404.html');
+});
+
 test('every SHELL js entry exists on disk (no stale precache entries)', () => {
   const sw = readFileSync(join(root, 'sw.js'), 'utf8');
   const entries = [...sw.matchAll(/'\.\/(js\/[^']+|data\/[^']+)'/g)].map((m) => m[1]);

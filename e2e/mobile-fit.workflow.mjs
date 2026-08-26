@@ -48,23 +48,23 @@ export async function run() {
   });
   for (const width of WIDTHS) {
     await b.page.setViewportSize({ width, height: 800 });
-    await b.page.goto(`${b.origin}/#/`);
+    await b.page.goto(`${b.origin}/`);
     await b.page.waitForSelector('text=The Lens');
     await assertNoOverflow(b.page, `bluesky home @${width}`);
 
-    await b.page.goto(`${b.origin}/#/f/whats-hot`);
+    await b.page.goto(`${b.origin}/f/whats-hot`);
     await b.page.waitForSelector('.postrow');
     await assertNoOverflow(b.page, `feed board (long tokens) @${width}`);
 
-    await b.page.goto(`${b.origin}/#/p?uri=${encodeURIComponent('at://did:plc:aa/app.bsky.feed.post/long1')}`);
+    await b.page.goto(`${b.origin}/p?uri=${encodeURIComponent('at://did:plc:aa/app.bsky.feed.post/long1')}`);
     await b.page.waitForSelector('.comment');
     await assertNoOverflow(b.page, `deep thread @${width}`);
 
-    await b.page.goto(`${b.origin}/#/mode`);
+    await b.page.goto(`${b.origin}/mode`);
     await b.page.waitForSelector('[data-mode-card="memory"]');
     await assertNoOverflow(b.page, `/mode @${width}`);
 
-    await b.page.goto(`${b.origin}/#/settings`);
+    await b.page.goto(`${b.origin}/settings`);
     await b.page.waitForSelector('text=Theme');
     await assertNoOverflow(b.page, `/settings @${width}`);
   }
@@ -74,7 +74,7 @@ export async function run() {
   const m = await scenario('seeded', {});
   for (const width of WIDTHS) {
     await m.page.setViewportSize({ width, height: 800 });
-    await m.page.goto(`${m.origin}/#/popular`);
+    await m.page.goto(`${m.origin}/popular`);
     await m.page.waitForSelector('.postrow');
     await assertNoOverflow(m.page, `memory popular @${width}`);
 
@@ -88,7 +88,7 @@ export async function run() {
       return null;
     });
     assert.ok(threadLink, 'the seed has a thread with comments');
-    await m.page.goto(`${m.origin}/${threadLink}`);
+    await m.page.goto(new URL(threadLink, m.origin).href); // clean paths already start with /
     await m.page.waitForSelector('.comment');
     await assertNoOverflow(m.page, `memory thread @${width}`);
   }

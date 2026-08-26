@@ -16,7 +16,7 @@ export const SKINS = Object.freeze({
 export function hrefFor(id) {
   const s = SKINS[id];
   if (!s) throw new Error(`unknown skin: ${id} (known: ${Object.keys(SKINS).join(', ')})`);
-  return s.file ? `./${s.file}` : null;
+  return s.file ? `/${s.file}` : null;
 }
 
 export function getSkin() {

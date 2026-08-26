@@ -78,7 +78,7 @@ export async function run() {
   const { page } = s;
 
   // signed-out: the OAuth card, no app-password field anywhere
-  await page.goto(`${s.origin}/#/`);
+  await page.goto(`${s.origin}/`);
   await page.waitForSelector('text=Sign in with Bluesky');
   assert.equal(await page.locator('input[type="password"]').count(), 0, 'no password field exists anymore');
 
@@ -89,12 +89,12 @@ export async function run() {
 
   // the personal surface opens: saved feeds in the sidebar; the identity and
   // moderation mirror live on /me, NOT the front page
-  await page.waitForSelector('a[href="#/f/whats-hot"]');
-  await page.waitForSelector('a[href="#/f/following"]');
+  await page.waitForSelector('a[href="/f/whats-hot"]');
+  await page.waitForSelector('a[href="/f/following"]');
   assert.equal(await page.locator('#side [data-moderation-panel]').count(), 0, 'moderation lives on /me now');
 
   // the masthead @handle IS the profile link
-  await page.goto(`${s.origin}/#/`);
+  await page.goto(`${s.origin}/`);
   await page.locator('.masthead a[title="Your Forage profile"]').click();
   await page.waitForSelector('text=@wtest.bsky.social');
   await page.waitForSelector('[data-moderation-panel]');
@@ -105,7 +105,7 @@ export async function run() {
   await page.waitForSelector('button:has-text("+ Add another account")');
 
   // 3j: feed discovery — /feeds lists generators, searchable, each linkable
-  await page.goto(`${s.origin}/#/feeds`);
+  await page.goto(`${s.origin}/feeds`);
   await page.waitForSelector('[data-discover-feed]');
   await page.waitForSelector('text=Garden Talk');
   await page.waitForSelector('text=Post with #gardening to appear here.');
@@ -114,7 +114,7 @@ export async function run() {
   await page.waitForSelector('text=Garden Talk');
 
   // 3j: a feed board carries its header card, and Join writes preferences
-  await page.goto(`${s.origin}/#/f/whats-hot`);
+  await page.goto(`${s.origin}/f/whats-hot`);
   await page.waitForSelector('[data-feed-header]');
   await page.waitForSelector('text=feed by @bsky.app');
   const joinBtn = page.locator('[data-feed-header] button');
@@ -126,7 +126,7 @@ export async function run() {
   assert.ok(!savedPref.items.some((i) => i.value.includes('whats-hot')), 'leaving removed it from saved feeds');
 
   // sign out lives on the profile now — go there, then out
-  await page.goto(`${s.origin}/#/me`);
+  await page.goto(`${s.origin}/me`);
   await page.waitForSelector('button:has-text("Sign out")');
   await page.locator('button:has-text("Sign out")').click();
   await page.waitForSelector('text=Sign in with Bluesky', { timeout: 10000 });

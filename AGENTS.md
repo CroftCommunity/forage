@@ -86,7 +86,9 @@ start.
 
 ## Surfaces (Bluesky population)
 
-One route namespace, resolved by the active presentation mode (`js/mode.js`):
+Clean paths (3n) — no `#` fragments; `404.html` mirrors `index.html` for Pages
+deep links and the service worker upgrades them to 200s. One route namespace,
+resolved by the active presentation mode (`js/mode.js`):
 `/` home · `/f/:slug` feed board · `/h/:tag` hashtag board · `/p?uri=` thread ·
 `/u/:handle` profile · `/me` your session + accounts + moderation mirror ·
 `/feeds` discovery · `/mode` · `/settings`. Cross-population routes gate with

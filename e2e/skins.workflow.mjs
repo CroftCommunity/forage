@@ -11,7 +11,7 @@ export async function run() {
   const fontOf = () => page.evaluate(() => getComputedStyle(document.body).fontFamily);
   const linkCount = () => page.locator('link#skin-sheet').count();
 
-  await page.goto(`${s.origin}/#/settings`);
+  await page.goto(`${s.origin}/settings`);
   await page.waitForSelector('text=Skin');
   const before = await fontOf();
   assert.equal(await linkCount(), 0, 'default = no skin sheet');
@@ -28,12 +28,12 @@ export async function run() {
   assert.match(await fontOf(), /mono/i, 'the skin survives reload (device-local)');
 
   // …and follows across surfaces (skins ride the shell, not a population)
-  await page.goto(`${s.origin}/#/about`);
+  await page.goto(`${s.origin}/about`);
   await page.waitForSelector('.masthead');
   assert.match(await fontOf(), /mono/i, 'the BBS skin dresses every surface');
 
   // back to default: the look is exactly today's (no sheet at all)
-  await page.goto(`${s.origin}/#/settings`);
+  await page.goto(`${s.origin}/settings`);
   await page.waitForSelector('text=Skin');
   await page.locator('.field-row:has-text("Skin") select').selectOption('default');
   await page.waitForFunction(() => !document.getElementById('skin-sheet'));
