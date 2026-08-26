@@ -47,16 +47,19 @@ test('the UI layer never imports a substrate or the routing config (lens read-on
   }
 });
 
-test('the lens exception holds: exactly TWO write paths, both named (DL-013 likes, 3j feed join)', () => {
+test('the lens exception holds: writes are records-none, likes-one-pair, preferences-only (DL-013, 3j, 3s)', () => {
   const src = readFileSync(join(root, 'js/substrates/lens.js'), 'utf8');
   assert.ok(!/\bcommit\s*\(/.test(src), 'lens.js never touches the memory fold');
   assert.ok(!/putRecord/.test(src), 'no putRecord — the lens edits no records');
-  // the SECOND write (3j): preferences, not records — join/leave a feed.
-  // Exactly one putPreferences call, under its marked section.
-  assert.equal((src.match(/putPreferences/g) || []).length, 1, 'exactly one putPreferences (feed join/leave)');
+  // the SECOND write (3j/3s): preferences, not records. Two callers now —
+  // join/leave and favorite/unfavorite — because Bluesky models saved and
+  // pinned separately and Forage must not conflate them. Both live under the
+  // marker; the count is pinned so a third does not appear unnoticed.
+  assert.equal((src.match(/putPreferences/g) || []).length, 2,
+    'exactly two putPreferences callers: join/leave (3j) and favorite (3s)');
   const prefMarker = src.indexOf('the SECOND lens write');
   assert.ok(prefMarker > 0, 'the preferences write carries its marker comment');
-  assert.ok(src.indexOf('putPreferences') > prefMarker, 'it lives under that marker');
+  assert.ok(src.indexOf('putPreferences') > prefMarker, 'they live under that marker');
   // exactly ONE createRecord and ONE deleteRecord, both under the marked
   // write-pair section, both bound to the like collection constant
   assert.equal((src.match(/createRecord/g) || []).length, 1, 'exactly one createRecord (the like)');

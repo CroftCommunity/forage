@@ -76,6 +76,16 @@ export async function run() {
           embed: { $type: 'app.bsky.embed.images#view', images: [
             { thumb: 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==', fullsize: 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==', alt: 'a test image post' } ] } } },
       ] },
+      // 3r: the cascade fixture. Routing is first-match-wins by substring, so
+      // quote1's own thread/quotes must be declared BEFORE the generic keys.
+      'getPostThread?uri=at%3A%2F%2Fdid%3Aplc%3Acc%2Fapp.bsky.feed.post%2Fquote1': { thread: {
+        post: post('quote1', 'did:plc:cc', '2026-08-25T12:00:00Z').post,
+        replies: [{ post: { ...post('q1reply', 'did:plc:aa', '2026-08-25T12:30:00Z').post,
+          record: { text: 'replying to the quote', createdAt: '2026-08-25T12:30:00Z' } }, replies: [] }],
+      } },
+      'getQuotes?uri=at%3A%2F%2Fdid%3Aplc%3Acc%2Fapp.bsky.feed.post%2Fquote1': { posts: [
+        { ...post('quote2', 'did:plc:bb', '2026-08-25T13:00:00Z').post,
+          record: { text: 'quoting the quote', createdAt: '2026-08-25T13:00:00Z' } } ] },
       'getPostThread': { thread: {
         post: { ...post('b1', 'did:plc:bb', '2026-08-25T11:00:00Z').post, quoteCount: 1 },
         replies: [
@@ -84,7 +94,8 @@ export async function run() {
           { post: post('reply1', 'did:plc:aa', '2026-08-25T11:30:00Z').post, replies: [] },
         ],
       } },
-      'getQuotes': { posts: [post('quote1', 'did:plc:cc', '2026-08-25T12:00:00Z').post] },
+      'getQuotes': { posts: [
+        { ...post('quote1', 'did:plc:cc', '2026-08-25T12:00:00Z').post, replyCount: 1, quoteCount: 1 } ] },
     },
   });
   const { page } = s;
@@ -136,7 +147,7 @@ export async function run() {
     'the self-thread part is body, never a comment');
   await page.waitForSelector('text=post reply1');
   await page.waitForSelector('[data-kind="quote"]');
-  const qnode = page.locator('[data-kind="quote"]');
+  const qnode = page.locator('[data-kind="quote"][data-depth="0"]');
   assert.match(await qnode.innerText(), /❝/, 'the quote marker distinguishes the kind');
   assert.match(await qnode.innerText(), /post quote1/, 'the quote body renders in the thread');
   assert.ok(await qnode.locator('a:has-text("open its thread")').count(), 'a quote opens as its own room');
@@ -146,19 +157,36 @@ export async function run() {
   // replies beneath it. The replies keep the collapse gutter; never both.
   const qbox = await qnode.evaluate((n) => {
     const cs = getComputedStyle(n);
-    return { wall: parseFloat(cs.borderLeftWidth), bg: cs.backgroundColor, gutters: n.querySelectorAll('.gutter').length };
+    // :scope > — a quote's own chrome. Its nested replies (3r) legitimately
+    // carry gutters of their own; what must never happen is one node wearing
+    // both grammars.
+    return { wall: parseFloat(cs.borderLeftWidth), bg: cs.backgroundColor, gutters: n.querySelectorAll(':scope > .gutter').length };
   });
   assert.ok(qbox.wall >= 2, `the quote carries a left wall (got ${qbox.wall}px)`);
   assert.equal(qbox.gutters, 0, 'a walled quote has no collapse gutter — the two grammars stay distinct');
-  const replyBox = await page.locator('.comment:not([data-kind="quote"])').first()
-    .evaluate((n) => ({ wall: parseFloat(getComputedStyle(n).borderLeftWidth), gutters: n.querySelectorAll('.gutter').length }));
+  const replyBox = await page.locator('.card > .comment:not([data-kind="quote"])').first()
+    .evaluate((n) => ({ wall: parseFloat(getComputedStyle(n).borderLeftWidth), gutters: n.querySelectorAll(':scope > .gutter').length }));
   assert.equal(replyBox.wall, 0, 'a reply is NOT walled');
   assert.ok(replyBox.gutters >= 1, 'a reply keeps its collapse gutter');
   // and the body is styled at all — .cmeta/.cbody had no rules, so the node
   // used to render as default body text (2026-08-26)
-  const qFont = await qnode.locator('.quote-body').evaluate((n) => parseFloat(getComputedStyle(n).fontSize));
+  const qFont = await qnode.locator(':scope > .quote-body').evaluate((n) => parseFloat(getComputedStyle(n).fontSize));
   const rootFont = await page.evaluate(() => parseFloat(getComputedStyle(document.body).fontSize));
   assert.ok(qFont < rootFont, `the quote body reads at comment scale (${qFont}px < ${rootFont}px)`);
+
+  // 3r: the CASCADE. A quote collects replies of its own and can itself be
+  // quoted; it lands after the first paint, so the thread never waits for it.
+  await page.waitForSelector('text=replying to the quote');
+  await page.waitForSelector('text=quoting the quote');
+  const cascade = await page.locator('[data-kind="quote"][data-depth="0"]').evaluate((n) => ({
+    nestedQuotes: n.querySelectorAll('[data-kind="quote"]').length,
+    nestedReplies: n.querySelectorAll('.comment:not([data-kind="quote"])').length,
+  }));
+  assert.equal(cascade.nestedQuotes, 1, 'the quote-of-the-quote nests INSIDE the quote it answers');
+  assert.equal(cascade.nestedReplies, 1, 'and so does the reply to the quote');
+  const nested = page.locator('[data-kind="quote"][data-depth="1"]');
+  assert.ok(await nested.evaluate((n) => parseFloat(getComputedStyle(n).borderLeftWidth) >= 2),
+    'a wall nests inside a wall — the grammar holds at every depth');
 
   // …and the facet #tag in a board post is a doorway into /h/
   await page.goto(`${s.origin}/`);
@@ -191,8 +219,10 @@ export async function run() {
   const feedTitle = await page.locator('h1').first().innerText();
   assert.equal(await page.locator('[data-feed-header]').innerText().then((t) => t.includes(feedTitle)), false,
     'the card never repeats the title the heading already carries');
-  assert.match(await page.locator('[data-feed-header] button').innerText(), /Join|Leave/,
+  assert.match(await page.locator('[data-feed-header] button:not([data-feed-favorite])').innerText(), /Join|Leave/,
     'Join/Leave rides on the headline row');
+  assert.equal(await page.locator('[data-feed-header] [data-feed-favorite]').count(), 1,
+    '3s: and the favorite star rides beside it');
 
   // 3i segment: the board toolbar — window sorts, honestly scoped
   await page.waitForSelector('[data-board-toolbar]');

@@ -126,9 +126,11 @@ test('3e: replies and quotes interleave time-ordered as ONE continuation; ties b
       { post: qPost('r2', 'did:plc:cc', '2026-08-25T11:00:00Z'), replies: [] },
     ],
   } };
+  // 3r: a quote is a cascade ENTRY — a threadViewPost plus its own quotes.
+  // With nothing fetched below it, that is just { post }.
   const quotes = [
-    qPost('q1', 'did:plc:bb', '2026-08-25T10:00:00Z'),
-    qPost('q2', 'did:plc:aa', '2026-08-25T09:00:00Z'), // TIE with r1 at 09:00 — did:plc:aa equal, id decides
+    { post: qPost('q1', 'did:plc:bb', '2026-08-25T10:00:00Z') },
+    { post: qPost('q2', 'did:plc:aa', '2026-08-25T09:00:00Z') }, // TIE with r1 at 09:00 — did:plc:aa equal, id decides
   ];
   const t = shapeLensThread(threadResponse, QSRC, { quotes });
   const order = t.comments.map((c) => `${c.kind}:${c.id.split('/').pop()}`);
@@ -141,6 +143,68 @@ test('3e: replies and quotes interleave time-ordered as ONE continuation; ties b
     'exactly what the appview returned — a detached quote simply is not in the list');
 });
 
+// ---- 3r: quote CASCADES — a quote of a quote of a quote ----
+// A repost-with-comment can itself be quoted, and a quote can collect its own
+// replies. The topic-centered view has to show that whole continuation, not
+// just the first ring of quotes and not just replies to the root.
+
+test('3r: a quote carries its own replies AND its own quotes, interleaved by the same rule', () => {
+  const q1 = qPost('q1', 'did:plc:bb', '2026-08-25T10:00:00Z');
+  const threadResponse = { thread: {
+    post: qPost('root', 'did:plc:op', '2026-08-25T08:00:00Z'),
+    replies: [{ post: qPost('r1', 'did:plc:aa', '2026-08-25T09:00:00Z'), replies: [] }],
+  } };
+  const t = shapeLensThread(threadResponse, QSRC, { quotes: [
+    { post: q1,
+      replies: [{ post: qPost('q1r1', 'did:plc:cc', '2026-08-25T12:00:00Z'), replies: [] }],
+      quotes: [{ post: qPost('q1q1', 'did:plc:dd', '2026-08-25T11:00:00Z'),
+        quotes: [{ post: qPost('q1q1q1', 'did:plc:ee', '2026-08-25T11:30:00Z') }] }] },
+  ] });
+
+  const quote = t.comments.find((c) => c.kind === 'quote');
+  assert.equal(quote.id.split('/').pop(), 'q1');
+  // its subtree interleaves a REPLY and a QUOTE-OF-THE-QUOTE by time
+  assert.deepEqual(quote.children.map((c) => `${c.kind}:${c.id.split('/').pop()}`),
+    ['quote:q1q1', 'reply:q1r1'], 'one ordering rule the whole way down: (createdTs, authorId, id)');
+  // and the cascade keeps going — a quote of a quote of a quote
+  assert.deepEqual(quote.children[0].children.map((c) => `${c.kind}:${c.id.split('/').pop()}`),
+    ['quote:q1q1q1']);
+  assert.equal(quote.children[0].children[0].depth, 2, 'depth counts the whole continuation');
+  assert.equal(t.total, 5, 'every rendered node is counted: r1, q1, q1r1, q1q1, q1q1q1');
+});
+
+test('3r: the cascade is BOUNDED — past the cap a quote says how many it is not showing', async () => {
+  const { QUOTE_CASCADE_DEPTH } = await import('../js/substrates/lens.js');
+  assert.ok(QUOTE_CASCADE_DEPTH >= 1, 'there is a published cap, not an accidental one');
+
+  // build a chain of quotes one level deeper than the cap allows
+  let entry = { post: qPost('deepest', 'did:plc:zz', '2026-08-25T09:00:00Z') };
+  for (let d = QUOTE_CASCADE_DEPTH; d >= 0; d -= 1) {
+    entry = { post: qPost(`q${d}`, 'did:plc:aa', '2026-08-25T09:00:00Z'), quotes: [entry] };
+  }
+  const t = shapeLensThread({ thread: { post: qPost('root', 'did:plc:op', '2026-08-25T08:00:00Z'), replies: [] } },
+    QSRC, { quotes: [entry] });
+
+  let node = t.comments[0];
+  let depth = 0;
+  while (node.children.length) { node = node.children[0]; depth += 1; }
+  assert.equal(depth, QUOTE_CASCADE_DEPTH, 'the cascade stops at the cap');
+  assert.equal(node.deferred, 1, 'and says plainly that one more quote exists below it');
+});
+
+test('3r: a blocked quoter takes their whole branch with them', () => {
+  const posture = { blockedDids: new Set(['did:plc:bad']), mutedDids: new Set(), labelerDids: [], contentLabels: new Map(), mutedWords: [] };
+  const t = shapeLensThread({ thread: { post: qPost('root', 'did:plc:op', '2026-08-25T08:00:00Z'), replies: [] } },
+    QSRC, { posture, quotes: [
+      { post: qPost('bad', 'did:plc:bad', '2026-08-25T09:00:00Z'),
+        quotes: [{ post: qPost('under', 'did:plc:ok', '2026-08-25T10:00:00Z') }] },
+      { post: qPost('fine', 'did:plc:ok', '2026-08-25T11:00:00Z') },
+    ] });
+  assert.deepEqual(t.comments.map((c) => c.id.split('/').pop()), ['fine'],
+    'the same rule replies already follow — a blocked node never renders, and neither does anything under it');
+  assert.equal(t.total, 1);
+});
+
 // 3q: a quote-response is a top-level thread ON the post — the OG post stays
 // the container. That is a rule about DEPTH, so it is pinned here and the view
 // reads it rather than deciding for itself.
@@ -150,10 +214,9 @@ test('3q: quote nodes are always top-level; threadNodeStyle walls only those', a
     post: qPost('root', 'did:plc:op', '2026-08-25T08:00:00Z'),
     replies: [{ post: qPost('r1', 'did:plc:aa', '2026-08-25T09:00:00Z'), replies: [] }],
   } };
-  const t = shapeLensThread(threadResponse, QSRC, { quotes: [qPost('q1', 'did:plc:bb', '2026-08-25T10:00:00Z')] });
-  for (const c of t.comments.filter((c) => c.kind === 'quote')) {
-    assert.equal(c.depth, 0, 'a quote never nests — it responds to the post, not to a reply');
-  }
+  const t = shapeLensThread(threadResponse, QSRC, { quotes: [{ post: qPost('q1', 'did:plc:bb', '2026-08-25T10:00:00Z') }] });
+  assert.equal(t.comments.find((c) => c.kind === 'quote').depth, 0,
+    'a quote OF THE POST is top-level — it answers the post, not a reply');
 
   // the wall marks quoted material. A reply gets the collapse gutter instead;
   // the two must never appear on the same node or the thread reads as if the
@@ -161,9 +224,9 @@ test('3q: quote nodes are always top-level; threadNodeStyle walls only those', a
   assert.deepEqual(threadNodeStyle({ kind: 'quote', depth: 0 }), { kind: 'quote', walled: true });
   assert.deepEqual(threadNodeStyle({ kind: 'reply', depth: 0 }), { kind: 'reply', walled: false });
   assert.deepEqual(threadNodeStyle({ kind: 'reply', depth: 3 }), { kind: 'reply', walled: false });
-  // defensive: if a quote ever arrived nested, it renders as an ordinary reply
-  // rather than stacking a second wall inside the gutter
-  assert.deepEqual(threadNodeStyle({ kind: 'quote', depth: 2 }), { kind: 'reply', walled: false });
+  // 3r: a quote OF a quote is still quoted material, so it is still walled —
+  // the wall marks the kind, never the position
+  assert.deepEqual(threadNodeStyle({ kind: 'quote', depth: 2 }), { kind: 'quote', walled: true });
 });
 
 test('3e: reply nodes carry kind=reply and nested children keep working', () => {
@@ -214,6 +277,67 @@ test('3e: thread() fetches quotes alongside; a quotes failure degrades to the ho
   assert.deepEqual(degraded.comments.map((c) => c.kind), ['reply'], 'replies still render');
   assert.equal(degraded.quotesFailed, true, 'the failure is named, not silent');
   assert.equal(degraded.quoteCount, 3, 'the honest count survives for the chip');
+});
+
+test('3r: thread() expands the cascade OPPORTUNISTICALLY — first paint never waits for it', async () => {
+  const json = (d) => ({ ok: true, status: 200, json: async () => d });
+  const calls = [];
+  const uriOf = (p) => new URLSearchParams(p.split('?')[1] || '').get('uri') || '';
+  const transport = async (path) => {
+    calls.push(path);
+    if (path.includes('getPostThread')) {
+      const u = uriOf(path);
+      if (u.endsWith('/root')) return json({ thread: { post: qPost('root', 'did:plc:op', '2026-08-25T08:00:00Z', { quoteCount: 2 }), replies: [] } });
+      // the quote's own replies
+      return json({ thread: { post: qPost('q1', 'did:plc:bb', '2026-08-25T10:00:00Z'),
+        replies: [{ post: qPost('q1r1', 'did:plc:cc', '2026-08-25T12:00:00Z'), replies: [] }] } });
+    }
+    if (path.includes('getQuotes')) {
+      const u = uriOf(path);
+      if (u.endsWith('/root')) {
+        return json({ posts: [
+          qPost('q1', 'did:plc:bb', '2026-08-25T10:00:00Z', { replyCount: 1, quoteCount: 1 }),
+          qPost('q2', 'did:plc:dd', '2026-08-25T13:00:00Z'), // silent: no replies, no quotes
+        ] });
+      }
+      return json({ posts: [qPost('q1q1', 'did:plc:ee', '2026-08-25T11:00:00Z')] });
+    }
+    return { ok: false, status: 404, json: async () => ({}) };
+  };
+
+  const lens = createLens({ session: { did: 'did:plc:me', handle: 'me', fetchHandler: transport } });
+  const painted = [];
+  const first = await lens.thread('at://did:plc:op/app.bsky.feed.post/root', QSRC,
+    { onCascade: (t) => painted.push(t) });
+
+  // the first result is the CHEAP one — root thread + its quotes, nothing deeper
+  assert.deepEqual(first.comments.map((c) => c.id.split('/').pop()), ['q1', 'q2']);
+  assert.deepEqual(first.comments.map((c) => c.children.length), [0, 0]);
+
+  await new Promise((r) => setTimeout(r, 30)); // let the cascade land
+  assert.ok(painted.length >= 1, 'the cascade repaints rather than blocking the thread');
+  const deep = painted.at(-1);
+  const q1 = deep.comments.find((c) => c.id.endsWith('/q1'));
+  assert.deepEqual(q1.children.map((c) => `${c.kind}:${c.id.split('/').pop()}`),
+    ['quote:q1q1', 'reply:q1r1'], 'the quote grew its own replies AND its own quotes');
+
+  // the budget: q2 announces no replies and no quotes, so we never ask about it
+  assert.equal(calls.filter((c) => c.includes(encodeURIComponent('/q2'))).length, 0,
+    'replyCount/quoteCount are the budget — a silent quote costs nothing');
+});
+
+test('3r: without onCascade, thread() makes exactly the two calls it always made', async () => {
+  const json = (d) => ({ ok: true, status: 200, json: async () => d });
+  const calls = [];
+  const transport = async (path) => {
+    calls.push(path);
+    if (path.includes('getPostThread')) return json({ thread: { post: qPost('root', 'did:plc:op', '2026-08-25T08:00:00Z'), replies: [] } });
+    return json({ posts: [qPost('q1', 'did:plc:bb', '2026-08-25T10:00:00Z', { replyCount: 5, quoteCount: 5 })] });
+  };
+  await createLens({ session: { did: 'did:plc:me', handle: 'me', fetchHandler: transport } })
+    .thread('at://did:plc:op/app.bsky.feed.post/root', QSRC);
+  await new Promise((r) => setTimeout(r, 30));
+  assert.equal(calls.length, 2, 'the cascade is opt-in — no caller pays for it by accident');
 });
 
 // ---- 3i (2026-08-26 iteration): title/body, self-threads ----

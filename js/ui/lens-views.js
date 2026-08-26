@@ -19,13 +19,24 @@ let bootStarted = false;
 // and shared — the header card and the sidebar both need it, and a race
 // between them showed the wrong Join/Leave label.
 const savedFeedUris = new Set();
+// 3s: and which of those are FAVORITED (pinned to the top row of the official
+// app). Saved and pinned are two different states in savedFeedsPrefV2 — Forage
+// used to force both at once, quietly rearranging that top row.
+const pinnedFeedUris = new Set();
 let savedFeedsPromise = null;
 const roster = createAccountRoster();
 function ensureSavedFeeds() {
   if (!session) return Promise.resolve(savedFeedUris);
   if (!savedFeedsPromise) {
     savedFeedsPromise = lens.fields()
-      .then((fs) => { for (const f of fs) if (f.kind === 'feed') savedFeedUris.add(f.id); return fs; })
+      .then((fs) => {
+        for (const f of fs) {
+          if (f.kind !== 'feed') continue;
+          savedFeedUris.add(f.id);
+          if (f.pinned) pinnedFeedUris.add(f.id);
+        }
+        return fs;
+      })
       .catch(() => []);
   }
   return savedFeedsPromise;
@@ -86,6 +97,7 @@ async function adoptSession(s) {
   session = { did: s.did, handle, fetchHandler: (p, i) => manager.fetch(p, i) };
   lens = createLens({ session });
   savedFeedUris.clear();
+  pinnedFeedUris.clear();
   savedFeedsPromise = null;
   roster.remember({ did: s.did, handle }); // 3k: this device knows this account now
   // 3f: mirror the account's moderation posture — mute a word on bsky.app and
@@ -329,6 +341,7 @@ function sessionCard() {
       session = null;
       lens = createLens({});
       savedFeedUris.clear();
+      pinnedFeedUris.clear();
       savedFeedsPromise = null;
       activeRing = 'world';
       toast('Signed out.', 'ok');
@@ -499,15 +512,33 @@ export function lensFieldView(params) {
 // below it (which carry the green collapse gutter instead). The ❝ marker keeps
 // the distinction in words; the node still opens as its own thread, because
 // the conversation genuinely branched into a new room.
-function quoteNode(node) {
-  return el('div', { class: 'comment quote-node', 'data-kind': 'quote' },
+function quoteNode(node, ctx) {
+  const kids = el('div', { class: 'quote-children' });
+  const box = el('div', { class: 'comment quote-node', 'data-kind': 'quote', 'data-depth': String(node.depth) },
     el('div', { class: 'quote-meta' },
       el('span', { title: 'A quote-response: this author quoted the post above' }, '❝ '),
       node.author ? el('a', { href: `/u/${encodeURIComponent(node.author)}` }, node.author) : '[muted]',
-      el('span', { class: 'muted' }, ` quoted this · ${timeAgo(node.createdTs)} ago · ${fmtScore(node.score)} likes`)),
+      el('span', { class: 'muted' },
+        ` quoted ${node.depth ? 'that' : 'this'} · ${timeAgo(node.createdTs)} ago · ${fmtScore(node.score)} likes`)),
     el('div', { class: 'quote-body' }, node.maskedRemoved ? el('span', { class: 'muted' }, node.title || '[muted]') : node.body),
     el('div', { class: 'xs quote-open' },
-      el('a', { href: `/p?uri=${encodeURIComponent(node.quoteUri)}` }, 'open its thread ↳')));
+      el('a', { href: `/p?uri=${encodeURIComponent(node.quoteUri)}` }, 'open its thread ↳')),
+    kids);
+  // 3r: a quote collects its own replies and its own quotes — the cascade
+  // renders through the SAME dispatch, so a wall nests inside a wall and a
+  // gutter nests inside a wall, each keeping its own grammar.
+  for (const k of node.children || []) kids.append(lensNode(k, ctx));
+  if (node.deferred > 0) {
+    kids.append(el('a', { class: 'continue-stub', href: `/p?uri=${encodeURIComponent(node.quoteUri)}` },
+      `→ ${node.deferred} more quote${node.deferred === 1 ? '' : 's'} of this, in its own thread`));
+  }
+  return box;
+}
+
+// 3r: one dispatch for every thread node. The substrate says which kind it is;
+// the view only draws.
+function lensNode(node, ctx) {
+  return threadNodeStyle(node).walled ? quoteNode(node, ctx) : commentNode(node, ctx);
 }
 
 // 3e inbound: any post that IS a quote shows what it quotes, linked home.
@@ -586,7 +617,7 @@ export function accountMenu() {
     const did = session?.did;
     try { await manager.signOut(); } catch (e) { toast(e.message, 'err'); }
     if (did) roster.forget(did);
-    session = null; lens = createLens({}); savedFeedUris.clear(); savedFeedsPromise = null; activeRing = 'world';
+    session = null; lens = createLens({}); savedFeedUris.clear(); pinnedFeedUris.clear(); savedFeedsPromise = null; activeRing = 'world';
     toast('Signed out.', 'ok');
     rerender();
   });
@@ -623,14 +654,43 @@ export function lensUserView(params) {
 function feedHeaderCard(info, onChange) {
   const m = feedCardModel(info);
   const savedNow = () => savedFeedUris.has(info.uri);
+  const favNow = () => pinnedFeedUris.has(info.uri);
+
+  // 3s: favorite = pin it to the top row, the same row bsky.app shows. It is
+  // NOT joining: you can be joined without pinning, and favoriting something
+  // you never joined joins you too (pinned-but-unsaved is not a real state).
+  const star = el('button', { class: 'btn sm star', 'data-feed-favorite': '1',
+    'aria-pressed': String(favNow()), title: 'Favorite — pin this feed to the top of your feeds' },
+    favNow() ? '★' : '☆');
+  star.addEventListener('click', async () => {
+    if (!session) return toast('Sign in to favorite feeds — it pins to your Bluesky account.', 'err');
+    const want = !favNow();
+    star.disabled = true;
+    try {
+      await lens.favoriteFeed(info.uri, want);
+      if (want) { pinnedFeedUris.add(info.uri); savedFeedUris.add(info.uri); } else pinnedFeedUris.delete(info.uri);
+      toast(want ? 'Favorited — pinned to the top of your feeds.' : 'Unfavorited — still joined.', 'ok');
+      onChange?.();
+    } catch (e) { toast((want ? 'Favorite' : 'Unfavorite') + ' failed: ' + e.message, 'err'); }
+    finally {
+      star.disabled = false;
+      star.setAttribute('aria-pressed', String(favNow()));
+      star.replaceChildren(favNow() ? '★' : '☆');
+      btn.replaceChildren(savedNow() ? 'Leave' : 'Join');
+      btn.classList.toggle('primary', !savedNow());
+    }
+  });
+
   const btn = el('button', { class: 'btn sm' + (savedNow() ? '' : ' primary') }, savedNow() ? 'Leave' : 'Join');
   btn.addEventListener('click', async () => {
     if (!session) return toast('Sign in to join feeds — it saves to your Bluesky account.', 'err');
     const want = !savedNow();
     btn.disabled = true;
     try {
-      await (want ? lens.pinFeed(info.uri) : lens.unpinFeed(info.uri));
-      if (want) savedFeedUris.add(info.uri); else savedFeedUris.delete(info.uri);
+      await (want ? lens.joinFeed(info.uri) : lens.leaveFeed(info.uri));
+      if (want) { savedFeedUris.add(info.uri); } else { savedFeedUris.delete(info.uri); pinnedFeedUris.delete(info.uri); }
+      star.setAttribute('aria-pressed', String(pinnedFeedUris.has(info.uri)));
+      star.replaceChildren(pinnedFeedUris.has(info.uri) ? '★' : '☆');
       toast(want ? 'Joined — it is in your feeds on Bluesky too.' : 'Left the feed.', 'ok');
       onChange?.();
     } catch (e) { toast((want ? 'Join' : 'Leave') + ' failed: ' + e.message, 'err'); }
@@ -643,7 +703,7 @@ function feedHeaderCard(info, onChange) {
         el('div', { style: 'min-width:0' },
           el('div', { class: 'small' }, el('strong', {}, m.headline)),
           el('div', { class: 'xs muted' }, `${fmtScore(m.likeCount)} likes`))),
-      btn),
+      el('div', { class: 'row', style: 'gap:6px;align-items:center' }, star, btn)),
     el('div', { class: 'feed-blurb' + (m.blurbIsOwnWords ? '' : ' muted'), 'data-feed-blurb': m.blurbIsOwnWords ? 'feed' : 'ours' },
       m.blurb),
     m.degraded ? el('div', { class: 'xs muted' }, 'This feed’s server is not responding right now.') : null);
@@ -755,7 +815,10 @@ export function lensThreadView(params, query) {
   const src = from ? { fieldId: `lens:${from.slug}`, fieldSlug: from.slug, fieldTitle: from.title }
                    : { fieldId: 'lens:thread', fieldSlug: 'thread', fieldTitle: 'Thread' };
   const main = el('div', {}, skeleton(8));
-  lens.thread(uri, src).then((t) => {
+  // 3r: the cascade repaints in place — a quote of a quote is worth showing,
+  // never worth making the thread wait.
+  let onCascade = () => {};
+  lens.thread(uri, src, { onCascade: (t) => onCascade(t) }).then((t) => {
     const p = t.post;
     const head = el('div', { class: 'card', style: 'display:flex;gap:10px' },
       voteBox('post', p.id, p, !!session, 'col', lensVote(p)),
@@ -780,13 +843,14 @@ export function lensThreadView(params, query) {
       t.quotesFailed ? el('div', { class: 'row', style: 'gap:6px;margin-top:6px' },
         chip(`${t.quoteCount} quote${t.quoteCount === 1 ? '' : 's'} — couldn't fetch`, 'getQuotes failed; replies still render. Reload to retry.')) : null));
     const ctx = { ...LENS_PERMS, locked: true, // read-only: reply/vote/save/mod all gate
-      authorHref: (n) => `/u/${encodeURIComponent(n.author)}` }; // 3k: authors reach OUR profile page (which links out)
+      authorHref: (n) => `/u/${encodeURIComponent(n.author)}`, // 3k: authors reach OUR profile page (which links out)
+      nodeRenderer: (n, c) => lensNode(n, c) }; // 3r: a quote nested under a reply is still a quote
     const commentsCard = el('div', { class: 'card' });
-    for (const node of t.comments) {
-      // 3q: the substrate decides which nodes are walled quotes — the view
-      // never re-derives it, so a nested quote can't grow a second wall.
-      commentsCard.append(threadNodeStyle(node).walled ? quoteNode(node) : commentNode(node, ctx));
-    }
+    const paintComments = (comments) => {
+      commentsCard.replaceChildren(...comments.map((n) => lensNode(n, ctx)));
+    };
+    paintComments(t.comments);
+    onCascade = (next) => paintComments(next.comments); // the cascade landed — redraw the list in place
     main.replaceChildren(head, t.comments.length ? commentsCard : emptyState('No replies', 'Nothing below this post yet.'));
   }).catch((e) => main.replaceChildren(emptyState('Lens fetch failed', e.message)));
   return { main, side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()) };

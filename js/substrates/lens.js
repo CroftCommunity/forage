@@ -178,9 +178,21 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
 // the collapse gutter instead. Never both: with a bare quote node above them,
 // the walled replies below read as if they hung off the quote (2026-08-26).
 export function threadNodeStyle(node) {
-  const isTopQuote = node.kind === 'quote' && node.depth === 0;
-  return { kind: isTopQuote ? 'quote' : 'reply', walled: isTopQuote };
+  // 3r: walled at ANY depth. A quote can itself be quoted, so the wall marks
+  // the KIND of material, never its position — a cascade of quotes nests walls
+  // the way a cascade of replies nests gutters.
+  const isQuote = node.kind === 'quote';
+  return { kind: isQuote ? 'quote' : 'reply', walled: isQuote };
 }
+
+// 3r: how far a quote cascade renders inline before it becomes a link. Each
+// level costs a getPostThread + a getQuotes per quote, so this is a real
+// budget, not a style choice; past it the node says how many it is hiding.
+export const QUOTE_CASCADE_DEPTH = 3;
+
+// 3r: how many quotes per level we expand. Quote counts are long-tailed — the
+// first handful carry the conversation, the rest are drive-by reposts.
+const CASCADE_BREADTH = 10;
 
 // One bsky threadViewPost tree -> our thread result shape.
 // 3e: replies AND quotes are ONE continuation — a quote is a response the
@@ -240,17 +252,32 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
     chain = next;
   }
   const replies = build([...topLevel, ...reRooted], 0);
-  const quoteNodes = (quotes || [])
-    .filter((q) => !posture.blockedDids.has(q.author?.did))
-    .map((q) => {
-      total += 1;
-      const p = shapeLensPost(q, src, posture);
-      return node(p, 0, { kind: 'quote', quoteUri: p.id, quoted: p.quoted });
-    });
-  const comments = [...replies, ...quoteNodes].sort((a, b) =>
-    (a.createdTs - b.createdTs)
+  // 3r: a quote cascade. A repost-with-comment collects replies of its own and
+  // can itself be quoted, so a quote entry is a threadViewPost (post+replies)
+  // plus its own quotes, and this walks the whole continuation. One ordering
+  // rule the entire way down; a blocked author drops their branch, exactly as
+  // a blocked replier already does.
+  const order = (a, b) => (a.createdTs - b.createdTs)
     || String(a.authorId).localeCompare(String(b.authorId))
-    || String(a.id).localeCompare(String(b.id)));
+    || String(a.id).localeCompare(String(b.id));
+  const buildQuote = (entry, depth) => {
+    if (posture.blockedDids.has(entry.post?.author?.did)) return null;
+    total += 1;
+    const p = shapeLensPost(entry.post, src, posture);
+    const own = (entry.quotes || []);
+    const expandable = depth < QUOTE_CASCADE_DEPTH;
+    const kids = [
+      ...build(entry.replies, depth + 1),
+      ...(expandable ? own.map((q) => buildQuote(q, depth + 1)).filter(Boolean) : []),
+    ].sort(order);
+    return {
+      ...node(p, depth, { kind: 'quote', quoteUri: p.id, quoted: p.quoted }),
+      children: kids,
+      deferred: expandable ? 0 : own.length,
+    };
+  };
+  const quoteNodes = (quotes || []).map((q) => buildQuote(q, 0)).filter(Boolean);
+  const comments = [...replies, ...quoteNodes].sort(order);
   return { post, perms: LENS_PERMS, sort: 'lens', locked: false, comments, total,
     selfThread, quoteCount: root.post.quoteCount ?? 0 };
 }
@@ -312,20 +339,42 @@ export function sortWindow(posts, sort, timeframe, nowMs) {
   return [...window].sort((a, b) => (sort === 'new' ? b.createdTs - a.createdTs : b.score - a.score));
 }
 
-// 3j: joining a feed = saving+pinning it in savedFeedsPrefV2 (the same
-// preferences blob the official app uses — piggy-back principle). Pure: the
-// id is derived from the uri (deterministic, unique per feed, no randomness).
-export function withSavedFeed(preferences, uri, saved) {
-  const isSaved = (p) => (p.$type || '').endsWith('savedFeedsPrefV2');
-  const existing = preferences.find(isSaved);
-  const items = existing?.items ? [...existing.items] : [];
-  const at = items.findIndex((i) => i.value === uri);
-  if (saved && at === -1) items.push({ type: 'feed', value: uri, pinned: true, id: `forage-${uri.split('/').pop()}` });
-  if (!saved && at !== -1) items.splice(at, 1);
+// 3j/3s: joining a feed = SAVING it in savedFeedsPrefV2 (the same preferences
+// blob the official app uses — piggy-back principle). Pure: the id is derived
+// from the uri (deterministic, unique per feed, no randomness).
+//
+// 3s: joining does NOT pin. Bluesky models saved and pinned separately — saved
+// is your list, pinned is the top row of tabs — and forcing pinned:true here
+// rearranged that tab bar for anyone who joined a feed from Forage. Favoriting
+// is withPinnedFeed, below.
+const SAVED_PREF = (p) => (p.$type || '').endsWith('savedFeedsPrefV2');
+const feedItem = (uri, pinned) => ({ type: 'feed', value: uri, pinned, id: `forage-${uri.split('/').pop()}` });
+
+const withSavedItems = (preferences, mutate) => {
+  const existing = preferences.find(SAVED_PREF);
+  const items = mutate(existing?.items ? [...existing.items] : []);
   const next = { $type: 'app.bsky.actor.defs#savedFeedsPrefV2', ...(existing || {}), items };
-  return existing
-    ? preferences.map((p) => (isSaved(p) ? next : p))
-    : [...preferences, next];
+  return existing ? preferences.map((p) => (SAVED_PREF(p) ? next : p)) : [...preferences, next];
+};
+
+export function withSavedFeed(preferences, uri, saved) {
+  return withSavedItems(preferences, (items) => {
+    const at = items.findIndex((i) => i.value === uri);
+    if (saved && at === -1) items.push(feedItem(uri, false));
+    if (!saved && at !== -1) items.splice(at, 1); // leaving takes the pin with it
+    return items;
+  });
+}
+
+// 3s: favoriting = pinning. Pinning a feed you never joined joins it too —
+// pinned-but-unsaved is not a state the official app has.
+export function withPinnedFeed(preferences, uri, pinned) {
+  return withSavedItems(preferences, (items) => {
+    const at = items.findIndex((i) => i.value === uri);
+    if (at === -1) return pinned ? [...items, feedItem(uri, true)] : items;
+    items[at] = { ...items[at], pinned };
+    return items;
+  });
 }
 
 // 3m: the affordance split (owner-ratified 2026-08-26). /f/ and /h/ share the
@@ -467,15 +516,48 @@ export function createLens({ session = null, transport = fetch } = {}) {
     },
     posture: () => posture,
 
-    async thread(uri, src) {
+    // 3r: the thread, then its quote cascade. The cascade is opt-in (onCascade)
+    // and lands AFTER the first paint — a quote of a quote is worth showing,
+    // never worth waiting for. Each level costs requests, so two things bound
+    // it: QUOTE_CASCADE_DEPTH, and the counts the appview already gave us —
+    // a quote reporting no replies and no quotes is never asked about.
+    async thread(uri, src, { onCascade } = {}) {
+      const source = src || { fieldId: 'lens:thread', fieldSlug: 'thread', fieldTitle: 'Thread' };
       const [data, quotesRes] = await Promise.all([
         get('app.bsky.feed.getPostThread', { uri, depth: 10 }),
         get('app.bsky.feed.getQuotes', { uri, limit: 50 }).catch(() => null), // degrade, never break the thread
       ]);
-      const shaped = shapeLensThread(data,
-        src || { fieldId: 'lens:thread', fieldSlug: 'thread', fieldTitle: 'Thread' },
-        { quotes: quotesRes?.posts, posture });
-      return quotesRes === null ? { ...shaped, quotesFailed: true } : shaped;
+      const entries = (quotesRes?.posts || []).map((post) => ({ post }));
+      const shape = () => {
+        const t = shapeLensThread(data, source, { quotes: entries, posture });
+        return quotesRes === null ? { ...t, quotesFailed: true } : t;
+      };
+
+      if (onCascade && entries.length) {
+        const expand = async (level, depth) => {
+          if (depth >= QUOTE_CASCADE_DEPTH) return;
+          const targets = level
+            .filter((e) => (e.post.replyCount || 0) > 0 || (e.post.quoteCount || 0) > 0)
+            .slice(0, CASCADE_BREADTH);
+          if (!targets.length) return;
+          await Promise.all(targets.map(async (e) => {
+            const qUri = e.post.uri;
+            const [th, qs] = await Promise.all([
+              (e.post.replyCount || 0) > 0
+                ? get('app.bsky.feed.getPostThread', { uri: qUri, depth: 10 }).catch(() => null) : null,
+              (e.post.quoteCount || 0) > 0
+                ? get('app.bsky.feed.getQuotes', { uri: qUri, limit: 50 }).catch(() => null) : null,
+            ]);
+            e.replies = th?.thread?.replies || [];
+            e.quotes = (qs?.posts || []).map((post) => ({ post }));
+          }));
+          onCascade(shape()); // paint what landed before going deeper
+          await expand(targets.flatMap((e) => e.quotes || []), depth + 1);
+        };
+        // deliberately un-awaited: the caller already has a thread to draw
+        expand(entries, 0).catch(() => {}); // a cascade failure never breaks the thread
+      }
+      return shape();
     },
 
     // The lens Fields list: pinned/saved feeds + lists from preferences,
@@ -667,8 +749,18 @@ export function createLens({ session = null, transport = fetch } = {}) {
       await post('app.bsky.actor.putPreferences', { preferences: next }, saved ? 'join feed' : 'leave feed');
       return next;
     },
-    pinFeed(uri) { return this.setFeedSaved(uri, true); },
-    unpinFeed(uri) { return this.setFeedSaved(uri, false); },
+    joinFeed(uri) { return this.setFeedSaved(uri, true); },
+    leaveFeed(uri) { return this.setFeedSaved(uri, false); },
+
+    // 3s: favoriting = pinning it to the top row, the same row the official
+    // app shows. Independent of joining, and it joins you if you weren't.
+    async favoriteFeed(uri, on) {
+      if (!session) throw new Error('lens: favoriting a feed needs a session — sign in first');
+      const prefs = await get('app.bsky.actor.getPreferences');
+      const next = withPinnedFeed(prefs.preferences || [], uri, on);
+      await post('app.bsky.actor.putPreferences', { preferences: next }, on ? 'favorite feed' : 'unfavorite feed');
+      return next;
+    },
 
     // 3k: a user's profile card — the persistent /u/<handle> surface. Read
     // only: editing lives on bsky.app (the lens tenet).

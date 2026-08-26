@@ -161,7 +161,11 @@ function renderChildren(container, node, ctx) {
   let shown = 0;
   const showBatch = () => {
     const slice = kids.slice(shown, shown + CHILD_PAGE);
-    for (const k of slice) container.append(commentNode(k, ctx));
+    // 3r: the caller may draw some children differently (the lens draws a
+    // quote-of-a-quote as a walled quote). Default stays commentNode, so the
+    // memory tier is untouched.
+    const draw = ctx.nodeRenderer || ((n) => commentNode(n, ctx));
+    for (const k of slice) container.append(draw(k, ctx));
     shown += slice.length;
     more.remove();
     if (shown < kids.length) container.append(more);

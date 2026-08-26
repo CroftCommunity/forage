@@ -176,6 +176,10 @@ kbd { background: var(--green-100); border: 1px solid var(--border); border-radi
 .comment.collapsed > .comment-body > .comment-actions,
 .comment.collapsed > .children { display: none; }
 .collapse-note { font-size: var(--t-xs); color: var(--muted); }
+/* 3s: the favorite star. Pressed = pinned to the top row of your feeds. */
+.btn.star { padding: 4px 8px; line-height: 1; font-size: 16px; }
+.btn.star[aria-pressed="true"] { color: var(--brand); border-color: var(--brand); }
+
 /* 3q: a quote-response at the top of a thread. The WALL is the grammar for
    quoted material (see .feed-blurb); the green gutter next door means
    "collapsible reply", so these must not look alike — the wall is static and

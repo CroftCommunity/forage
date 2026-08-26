@@ -213,7 +213,40 @@ test('3i: sortWindow — feed keeps the generator order; new is by time; top is 
 
 // ---- 3j: feed discovery, metadata, and join (pin) ----
 
-test('3j: withSavedFeed adds a pinned feed, removes it, is idempotent, and preserves other prefs', async () => {
+// 3s: Join and Favorite are two different things, exactly as Bluesky models
+// them — saved puts a feed in your list, pinned puts it in your top row. Join
+// used to force pinned:true, which silently rearranged the official app's tab
+// bar for anyone who joined a feed here.
+
+test('3s: joining SAVES without pinning; favoriting pins; unfavoriting keeps you joined', async () => {
+  const { withSavedFeed, withPinnedFeed } = await import('../js/substrates/lens.js');
+  const URI = 'at://did:plc:x/app.bsky.feed.generator/funny';
+  const base = [{ $type: 'app.bsky.actor.defs#savedFeedsPrefV2', items: [] }];
+
+  const joined = withSavedFeed(base, URI, true);
+  const item = (prefs) => prefs.find((p) => p.$type.endsWith('savedFeedsPrefV2')).items.find((i) => i.value === URI);
+  assert.equal(item(joined).pinned, false, 'joining never touches the top row of the official app');
+
+  const fav = withPinnedFeed(joined, URI, true);
+  assert.equal(item(fav).pinned, true);
+  assert.equal(item(fav).id, item(joined).id, 'favoriting edits the entry in place — same id, no duplicate');
+
+  const unfav = withPinnedFeed(fav, URI, false);
+  assert.equal(item(unfav).pinned, false, 'unfavoriting drops the pin');
+  assert.ok(item(unfav), 'and leaves you joined — the two controls are independent');
+
+  // favoriting a feed you have not joined joins it too: a pinned-but-unsaved
+  // entry is not a state the official app has
+  const cold = withPinnedFeed(base, URI, true);
+  assert.equal(item(cold).pinned, true);
+  assert.equal(item(cold).type, 'feed');
+
+  // leaving takes the pin with it
+  const left = withSavedFeed(fav, URI, false);
+  assert.equal(item(left), undefined);
+});
+
+test('3j: withSavedFeed adds a feed, removes it, is idempotent, and preserves other prefs', async () => {
   const { withSavedFeed } = await import('../js/substrates/lens.js');
   const other = { $type: 'app.bsky.actor.defs#mutedWordsPref', items: [{ value: 'x' }] };
   const saved = { $type: 'app.bsky.actor.defs#savedFeedsPrefV2', items: [
@@ -225,7 +258,7 @@ test('3j: withSavedFeed adds a pinned feed, removes it, is idempotent, and prese
   const addedSaved = added.find((p) => p.$type.endsWith('savedFeedsPrefV2'));
   assert.equal(addedSaved.items.length, 2);
   const entry = addedSaved.items.find((i) => i.value === URI);
-  assert.deepEqual({ type: entry.type, pinned: entry.pinned }, { type: 'feed', pinned: true });
+  assert.deepEqual({ type: entry.type, pinned: entry.pinned }, { type: 'feed', pinned: false }); // 3s: joining ≠ pinning
   assert.ok(entry.id, 'an id is assigned');
   assert.deepEqual(added.find((p) => p.$type.endsWith('mutedWordsPref')), other, 'other prefs untouched');
 
@@ -276,9 +309,10 @@ test('3j: discoverFeeds lists popular generators and searches by query; guests g
   assert.ok(calls[1].includes('query=garden'), 'the query rides through');
 });
 
-test('3j: pinFeed/unpinFeed write through putPreferences and refuse without a session', async () => {
+test('3j/3s: joinFeed and favoriteFeed write through putPreferences and refuse without a session', async () => {
   const URI = 'at://did:plc:a/app.bsky.feed.generator/aaa111';
-  await assert.rejects(() => createLens({}).pinFeed(URI), /session|sign/i);
+  await assert.rejects(() => createLens({}).joinFeed(URI), /session|sign/i);
+  await assert.rejects(() => createLens({}).favoriteFeed(URI, true), /session|sign/i);
 
   const calls = [];
   const fetchHandler = async (path, init = {}) => {
@@ -290,12 +324,19 @@ test('3j: pinFeed/unpinFeed write through putPreferences and refuse without a se
     return { ok: true, status: 200, json: async () => ({}) };
   };
   const lens = createLens({ session: { did: 'did:plc:me', handle: 'me', fetchHandler } });
-  await lens.pinFeed(URI);
+  await lens.joinFeed(URI);
   const put = calls.find((c) => c.path.includes('putPreferences'));
   assert.ok(put, 'putPreferences called');
   const savedPref = put.body.preferences.find((p) => p.$type.endsWith('savedFeedsPrefV2'));
   assert.equal(savedPref.items[0].value, URI);
-  assert.equal(savedPref.items[0].pinned, true);
+  assert.equal(savedPref.items[0].pinned, false, 'joining leaves the official tab bar alone');
+
+  // 3s: favoriting is its own write, and it pins the entry in place
+  calls.length = 0;
+  await lens.favoriteFeed(URI, true);
+  const fav = calls.find((c) => c.path.includes('putPreferences'));
+  const favPref = fav.body.preferences.find((p) => p.$type.endsWith('savedFeedsPrefV2'));
+  assert.equal(favPref.items[0].pinned, true);
 });
 
 // ---- 3k: user profiles (persistent /u/<handle> URLs) ----

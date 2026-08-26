@@ -53,7 +53,7 @@ export async function run() {
     responses: {
       'describeRepo': { did: 'did:plc:w2test', handle: 'wtest.bsky.social', didDoc: {}, collections: [] },
       'getPreferences': { preferences: [{ $type: 'app.bsky.actor.defs#savedFeedsPrefV2',
-        items: [{ type: 'feed', value: WHATS_HOT, pinned: true, id: '1' },
+        items: [{ type: 'feed', value: WHATS_HOT, pinned: false, id: '1' }, // 3s: joined, not favorited
                 { type: 'timeline', value: 'following', pinned: true, id: '2' }] }] },
       'getFeedGenerators': { feeds: [{ uri: WHATS_HOT, displayName: "What's Hot", likeCount: 1 }] },
       'getPopularFeedGenerators': { feeds: [
@@ -117,11 +117,26 @@ export async function run() {
   await page.goto(`${s.origin}/f/whats-hot`);
   await page.waitForSelector('[data-feed-header]');
   await page.waitForSelector('text=Curated by @bsky.app.');
-  const joinBtn = page.locator('[data-feed-header] button');
+  // 3s: Favorite is its own control — pinning is the top row of the official
+  // app, joining is the list. Forage must not conflate them.
+  const star = page.locator('[data-feed-favorite]');
+  assert.equal(await star.count(), 1, 'the feed page offers a favorite');
+  assert.equal(await star.getAttribute('aria-pressed'), 'false', 'a joined-but-unpinned feed is not a favorite');
+  await star.click();
+  await page.waitForFunction(() => window.__shimHits.filter((h) => h.url.includes('putPreferences')).length >= 1);
+  const favBody = JSON.parse(await page.evaluate(() =>
+    window.__shimHits.filter((h) => h.url.includes('putPreferences')).at(-1).body));
+  const favPref = favBody.preferences.find((p) => p.$type.includes('savedFeedsPrefV2'));
+  assert.equal(favPref.items.find((i) => i.value.includes('whats-hot')).pinned, true,
+    'favoriting pins the entry — and leaves it saved');
+  await page.waitForSelector('[data-feed-favorite][aria-pressed="true"]');
+
+  const joinBtn = page.locator('[data-feed-header] button.btn.sm:not([data-feed-favorite])');
   assert.equal(await joinBtn.innerText(), 'Leave', 'an already-saved feed offers Leave');
   await joinBtn.click();
-  await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('putPreferences')));
-  const putBody = await page.evaluate(() => JSON.parse(window.__shimHits.find((h) => h.url.includes('putPreferences')).body));
+  // .at(-1): the favorite above already wrote once — read the LATEST write
+  await page.waitForFunction(() => window.__shimHits.filter((h) => h.url.includes('putPreferences')).length >= 2);
+  const putBody = await page.evaluate(() => JSON.parse(window.__shimHits.filter((h) => h.url.includes('putPreferences')).at(-1).body));
   const savedPref = putBody.preferences.find((p) => p.$type.includes('savedFeedsPrefV2'));
   assert.ok(!savedPref.items.some((i) => i.value.includes('whats-hot')), 'leaving removed it from saved feeds');
 
