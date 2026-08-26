@@ -1,0 +1,71 @@
+{
+  "preferences": [
+    {
+      "$type": "app.bsky.actor.defs#personalDetailsPref",
+      "birthDate": "1970-01-01T00:00:00.000Z"
+    },
+    {
+      "tags": [],
+      "$type": "app.bsky.actor.defs#interestsPref"
+    },
+    {
+      "$type": "app.bsky.actor.defs#savedFeedsPrefV2",
+      "items": [
+        {
+          "type": "feed",
+          "value": "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot",
+          "pinned": true,
+          "id": "3mo67xbn7zt2w"
+        },
+        {
+          "type": "timeline",
+          "value": "following",
+          "pinned": true,
+          "id": "3mo67xbn7zu2w"
+        },
+        {
+          "type": "feed",
+          "value": "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/thevids",
+          "pinned": true,
+          "id": "3mo67xbn7zv2w"
+        }
+      ]
+    },
+    {
+      "$type": "app.bsky.actor.defs#bskyAppStatePref"
+    },
+    {
+      "$type": "app.bsky.actor.defs#contentLabelPref",
+      "label": "porn",
+      "visibility": "ignore"
+    },
+    {
+      "$type": "app.bsky.actor.defs#contentLabelPref",
+      "label": "nsfw",
+      "visibility": "ignore"
+    },
+    {
+      "$type": "app.bsky.actor.defs#adultContentPref",
+      "enabled": false
+    },
+    {
+      "$type": "app.bsky.actor.defs#mutedWordsPref",
+      "items": [
+        {
+          "value": "foragetestmute",
+          "targets": [
+            "content",
+            "tag"
+          ],
+          "actorTarget": "all"
+        }
+      ]
+    },
+    {
+      "isOverAge13": true,
+      "isOverAge16": true,
+      "isOverAge18": true,
+      "$type": "app.bsky.actor.defs#declaredAgePref"
+    }
+  ]
+}

@@ -104,6 +104,14 @@ Spaces integration (and Spaces is alpha — sandbox PDS, breaking changes).
   DISCOVERY RAIL of `/f/`-kind streams, not a third kind. `/h/` is session-gated
   (searchPosts, D8); in memory mode `/h/:tag` maps to the native tag concept via
   a selector, so the route scheme is a platform concept, not a lens hack.
+- **Piggy-back principle (user, 2026-08-25: "we should piggy back anywhere we can
+  in that way"):** wherever the network already stores a user's state
+  account-side, forage READS that state rather than keeping a forage-local copy —
+  proven surface (D10): the getPreferences blob (muted words, label filters,
+  adult toggle, saved feeds) + graph endpoints (mutes, blocks, list subs). The
+  Bluesky view holds NO forage-local moderation or preference state; editing
+  happens on the network's own surfaces (lens tenet), with putPreferences-based
+  management a registered frontier.
 - **Bluesky primitives sorting rule (user-ratified 2026-08-25):** topic-shaped
   primitives (feeds, hashtags, quotes, trending) get first-class stream/thread
   surfaces; person-shaped primitives (profiles, mentions, follows) become
@@ -317,6 +325,25 @@ user-approved checkpoints.
   (serial ~590ms); one cold-start stall of ~20s observed → per-request timeouts
   required. **The cap ships at 25.** Mutuals math trivial at test-account scale;
   pagination costs 1 request per 100 edges per side.
+- **D10 ✅ (added 2026-08-25, user direction: mirror standard moderation, piggy-back
+  on the account)** — the moderation surface is far MORE accessible than "block
+  lists only": `app.bsky.actor.getPreferences` (authed, PDS-served) returns the
+  SAME preferences blob the official app uses — observed $types on the test
+  account: contentLabelPref (per-category show/warn/hide — the content filters
+  screen), adultContentPref, savedFeedsPrefV2, interestsPref, personalDetailsPref,
+  bskyAppStatePref, declaredAgePref. `putPreferences` round-trip PROVEN on our own
+  test account: wrote a `mutedWordsPref` item
+  `{value, targets:['content','tag'], actorTarget:'all'}` (the muted-words dialog
+  maps 1:1 — text&tags vs tags-only = targets; "exclude users you follow" =
+  actorTarget; duration = expiry field), read it back verbatim, restored the
+  original prefs exactly. Graph endpoints all authed-200: getBlocks, getMutes
+  (test account has 2), getListMutes, getListBlocks; `app.bsky.graph.block`
+  records are additionally PUBLIC repo records. So: muted words/tags, label
+  filters, adult-content toggle, mutes, blocks, mod-list subscriptions — ALL
+  readable via the account with a session; nothing needs forage-local storage.
+  Interaction defaults (who-can-reply/allow-quotes) and hide-verification-badges
+  are further pref $types not present on this account (never set) — same blob,
+  confirm shape when first encountered. Fixture `wide-preferences.json` (redacted).
 - **D8 ✅ (added 2026-08-25, user direction: trending in, /h/ streams)** —
   `app.bsky.unspecced.getTrendingTopics` AND `getTrends` are UNAUTH-200. Each
   trending topic's `link` resolves to a FEED GENERATOR (`/profile/<did>/feed/<id>`)
@@ -373,6 +400,10 @@ Original task specs (all executed as written):
   **Success:** the gated read/write loop demonstrated end to end, or a precise list
   of what's missing → phase 5 re-scoped at its split. **Disposition:**
   keep-as-fixture (responses; throwaway scripts).
+- [x] **D10: Moderation-surface accessibility** (added on user direction, executed
+  2026-08-25; one reversible prefs write on our own test account, restored
+  exactly). getPreferences/putPreferences + graph moderation endpoints.
+  **Disposition:** keep-as-fixture.
 - [x] **D8: Trending + hashtag-search surfaces** (added on user direction, executed
   2026-08-25, read-only). getTrendingTopics/getTrends unauth status + shapes;
   searchPosts tag gate re-check. **Disposition:** keep-as-fixture.
@@ -550,24 +581,44 @@ actor-centered view scatters quotes onto the quoter's profile). Also the BBS idi
 **Wiring:** hermetic thread tests + the 3d live smoke extends to open a thread with
 a known quote (own test post pair). Multi-commit ≤3.
 
-#### 3f: Honest rendering — facets, labels→masking, mutes, verification
-(Added 2026-08-25, user-ratified tier 1 + verification.) Correctness, not features:
-a lens that drops these misrepresents the network.
+#### 3f: Honest rendering — the account's own moderation posture, mirrored
+(Added 2026-08-25, user-ratified tier 1 + verification; EXPANDED same day on user
+direction: "mirror the standard moderation controls … piggy back anywhere we can".)
+Correctness, not features: a lens that drops these misrepresents the network.
+**Piggy-back principle (D10-proven):** forage stores NO moderation state of its
+own for the Bluesky view — the entire posture derives from the account via
+`getPreferences` (muted words/tags with targets+actorTarget+expiry; per-category
+label filters show/warn/hide; adult-content toggle) plus the graph endpoints
+(mutes, blocks, list-mutes/blocks). One fetch per session; the same settings the
+official app reads, so a word muted on bsky.app is muted here with no forage UI.
 - [ ] `js/substrates/lens.js` — shapes carry `facets` (mention/link/tag spans),
-  author `labels`, author `verification` (D9: already in every payload), and the
-  signed-in viewer's mutes (getMutes, probe-verified) are applied IN THE SHAPE
-  LAYER as masking (policy in selectors/substrate, never components).
+  author `labels`, author `verification` (D9: already in every payload); a
+  session-scoped moderation posture (from getPreferences + getMutes/getBlocks/
+  getListMutes/getListBlocks, D10) is applied IN THE SHAPE LAYER as masking
+  (policy in selectors/substrate, never components): muted words/tags filter
+  stream/thread shapes (honoring targets, actorTarget, expiry), label prefs map
+  to the show/warn/hide masking states, muted/blocked authors mask.
 - [ ] `js/ui/lens-views.js` — post text renders facet-aware (links live, mentions
   link OUT per the tenet, `#tags` become `/h/` links once 3g lands — until then
   plain emphasized); label-bearing content renders through the existing masking
   affordances (hide/warn chips); verified authors get the checkmark
   (`verifiedStatus === 'valid'`), trusted verifiers a distinct mark — display
   only, never a gate.
+- [ ] A read-only **Moderation panel** in the lens settings surface: shows the
+  account's current posture (muted words count, filter levels, mutes/blocks
+  counts) with **edit-on-bsky.app links** — the lens tenet applied to settings:
+  we mirror and respect; the network's own surface manages. (Managing posture
+  FROM forage via putPreferences — round-trip proven at D10 — is a registered
+  frontier, not built now.)
 - [ ] `test/lens.test.js` — RED first over fixture payloads: facet spans map to
   byte-correct offsets (facets are BYTE-indexed, not UTF-16 — the boundary
-  case: a post with an emoji before the tag); a muted author's posts are masked
-  in board shapes; a labeled post carries its masking state; verification
-  states render for valid/none/trusted-verifier. Fixture-driven (D8/D9 files).
+  case: a post with an emoji before the tag); muted WORD in post text masks
+  (and does NOT when actorTarget excludes follows and the author is followed;
+  and does NOT past expiry); muted TAG masks under targets:['tag'] but plain
+  text mention of the word does not; label prefs map show/warn/hide including
+  the adult-content master toggle OFF forcing hide; a muted author's posts are
+  masked in board shapes; a blocked author never renders; verification states
+  render for valid/none/trusted-verifier. Fixture-driven (D8/D9/D10 files).
 **Wiring:** hermetic tests + the 3d smoke visually confirms a verified author and
 a facet-linked post. Multi-commit ≤3.
 
@@ -870,3 +921,21 @@ every author view (zero extra requests). Frontiers registered at 3g: list-backed
 Fields, starter packs. NOT-doing updated: DMs out; **Jetstream v2 investigation
 recorded as a named follow-up in TODO.md** (user: "full investigation of how best
 to handle these with the new released jetstream2") — not folded into this plan.
+
+### Moderation mirror ratified; piggy-back principle adopted — 2026-08-25
+User direction (with the official app's screens as reference): mirror the standard
+moderation controls — muted words & tags, content filters, mutes, blocks, mod
+lists, interaction settings, verification settings — and "piggy back anywhere we
+can" on account-side state. D10 probed same-session and settled the accessibility
+question favorably: the user's working assumption was that settings are not
+accessible — they are not PUBLIC, but they ARE app-API-accessible with the user's
+session via getPreferences (and blocks are public records besides); putPreferences
+round-trip proven and restored. Consequences: 3f expanded from "labels+mutes" to
+the FULL posture mirror derived from the account (muted words with
+targets/actorTarget/expiry, label filters, adult toggle, mutes/blocks/list-subs),
+plus a read-only Moderation panel with edit-on-bsky.app links; managing posture
+from forage (putPreferences UI) and interaction-defaults authoring are registered
+frontiers (forage composes no network posts). The piggy-back principle recorded as
+a Reasoning tenet. BBS-side board moderation (banned words as a space-owner
+concept) is a phase-5-split topic — the memory tier's moderation-as-masking is the
+shape it reuses.
