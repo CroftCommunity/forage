@@ -7,6 +7,10 @@
    Two roles are split so the brand reads on both themes:
      --brand-ink   brand green for TEXT (wordmark, active tab, gutter, accents)
      --brand-fill  brand green for BUTTON fills (paired with --on-brand text)
+     --color-scheme  native chrome (scrollbars, form controls, caret). A TOKEN
+                   rather than a raw property so a SKIN can set it — skinScan
+                   rejects real CSS properties, so a raw `color-scheme` here
+                   would leave every dark skin with light scrollbars.
    In light both are deep green; in dark, -ink lifts to a legible leaf green
    while -fill stays a deep green so white button text still passes.           */
 
@@ -70,7 +74,7 @@
   --gutter-rule: 2px;
   --gutter-hit: 24px;
 
-  color-scheme: light;
+  --color-scheme: light;
 }
 
 /* ---------- DARK palette ----------
@@ -105,7 +109,7 @@
   --clay-600:    #A24D2C;
   --stripe:      rgba(255,255,255,.04);
 
-  color-scheme: dark;
+  --color-scheme: dark;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -137,6 +141,6 @@
     --clay-600:    #A24D2C;
     --stripe:      rgba(255,255,255,.04);
 
-    color-scheme: dark;
+    --color-scheme: dark;
   }
 }

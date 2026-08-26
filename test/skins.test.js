@@ -235,3 +235,35 @@ test('1A WIRING: activeSkin() resolves stored -> transient -> OS, in that order'
     }
   }
 });
+
+// ---------------------------------------------------------------------------
+// Phase 1B — `color-scheme` becomes skinnable.
+// `color-scheme` drives NATIVE chrome: scrollbars, form controls, the caret.
+// It is a real CSS property, so skinScan REJECTS it — meaning no skin could
+// control it, and a dark skin would render with light scrollbars. Route it
+// through a token so app.css owns the property and skins own the value.
+// ---------------------------------------------------------------------------
+
+test('1B: --color-scheme is a declared token, so a skin is allowed to set it', () => {
+  const tokens = declaredTokens(readFileSync(join(root, 'css/tokens.css'), 'utf8'));
+  assert.ok(tokens.has('--color-scheme'),
+    '--color-scheme must be declared in tokens.css or no skin can reach native chrome');
+
+  const r = skinScan(':root { --color-scheme: dark; }', tokens);
+  assert.deepEqual(r.violations, [], 'a skin assigning --color-scheme must pass the scan');
+});
+
+test('1B: app.css CONSUMES the token — declaring it alone would be inert', () => {
+  const app = readFileSync(join(root, 'css/app.css'), 'utf8');
+  assert.match(app, /color-scheme:\s*var\(--color-scheme\)/,
+    'app.css must apply color-scheme from the token, or setting it in a skin does nothing');
+});
+
+test('1B: tokens.css no longer hard-sets color-scheme past the token', () => {
+  // A leftover raw `color-scheme: dark` in a legacy block would out-specify the
+  // token for skins, which is exactly the bug this phase exists to remove.
+  const tokensCss = readFileSync(join(root, 'css/tokens.css'), 'utf8');
+  const raw = [...tokensCss.matchAll(/(^|[;{]\s*)color-scheme\s*:\s*(?!var\()/g)];
+  assert.equal(raw.length, 0,
+    `tokens.css still sets color-scheme directly ${raw.length}x — route it through --color-scheme`);
+});

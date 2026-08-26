@@ -946,3 +946,26 @@ message is a behaviour regression under the workspace enforcement posture.
 **Rebased onto `f08fa9d`** mid-phase after `claude/modes-bbs` landed 3p-3u. Clean —
 no overlap with 1A's files. Two `css/app.css` line references in this plan had gone
 stale (198→214, 282→304) and were corrected; suite went 292→314 tests on the new base.
+
+### Amendment: the collapse splits 1B–1F — 2026-08-26 (execution-time find)
+
+Reading ahead into 1B before writing it: **registering `forage-dark` in `js/skins.js`
+had no home.** 1B listed the CSS files, 1C the boot path, 1D the UI — none listed the
+registry, so the skin would have shipped unreachable. Adding it to 1B makes that phase
+4 files, which the hard rule forbids.
+
+Re-split, each phase ≤3 files and independently green:
+
+| | scope | write-set |
+|---|---|---|
+| 1B | `--color-scheme` becomes a token (the scan blocker) | `css/tokens.css`, `css/app.css`, `test/skins.test.js` |
+| 1C | `forage-dark` authored, registered, paired, cached | `skins/forage-dark.css`, `js/skins.js`, `sw.js` |
+| 1D | boot path: no flash of the wrong palette | `index.html`, `404.html` |
+| 1E | toggle + picker point at skins | `js/main.js`, `js/ui/views.js` |
+| 1F | contract: delete the legacy theme path | `js/theme.js` (deleted), `css/tokens.css` |
+
+Spine: Phase 0 → 1B → 1C → 1D → 1E → 1F → 2 → 3A → 3B → 4A → 4B → [5 || 6]
+(1A landed before this amendment.)
+
+Expand/contract still holds: 1B–1E add the new path beside the legacy one, 1F removes
+the old. `js/theme.js` keeps working until 1F, so every intermediate state is shippable.

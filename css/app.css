@@ -1,5 +1,10 @@
 /* Forage app styles. Quiet everywhere; distinctiveness spent on the collapse gutter (§3.3). */
 
+/* Native chrome (scrollbars, form controls, caret) follows the active palette.
+   Applied here rather than in tokens.css so that a SKIN, which may only assign
+   custom properties, can drive it via --color-scheme. */
+:root { color-scheme: var(--color-scheme); }
+
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 body {
