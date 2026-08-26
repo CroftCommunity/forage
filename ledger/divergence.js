@@ -61,6 +61,14 @@ export const LEDGER = [
     reason: 'Ranking formulas are declared variant-swappable (engines are pure and pluggable); which posts are visible is policy and must agree exactly.',
     tolerance: 'set-equality',
     date: '2026-08-24', status: 'active' },
+
+  // ---- the ring dial (plan 2026-08-25-1, 3b) ----
+  { id: 'DL-016', kind: 'frontier', capability: 'feeds', tier: 'wide', label: 'Ring beyond the cap',
+    description: 'mutuals+1 draws the first 25 members (D6-measured cap; latency is not the bound — board noise is). The chip reports the TRUE member count; drawing the full ring (sampling, rotation, or paging members) is this frontier.',
+    date: '2026-08-25', status: 'open' },
+  { id: 'DL-017', kind: 'frontier', capability: 'feeds', tier: 'wide', label: 'Ring criteria beyond the follow graph',
+    description: 'Rings are follow-graph-shaped (mutuals, mutuals+1). Criteria like interaction density, lists, or shared-feed affinity are deferred until a ring proves too coarse.',
+    date: '2026-08-25', status: 'open' },
 ];
 
 export const frontiers = () => LEDGER.filter((e) => e.kind === 'frontier');

@@ -209,6 +209,51 @@ export function createLens({ session = null, transport = fetch } = {}) {
       return { members: all.slice(0, RING_CAP), overflow: { capped: true, total: all.length } };
     },
 
+    // 3b: the merged ring board. One page = one fan-out round over the ring's
+    // members (parallel, per-member failures REPORTED, never board-fatal),
+    // time-interleaved with a deterministic tie order (indexedAt desc, then
+    // author DID, then uri). The cursor is the per-member cursor map, base64 —
+    // resuming advances each member from its own cursor, so no duplicates;
+    // exhausted members drop out.
+    async ringFeed(ring, { cursor } = {}) {
+      if (ring === 'world') {
+        throw new Error('lens: the world ring has no merged board — its board is the sources/feeds surface');
+      }
+      if (ring === 'following') {
+        const board = await this.feed({ kind: 'timeline' }, { title: 'Following' });
+        return { ...board, ring, failures: [] };
+      }
+      const resumed = cursor ? JSON.parse(atob(cursor)) : null;
+      const ringInfo = resumed ? { members: Object.keys(resumed.m) } : await this.ringMembers(ring);
+      const cursors = resumed ? resumed.m : Object.fromEntries((ringInfo.members ?? []).map((d) => [d, undefined]));
+      const failures = [];
+      const pages = await Promise.all(Object.entries(cursors).map(async ([did, cur]) => {
+        try {
+          const data = await get('app.bsky.feed.getAuthorFeed', { actor: did, limit: 10, cursor: cur });
+          return { did, items: data.feed || [], next: data.cursor };
+        } catch {
+          failures.push(did);
+          return { did, items: [], next: undefined };
+        }
+      }));
+      const items = pages.flatMap((p) => p.items);
+      items.sort((x, y) => {
+        const t = String(y.post.indexedAt).localeCompare(String(x.post.indexedAt));
+        if (t) return t;
+        const a = String(x.post.author?.did).localeCompare(String(y.post.author?.did));
+        if (a) return a;
+        return String(x.post.uri).localeCompare(String(y.post.uri));
+      });
+      const nextMap = Object.fromEntries(pages.filter((p) => p.next).map((p) => [p.did, p.next]));
+      const src = { fieldId: `lens:ring:${ring}`, fieldSlug: `ring:${ring}`, fieldTitle: ring === 'mutuals' ? 'Mutuals' : 'Mutuals +1' };
+      return {
+        ...shapeLensFeed({ feed: items }, src), ...src,
+        ring, failures,
+        ...(ringInfo.overflow ? { overflow: ringInfo.overflow } : {}),
+        cursor: Object.keys(nextMap).length ? btoa(JSON.stringify({ m: nextMap })) : undefined,
+      };
+    },
+
     async search(q) {
       if (!session) throw new Error('lens: search needs a session (403 unauth — probe-verified)');
       const data = await get('app.bsky.feed.searchPosts', { q, limit: 30 });

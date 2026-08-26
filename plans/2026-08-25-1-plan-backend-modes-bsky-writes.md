@@ -1,7 +1,7 @@
 # Plan: three modes — memory, the Bluesky view with a ring dial, and the private BBS
 
 date: 2026-08-25
-status: EXECUTING — Phases 1–2 complete; 3a SHIPPED; next: 3b (ring boards + dial UI).
+status: EXECUTING — 3a–3b SHIPPED (dial + merged boards live in the corpus); next: 3c (boost = like).
 Execution in worktrees/forage/modes-bbs (branch claude/modes-bbs)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `10a8ade` (clean tree, pushed; forage.fyi deployed at forage-v11)
@@ -574,7 +574,7 @@ a hashtag stream, the trending rail). Unit numbering is historical; the spine ab
 is the order. 3e/3f/3g's "the 3d smoke extends" lines mean the capstone smoke
 covers them, not that 3d has already run.
 
-#### 3a: Ring computation — ✅ SHIPPED
+#### 3a: Ring computation — ✅ SHIPPED (`4c2604e`)
 - [ ] `js/substrates/lens.js` — `ringMembers(ring, {session, fetch})`: `mutuals` =
   follows ∩ followers (paginated, D6-measured); `mutuals+1` = mutuals ∪ their follows
   with the D6-derived cap; returns members + honest overflow info.
@@ -587,7 +587,7 @@ covers them, not that 3d has already run.
   cap+1, with the true count); a member appearing in both mutuals and their-follows
   counted once.
 
-#### 3b: Ring boards
+#### 3b: Ring boards — ✅ SHIPPED
 - [ ] `js/substrates/lens.js` — `ringFeed(ring, …)`: merged author-feed board
   (time-interleaved, cursor-capable) for mutuals/mutuals+1; `following` =
   getTimeline; world = today's sources.

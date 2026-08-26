@@ -8,7 +8,7 @@
 
 import { el, timeAgo, fmtScore } from '../util.js';
 import { postRow, commentNode, skeleton, emptyState, toast } from './components.js';
-import { createLens, LENS_PERMS } from '../substrates/lens.js';
+import { createLens, LENS_PERMS, RING_CAP } from '../substrates/lens.js';
 import { initSession } from '../auth/session.js';
 
 let manager = null;        // null = not booted; 'unavailable' = origin has no OAuth client
@@ -103,6 +103,7 @@ function sessionCard() {
       try { await manager.signOut(); } catch (e) { toast(e.message, 'err'); }
       session = null;
       lens = createLens({});
+      activeRing = 'world';
       toast('Signed out.', 'ok');
       rerender();
     });
@@ -132,9 +133,57 @@ function sessionCard() {
     btn);
 }
 
+// 3b: the ring dial — how far out does your ring go? Session-gated rings
+// refuse with words; the selection is page-lifetime state (a view concern).
+let activeRing = 'world';
+
+function ringDial() {
+  const RINGS = [['world', 'World'], ['following', 'Following'], ['mutuals', 'Mutuals'], ['mutuals+1', 'Mutuals +1']];
+  const row = el('div', { class: 'row wrap', style: 'gap:6px', 'data-ring-dial': '1' });
+  for (const [id, label] of RINGS) {
+    const b = el('button', { class: 'btn sm' + (activeRing === id ? ' primary' : '') }, label);
+    b.addEventListener('click', () => {
+      if (id !== 'world' && !session) return toast('Sign in first — rings are computed from your graph.', 'err');
+      activeRing = id;
+      rerender();
+    });
+    row.append(b);
+  }
+  return el('div', { class: 'card' }, el('h2', {}, 'Your ring'), row,
+    el('div', { class: 'xs muted', style: 'margin-top:4px' },
+      'World is everyone; Following is your timeline; Mutuals is follows ∩ followers; +1 adds who they follow (capped honestly).'));
+}
+
+function ringBoard(ring, cursor) {
+  const holder = el('div', {}, skeleton(6));
+  const render = (board, into) => {
+    const chips = el('div', { class: 'row wrap', style: 'gap:6px' });
+    if (board.overflow) chips.append(chip(`ring capped: ${board.overflow.total} members → first ${RING_CAP} (DL-016)`, `The ring truly has ${board.overflow.total} members; the board draws the first ${RING_CAP}. Honest overflow, never silent.`));
+    if (board.failures.length) chips.append(chip(`${board.failures.length} member feed(s) unreachable`, board.failures.join(', ')));
+    const card = el('div', { class: 'card' });
+    for (const p of board.posts) card.append(postRow(p, false));
+    for (const a of card.querySelectorAll('a[href*="/p/at:"]')) {
+      const m = a.getAttribute('href').match(/\/p\/(at:.+)$/);
+      if (m) a.setAttribute('href', `#/lens/p?uri=${encodeURIComponent(m[1])}&from=${board.fieldSlug}`);
+    }
+    const more = board.cursor ? el('button', { class: 'btn sm' }, 'More') : null;
+    if (more) more.addEventListener('click', () => { into.replaceChildren(ringBoard(ring, board.cursor)); });
+    into.replaceChildren(chips, board.posts.length ? card : emptyState('A quiet ring', 'No posts from these members yet.'), more || '');
+  };
+  lens.ringFeed(ring, { cursor }).then((b) => render(b, holder))
+    .catch((e) => holder.replaceChildren(emptyState('Ring fetch failed', e.message)));
+  return holder;
+}
+
 export function lensHomeView() {
+  if (activeRing !== 'world') {
+    const title = activeRing === 'following' ? 'Following' : activeRing === 'mutuals' ? 'Mutuals' : 'Mutuals +1';
+    return { main: el('div', {}, el('h1', {}, title), ringDial(), ringBoard(activeRing)),
+      side: el('div', { class: 'side' }, sessionCard(), lensSidebar()) };
+  }
   const main = el('div', {},
     el('h1', {}, 'The Lens'),
+    ringDial(),
     el('div', { class: 'card' },
       el('p', { class: 'small' },
         'Your Bluesky, shaped as a forum: Fields are feeds, threads are threads, boosts ride likes. Read-only — writes stay on the demo tier for now.'),
