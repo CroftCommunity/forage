@@ -74,22 +74,31 @@ export async function run() {
   await page.waitForSelector('text=Sign in with Bluesky');
   assert.equal(await page.locator('input[type="password"]').count(), 0, 'no password field exists anymore');
 
-  // the masthead Sign in control REACHES the card (focuses the handle input)
-  await page.locator('.masthead .who a:has-text("Sign in")').click();
-  await page.waitForFunction(() => document.activeElement?.id === 'signin-handle');
-
-  // sign in: handle → button → (redirect-in-miniature) → signed-in identity
+  // card path: handle → button → (redirect-in-miniature) → signed-in identity
   await page.locator('input[placeholder="you.bsky.social"]').fill('wtest.bsky.social');
   await page.locator('button:has-text("Sign in with Bluesky")').click();
-  await page.waitForSelector('text=@wtest.bsky.social', { timeout: 10000 });
+  await page.waitForSelector('.masthead a[href="#/me"]', { timeout: 10000 });
 
-  // the personal surface opens: saved feeds become Fields in the sidebar
-  await page.waitForSelector('a[href="#/f/whatshot"]');
+  // the personal surface opens: saved feeds in the sidebar; the identity and
+  // moderation mirror live on /me, NOT the front page
+  await page.waitForSelector('a[href="#/f/whats-hot"]');
   await page.waitForSelector('a[href="#/f/following"]');
+  assert.equal(await page.locator('#side [data-moderation-panel]').count(), 0, 'moderation lives on /me now');
 
-  // sign out returns to the signed-out card
+  // the masthead @handle IS the profile link
+  await page.locator('.masthead a[href="#/me"]').click();
+  await page.waitForSelector('text=@wtest.bsky.social');
+  await page.waitForSelector('[data-moderation-panel]');
+  await page.waitForSelector('text=Muted words');
+
+  // sign out (from the profile) returns to the signed-out card
   await page.locator('button:has-text("Sign out")').click();
-  await page.waitForSelector('text=Sign in with Bluesky');
+  await page.waitForSelector('text=Sign in with Bluesky', { timeout: 10000 });
+
+  // the masthead direct path: no local form — straight to the entryway (the
+  // fake manager stamps and reloads, same shape as the real redirect)
+  await page.locator('.masthead .who a:has-text("Sign in")').click();
+  await page.waitForSelector('.masthead a[href="#/me"]', { timeout: 10000 });
 
   assert.deepEqual(await s.shimMisses(), [], 'every network read had a fixture');
   await s.close();

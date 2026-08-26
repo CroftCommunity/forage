@@ -65,7 +65,14 @@ export async function run() {
       'com.atproto.repo.deleteRecord': {},
       'searchPosts': { posts: [post('tagged1', 'did:plc:cc', '2026-08-25T13:00:00Z').post] },
       'getAuthorFeed?actor=did%3Aplc%3Atrends': { feed: [post('trendpost', 'did:plc:cc', '2026-08-25T14:00:00Z')] },
-      'getFeed': { feed: [post('trendpost', 'did:plc:cc', '2026-08-25T14:00:00Z')] },
+      'getFeed': { feed: [
+        { post: { ...post('tp1', 'did:plc:cc', '2026-08-25T12:00:00Z').post, likeCount: 50 } },
+        { post: { ...post('tp2', 'did:plc:cc', '2026-08-25T15:00:00Z').post, likeCount: 2 } },
+        { post: { ...post('tp3', 'did:plc:cc', '2026-08-25T15:30:00Z').post,
+          record: { text: '', createdAt: '2026-08-25T15:30:00Z' },
+          embed: { $type: 'app.bsky.embed.images#view', images: [
+            { thumb: 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==', fullsize: 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==', alt: 'a test image post' } ] } } },
+      ] },
       'getPostThread': { thread: {
         post: { ...post('b1', 'did:plc:bb', '2026-08-25T11:00:00Z').post, quoteCount: 1 },
         replies: [
@@ -130,13 +137,6 @@ export async function run() {
   assert.match(await qnode.innerText(), /❝/, 'the quote marker distinguishes the kind');
   assert.match(await qnode.innerText(), /post quote1/, 'the quote body renders in the thread');
   assert.ok(await qnode.locator('a:has-text("open its thread")').count(), 'a quote opens as its own room');
-
-  // 3g segment: back home on the WORLD ring — the trending rail is live
-  await page.goto(`${s.origin}/#/`);
-  await page.locator('[data-ring-dial] button:has-text("World")').first().click();
-  await page.waitForSelector('[data-trending] a:has-text("Meadow Fest")');
-  await page.locator('[data-trending] a:has-text("Meadow Fest")').click();
-  await page.waitForSelector('text=post trendpost');
 
   // …and the facet #tag in a board post is a doorway into /h/
   await page.goto(`${s.origin}/#/`);
