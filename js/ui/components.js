@@ -83,7 +83,10 @@ export function postRow(p, viewerCanVote, opts = {}) {
     ? el('a', { href: p.url, target: '_blank', rel: 'noopener noreferrer' }, p.title)
     : el('a', { href: link }, p.title);
   const meta = el('div', { class: 'postmeta' },
-    el('a', { href: `/f/${p.fieldSlug}` }, `f/${p.fieldSlug}`),
+    // 3v: the lens passes a creator-qualified href when it has one, so a
+    // copied breadcrumb resolves for a stranger. Memory Fields are local and
+    // need no creator, so the plain slug stays the default.
+    el('a', { href: opts.fieldHref || `/f/${p.fieldSlug}` }, `f/${p.fieldSlug}`),
     p.author ? el('span', {}, `by ${p.author}`, opts.authorBadge || '') : el('span', { class: 'muted' }, 'by [removed]'),
     el('span', {}, timeAgo(p.createdTs) + ' ago'),
     p.format === 'link' && p.url ? el('span', { class: 'domain' }, domainOf(p.url)) : null,

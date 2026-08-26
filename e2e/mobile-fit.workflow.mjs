@@ -65,7 +65,7 @@ export async function run() {
     await assertNoOverflow(b.page, `/mode @${width}`);
 
     await b.page.goto(`${b.origin}/settings`);
-    await b.page.waitForSelector('text=Theme');
+    await b.page.waitForSelector('text=Skin');
     await assertNoOverflow(b.page, `/settings @${width}`);
   }
   await b.close();

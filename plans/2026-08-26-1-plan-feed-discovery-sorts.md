@@ -3,7 +3,7 @@
 date: 2026-08-26
 status: **4a–4g SHIPPED — the plan is complete.** OQ1/OQ2/OQ3/OQ4 closed; OQ5 open
 (owner), plus 4g's scope cut for the owner to accept or reverse.
-Gate green: 339 unit tests, 5/5 workflows. DL-027–DL-030 landed; ADR-004 recorded.
+Gate green: 339 unit tests, 5/5 workflows. DL-031–DL-034 landed; ADR-004 recorded.
 Execution in worktrees/forage/feed-discovery-sorts (branch claude/feed-discovery-sorts)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `f08fa9d` (clean tree)
@@ -471,7 +471,7 @@ the **plain transport, never the session**, and returns `null` — never zeroes 
 host does not answer. The feed card renders "4.3k shares (5 this week) · 965 starter
 packs", or renders nothing at all. `constellation.microcosm.blue` is now FENCED in the
 workflow shim, which immediately caught an unfixtured read in a second journey.
-ADR-004 + DL-030 record the dependency. 6 unit tests + a journey segment.
+ADR-004 + DL-034 record the dependency. 6 unit tests + a journey segment.
 
 **THE SCOPE CUT — owner's call to reverse.** The plan said "Most shared" and "In
 starter packs" as corpus-wide *sorts*. Built as sorts, each would fire ~222 requests at
@@ -485,17 +485,17 @@ acceptable, or wants it gated behind an explicit "measure these" button.
  Gated behind the ADR below. "Most shared" and "In starter
 packs", with TID-decoded windows.
 
-## Ledger entries — LANDED 2026-08-26 (DL-027, DL-028, DL-029 in `ledger/divergence.js`)
+## Ledger entries — LANDED 2026-08-26 (DL-031, DL-032, DL-033 in `ledger/divergence.js`)
 
-- **DL-027 tolerance** — discovery ordering is Forage-local. The AppView's popular
+- **DL-031 tolerance** — discovery ordering is Forage-local. The AppView's popular
   order is an opaque score; every sort we offer above it is computed here.
-- **DL-028 tolerance** — "Top" means two different things by board kind after 4e:
+- **DL-032 tolerance** — "Top" means two different things by board kind after 4e:
   a whole-corpus server ranking on `/h/`, a budgeted local sort on `/f/`. Names
   DL-010 as the reason `/f/` cannot do better.
-- **DL-029 frontier** — feed adoption is unmeasurable: `app.bsky.feed.save` = 0
+- **DL-033 frontier** — feed adoption is unmeasurable: `app.bsky.feed.save` = 0
   records network-wide, `savedFeedsPrefV2` is private, so "most joined" cannot be
   built. Sibling of DL-025.
-- **DL-030 proposal** (only if 4g ships) — a non-Bluesky read dependency.
+- **DL-034 proposal** (only if 4g ships) — a non-Bluesky read dependency.
 
 ## Open questions — owner
 

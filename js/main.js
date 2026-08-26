@@ -1,4 +1,4 @@
-// Bootstrap: layout, routes, store subscription, theme, service worker.
+// Bootstrap: layout, routes, store subscription, skins, service worker.
 
 import * as store from './store.js';
 import * as router from './router.js';
@@ -11,7 +11,6 @@ import { toast } from './ui/components.js';
 import { setToaster } from './actions.js';
 import * as views from './ui/views.js';
 import * as lensViews from './ui/lens-views.js';
-import * as theme from './theme.js';
 import * as pmode from './mode.js';
 import { modeView, wrongPopulation } from './ui/mode-view.js';
 
@@ -27,11 +26,32 @@ const shell = el('div', { class: 'shell' }, mainEl, sideEl);
 app.append(devHost, mastHost, shell);
 if (!document.getElementById('toasts')) document.body.append(el('div', { id: 'toasts' }));
 
+// The upper-right control moves between a skin and its PAIRED OPPOSITE. Skins
+// subsumed themes (plan 2026-08-26-1), so there is no second axis to flip: a
+// skin that ships one palette has nowhere to go, and the control has to READ
+// as unavailable rather than sit there absorbing clicks. Disabled with a title
+// that says why — a dead-looking button is a bug report waiting to happen.
+function skinToggle() {
+  const active = skins.activeSkin();
+  const entry = skins.SKINS[active];
+  // A stored id from an older build would otherwise throw here and take the
+  // whole masthead with it; treat it as sibling-less and let the picker recover.
+  const sibling = entry ? skins.siblingOf(active) : null;
+  const isDark = (entry?.palette ?? 'light') === 'dark';
+  const label = entry?.label ?? active;
+  const words = sibling
+    ? (isDark ? 'Switch to light' : 'Switch to dark')
+    : `${label} has only one palette`;
+  const btn = el('button', {
+    class: 'themetoggle', title: words, 'aria-label': words,
+  }, isDark ? '☀' : '☾');
+  if (sibling) btn.addEventListener('click', () => skins.setSkin(sibling));
+  else { btn.disabled = true; btn.setAttribute('aria-disabled', 'true'); }
+  return btn;
+}
+
 function masthead() {
-  const dark0 = theme.resolvedDark();
-  const themeBtn0 = el('button', { class: 'themetoggle', title: dark0 ? 'Switch to light' : 'Switch to dark',
-    'aria-label': dark0 ? 'Switch to light mode' : 'Switch to dark mode' }, dark0 ? '☀' : '☾');
-  themeBtn0.addEventListener('click', () => theme.toggle());
+  const themeBtn0 = skinToggle();
   // 3h: populations do not mix — the Bluesky masthead carries NO memory
   // chrome (no persona, no notifications, no memory search).
   if (pmode.active() === 'bluesky') {
@@ -65,10 +85,7 @@ function masthead() {
   const search = el('input', { type: 'text', placeholder: 'Search Forage…', 'aria-label': 'Search' });
   search.addEventListener('keydown', (e) => { if (e.key === 'Enter' && search.value.trim()) router.go(`/search?q=${encodeURIComponent(search.value.trim())}`); });
   const who = store.getState().users[viewer];
-  const dark = theme.resolvedDark();
-  const themeBtn = el('button', { class: 'themetoggle', title: dark ? 'Switch to light' : 'Switch to dark',
-    'aria-label': dark ? 'Switch to light mode' : 'Switch to dark mode' }, dark ? '☀' : '☾');
-  themeBtn.addEventListener('click', () => theme.toggle());
+  const themeBtn = skinToggle();
   return el('header', { class: 'masthead' },
     el('a', { class: 'wordmark', href: '/popular' },
       el('img', { class: 'wordmark-glyph', src: '/icons/icon-192.png', alt: '' }), 'Forage'),
@@ -99,6 +116,10 @@ router.route('/home', memoryOnly((p, q) => views.feedView('home', 'Home', q)));
 router.route('/popular', memoryOnly((p, q) => views.feedView('popular', 'Popular', q)));
 router.route('/all', memoryOnly((p, q) => views.feedView('all', 'All', q)));
 router.route('/f/:slug', byMode(lensViews.lensFieldView, views.fieldView));
+// 3v: the SHAREABLE feed path — /f/@creator/<rkey> resolves cold, which the
+// bare-rkey form cannot (an rkey has no did). Bluesky population only; the
+// memory tier's Fields are local and need no creator.
+router.route('/f/:handle/:rkey', byMode(lensViews.lensFieldView, views.fieldView));
 router.route('/f/:slug/settings', memoryOnly(views.fieldSettingsView));
 router.route('/f/:slug/mod/log', memoryOnly(views.auditView));
 router.route('/f/:slug/mod/queue', memoryOnly(views.queueView));
@@ -157,9 +178,10 @@ window.addEventListener('hashchange', () => {
   render();
 });
 
-// ---------- theme + skin ----------
-theme.apply();
-theme.onChange(render); // re-render so the toggle icon flips
+// ---------- skins (which now carry the palette too) ----------
+// The palette is a skin, and the inline <head> script already injected its
+// sheet before first paint; this only re-adopts that element. Nothing else
+// applies a palette any more — there is no separate theme module to call.
 skins.apply();
 skins.onChange(render);
 

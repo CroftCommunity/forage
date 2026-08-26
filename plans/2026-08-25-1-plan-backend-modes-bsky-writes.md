@@ -763,6 +763,13 @@ hashtag board signed-in. Multi-commit ≤3.
 - [ ] Dev-bar/settings skin picker; `sw.js` SHELL for skin files.
 Multi-commit ≤3.
 
+> **EXPANDED by `plans/2026-08-26-1-plan-skin-chrome-and-phpbb-import.md`**
+> (2026-08-26): forum-chrome tokens, the phpBB skin, and a phpBB style importer.
+> That plan also **supersedes 4a's** "composing WITH light/dark where the skin
+> permits" — skins now subsume themes, one skin carrying one palette with a
+> declared sibling (ADR-003). 4a's independent skins-and-modes axes are
+> unchanged.
+
 #### 4b: The classic BBS skin (+ at most one more, OQ8) — ✅ SHIPPED
 - [ ] `skins/bbs.css` — the era: terminal palette (amber/green on black), monospace
   stack, box-drawing borders, dense rows; readable, not a costume that breaks WCAG
@@ -1302,3 +1309,46 @@ Five units from a live preview pass, each RED-first with a journey segment.
   reports what it removed. A post that declared nothing is never hidden.
 
 302 unit tests / 88 conformance / 5 journeys green. `sw.js` at `forage-v24`.
+
+### The public-site queue — 3v, 3w, 3x (2026-08-26, owner-chosen)
+
+Phase 5 is PAUSED (owner: "we are pausing it until we have the main site in
+better shape"; recorded on roadmap E138). These three came ahead of it.
+
+- **3v — a feed link that survives being pasted** (`cb9a33c`). Found by
+  verifying the live site, not by reading code: `/f/<rkey>` resolved only while
+  navigating. Two causes, and the second is the real one — the source registry
+  is in memory, AND **an rkey alone is not resolvable**. A feed's identity is
+  `at://<did>/app.bsky.feed.generator/<rkey>`, rkeys are not unique across
+  creators, and nothing resolves one without a repo. So clean paths were
+  handing out links that worked for exactly one person. The shareable form
+  carries the creator (`/f/@handle/<rkey>`) and resolves cold in two
+  unauthenticated calls — verified live: `resolveHandle` → did, then
+  `getFeedGenerator` on the assembled uri. Discovery links, sidebar links, and
+  every board row's breadcrumb now use it. The bare form still works
+  in-session, and when it misses it now says the link is missing the creator
+  instead of "open the lens home first".
+- **3w — composing** (`2285813`). The gap between a reader and a forum. Two
+  surfaces: a hashtag board's compose button (previously a disabled stub) and
+  Reply on a thread. What a post IS lives in a pure module built from the
+  lexicon: **both** limits enforced (300 graphemes AND 3000 utf-8 bytes — 300
+  family emoji are 300 characters and 7500 bytes, which a grapheme-only check
+  would pass and the network would reject); graphemes counted with
+  `Intl.Segmenter`; facets **byte**-indexed (a UTF-16 offset lands
+  mid-character on any non-ASCII post, and a test pins exactly that); a typed
+  hashtag becomes a facet, never the `tags` field; a reply carries root AND
+  parent, both with cids, refused otherwise. The counter counts what will be
+  SENT (board tag included) and goes negative rather than clamping. The
+  write-path invariant widened **deliberately**: two createRecord calls bound
+  to two named constants, still exactly ONE deleteRecord, still reachable only
+  by unliking — publishing gained no power to delete. DL-027 records what
+  composing does not do (embeds, mention facets, self-labels, editing).
+- **3x — ring caching** (`d525d3e`). ringMembers caches per ring for the life
+  of the lens, and sign-in warms `mutuals` in the background. The promise is
+  cached, not the result, so racing callers share one graph walk; a rejected
+  promise is dropped so a transient 502 is never remembered as an empty ring.
+  Also deflaked the thread journey: after 3w a reply refetches the thread, and
+  the journey was reading the DOM while that rerender detached it.
+
+323 unit / 88 conformance / 5 journeys green (journeys run 4× consecutively).
+`sw.js` at `forage-v25`.

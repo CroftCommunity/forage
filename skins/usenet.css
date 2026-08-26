@@ -1,8 +1,15 @@
-/* Usenet gray — the restrained second skin proving the mechanism generalizes:
-   newsprint grays, serif headers gone utilitarian, square-ish corners. Token
-   assignments only (scanned). AA holds: #1C1C1C on #E8E8E4 is ~13:1. */
+/* Usenet gray (newsprint) — the light half of the pair.
 
-:root, :root[data-theme="light"] {
+   Was a two-block skin (light + a `:root:not([data-theme="light"])` dark
+   block). When the theme axis retired (ADR-003) that selector began matching
+   UNCONDITIONALLY, so this skin silently rendered its dark palette while the
+   registry called it light. Split into a proper sibling pair; skins/usenet-dark.css
+   carries the other half. test/skins.test.js now refuses any skin that keys off
+   data-theme, or that declares more than one :root block.
+
+   AA: #1C1C1C on #E8E8E4 is ~13:1. */
+
+:root {
   --bg:          #E8E8E4;
   --paper:       #E8E8E4;
   --surface:     #F2F2EE;
@@ -31,32 +38,5 @@
   --font-display: Verdana, Geneva, Tahoma, sans-serif;
   --radius-card: 2px;
   --radius-chip: 2px;
-}
-
-:root:not([data-theme="light"]) {
-  --bg:          #23231F;
-  --paper:       #23231F;
-  --surface:     #2A2A25;
-  --card:        #2C2C27;
-  --card-2:      #34342E;
-  --text:        #D9D9D2;
-  --ink:         #D9D9D2;
-  --ink-soft:    #B0B0A8;
-  --muted:       #A0A098;
-  --border:      #46463E;
-  --line:        #46463E;
-  --stripe:      #29291F;
-  --link:        #8FA8E8;
-  --brand:       #C9C9C0;
-  --brand-ink:   #C9C9C0;
-  --brand-fill:  #4A4A44;
-  --brand-fill-hover: #57574F;
-  --on-brand:    #F0F0EA;
-  --boost:       #8FA8E8;
-  --bury:        #D08A7A;
-  --tint:        #33332B;
-  --font-body:   Verdana, Geneva, Tahoma, sans-serif;
-  --font-display: Verdana, Geneva, Tahoma, sans-serif;
-  --radius-card: 2px;
-  --radius-chip: 2px;
+  --color-scheme: light;
 }

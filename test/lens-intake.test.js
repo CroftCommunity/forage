@@ -213,6 +213,73 @@ test('3i: sortWindow — feed keeps the generator order; new is by time; top is 
 
 // ---- 3j: feed discovery, metadata, and join (pin) ----
 
+// ---- 3v: a feed URL that survives being pasted ----
+//
+// Found live on forage.fyi 2026-08-26: /f/<rkey> resolves only while you are
+// navigating, because the source registry is in memory AND an rkey alone is
+// not resolvable — a feed's identity is at://<did>/app.bsky.feed.generator/
+// <rkey>, rkeys are not unique across creators, and no endpoint resolves one
+// without a repo. VERIFIED cold and unauthenticated: resolveHandle('bsky.app')
+// → did:plc:z72i7hdynmk6r22z27h6tvur, and getFeedGenerator on the assembled
+// at-uri returns the feed. So a shareable feed URL must carry the creator.
+
+test('3v: feedPath is the canonical shareable form — creator and rkey, both needed', async () => {
+  const { feedPath } = await import('../js/substrates/lens.js');
+  assert.equal(feedPath({ creator: 'bsky.app', rkey: 'whats-hot' }), '/f/@bsky.app/whats-hot');
+  assert.equal(feedPath({ creator: 'alexismadd.bsky.social', rkey: 'aaaaqhuqm2kdc' }),
+    '/f/@alexismadd.bsky.social/aaaaqhuqm2kdc');
+  // no creator = no shareable path. Returning the bare rkey form here would
+  // hand out exactly the link that does not work.
+  assert.equal(feedPath({ rkey: 'whats-hot' }), null);
+  assert.equal(feedPath({ creator: '', rkey: 'x' }), null);
+  // it can build straight from a feed uri + creator handle
+  assert.equal(feedPath({ creator: 'bsky.app', uri: 'at://did:plc:z7/app.bsky.feed.generator/whats-hot' }),
+    '/f/@bsky.app/whats-hot');
+});
+
+test('3v: parseFeedRoute tells a creator-qualified path from a bare slug', async () => {
+  const { parseFeedRoute } = await import('../js/substrates/lens.js');
+  assert.deepEqual(parseFeedRoute({ handle: '@bsky.app', rkey: 'whats-hot' }),
+    { kind: 'qualified', handle: 'bsky.app', rkey: 'whats-hot' });
+  // the @ is required: without it the first segment is ambiguous with a slug
+  assert.deepEqual(parseFeedRoute({ handle: 'bsky.app', rkey: 'whats-hot' }),
+    { kind: 'qualified', handle: 'bsky.app', rkey: 'whats-hot' }, 'a two-segment path is qualified either way');
+  assert.deepEqual(parseFeedRoute({ slug: 'whats-hot' }), { kind: 'slug', slug: 'whats-hot' });
+});
+
+test('3v: resolveFeed goes handle → did → feed, cold, with no session', async () => {
+  const calls = [];
+  const transport = async (path) => {
+    calls.push(path);
+    const json = (d) => ({ ok: true, status: 200, json: async () => d });
+    if (path.includes('resolveHandle')) return json({ did: 'did:plc:z72' });
+    if (path.includes('getFeedGenerator')) return json({ view: {
+      uri: 'at://did:plc:z72/app.bsky.feed.generator/whats-hot', displayName: "What's Hot",
+      description: 'the hot ones', likeCount: 9, creator: { handle: 'bsky.app' } }, isOnline: true, isValid: true });
+    return { ok: false, status: 404, json: async () => ({}) };
+  };
+  const lens = createLens({ transport }); // NO session — a stranger opening a shared link
+  const info = await lens.resolveFeed({ handle: 'bsky.app', rkey: 'whats-hot' });
+  assert.equal(info.uri, 'at://did:plc:z72/app.bsky.feed.generator/whats-hot');
+  assert.equal(info.title, "What's Hot");
+  assert.equal(info.creator, 'bsky.app');
+  assert.ok(calls.some((c) => c.includes('resolveHandle')), 'the handle is resolved, never assumed to be a did');
+  assert.ok(calls.some((c) => c.includes('getFeedGenerator')));
+
+  // a did in the handle position is already resolved — do not ask again
+  calls.length = 0;
+  await lens.resolveFeed({ handle: 'did:plc:z72', rkey: 'whats-hot' });
+  assert.equal(calls.filter((c) => c.includes('resolveHandle')).length, 0, 'a did needs no resolution');
+});
+
+test('3v: a handle that does not resolve fails by NAME, never as a blank board', async () => {
+  const transport = async (path) => (path.includes('resolveHandle')
+    ? { ok: false, status: 400, json: async () => ({ error: 'InvalidRequest', message: 'Unable to resolve handle' }) }
+    : { ok: true, status: 200, json: async () => ({}) });
+  await assert.rejects(() => createLens({ transport }).resolveFeed({ handle: 'nope.invalid', rkey: 'x' }),
+    /resolve|handle/i);
+});
+
 // 3s: Join and Favorite are two different things, exactly as Bluesky models
 // them — saved puts a feed in your list, pinned puts it in your top row. Join
 // used to force pinned:true, which silently rearranged the official app's tab
@@ -312,7 +379,7 @@ test('3j: discoverFeeds lists popular generators and searches by query; guests g
 // ---- 4g: adoption signals from Constellation (ADR-004) ----
 // The AppView exposes ONE popularity signal for a feed (likeCount, plus the
 // windows 4c counts). It exposes nothing about how a feed is recommended, and
-// DL-029 records why that gap is permanent. Constellation's backlink index
+// DL-033 records why that gap is permanent. Constellation's backlink index
 // answers it — and its rows are time-windowable for free, because an atproto
 // rkey is a TID encoding a microsecond timestamp.
 
@@ -387,7 +454,7 @@ test('4g: adoption sends nothing about the viewer — ADR-004 point 4', async ()
 
 // ---- 4f: /f/ boards deepen on a BUDGET, and say which way it ended ----
 // A generator has no window lever (getFeedSkeleton takes only limit/cursor —
-// DL-028), so the only way to widen a /f/ board's window is to page backwards.
+// DL-032), so the only way to widen a /f/ board's window is to page backwards.
 // Measured cost varies by 100x (plan D4): Astronomy covered 24h in 1 page,
 // Blacksky reached 3.6h in 40 pages. So the honest shape is a budget plus a
 // verdict the UI can read out.
@@ -454,7 +521,7 @@ test('4f: deepen de-duplicates posts that repeat across pages', async () => {
 // searchPosts takes sort=top|latest plus since/until SERVER-SIDE (probed with a
 // session 2026-08-26, plan D3), so "Top · this week" on a hashtag board is one
 // query over the whole corpus. /f/ generator boards have no such lever — the
-// asymmetry is real and DL-028 names it.
+// asymmetry is real and DL-032 names it.
 
 test('4e: searchWindow maps the board controls onto searchPosts params', () => {
   const now = Date.parse('2026-08-26T12:00:00Z');

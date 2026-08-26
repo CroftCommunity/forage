@@ -1,0 +1,43 @@
+/* Forage (dark) — Phase 1C of the theme/skin collapse (plan 2026-08-26-1).
+
+   This is the palette that lived in tokens.css as `:root[data-theme="dark"]`,
+   lifted VERBATIM and now shipped as an ordinary skin. Light and dark stopped
+   being a second axis: a skin carries one palette, and this one is the sibling
+   of `default` (Forage light). The upper-right toggle swaps between the two.
+
+   Generated from the legacy block, not retyped — test/skins.test.js asserts
+   token-for-token identity, so a drift here turns the suite red.
+
+   Contrast is unchanged from the shipping dark theme: --text #EFE7D9 on
+   --bg #262019 is ~12.1:1, well past AA for body text. */
+
+:root {
+  --bg:          #262019;   /* warm umber, lifted from near-black */
+  --card:        #31291F;
+  --card-2:      #3B3226;
+  --text:        #EFE7D9;   /* warm paper */
+  --muted:       #B5A88F;
+  --border:      #4C4232;   /* twig */
+
+  --link:        #A5CD98;
+  --brand-ink:   #A5CD98;
+  --brand-fill:  #41724A;
+  --brand-fill-hover: #4A7F54;
+  --on-brand:    #FFFFFF;
+
+  --boost:       #8FC48A;
+  --bury:        #DE9A6E;
+  --tint:        #3A392A;
+
+  --gold-500:    #D4A94E;
+  --gold-strong: #E2BC64;
+
+  --danger:      #F0938A;
+  --danger-ink:  #F0938A;
+  --danger-tint: #42251F;
+
+  --clay-600:    #A24D2C;
+  --stripe:      rgba(255,255,255,.04);
+
+  --color-scheme: dark;
+}

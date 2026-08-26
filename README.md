@@ -61,10 +61,44 @@ Identity is a **dev-bar dropdown**, not a login. Every UX path is walkable from 
 A skin is a **token-sheet swap** (Settings → Skin, device-local): an extra
 stylesheet that may only reassign the design tokens in `css/tokens.css` —
 `test/skins.test.js` scans every registered skin and refuses smuggled component
-rules. Shipping: **Classic BBS** (amber terminal, monospace, square corners) and
-**Usenet gray** (newsprint). Skins and modes are independent axes — the BBS skin
-in the Bluesky view is legal, just off-theme; the BBS mode merely defaults to
-its skin. New skins are cheap: one CSS file + one registry line.
+rules. That restriction is the point: a skin can restyle anything and
+restructure nothing, so it can never hide a moderation notice or a gate.
+
+**A skin carries exactly one palette.** Light and dark are not a second axis;
+they are skins (ADR-003). A skin may declare a **sibling** — its opposite-palette
+twin — and the upper-right toggle swaps to it, or reads as disabled where none
+exists. Shipping: **Forage (light)** ↔ **Forage (dark)**, **phpBB (classic
+board)** ↔ **phpBB (after hours)**, **Classic BBS** (amber terminal) and
+**Usenet gray** (newsprint). Skins and modes stay independent axes — the phpBB
+board in the Bluesky view is legal, just off-theme.
+
+New skins are cheap: one CSS file plus one registry line in `js/skins.js`.
+
+### Importing a phpBB style
+
+```
+npm run import-phpbb -- <style-dir-or-css> [--name id] [--out file] [--licence L]
+```
+
+Reads a real phpBB style and emits a Forage skin. It resolves by **selector**
+across every CSS file in the style — not by filename, because only one of the
+four styles surveyed actually has a `colours.css` (subsilver2 is monolithic,
+modern styles inline colour, some author in SCSS).
+
+An imported skin is faithful in **palette, typography and chrome — never in
+layout.** Forage keeps its own DOM, so a phpBB template targets markup that does
+not exist here. The result reads as that theme's colours on Forage's structure;
+row density is a registered frontier (DL-027), not an oversight.
+
+Every generated file states its own provenance: source, licence, and per-role
+whether each value was read from the theme (`direct`), resolved through a
+declared fallback chain (`derived`), or not found (`absent`). The tool exits
+non-zero on an unresolved role or a failed contrast gate — `--allow-contrast-
+failures` emits anyway, knowingly.
+
+Only GPL-compatible skins ship in this repo. The importer is a local tool for
+themes you have licensed. See `docs/SKINS.md` for the role vocabulary and
+`test/fixtures/phpbb-themes/PROVENANCE.md` for what is vendored and why.
 
 ## Testing
 

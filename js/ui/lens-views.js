@@ -8,11 +8,12 @@
 
 import { el, timeAgo, fmtScore } from '../util.js';
 import { postRow, commentNode, voteBox, skeleton, emptyState, toast } from './components.js';
-import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow, affordanceFor, feedCardModel, threadNodeStyle,
+import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow, affordanceFor, feedCardModel, threadNodeStyle, feedPath, parseFeedRoute,
   sortFeeds, filterFeeds, platforms, liveFeeds } from '../substrates/lens.js';
 import { initSession, createAccountRoster } from '../auth/session.js';
 import * as mediaScale from '../media-scale.js';
 import * as lang from '../lang.js';
+import { POST_LIMITS, graphemes, withTag } from '../compose.js';
 import { MEDIA_SCALE } from '../media-scale.js';
 
 let manager = null;        // null = not booted; 'unavailable' = origin has no OAuth client
@@ -103,6 +104,10 @@ async function adoptSession(s) {
   savedFeedUris.clear();
   pinnedFeedUris.clear();
   savedFeedsPromise = null;
+  // 3x: warm the ring the dial will most likely ask for, while the board is
+  // still painting. Fire-and-forget: a failure here must never break sign-in,
+  // and the dial will simply compute it the normal way.
+  lens.ringMembers('mutuals').catch(() => {});
   roster.remember({ did: s.did, handle }); // 3k: this device knows this account now
   // 3f: mirror the account's moderation posture — mute a word on bsky.app and
   // it is muted here. A failure runs unfiltered WITH WORDS, never silently.
@@ -320,6 +325,13 @@ function renderBoard(card, posts, { wholeCorpus = false } = {}) {
   }
 }
 
+// 3v: the breadcrumb on a board row is a link people copy, so give it the
+// shareable form whenever the registry knows who made the feed.
+const fieldHrefFor = (slug) => {
+  const entry = sources.get(slug);
+  return (entry && feedPath({ creator: entry.creator, rkey: entry.slug })) || `/f/${slug}`;
+};
+
 const lensRow = (p, view = 'card') => postRow(p, !!session, {
   onVote: lensVote(p),
   // 3i: never duplicate the title — a preview renders only when it adds
@@ -329,6 +341,7 @@ const lensRow = (p, view = 'card') => postRow(p, !!session, {
     : p.preview ? facetedBody({ ...p, body: p.preview }) : tagChips(p),
   authorBadge: verifiedBadge(p),
   metaExtra: langChip(p),
+  fieldHref: fieldHrefFor(p.fieldSlug),
   compact: view === 'compact',
 });
 
@@ -359,14 +372,15 @@ function lensSidebar() {
     list.append(skeleton(3));
     ensureSavedFeeds().then((fields) => {
       list.replaceChildren(...fields.map((f) => {
-        const entry = { slug: f.slug, humanSlug: f.humanSlug, title: f.title, kind: f.kind,
+        const entry = { slug: f.slug, humanSlug: f.humanSlug, title: f.title, kind: f.kind, creator: f.creator,
           source: f.kind === 'author' ? { kind: 'author', actor: f.id }
             : f.kind === 'timeline' ? { kind: 'timeline' } : { kind: f.kind, uri: f.id } };
         registerSource(entry);
         // share links carry the FIXED identity (the rkey); the human alias
         // still routes when typed
         return el('div', { class: 'row spread' },
-          el('a', { href: `/f/${f.slug}`, title: f.humanSlug ? `also #/f/${f.humanSlug}` : `/f/${f.slug}` }, `f/${f.title}`),
+          el('a', { href: feedPath({ creator: f.creator, rkey: f.slug }) || `/f/${f.slug}`,
+            title: f.creator ? `Shareable: /f/@${f.creator}/${f.slug}` : `/f/${f.slug}` }, `f/${f.title}`),
           el('span', { class: 'xs muted' }, `${f.kind}${f.pinned ? ' · pinned' : ''}`));
       }));
     }).catch((e) => list.replaceChildren(el('div', { class: 'xs muted' }, 'Feeds failed: ' + e.message)));
@@ -394,6 +408,8 @@ function sessionCard() {
       pinnedFeedUris.clear();
       savedFeedsPromise = null;
       activeRing = 'world';
+      // (the new lens above has no ring memory — the graph belongs to the
+      // account that just left)
       toast('Signed out.', 'ok');
       rerender();
     });
@@ -501,9 +517,38 @@ export function lensHomeView() {
   return { main, side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()) };
 }
 
+// 3v: /f/ has two shapes. A creator-qualified path (/f/@handle/rkey) is the
+// SHAREABLE one and resolves cold — handle → did → feed — so a stranger with
+// the link gets the board. A bare slug still works for in-session navigation
+// and for every link already shared, but it cannot resolve cold: an rkey has
+// no did, and nothing resolves one without a repo.
 export function lensFieldView(params) {
-  const entry = sources.get(params.slug);
-  if (!entry) return { main: emptyState('Unknown lens Field', 'Open the lens home first so its sources register.', el('a', { class: 'btn', href: '/' }, 'Lens home')), side: null };
+  const route = parseFeedRoute(params);
+  if (route.kind === 'slug') {
+    const entry = sources.get(route.slug);
+    if (!entry) {
+      return { main: emptyState('Unknown feed',
+        'This link is missing the feed’s creator, so it only works while browsing. Open Discover and find it by name — the link from there can be shared.',
+        el('a', { class: 'btn primary', href: '/feeds' }, 'Discover feeds')), side: null };
+    }
+    return feedBoardView(entry);
+  }
+
+  const host = el('div', {}, skeleton(6));
+  const side = el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar());
+  lens.resolveFeed({ handle: route.handle, rkey: route.rkey })
+    .then((info) => {
+      const entry = { slug: route.rkey, humanSlug: slugifyFeedName(info.title), title: info.title,
+        kind: 'feed', creator: info.creator, source: { kind: 'feed', uri: info.uri } };
+      registerSource(entry);
+      host.replaceChildren(feedBoardView(entry, info).main);
+    })
+    .catch((e) => host.replaceChildren(emptyState('Could not open that feed',
+      `@${route.handle} / ${route.rkey} — ${e.message}`, el('a', { class: 'btn', href: '/feeds' }, 'Discover feeds'))));
+  return { main: host, side };
+}
+
+function feedBoardView(entry, preInfo) {
   const main = el('div', {},
     el('div', { class: 'row spread wrap' },
       el('h1', {}, entry.title),
@@ -527,7 +572,7 @@ export function lensFieldView(params) {
     }
   };
   const headerHost = el('div', {});
-  // 4f: a /f/ board has no server window (DL-028), so "Top · this week" widens
+  // 4f: a /f/ board has no server window (DL-032), so "Top · this week" widens
   // by paging backwards on a budget and then says which of the three ways it
   // ended. The note is part of the answer, not decoration.
   const deepNote = el('div', { class: 'xs muted', style: 'padding:6px', 'data-deepen': '1' });
@@ -560,7 +605,8 @@ export function lensFieldView(params) {
   // = max(info, feed), never sum, and there is no flash of gated content.
   const isFeedSource = entry.source.kind === 'feed' && !!entry.source.uri;
   const infoReady = isFeedSource
-    ? Promise.all([lens.feedInfo(entry.source.uri), ensureSavedFeeds()])
+    // 3v: a cold resolve already fetched this — do not ask twice
+    ? Promise.all([preInfo ? Promise.resolve(preInfo) : lens.feedInfo(entry.source.uri), ensureSavedFeeds()])
         .then(([info]) => info)
         .catch(() => null)   // the board still works without its card
     : Promise.resolve(null);
@@ -641,21 +687,76 @@ function quotedContext(quoted) {
 
 // 3m: the affordance strip — the one place /f/ and /h/ differ. Same chrome
 // above and below; different promise here.
-function affordanceStrip(stream) {
+function affordanceStrip(stream, onPosted) {
   const a = affordanceFor(stream);
+  const host = el('div', { class: 'card', 'data-affordance': a.targetable ? 'targetable' : 'curated' });
+  // 3w: the promise is now KEPT. A hashtag board is targetable, so its button
+  // opens a real composer; a feed still gets none, because we cannot promise
+  // entry to a program whose criteria are unpublished (DL-025).
   const compose = a.composeLabel
     ? (() => {
-        const b = el('button', { class: 'btn sm', 'data-compose': '1', disabled: true },
-          `${a.composeLabel} (composing not built yet)`);
+        const b = el('button', { class: 'btn sm primary', 'data-compose': '1' }, a.composeLabel);
+        b.addEventListener('click', () => {
+          if (!session) return toast('Sign in to post — it writes to your own Bluesky account.', 'err');
+          if (host.querySelector('[data-composer]')) return;
+          host.append(composerCard({ tag: stream.key, onDone: onPosted }));
+        });
         return b;
       })()
     : null;
-  return el('div', { class: 'card', 'data-affordance': a.targetable ? 'targetable' : 'curated' },
-    el('div', { class: 'row spread wrap', style: 'gap:8px;align-items:center' },
-      el('div', { style: 'min-width:0' },
-        el('div', { class: 'small' }, el('strong', {}, a.headline)),
-        el('div', { class: 'xs muted', style: 'white-space:pre-wrap' }, a.detail)),
-      compose));
+  host.append(el('div', { class: 'row spread wrap', style: 'gap:8px;align-items:center' },
+    el('div', { style: 'min-width:0' },
+      el('div', { class: 'small' }, el('strong', {}, a.headline)),
+      el('div', { class: 'xs muted', style: 'white-space:pre-wrap' }, a.detail)),
+    compose));
+  return host;
+}
+
+// 3w: the composer. The pure module owns what a post IS — the two limits, the
+// byte-indexed facets, the reply refs — so this only collects text and shows
+// the writer what the composer would say before they send it. The counter goes
+// NEGATIVE past the limit rather than clamping, because clamping hides that
+// their words are being cut.
+function composerCard({ tag, replyTo, onDone }) {
+  const box = el('textarea', { rows: '3', 'data-composer-text': '1',
+    placeholder: tag ? `Post to #${tag}…` : 'Write a reply…' });
+  const remaining = el('span', { class: 'xs muted', 'data-remaining': '1' });
+  const note = el('span', { class: 'xs muted' },
+    tag ? `#${tag} is added for you if you don’t write it.` : '');
+  const send = el('button', { class: 'btn sm primary' }, replyTo ? 'Reply' : 'Post');
+  const cancel = el('button', { class: 'btn sm' }, 'Cancel');
+  const card = el('div', { class: 'card', 'data-composer': '1', style: 'margin-top:8px' },
+    box,
+    el('div', { class: 'row spread wrap', style: 'gap:8px;align-items:center;margin-top:6px' },
+      el('div', { class: 'row', style: 'gap:8px;align-items:center' }, remaining, note),
+      el('div', { class: 'row', style: 'gap:6px' }, cancel, send)));
+
+  const sync = () => {
+    // count what will actually be SENT, board tag included — otherwise the
+    // number lies by exactly the length of the tag
+    const willSend = tag ? withTag(box.value, tag) : box.value.trim();
+    const left = POST_LIMITS.graphemes - graphemes(willSend);
+    remaining.textContent = left >= 0 ? `${left} left` : `${-left} over`;
+    remaining.classList.toggle('over', left < 0);
+    send.disabled = left < 0 || !willSend.trim();
+  };
+  box.addEventListener('input', sync);
+  sync();
+
+  cancel.addEventListener('click', () => card.remove());
+  send.addEventListener('click', async () => {
+    send.disabled = true;
+    try {
+      await lens.publish({ text: box.value, tag, replyTo, langs: lang.active().slice(0, 1) });
+      toast('Posted — it is on your Bluesky account too.', 'ok');
+      card.remove();
+      onDone?.();
+    } catch (e) {
+      toast('Post failed: ' + e.message, 'err');
+      send.disabled = false;
+    }
+  });
+  return card;
 }
 
 // 3k: the profile header — the bsky card, read-only (editing lives there).
@@ -845,14 +946,16 @@ export function lensFeedsView() {
   let probing = false;
 
   const card = (f) => {
+    // 3v (from main): the shareable form carries the creator, and the source
+    // registry keeps it so every link the app draws can use that form.
     registerSource({ slug: f.uri.split('/').pop(), humanSlug: slugifyFeedName(f.title), title: f.title,
-      kind: 'feed', source: { kind: 'feed', uri: f.uri } });
+      kind: 'feed', creator: f.creator, source: { kind: 'feed', uri: f.uri } });
     return el('div', { class: 'card', 'data-discover-feed': f.uri },
       el('div', { class: 'row spread wrap', style: 'gap:8px;align-items:center' },
         el('div', { class: 'row', style: 'gap:8px;align-items:center;min-width:0' },
           f.avatar ? el('img', { src: f.avatar, alt: '', class: 'feed-avatar', loading: 'lazy' }) : null,
           el('div', { style: 'min-width:0' },
-            el('a', { href: `/f/${f.uri.split('/').pop()}` }, f.title),
+            el('a', { href: feedPath({ creator: f.creator, uri: f.uri }) || `/f/${f.uri.split('/').pop()}` }, f.title),
             el('div', { class: 'xs muted' },
               `by @${f.creator} · ${fmtScore(f.likeCount)} likes`,
               risingNote(f),
@@ -1136,6 +1239,20 @@ export function lensThreadView(params, query) {
   let onCascade = () => {};
   lens.thread(uri, src, { onCascade: (t) => onCascade(t) }).then((t) => {
     const p = t.post;
+    // 3w: the thread is no longer read-only — replies are a real write now.
+    // A reply's PARENT is the node you answered; its ROOT is the top of the
+    // thread, which for a lens thread is always the post being read. Defined
+    // before the head, which uses them.
+    const rootRef = { uri: p.id, cid: p.cid };
+    const replyHost = el('div', {});
+    const openReply = (parentRef) => {
+      if (!session) return toast('Sign in to reply — it writes to your own Bluesky account.', 'err');
+      if (replyHost.querySelector('[data-composer]')) return;
+      replyHost.replaceChildren(composerCard({
+        replyTo: { root: rootRef, parent: parentRef },
+        onDone: () => rerender(),
+      }));
+    };
     const head = el('div', { class: 'card', style: 'display:flex;gap:10px' },
       voteBox('post', p.id, p, !!session, 'col', lensVote(p)),
       el('div', {},
@@ -1157,8 +1274,14 @@ export function lensThreadView(params, query) {
         }))),
       p.quoted ? quotedContext(p.quoted) : null,
       t.quotesFailed ? el('div', { class: 'row', style: 'gap:6px;margin-top:6px' },
-        chip(`${t.quoteCount} quote${t.quoteCount === 1 ? '' : 's'} — couldn't fetch`, 'getQuotes failed; replies still render. Reload to retry.')) : null));
-    const ctx = { ...LENS_PERMS, locked: true, // read-only: reply/vote/save/mod all gate
+        chip(`${t.quoteCount} quote${t.quoteCount === 1 ? '' : 's'} — couldn't fetch`, 'getQuotes failed; replies still render. Reload to retry.')) : null,
+      (() => {
+        const b = el('button', { class: 'btn sm primary', 'data-reply-open': '1', style: 'margin-top:8px' }, 'Reply');
+        b.addEventListener('click', () => openReply(rootRef)); // replying to the post: parent IS root
+        return b;
+      })(),
+      replyHost));
+    const ctx = { ...LENS_PERMS, locked: true, // vote/save/mod still gate; replying does not
       authorHref: (n) => `/u/${encodeURIComponent(n.author)}`, // 3k: authors reach OUR profile page (which links out)
       nodeRenderer: (n, c) => lensNode(n, c) }; // 3r: a quote nested under a reply is still a quote
     const commentsCard = el('div', { class: 'card' });

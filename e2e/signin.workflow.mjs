@@ -59,7 +59,12 @@ export async function run() {
   const s = await scenario('first-visit', {
     initScripts: [FAKE_MANAGER],
     responses: {
+      'resolveHandle': { did: 'did:plc:x' },
       'describeRepo': { did: 'did:plc:w2test', handle: 'wtest.bsky.social', didDoc: {}, collections: [] },
+      // 3x: signing in warms the mutuals ring in the background, so the graph
+      // is read here now — the journey declares it rather than hiding it.
+      'getFollows': { follows: [] },
+      'getFollowers': { followers: [] },
       'getPreferences': { preferences: [{ $type: 'app.bsky.actor.defs#savedFeedsPrefV2',
         items: [{ type: 'feed', value: WHATS_HOT, pinned: false, id: '1' }, // 3s: joined, not favorited
                 // 4a: joined BEFORE adult content was off — membership is not
@@ -176,6 +181,10 @@ export async function run() {
   await page.goto(`${s.origin}/feeds`);
   await page.waitForSelector('[data-discover-feed]');
   await page.waitForSelector('text=Garden Talk');
+  // 3v: the link discovery hands out is the SHAREABLE one — creator-qualified,
+  // so pasting it works for someone who has never opened Forage.
+  const shared = await page.locator('[data-discover-feed] a').first().getAttribute('href');
+  assert.match(shared, /^\/f\/@[^/]+\/[^/]+$/, `discovery links carry the creator, got ${shared}`);
   await page.waitForSelector('text=Post with #gardening to appear here.');
   // 4a: the adult-labelled generator is absent from discovery entirely — the
   // account never enabled adult content, so the posture hides it in the shape
@@ -247,13 +256,22 @@ export async function run() {
   assert.equal(await page.locator('.side >> text=After Dark').count(), 0,
     'a joined adult feed does not appear in Fields');
 
-  // 4a: and its board never paints. The slug never registers (nothing that can
-  // reach it survives the posture), so a direct URL lands on the unknown-source
-  // state rather than leaking the feed's content or name.
+  // 4a: and its board never paints. A BARE slug never registers (nothing that
+  // survives the posture can register it), so that link lands on the
+  // unknown-feed state without leaking the feed's content or name.
   await page.goto(`${s.origin}/f/afterdark`);
-  await page.waitForSelector('text=Unknown lens Field');
+  await page.waitForSelector('text=Unknown feed');
   assert.equal(await page.locator('[data-board-toolbar]').count(), 0, 'no board painted');
   assert.equal(await page.locator('text=adult stuff').count(), 0, 'no description leaks either');
+
+  // 4a x 3v: the QUALIFIED link is the one that cold-resolves, so it reaches
+  // the board without ever passing through discovery — which is exactly why
+  // the board carries its own moderation gate. It must refuse here.
+  await page.goto(`${s.origin}/f/@x.test/afterdark`);
+  await page.waitForSelector('text=hidden by your moderation settings');
+  assert.equal(await page.locator('[data-board-toolbar]').count(), 0,
+    'a cold-resolved adult feed paints no board');
+  assert.equal(await page.locator('text=adult stuff').count(), 0, 'and leaks no description');
 
   // 3j: a feed board carries its header card, and Join writes preferences
   await page.goto(`${s.origin}/f/whats-hot`);

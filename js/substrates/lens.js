@@ -8,6 +8,8 @@
 
 // Lens surfaces are read-only; the write gates all stay shut (frontier chips,
 // never dead buttons — the UI renders these as deferred, invariant 7).
+import { buildPost, withTag } from '../compose.js';
+
 export const LENS_PERMS = Object.freeze({
   viewerId: null, loggedIn: false, admin: false, probation: false,
   isSteward: false, isOwner: false, bannedHere: false, banInfo: null,
@@ -362,7 +364,7 @@ export function sortWindow(posts, sort, timeframe, nowMs) {
 // "Top · this week" is a real query over the whole corpus, not a re-sort of the
 // page we happened to load — the one place the DL-010 limitation genuinely
 // lifts. /f/ generator boards have no equivalent: getFeedSkeleton takes only
-// limit and cursor, which is what DL-028 records.
+// limit and cursor, which is what DL-032 records.
 //
 // NOTE on honesty: Bluesky's `top` is an engagement-weighted RELEVANCE ranking,
 // not a likeCount sort — a probe returned 152, 113, 1478, 122, 168 likes in that
@@ -380,7 +382,7 @@ export function searchWindow(sort, timeframe, nowMs) {
 
 // ---- 4g: adoption signals from Constellation (ADR-004) ----
 // The AppView counts likes on a feed and nothing else about how it is USED —
-// and DL-029 records why that gap is permanent. Constellation indexes atproto
+// and DL-033 records why that gap is permanent. Constellation indexes atproto
 // backlinks, so it can answer "how many people quoted this feed" and "how many
 // starter packs include it": a recommendation in someone's own words, and a
 // curator staking their pack on it. Neither exists anywhere in app.bsky.
@@ -570,6 +572,30 @@ export function withPinnedFeed(preferences, uri, pinned) {
   });
 }
 
+// 3v: the canonical, SHAREABLE feed path. A feed's identity is
+// at://<did>/app.bsky.feed.generator/<rkey>; an rkey alone is not resolvable
+// (rkeys are not unique across creators, and no endpoint resolves one without
+// a repo), so a link that omits the creator only works for whoever already had
+// the feed in memory — which is exactly the bug found live on forage.fyi.
+// No creator, no shareable path: returning the bare form would hand out the
+// broken link.
+export function feedPath({ creator, rkey, uri } = {}) {
+  const handle = String(creator || '').trim().replace(/^@/, '');
+  const key = rkey || (uri ? String(uri).split('/').pop() : '');
+  if (!handle || !key) return null;
+  return `/f/@${handle}/${key}`;
+}
+
+// Which shape of /f/ route this is. Two segments means creator-qualified (the
+// leading @ is conventional, not load-bearing); one means a bare slug, which
+// still works for in-session navigation and every link already shared.
+export function parseFeedRoute(params = {}) {
+  if (params.rkey) {
+    return { kind: 'qualified', handle: String(params.handle || '').replace(/^@/, ''), rkey: params.rkey };
+  }
+  return { kind: 'slug', slug: params.slug };
+}
+
 // 3m: the affordance split (owner-ratified 2026-08-26). /f/ and /h/ share the
 // board chrome and differ in ONE place — what each promises about getting in.
 // A hashtag is targetable BY CONSTRUCTION (the tag is the membership rule); a
@@ -628,13 +654,27 @@ const slugForSource = (source) => {
 // with a RELATIVE /xrpc path (the library owns auth headers, tokens, and
 // refresh; the lens builds none of it) and the personal surfaces (fields,
 // search, timeline) open up.
-// THE one write pair (DL-013): boost = a real Bluesky like. The ONLY records
-// the lens ever writes are its own likes — test/invariants.test.js narrows the
-// read-only proof to exactly this pair.
+// THE write pair (DL-013): boost = a real Bluesky like.
 const LIKE_COLLECTION = 'app.bsky.feed.like';
+
+// 3w: THE publish write. The second kind of record the lens creates, and the
+// one that makes Forage a forum rather than a reader. Deliberately narrow:
+// our own repo, this one collection, a record built by the pure composer, and
+// no deletes — nothing here can remove anything. test/invariants.test.js pins
+// the count so a third kind cannot appear unnoticed.
+const POST_COLLECTION = 'app.bsky.feed.post';
 
 export function createLens({ session = null, transport = fetch } = {}) {
   let posture = EMPTY_POSTURE;
+  // 3x: rings are expensive — mutuals+1 is one getFollows per mutual, so a
+  // full ring is 26+ graph reads before a single post loads, and it was paid
+  // again on every visit to the dial. The follow graph changes slowly, so the
+  // answer is remembered for the life of this lens (i.e. this session on this
+  // device; a sign-out builds a new lens). The PROMISE is cached, not the
+  // result, so two callers racing a cold ring share one computation — and a
+  // rejected promise is dropped, because a transient 502 must never be
+  // remembered as an empty ring.
+  const ringCache = new Map();
 
   async function post(path, body, verb) {
     if (!session) throw new Error(`lens: ${verb} needs a session — sign in first`);
@@ -769,6 +809,9 @@ export function createLens({ session = null, transport = fetch } = {}) {
       // before the account turned adult content off still leaves the sidebar —
       // membership is not consent, and there is no Forage-side override.
       const hiddenUris = new Set(gens.filter((g) => feedDisposition(g, posture)?.mode === 'hide').map((g) => g.uri));
+      // 3v: the same response already names the creator — keep it, so every
+      // link the sidebar draws can be the shareable form.
+      const creatorOf = new Map(gens.map((g) => [g.uri, g.creator?.handle || null]));
       const taken = new Set();
       return items.filter((i) => !hiddenUris.has(i.value)).map((i) => {
         const slug = slugForSource(i.type === 'author' ? { kind: 'author', actor: i.value } : i.type === 'timeline' ? { kind: 'timeline' } : { kind: i.type, uri: i.value });
@@ -780,7 +823,8 @@ export function createLens({ session = null, transport = fetch } = {}) {
         if (humanSlug && (taken.has(humanSlug) || humanSlug === slug)) humanSlug = humanSlug === slug ? humanSlug : null;
         if (humanSlug) taken.add(humanSlug);
         taken.add(slug);
-        return { id: i.value, kind: i.type, pinned: !!i.pinned, slug, humanSlug, title };
+        return { id: i.value, kind: i.type, pinned: !!i.pinned, slug, humanSlug, title,
+          creator: creatorOf.get(i.value) || null };
       });
     },
 
@@ -788,12 +832,26 @@ export function createLens({ session = null, transport = fetch } = {}) {
     // bypass the graph (their boards come from sources/timeline). mutuals =
     // follows ∩ followers; mutuals+1 adds each mutual's follows under
     // RING_CAP with HONEST overflow (the true pre-cap count — never silent).
-    async ringMembers(ring) {
-      if (ring === 'world' || ring === 'following') return { members: null };
+    ringMembers(ring) {
+      if (ring === 'world' || ring === 'following') return Promise.resolve({ members: null });
       if (ring !== 'mutuals' && ring !== 'mutuals+1') {
-        throw new Error(`lens: unknown ring: ${ring} (known: world, following, mutuals, mutuals+1)`);
+        return Promise.reject(new Error(`lens: unknown ring: ${ring} (known: world, following, mutuals, mutuals+1)`));
       }
-      if (!session) throw new Error('lens: rings are computed from YOUR graph — needs a session');
+      if (!session) return Promise.reject(new Error('lens: rings are computed from YOUR graph — needs a session'));
+      const cached = ringCache.get(ring);
+      if (cached) return cached;
+      const pending = this.computeRing(ring)
+        .catch((e) => { ringCache.delete(ring); throw e; }); // a failure is not an answer
+      ringCache.set(ring, pending);
+      return pending;
+    },
+
+    // 3x: forget the remembered rings — sign-out, account switch, or an
+    // explicit refresh. The graph belongs to an account, not to a device.
+    forgetRings() { ringCache.clear(); },
+
+    // The actual graph walk, cached by ringMembers above.
+    async computeRing(ring) {
       const [follows, followers] = await Promise.all([
         pagedGraph('getFollows', session.did),
         pagedGraph('getFollowers', session.did),
@@ -876,6 +934,19 @@ export function createLens({ session = null, transport = fetch } = {}) {
       return { likeUri: data.uri };
     },
 
+    // 3w: publish MY post. The composer decides what a post IS (limits,
+    // facets, reply refs) and refuses before anything reaches the network;
+    // this only carries it. Returns uri+cid so a reply can thread onto it
+    // without a refetch.
+    async publish({ text, tag, langs, replyTo } = {}) {
+      if (!session) throw new Error('lens: publishing needs a session — sign in first');
+      const record = buildPost({ text: tag ? withTag(text, tag) : text, langs, replyTo });
+      const data = await post('com.atproto.repo.createRecord', {
+        repo: session.did, collection: POST_COLLECTION, record,
+      }, 'publish');
+      return { uri: data.uri, cid: data.cid, record };
+    },
+
     // unboost: delete MY like by its exact rkey.
     async unlike(likeUri) {
       const rkey = likeUri.split('/').pop();
@@ -932,6 +1003,18 @@ export function createLens({ session = null, transport = fetch } = {}) {
         ...(disp?.mode === 'hide' ? { hidden: true } : {}),
         ...(disp?.mode === 'warn' ? { warnLabels: disp.labels } : {}),
       };
+    },
+
+    // 3v: resolve a SHARED feed link cold — handle → did → feed. Both calls
+    // are unauth-200 (verified live), so a stranger with the link gets the
+    // board, which is the entire point of a shareable URL. A did in the handle
+    // position is already resolved and is not looked up again.
+    async resolveFeed({ handle, rkey }) {
+      const did = String(handle || '').startsWith('did:')
+        ? handle
+        : (await get('com.atproto.identity.resolveHandle', { handle })).did;
+      if (!did) throw new Error(`lens: could not resolve @${handle} to an account`);
+      return this.feedInfo(`at://${did}/app.bsky.feed.generator/${rkey}`);
     },
 
     // 3j: discovery — popular generators, optionally searched. Unauth-200
@@ -993,7 +1076,7 @@ export function createLens({ session = null, transport = fetch } = {}) {
 
     // 4f: widen a /f/ board's window by paging BACKWARDS, on a budget. A
     // generator publishes no window lever (getFeedSkeleton takes only limit and
-    // cursor — DL-028), so this is the only way, and its cost varies by two
+    // cursor — DL-032), so this is the only way, and its cost varies by two
     // orders of magnitude between feeds: measured, Astronomy covered 24h in ONE
     // page while Blacksky reached 3.6h in forty. Deep paging is also not
     // reliable — two feeds errored mid-run — so a page that fails ends the walk

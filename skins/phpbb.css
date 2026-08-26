@@ -1,0 +1,90 @@
+/* phpBB (classic board) — Phase 3A, plan 2026-08-26-1.
+
+   The blend the owner chose (OQ5): subSilver's palette with prosilver's band
+   fill. Values marked MEASURED were read out of the real stylesheets in Phase 0
+   (phpbb/phpbb 3.0.x subsilver2/theme/stylesheet.css and master prosilver
+   colours.css), not recalled — three hexes this plan originally quoted from
+   memory turned out to be wrong.
+
+   MEASURED (subsilver2 3.0.x):
+     a:link  #006597   a:hover #D46400   body ink #323D4F
+     .row1   #ECECEC   .row2   #DCE1E5   .row3    #C0C8D0
+     font    "Lucida Grande", Verdana, Helvetica, Arial, sans-serif
+   MEASURED (prosilver): .headerbar/.forumbg #4688CE   .navbar #C9DEE8
+
+   TWO DELIBERATE DEVIATIONS, both recorded rather than silently applied:
+
+   1. --link-hover is #BB5800, not the authentic #D46400. The real value is
+      3.74:1 on white — below AA 4.5 for body text. #BB5800 is the same hue
+      scaled to 88% and lands at 4.66:1. Nostalgia does not outrank being able
+      to read the link.
+   2. --bg is #E5E5E5 rather than subsilver2's literal #FFFFFF. subSilver drew
+      its white content area with HTML bgcolor attributes on .forumline, which
+      no longer exist here (Phase 0, Finding 0.3). Without a gray surround the
+      cards would sit invisibly on the page ground.
+
+   CONTRAST (recorded, as usenet.css does):
+     ink #323D4F on page #E5E5E5      10.0:1   body        AA
+     ink on --row-odd #ECECEC          9.28:1  body        AA
+     ink on --row-even #DCE1E5         8.32:1  body        AA
+     ink on --row-head #DBE0E5         8.25:1  body        AA
+     link #006597 on --row-head        4.78:1  body        AA
+     link #006597 on card #FFFFFF      6.35:1  body        AA
+     hover #BB5800 on card             4.66:1  body        AA
+     band ink #FFFFFF on #4688CE       3.70:1  large/UI    AA (matches prosilver's own)
+*/
+
+:root {
+  --bg:          #E5E5E5;
+  --card:        #FFFFFF;
+  --card-2:      #ECECEC;
+  --text:        #323D4F;
+  --muted:       #4E5A6B;
+  --border:      #98AAB1;
+
+  --link:        #006597;
+  --link-hover:  #BB5800;
+  --brand-ink:   #006597;
+  --brand-fill:  #3A78BC;
+  --brand-fill-hover: #2F6BAE;
+  --on-brand:    #FFFFFF;
+
+  --band-fill:   #3A78BC;
+  --band-ink:    #FFFFFF;
+  --band-link:   #FFFFFF;
+  --band-brand:  #FFFFFF;
+  --nav-fill:    #C9DEE8;
+  --panel:       #FFFFFF;
+  --row-odd:     #ECECEC;
+  --row-even:    #DCE1E5;
+  --row-head:    #DBE0E5;
+
+  --boost:       #006597;
+  --bury:        #BB5800;
+  --tint:        #DCE1E5;
+
+  --gold-500:    #C9A227;
+  --gold-strong: #7A6110;
+  --danger:      #9E2F26;
+  --danger-ink:  #8F2A22;
+  --danger-tint: #F4E7E5;
+  --clay-600:    #A24D2C;
+  --stripe:      rgba(0,0,0,.04);
+
+  --font-body:   "Lucida Grande", Verdana, Helvetica, Arial, sans-serif;
+  --font-display: "Lucida Grande", Verdana, Helvetica, Arial, sans-serif;
+
+  /* Square everything. A board had corners. */
+  --radius-card:  0px;
+  --radius-chip:  0px;
+  --radius-sm:    0px;
+  --radius-media: 0px;
+  --radius-round: 0px;
+
+  /* The signature 3D cell: light top-left, shadow bottom-right. This is why
+     --card-shadow is a token — skinScan rejects real CSS properties, so a skin
+     could not express a bevel at all before Phase 2. */
+  --card-shadow: inset 1px 1px 0 #FFFFFF, inset -1px -1px 0 #B4BCC4;
+
+  --color-scheme: light;
+}

@@ -50,6 +50,7 @@ export async function run() {
       'getTrendingTopics': { topics: [
         { topic: 'Meadow Fest', displayName: 'Meadow Fest', description: 'campers assemble',
           link: '/profile/did:plc:trends/feed/meadow1' } ] },
+      'resolveHandle': { did: 'did:plc:trends' }, // 3v: a shared link resolves handle → did
       'getMutes': { mutes: [] },
       'getBlocks': { blocks: [] },
       'getListMutes': { lists: [] },
@@ -130,6 +131,20 @@ export async function run() {
   const text = await page.locator('main, body').first().innerText();
   assert.ok(text.indexOf('post b1') < text.indexOf('post a1'), 'newest first across members (11:00 before 10:00)');
 
+  // 3x: the ring is computed ONCE. Dialing away and back must not re-walk the
+  // follow graph — mutuals+1 is one getFollows per mutual, and paying that on
+  // every visit is the difference between instant and several seconds.
+  const graphCalls = () => page.evaluate(() => window.__shimHits
+    .filter((h) => /getFollows|getFollowers/.test(h.url)).length);
+  const afterFirstDial = await graphCalls();
+  assert.ok(afterFirstDial > 0, 'the first dial did read the graph');
+  await page.locator('[data-ring-dial] button:has-text("World")').first().click();
+  await page.waitForTimeout(300);
+  await page.locator('[data-ring-dial] button:has-text("Mutuals")').first().click();
+  await page.waitForSelector('text=post b1');
+  assert.equal(await graphCalls(), afterFirstDial,
+    'dialing back re-used the remembered ring — no new graph reads');
+
   // 3c segment: boost the top post — a REAL like write, optimistically painted
   const row = page.locator('.postrow', { hasText: 'post b1' });
   const scoreBefore = await row.locator('.score').innerText();
@@ -208,6 +223,27 @@ export async function run() {
   assert.ok(await nested.evaluate((n) => parseFloat(getComputedStyle(n).borderLeftWidth) >= 2),
     'a wall nests inside a wall — the grammar holds at every depth');
 
+  // 3w: a thread takes replies. The reply threads onto the post it answers —
+  // parent is what you clicked, root is the top of the thread — and both refs
+  // carry a cid, which the lexicon requires and a broken ref would not.
+  await page.waitForSelector('[data-reply-open]');
+  await page.locator('[data-reply-open]').first().click();
+  await page.waitForSelector('[data-composer]');
+  await page.locator('[data-composer] textarea').fill('mine came up early too');
+  await page.locator('[data-composer] button:has-text("Reply")').click();
+  await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('createRecord')
+    && JSON.parse(h.body).collection === 'app.bsky.feed.post'));
+  const reply = await page.evaluate(() => JSON.parse(window.__shimHits
+    .filter((h) => h.url.includes('createRecord')).at(-1).body));
+  assert.equal(reply.record.text, 'mine came up early too');
+  assert.ok(reply.record.reply.root.uri.endsWith('/b1'), 'the thread root is the post being read');
+  assert.ok(reply.record.reply.root.cid, 'root carries a cid');
+  assert.ok(reply.record.reply.parent.cid, 'so does parent');
+  // the reply refetches the thread, so wait for it to come back before
+  // anything else reads the DOM — a rerender mid-read detaches the nodes
+  // under a running query (this flaked before the segment moved here).
+  await page.waitForSelector('[data-kind="quote"][data-depth="0"]', { timeout: 15000 });
+
   // …and the facet #tag in a board post is a doorway into /h/
   await page.goto(`${s.origin}/`);
   await page.locator('[data-ring-dial] button:has-text("Mutuals")').first().click();
@@ -240,6 +276,41 @@ export async function run() {
   await page.waitForSelector('[data-affordance="targetable"]');
   await page.waitForSelector('text=Anyone can post here.');
   await page.waitForSelector('text=Include #camp in your post');
+
+  // 3w: and now the promise is KEPT — the compose button opens a real composer
+  // and the post it writes carries the board's tag as a byte-indexed facet.
+  const composeBtn = page.locator('[data-affordance="targetable"] [data-compose]');
+  assert.equal(await composeBtn.isDisabled(), false, 'the compose button is live now, not a stub');
+  await composeBtn.click();
+  await page.waitForSelector('[data-composer]');
+  await page.locator('[data-composer] textarea').fill('first tomato of the year');
+  // 24 typed + 6 for the " #camp" the board adds = 30 of 300. The counter
+  // counts what will be SENT, not what was typed — otherwise it lies by
+  // exactly the length of the tag.
+  assert.match(await page.locator('[data-composer] [data-remaining]').innerText(), /^270 left$/,
+    'the counter includes the tag the board is about to add');
+  await page.locator('[data-composer] button:has-text("Post")').click();
+  await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('createRecord')
+    && JSON.parse(h.body).collection === 'app.bsky.feed.post'));
+  const wrote = await page.evaluate(() => JSON.parse(window.__shimHits
+    .filter((h) => h.url.includes('createRecord')).at(-1).body));
+  assert.equal(wrote.collection, 'app.bsky.feed.post');
+  assert.equal(wrote.record.text, 'first tomato of the year #camp', 'the board tag joins the text');
+  assert.equal(wrote.record.facets[0].features[0].tag, 'camp', 'and is faceted so the network indexes it');
+  await page.waitForSelector('text=Posted', { timeout: 10000 });
+
+  // over-limit text is refused BEFORE the network, and says why
+  await composeBtn.click();
+  await page.waitForSelector('[data-composer]');
+  await page.locator('[data-composer] textarea').fill('x'.repeat(305));
+  assert.equal(await page.locator('[data-composer] button:has-text("Post")').isDisabled(), true,
+    'you cannot send a post the lexicon would reject');
+  // 305 typed + 6 for " #camp" = 311, i.e. 11 over — and it SAYS over rather
+  // than clamping, because clamping hides that words are being cut
+  assert.match(await page.locator('[data-composer] [data-remaining]').innerText(), /^11 over$/,
+    'the counter reports the overage, tag included');
+  await page.locator('[data-composer] button:has-text("Cancel")').click();
+  await page.waitForSelector('[data-composer]', { state: 'detached' });
 
   // 3g segment: the trending rail (world ring) opens a topic as a FEED board
   await page.goto(`${s.origin}/`);
@@ -331,6 +402,15 @@ export async function run() {
   await page.locator('[data-board-toolbar] select').nth(2).selectOption('card');
   await page.waitForSelector('.media-strip img');
 
+  // 3v: a SHARED feed link, opened COLD — a fresh navigation with no prior
+  // in-app state, exactly like pasting the URL to someone else. The failure
+  // found live on forage.fyi was that /f/<rkey> cannot resolve, because an
+  // rkey has no did. The creator-qualified path can.
+  await page.goto(`${s.origin}/f/@curator.test/meadow1`);
+  await page.waitForSelector('[data-feed-header]', { timeout: 15000 });
+  await page.waitForSelector('text=Curated by @curator.test.');
+  assert.equal(await page.locator('text=Unknown lens Field').count(), 0,
+    'a pasted feed link resolves for someone who has never opened the app');
   assert.deepEqual(await s.shimMisses(), [], 'every network read had a fixture');
   await s.close();
 

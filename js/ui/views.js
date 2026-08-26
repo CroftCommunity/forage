@@ -10,7 +10,6 @@ import * as version from '../version.js';
 import { go } from '../router.js';
 import { frontiers } from '../../ledger/divergence.js';
 import { humanWait } from '../engines/limits.js';
-import * as themeCtl from '../theme.js';
 import { postRow, commentNode, voteBox, emptyState, gate, errorState, toast } from './components.js';
 
 const V = () => store.getPersonaId();
@@ -524,11 +523,17 @@ export function fieldSettingsView(params) {
 }
 
 // ---------- settings / prefs ----------
+// NOTE (2026-08-26): the `.field-row` pattern used throughout this file places
+// a <label> as a SIBLING of its control, with no `for`. That names nothing —
+// axe reports `select-name` / form-field-without-label. The controls on THIS
+// view are wired with id/for because e2e/a11y-skins.workflow.mjs scans it. The
+// same latent defect exists at the other field-row call sites (submit, create
+// field, field settings); those surfaces are not scanned yet, so they are
+// recorded here rather than quietly left as if checked.
 export function settingsView() {
-  // Theme is a global setting (works logged out); the rest are per-account prefs.
-  const themeSel = el('select', { class: 'form' }, ...['auto', 'light', 'dark'].map((t) =>
-    el('option', { value: t, selected: themeCtl.getTheme() === t || false }, t === 'auto' ? 'Auto (match system)' : t)));
-  themeSel.addEventListener('change', () => themeCtl.setTheme(themeSel.value));
+  // Skins subsumed themes (plan 2026-08-26-1): the separate Theme control is
+  // gone, because a palette IS a skin. Light and dark are two entries in the
+  // list below, and the masthead toggle is the shortcut between paired ones.
   // 3d (OQ4): the front-door/mode preference is a device-local setting —
   // "it's local to them". The dev-bar Mode control is a scaffolding mirror.
   // 3o: which build is this device running? (owner ask) — a stale service
@@ -546,33 +551,39 @@ export function settingsView() {
   });
   // 4a: the skin picker — skins and modes are independent axes; any skin in
   // any mode. Device-local, like theme and front door.
-  const skinSel = el('select', { class: 'form' }, ...Object.entries(skins.SKINS).map(([id, s]) =>
-    el('option', { value: id, selected: skins.activeSkin() === id || false }, s.label)));
+  // Grouped by palette so siblings read as a pair: with light and dark now in
+  // one flat list, "Forage (light)" and "Forage (dark)" sitting apart would
+  // look like two unrelated themes rather than two sides of one choice.
+  const optsFor = (want) => Object.entries(skins.SKINS)
+    .filter(([, s]) => s.palette === want)
+    .map(([id, s]) => el('option', { value: id, selected: skins.activeSkin() === id || false }, s.label));
+  const skinSel = el('select', { class: 'form', id: 'pref-skin' },
+    el('optgroup', { label: 'Light' }, ...optsFor('light')),
+    el('optgroup', { label: 'Dark' }, ...optsFor('dark')));
   skinSel.addEventListener('change', () => skins.setSkin(skinSel.value));
   const themeCard = el('div', { class: 'card' },
-    el('div', { class: 'field-row' }, el('label', {}, 'Theme'), themeSel),
-    el('div', { class: 'field-row' }, el('label', {}, 'Skin'), skinSel),
+    el('div', { class: 'field-row' }, el('label', { for: 'pref-skin' }, 'Skin'), skinSel),
     el('div', { class: 'field-row' }, el('label', {}, 'Mode'),
       el('a', { href: '/mode' }, 'Bluesky view ↔ Memory sandbox — choose at /mode')),
     el('div', { class: 'field-row' }, el('label', {}, 'Accounts'),
       el('a', { href: '/me' }, 'Switch account, add another, or sign out')),
     el('div', { class: 'field-row' }, el('label', {}, 'Version'), versionOut),
-    el('div', { class: 'xs muted' }, 'Theme, skin, and mode are this device only.'));
+    el('div', { class: 'xs muted' }, 'Skin and mode are this device only.'));
 
   if (!V()) {
     return { main: el('div', {}, el('h1', {}, 'Preferences'), themeCard,
       el('p', { class: 'muted small', style: 'margin-top:12px' }, 'Log in to set comment and feed preferences.')), side: null };
   }
   const prefs = S().users[V()].prefs;
-  const thr = el('input', { type: 'number', value: prefs.commentThreshold });
+  const thr = el('input', { type: 'number', id: 'pref-threshold', value: prefs.commentThreshold });
   thr.addEventListener('change', async () => { await actions.updatePrefs({ commentThreshold: parseInt(thr.value, 10) || 0 }); });
-  const sort = el('select', { class: 'form' }, ...['hot', 'new', 'top', 'best'].map((s) => el('option', { value: s, selected: prefs.defaultSort === s || false }, s)));
+  const sort = el('select', { class: 'form', id: 'pref-sort' }, ...['hot', 'new', 'top', 'best'].map((s) => el('option', { value: s, selected: prefs.defaultSort === s || false }, s)));
   sort.addEventListener('change', async () => { await actions.updatePrefs({ defaultSort: sort.value }); });
   return { main: el('div', {}, el('h1', {}, 'Preferences'),
     themeCard,
     el('div', { class: 'card', style: 'margin-top:12px' },
-      el('div', { class: 'field-row' }, el('label', {}, 'Auto-collapse comments below score'), thr),
-      el('div', { class: 'field-row' }, el('label', {}, 'Default feed sort'), sort))), side: null };
+      el('div', { class: 'field-row' }, el('label', { for: 'pref-threshold' }, 'Auto-collapse comments below score'), thr),
+      el('div', { class: 'field-row' }, el('label', { for: 'pref-sort' }, 'Default feed sort'), sort))), side: null };
 }
 
 // ---------- about the dev bar (meta) ----------

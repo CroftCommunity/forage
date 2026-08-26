@@ -17,7 +17,7 @@ Feed discovery raises a different question. The owner asked (2026-08-26) which
 dimensions we can sort and filter feeds on. Probing (plan D1–D8) found that the
 AppView exposes exactly one popularity signal for a feed generator: `likeCount`,
 plus the 7d/30d windows we now count ourselves off `getLikes` (4c). It exposes
-nothing about how feeds are *used* or *recommended*, and DL-029 records why that
+nothing about how feeds are *used* or *recommended*, and DL-033 records why that
 gap is permanent: joining a feed writes `savedFeedsPrefV2`, which is per-actor
 private, and `app.bsky.feed.save` holds **zero** records network-wide.
 
@@ -86,7 +86,7 @@ is already public; the first is why point 2 is non-negotiable.
   TID decoding, and each able to vanish without taking the page with it.
 - A TID decoder enters the codebase. It is pure, testable, and verifiable
   against `getLikes` timestamps — that cross-check is a test, not a one-off.
-- If Constellation disappears permanently, 4g is deleted and DL-029 stands
+- If Constellation disappears permanently, 4g is deleted and DL-033 stands
   unchanged: adoption goes back to being unmeasurable, which it already is.
 - Revisit if Bluesky ever exposes quote-of-feed or pack-inclusion counts
   directly, at which point this host stops earning its place.
