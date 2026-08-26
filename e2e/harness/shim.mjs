@@ -22,7 +22,7 @@ export function fetchShim({ responses = {} } = {}) {
       if (!FENCED.some((h) => url.includes(h))) return real(input, init);
       for (const [needle, payload] of Object.entries(RESPONSES)) {
         if (url.includes(needle)) {
-          window.__shimHits.push(url);
+          window.__shimHits.push({ url, method: (init && init.method) || 'GET', body: init && init.body ? String(init.body) : null });
           return Promise.resolve(new Response(JSON.stringify(payload), {
             status: 200, headers: { 'content-type': 'application/json' },
           }));

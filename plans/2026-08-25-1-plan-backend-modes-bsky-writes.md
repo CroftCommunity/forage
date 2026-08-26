@@ -1,7 +1,7 @@
 # Plan: three modes — memory, the Bluesky view with a ring dial, and the private BBS
 
 date: 2026-08-25
-status: EXECUTING — 3a–3b SHIPPED (dial + merged boards live in the corpus); next: 3c (boost = like).
+status: EXECUTING — 3a–3c SHIPPED (the lens' first write is live under the narrowed invariant); next: 3e (quotes as continuation).
 Execution in worktrees/forage/modes-bbs (branch claude/modes-bbs)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `10a8ade` (clean tree, pushed; forage.fyi deployed at forage-v11)
@@ -587,7 +587,7 @@ covers them, not that 3d has already run.
   cap+1, with the true count); a member appearing in both mutuals and their-follows
   counted once.
 
-#### 3b: Ring boards — ✅ SHIPPED
+#### 3b: Ring boards — ✅ SHIPPED (`8d80379`)
 - [ ] `js/substrates/lens.js` — `ringFeed(ring, …)`: merged author-feed board
   (time-interleaved, cursor-capable) for mutuals/mutuals+1; `following` =
   getTimeline; world = today's sources.
@@ -600,7 +600,7 @@ cases named RED: timestamp ties keep a deterministic order (author-DID
 tiebreak, pinned); one member's feed exhausted mid-merge; cursor round-trip
 resumes without duplicates.
 
-#### 3c: Boost = like (DL-013), OAuth-bound
+#### 3c: Boost = like (DL-013), OAuth-bound — ✅ SHIPPED
 Self-contained (the pre-redirect draft text no longer exists in this doc): lens
 shapes gain `cid` + `likeUri`; `lens.like(uri,cid)` creates `app.bsky.feed.like`
 via the OAuth DPoP fetch and `lens.unlike(likeUri)` deletes it (record shapes per
