@@ -9,6 +9,8 @@ export const SKIN_KEY = 'forage.skin';
 
 export const SKINS = Object.freeze({
   default: { label: 'Forage (default)', file: null },
+  bbs: { label: 'Classic BBS (amber terminal)', file: 'skins/bbs.css' },
+  usenet: { label: 'Usenet gray (newsprint)', file: 'skins/usenet.css' },
 });
 
 export function hrefFor(id) {

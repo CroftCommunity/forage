@@ -1,0 +1,66 @@
+/* Usenet gray — the restrained second skin proving the mechanism generalizes:
+   newsprint grays, serif headers gone utilitarian, square-ish corners. Token
+   assignments only (scanned). AA holds: #1C1C1C on #E8E8E4 is ~13:1. */
+
+:root, :root[data-theme="light"] {
+  --bg:          #E8E8E4;
+  --paper:       #E8E8E4;
+  --surface:     #F2F2EE;
+  --card:        #F5F5F1;
+  --card-2:      #EBEBE6;
+  --text:        #1C1C1C;
+  --ink:         #1C1C1C;
+  --ink-soft:    #444444;
+  --muted:       #575752;
+  --border:      #C4C4BC;
+  --line:        #C4C4BC;
+  --stripe:      #EFEFEA;
+
+  --link:        #20409A;
+  --brand:       #333333;
+  --brand-ink:   #333333;
+  --brand-fill:  #3A3A3A;
+  --brand-fill-hover: #4A4A4A;
+  --on-brand:    #F5F5F1;
+
+  --boost:       #20409A;
+  --bury:        #8A2A2A;
+  --tint:        #DEDED8;
+  --gutter-rule: #C4C4BC;
+  --gutter-hit:  #333333;
+
+  --font-body:   Verdana, Geneva, Tahoma, sans-serif;
+  --font-display: Verdana, Geneva, Tahoma, sans-serif;
+  --radius-card: 2px;
+  --radius-chip: 2px;
+}
+
+:root:not([data-theme="light"]) {
+  --bg:          #23231F;
+  --paper:       #23231F;
+  --surface:     #2A2A25;
+  --card:        #2C2C27;
+  --card-2:      #34342E;
+  --text:        #D9D9D2;
+  --ink:         #D9D9D2;
+  --ink-soft:    #B0B0A8;
+  --muted:       #A0A098;
+  --border:      #46463E;
+  --line:        #46463E;
+  --stripe:      #29291F;
+  --link:        #8FA8E8;
+  --brand:       #C9C9C0;
+  --brand-ink:   #C9C9C0;
+  --brand-fill:  #4A4A44;
+  --brand-fill-hover: #57574F;
+  --on-brand:    #F0F0EA;
+  --boost:       #8FA8E8;
+  --bury:        #D08A7A;
+  --tint:        #33332B;
+  --gutter-rule: #46463E;
+  --gutter-hit:  #C9C9C0;
+  --font-body:   Verdana, Geneva, Tahoma, sans-serif;
+  --font-display: Verdana, Geneva, Tahoma, sans-serif;
+  --radius-card: 2px;
+  --radius-chip: 2px;
+}

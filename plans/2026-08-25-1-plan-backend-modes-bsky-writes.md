@@ -1,7 +1,7 @@
 # Plan: three modes — memory, the Bluesky view with a ring dial, and the private BBS
 
 date: 2026-08-25
-status: EXECUTING — Phase 3 complete; 4a SHIPPED (skin mechanism + scan); next: 4b (the BBS skin + one more).
+status: EXECUTING — PHASES 1–4 COMPLETE; next: phase 5 SPLIT (BBS on Spaces — plan-edit + user review before implementation).
 Execution in worktrees/forage/modes-bbs (branch claude/modes-bbs)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `10a8ade` (clean tree, pushed; forage.fyi deployed at forage-v11)
@@ -745,7 +745,7 @@ hashtag board signed-in. Multi-commit ≤3.
 
 ### Phase 4 — Skins
 
-#### 4a: The mechanism — ✅ SHIPPED
+#### 4a: The mechanism — ✅ SHIPPED (`cd9db38`+`428b7d5`)
 - [ ] `js/skins.js` + `skins/` registry — a skin = a stylesheet layering over
   `tokens.css` (+ optional skin-scoped extras), applied via a managed `<link>`,
   persisted (device-local pref), composing WITH light/dark where the skin permits;
@@ -763,7 +763,7 @@ hashtag board signed-in. Multi-commit ≤3.
 - [ ] Dev-bar/settings skin picker; `sw.js` SHELL for skin files.
 Multi-commit ≤3.
 
-#### 4b: The classic BBS skin (+ at most one more, OQ8)
+#### 4b: The classic BBS skin (+ at most one more, OQ8) — ✅ SHIPPED
 - [ ] `skins/bbs.css` — the era: terminal palette (amber/green on black), monospace
   stack, box-drawing borders, dense rows; readable, not a costume that breaks WCAG
   contrast (tokens carry recorded ratios).

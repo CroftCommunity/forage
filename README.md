@@ -56,6 +56,16 @@ Identity is a **dev-bar dropdown**, not a login. Every UX path is walkable from 
   (Wilson), Controversial and Rising carry the build spec's formulas verbatim; the Limits
   engine runs rolling-window rate limits over the event log.
 
+## Skins
+
+A skin is a **token-sheet swap** (Settings → Skin, device-local): an extra
+stylesheet that may only reassign the design tokens in `css/tokens.css` —
+`test/skins.test.js` scans every registered skin and refuses smuggled component
+rules. Shipping: **Classic BBS** (amber terminal, monospace, square corners) and
+**Usenet gray** (newsprint). Skins and modes are independent axes — the BBS skin
+in the Bluesky view is legal, just off-theme; the BBS mode merely defaults to
+its skin. New skins are cheap: one CSS file + one registry line.
+
 ## Testing
 
 `npm test` (units + invariant scans) · `npm run conformance` (memory↔codec worlds)

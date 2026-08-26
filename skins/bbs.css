@@ -1,0 +1,44 @@
+/* Classic BBS — the era: amber-and-green phosphor on black, monospace, square
+   corners, dense rows. A TOKEN-SHEET SWAP ONLY (test/skins.test.js scans this
+   file: declared tokens, nothing else). Contrast holds AA: amber #FFB000 and
+   green #33E070 on near-black exceed 8:1; body text #D8D2B8 exceeds 9:1.
+   This skin commits to one look — both theme states get the terminal. */
+
+:root, :root[data-theme="light"], :root[data-theme="dark"] {
+  --bg:          #0A0A05;
+  --paper:       #0A0A05;
+  --surface:     #0F0F08;
+  --card:        #101008;
+  --card-2:      #16160C;
+  --text:        #D8D2B8;
+  --ink:         #D8D2B8;
+  --ink-soft:    #A8A288;
+  --muted:       #9A9478;
+  --border:      #3A3A20;
+  --line:        #3A3A20;
+  --stripe:      #14140A;
+
+  --link:        #33E070;
+  --brand:       #FFB000;
+  --brand-ink:   #FFB000;
+  --brand-fill:  #7A5800;
+  --brand-fill-hover: #8F6700;
+  --on-brand:    #FFF6D8;
+
+  --boost:       #33E070;
+  --bury:        #FF6A33;
+  --tint:        #1A1A08;
+  --gold-500:    #FFB000;
+  --gold-strong: #FFC633;
+  --danger:      #FF6A33;
+  --danger-ink:  #FF8A5C;
+  --danger-tint: #241008;
+
+  --gutter-rule: #3A3A20;
+  --gutter-hit:  #FFB000;
+
+  --font-body:   ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --font-display: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --radius-card: 0px;
+  --radius-chip: 0px;
+}
