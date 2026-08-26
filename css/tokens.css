@@ -1,24 +1,26 @@
-/* Forage design tokens — spec §3, revised into two deliberate, WCAG-validated
-   palettes anchored to the Forage brand green, warmed toward the rook-and-wreath
-   illustration (paper, twig browns, moss) in the 2026-08 brand pass. Every
-   text/background pair below passes AA (body >= 4.5, large/UI >= 3.0);
-   re-verified for the warmed values.
+/* Forage design tokens — spec §3, anchored to the Forage brand green and warmed
+   toward the rook-and-wreath illustration (paper, twig browns, moss) in the
+   2026-08 brand pass. Every text/background pair below passes AA
+   (body >= 4.5, large/UI >= 3.0).
 
-   Two roles are split so the brand reads on both themes:
-   This file is now the LIGHT palette only. Skins subsumed themes (plan
+   THIS FILE IS THE LIGHT PALETTE. Skins subsumed themes (ADR-003, plan
    2026-08-26-1): a palette is a skin, so dark lives in skins/forage-dark.css
-   and the OS preference is resolved in js/skins.js rather than duplicated as a
-   prefers-color-scheme block here. The three hand-synced blocks this file used
-   to carry were a standing drift hazard; there is now one.
+   and the OS preference resolves in js/skins.js. This file used to hand-sync
+   the same values across three blocks (:root, [data-theme="dark"], and a
+   duplicated prefers-color-scheme block) — a standing drift hazard. There is
+   one now.
 
+   Two brand roles are split so the wordmark and buttons can differ, and so a
+   dark sibling can lift one without breaking the other:
      --brand-ink   brand green for TEXT (wordmark, active tab, gutter, accents)
      --brand-fill  brand green for BUTTON fills (paired with --on-brand text)
-     --color-scheme  native chrome (scrollbars, form controls, caret). A TOKEN
-                   rather than a raw property so a SKIN can set it — skinScan
-                   rejects real CSS properties, so a raw `color-scheme` here
-                   would leave every dark skin with light scrollbars.
-   In light both are deep green; in dark, -ink lifts to a legible leaf green
-   while -fill stays a deep green so white button text still passes.           */
+   Here both are deep green. skins/forage-dark.css lifts -ink to a legible leaf
+   green while keeping -fill deep, so white button text still passes.
+
+   --color-scheme carries native chrome (scrollbars, form controls, caret). It
+   is a TOKEN rather than a raw property because skinScan rejects real CSS
+   properties — a raw `color-scheme` here would leave every dark skin with
+   light scrollbars. css/app.css applies it.                                  */
 
 :root {
   /* Raw brand ramp (theme-independent) */
