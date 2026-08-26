@@ -257,3 +257,23 @@ hr.rule { border: none; border-top: 1px solid var(--border); margin: var(--s4) 0
 .postrow.compact .postmeta { font-size: 0.75em; }
 .media-strip { display: flex; gap: 6px; margin: 6px 0; flex-wrap: wrap; }
 .media-strip img { max-height: 220px; max-width: 100%; border-radius: var(--radius-card); border: 1px solid var(--border); }
+
+/* ---- 3i mobile-fit pass (croft-pwa lesson: no overflow at 320/360/390) ----
+   Long unbroken tokens (handles, URLs, joke hashtags, feed names) are THE
+   culprit class. Break them at the CONTAINER — overflow-wrap inherits, so one
+   rule covers every descendant present and future. An element allowlist here
+   was the first attempt and it leaked immediately (the trending rail's link
+   wasn't on it): same allowlist-drop trap the e2e harness warns about.
+   Flex children also need min-width:0 or they refuse to shrink. */
+.masthead, .shell, .devbar { overflow-wrap: anywhere; }
+.postrow { min-width: 0; }
+.postrow > div { min-width: 0; }
+.postmeta { flex-wrap: wrap; }
+.comment-meta { flex-wrap: wrap; }
+.masthead { flex-wrap: wrap; }
+.media-strip img { max-width: 100%; height: auto; }
+@media (max-width: 480px) {
+  .children { margin-left: 10px; }
+  .comment-body { padding-left: calc(var(--gutter-hit) - 4px); }
+  .shell { padding: var(--s2); }
+}
