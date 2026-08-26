@@ -798,6 +798,57 @@ session auth; `getSpace` is owner-only on this build (lexicon divergence — the
 member UI cannot rely on it); refusals are `UserNotAuthorized` (credential mint),
 `RepoNotFound` (reads — deliberately ambiguous), 401 (anon).
 
+#### THE SPLIT (drafted 2026-08-25 on D5 evidence — awaiting user review before implementation)
+
+**Split decision — the sandbox session:** the BBS mode's session is a DIRECT
+`createSession` against the spaces host with throwaway credentials — NOT the
+mainline OAuth session (different host: the alpha PDS is its own world of
+throwaway accounts, and D5 proved plain session JWTs drive every space call).
+This is the auth divergence D5 anticipated; it is sandbox-only posture and gets
+revisited at Spaces GA. **Split decision — space selection UX (closes OQ2's BBS
+half):** a Space connect card in the BBS mode — host + handle + app password +
+space uri to JOIN; owner tools are minimal (create space, add/remove member).
+
+- **5a: The space-credential module** — `js/auth/space-credential.js`: ephemeral
+  ES256 DPoP keypair (WebCrypto), proof builder (htm/htu/iat/jti + nonce + ath),
+  the mint chain (getDelegationToken via session → getSpaceCredential with
+  Bearer delegation + DPoP proof + nonce retry) and credential-bearing reads
+  (DPoP scheme + ath + nonce retry). The D5b/d probe code productized under TDD.
+  ~80 lines of crypto-adjacent glue the vendored OAuth client does not cover —
+  scoped to exactly the D5-proven dance, nothing more. Hermetic tests: proof
+  claim shapes, ath = b64url(sha256(credential)), nonce retry, refusals with
+  words. **Write-set:** js/auth/space-credential.js, test/space-credential.test.js.
+- **5b: The BBS substrate** — `js/substrates/bbs.js`, registered at mode entry
+  (`registerSubstrate('bbs', …)`, 1a seam): write = codec `encodeEvents` →
+  `space.createRecord {space, repo, collection, rkey, record}` (colon rkeys
+  legal, D3); read = pull-on-entry: credential chain → `space.listRepos` →
+  per-repo `space.listRecords` (all collections) → `decodeRecords` →
+  `loadEvents` into RAM (1b lifecycle). Moderation stays masking (scoped tier
+  unchanged). Same codec the conformance world already proves — 5b adds a
+  codec-identity test (bbs imports THE scoped codec, no fork). Hermetic over a
+  fake space host. **Write-set:** js/substrates/bbs.js, test/bbs-substrate.test.js.
+- **5c: The BBS mode UI** — the connect card (host/handle/password/space, JOIN
+  path), owner tools (createSpace with memberListPolicy+open, addMember/
+  removeMember/listMembers), the EXPERIMENTAL banner (sandbox-alpha posture,
+  OQ7), refusals with words incl. the honest outsider story ("not a member or
+  nothing there — indistinguishable by design", D5). BBS skin default already
+  wired (4a). **Write-set:** js/ui/bbs-views.js (new), js/main.js, js/devbar.js
+  (multi-commit ≤3).
+- **5d: W5 + the live rehearsal** — `e2e/bbs.workflow.mjs` (DOCKER=1,
+  skip-reports loudly): provisions the LOCAL `pds-spaces-alpha` container
+  per-run (amd64 emulation on Apple Silicon; volume chowned to node; htu =
+  the server's configured origin — all D5 rig facts), creates throwaway
+  accounts, then drives the APP: enter bbs mode → owner creates the space +
+  seeds the forum → member joins + reads + posts → OUTSIDER REFUSED (the
+  acceptance) → teardown (container + volume). The live rehearsal IS this
+  workflow's run, evidence recorded in the plan. Not in CI (daemon-bound).
+  **Write-set:** e2e/bbs.workflow.mjs (+ helper), README/TODO lines.
+
+**Risks (split-refined):** alpha churn (every endpoint fact pinned to D5;
+`getSpace` is owner-only on this build — the member UI never calls it);
+emulated-docker slowness (workflow budget minutes, not seconds); the sandbox
+session card carries credentials — throwaway accounts ONLY, banner says so.
+
 ### Phase 6 — Close-out
 Docs truthful everywhere; final cross-mode browser smoke (memory untouched, ring
 dial live, a boost, a quote-continued thread, account-posture masking, a hashtag
@@ -1099,3 +1150,23 @@ GROWING JOURNEY FILES (bluesky-view.workflow.mjs accretes a segment per phase-3
 unit rather than landing whole at 3d). The convention goes into AGENTS.md at 1d
 as the browser-level sibling of invariant 6, so it outlives this plan; the
 contract-level scenarios/ library keeps growing in parallel.
+
+### Execution run 1 + the phase-5 split — 2026-08-25
+One session executed phases 1–4 end to end (18 units, ~30 commits on
+claude/modes-bbs): modes foundation (1a–1c) + the workflow harness and W1 (1d);
+OAuth (2a–2c) with the fragment-callback find fixed test-first and the live
+loopback round-trip green; the whole Bluesky view (3a–3g, then the 3d capstone)
+— rings, merged boards, boost=like under the narrowed invariant, quotes as
+continuation, the account-posture mirror, /h/ + trending — closed by the
+credentialed live smoke: ALL SEVEN ARCS GREEN on real Bluesky (sign-in+posture,
+masked quote continuation, boost wire-verified, unboost, mutuals board,
+trending→board, hashtag board; zero page errors; content deleted, prefs
+restored). Skins (4a–4b) with the scan proven to bite and W4 in the corpus.
+Corpus: 4 journeys, all green; unit suite 242/242; conformance 88/88.
+Execution finds worth keeping: fragment-mode OAuth callbacks (fixed);
+the lens thread head lacked a boost control (live smoke caught it; fixed);
+appview propagation of viewer.like can exceed 2.5s (a wait, not a bug).
+Phase 5's MANDATORY split drafted above on D5 evidence — 5a–5d with two split
+decisions (sandbox session = direct createSession on the spaces host; space
+connect card UX). EXECUTION PAUSED for user review of the split before
+implementing phase 5.
