@@ -108,6 +108,7 @@ router.route('/frontiers', views.frontiersView);
 router.route('/h/:tag', byMode(lensViews.lensHashtagView, views.tagStreamView));
 router.route('/p', blueskyOnly(lensViews.lensThreadView));
 router.route('/me', blueskyOnly(lensViews.lensProfileView));
+router.route('/feeds', blueskyOnly(lensViews.lensFeedsView));
 router.route('/about', views.aboutView);
 router.route('/signup', memoryOnly(views.signupView));
 // legacy /lens* deep links → the unified namespace

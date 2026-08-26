@@ -210,3 +210,90 @@ test('3i: sortWindow — feed keeps the generator order; new is by time; top is 
   // unknown sort refuses with words
   assert.throws(() => sortWindow(posts, 'bestest', 'all', NOW), /bestest/);
 });
+
+// ---- 3j: feed discovery, metadata, and join (pin) ----
+
+test('3j: withSavedFeed adds a pinned feed, removes it, is idempotent, and preserves other prefs', async () => {
+  const { withSavedFeed } = await import('../js/substrates/lens.js');
+  const other = { $type: 'app.bsky.actor.defs#mutedWordsPref', items: [{ value: 'x' }] };
+  const saved = { $type: 'app.bsky.actor.defs#savedFeedsPrefV2', items: [
+    { type: 'timeline', value: 'following', pinned: true, id: 'tl' },
+  ] };
+  const URI = 'at://did:plc:a/app.bsky.feed.generator/aaa111';
+
+  const added = withSavedFeed([other, saved], URI, true);
+  const addedSaved = added.find((p) => p.$type.endsWith('savedFeedsPrefV2'));
+  assert.equal(addedSaved.items.length, 2);
+  const entry = addedSaved.items.find((i) => i.value === URI);
+  assert.deepEqual({ type: entry.type, pinned: entry.pinned }, { type: 'feed', pinned: true });
+  assert.ok(entry.id, 'an id is assigned');
+  assert.deepEqual(added.find((p) => p.$type.endsWith('mutedWordsPref')), other, 'other prefs untouched');
+
+  // idempotent: adding twice does not duplicate
+  assert.equal(withSavedFeed(added, URI, true).find((p) => p.$type.endsWith('savedFeedsPrefV2')).items.length, 2);
+
+  // removal
+  const removed = withSavedFeed(added, URI, false);
+  assert.equal(removed.find((p) => p.$type.endsWith('savedFeedsPrefV2')).items.length, 1);
+  // removing what is not there is a no-op, not a crash
+  assert.equal(withSavedFeed(removed, URI, false).find((p) => p.$type.endsWith('savedFeedsPrefV2')).items.length, 1);
+  // no savedFeeds pref at all → one is created
+  assert.equal(withSavedFeed([other], URI, true).find((p) => p.$type.endsWith('savedFeedsPrefV2')).items.length, 1);
+});
+
+test('3j: feedInfo returns the generator card — avatar, description, creator, likes, and the criteria caveat', async () => {
+  const URI = 'at://did:plc:a/app.bsky.feed.generator/aaa111';
+  const transport = async (url) => {
+    assert.ok(url.includes('app.bsky.feed.getFeedGenerator'));
+    return { ok: true, status: 200, json: async () => ({ view: {
+      uri: URI, displayName: 'Garden Talk', description: 'Post with #gardening to appear here.',
+      avatar: 'https://cdn/av.png', likeCount: 42,
+      creator: { did: 'did:plc:a', handle: 'grower.test' },
+    }, isOnline: true, isValid: true }) };
+  };
+  const info = await createLens({ transport }).feedInfo(URI);
+  assert.deepEqual(info, {
+    uri: URI, title: 'Garden Talk', description: 'Post with #gardening to appear here.',
+    avatar: 'https://cdn/av.png', likeCount: 42, creator: 'grower.test', online: true, valid: true,
+  });
+});
+
+test('3j: discoverFeeds lists popular generators and searches by query; guests get results too', async () => {
+  const calls = [];
+  const transport = async (url) => {
+    calls.push(url);
+    return { ok: true, status: 200, json: async () => ({ feeds: [
+      { uri: 'at://did:plc:a/app.bsky.feed.generator/x1', displayName: 'Garden Talk',
+        description: 'plants', avatar: 'a.png', likeCount: 9, creator: { handle: 'grower.test' } },
+    ] }) };
+  };
+  const lens = createLens({ transport });
+  const all = await lens.discoverFeeds();
+  assert.equal(all.length, 1);
+  assert.equal(all[0].title, 'Garden Talk');
+  assert.ok(calls[0].includes('getPopularFeedGenerators'));
+  await lens.discoverFeeds({ query: 'garden' });
+  assert.ok(calls[1].includes('query=garden'), 'the query rides through');
+});
+
+test('3j: pinFeed/unpinFeed write through putPreferences and refuse without a session', async () => {
+  const URI = 'at://did:plc:a/app.bsky.feed.generator/aaa111';
+  await assert.rejects(() => createLens({}).pinFeed(URI), /session|sign/i);
+
+  const calls = [];
+  const fetchHandler = async (path, init = {}) => {
+    calls.push({ path, body: init.body ? JSON.parse(init.body) : null });
+    if (path.includes('getPreferences')) {
+      return { ok: true, status: 200, json: async () => ({ preferences: [
+        { $type: 'app.bsky.actor.defs#savedFeedsPrefV2', items: [] }] }) };
+    }
+    return { ok: true, status: 200, json: async () => ({}) };
+  };
+  const lens = createLens({ session: { did: 'did:plc:me', handle: 'me', fetchHandler } });
+  await lens.pinFeed(URI);
+  const put = calls.find((c) => c.path.includes('putPreferences'));
+  assert.ok(put, 'putPreferences called');
+  const savedPref = put.body.preferences.find((p) => p.$type.endsWith('savedFeedsPrefV2'));
+  assert.equal(savedPref.items[0].value, URI);
+  assert.equal(savedPref.items[0].pinned, true);
+});

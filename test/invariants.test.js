@@ -47,10 +47,16 @@ test('the UI layer never imports a substrate or the routing config (lens read-on
   }
 });
 
-test('the lens exception holds: the ONLY write path is the like pair (DL-013, narrowed 3c)', () => {
+test('the lens exception holds: exactly TWO write paths, both named (DL-013 likes, 3j feed join)', () => {
   const src = readFileSync(join(root, 'js/substrates/lens.js'), 'utf8');
   assert.ok(!/\bcommit\s*\(/.test(src), 'lens.js never touches the memory fold');
-  assert.ok(!/putRecord/.test(src), 'no putRecord — the lens edits nothing');
+  assert.ok(!/putRecord/.test(src), 'no putRecord — the lens edits no records');
+  // the SECOND write (3j): preferences, not records — join/leave a feed.
+  // Exactly one putPreferences call, under its marked section.
+  assert.equal((src.match(/putPreferences/g) || []).length, 1, 'exactly one putPreferences (feed join/leave)');
+  const prefMarker = src.indexOf('the SECOND lens write');
+  assert.ok(prefMarker > 0, 'the preferences write carries its marker comment');
+  assert.ok(src.indexOf('putPreferences') > prefMarker, 'it lives under that marker');
   // exactly ONE createRecord and ONE deleteRecord, both under the marked
   // write-pair section, both bound to the like collection constant
   assert.equal((src.match(/createRecord/g) || []).length, 1, 'exactly one createRecord (the like)');

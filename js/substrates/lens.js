@@ -302,6 +302,22 @@ export function sortWindow(posts, sort, timeframe, nowMs) {
   return [...window].sort((a, b) => (sort === 'new' ? b.createdTs - a.createdTs : b.score - a.score));
 }
 
+// 3j: joining a feed = saving+pinning it in savedFeedsPrefV2 (the same
+// preferences blob the official app uses — piggy-back principle). Pure: the
+// id is derived from the uri (deterministic, unique per feed, no randomness).
+export function withSavedFeed(preferences, uri, saved) {
+  const isSaved = (p) => (p.$type || '').endsWith('savedFeedsPrefV2');
+  const existing = preferences.find(isSaved);
+  const items = existing?.items ? [...existing.items] : [];
+  const at = items.findIndex((i) => i.value === uri);
+  if (saved && at === -1) items.push({ type: 'feed', value: uri, pinned: true, id: `forage-${uri.split('/').pop()}` });
+  if (!saved && at !== -1) items.splice(at, 1);
+  const next = { $type: 'app.bsky.actor.defs#savedFeedsPrefV2', ...(existing || {}), items };
+  return existing
+    ? preferences.map((p) => (isSaved(p) ? next : p))
+    : [...preferences, next];
+}
+
 // OQ1: a lens Field's slug is the feed/list rkey (or the author handle).
 const slugForSource = (source) => {
   if (source.kind === 'author') return source.actor;
@@ -549,6 +565,43 @@ export function createLens({ session = null, transport = fetch } = {}) {
         };
       });
     },
+
+    // 3j: the feed's own card. NOTE (probe-verified 2026-08-26): a feed
+    // generator publishes NO machine-readable criteria — did, avatar,
+    // createdAt, description, displayName and nothing else. How to get INTO a
+    // feed lives in the description prose, which is why we render it whole.
+    async feedInfo(uri) {
+      const data = await get('app.bsky.feed.getFeedGenerator', { feed: uri });
+      const v = data.view || {};
+      return {
+        uri: v.uri, title: v.displayName || v.uri?.split('/').pop(), description: v.description || '',
+        avatar: v.avatar || null, likeCount: v.likeCount ?? 0,
+        creator: v.creator?.handle || '[unknown]',
+        online: data.isOnline !== false, valid: data.isValid !== false,
+      };
+    },
+
+    // 3j: discovery — popular generators, optionally searched. Unauth-200
+    // (probe-verified), so guests browse too.
+    async discoverFeeds({ query, limit = 30 } = {}) {
+      const data = await get('app.bsky.unspecced.getPopularFeedGenerators', { limit, query });
+      return (data.feeds || []).map((f) => ({
+        uri: f.uri, title: f.displayName || f.uri.split('/').pop(), description: f.description || '',
+        avatar: f.avatar || null, likeCount: f.likeCount ?? 0, creator: f.creator?.handle || '[unknown]',
+      }));
+    },
+
+    // 3j: join / leave a feed — the SECOND lens write (preferences, not
+    // records). Read-modify-write so nothing else in the blob is disturbed.
+    async setFeedSaved(uri, saved) {
+      if (!session) throw new Error('lens: joining a feed needs a session — sign in first');
+      const prefs = await get('app.bsky.actor.getPreferences');
+      const next = withSavedFeed(prefs.preferences || [], uri, saved);
+      await post('app.bsky.actor.putPreferences', { preferences: next }, saved ? 'join feed' : 'leave feed');
+      return next;
+    },
+    pinFeed(uri) { return this.setFeedSaved(uri, true); },
+    unpinFeed(uri) { return this.setFeedSaved(uri, false); },
 
     async search(q) {
       if (!session) throw new Error('lens: search needs a session (403 unauth — probe-verified)');

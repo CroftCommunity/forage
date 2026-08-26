@@ -94,6 +94,10 @@ export const LEDGER = [
     description: 'The Moderation panel is read-only by design (mirror + edit-on-bsky.app links, the lens tenet). Managing the posture from forage via putPreferences — round-trip proven at D10 — is this frontier.',
     date: '2026-08-25', status: 'open' },
 
+  { id: 'DL-025', kind: 'frontier', capability: 'feeds', tier: 'wide', label: 'Feeds are not targetable; hashtags are',
+    description: 'VERIFIED 2026-08-26 three ways: the app.bsky.feed.generator lexicon carries no criteria field (did, displayName, description, descriptionFacets, avatar, acceptsInteractions, labels, contentMode, createdAt — acceptsInteractions is feedback signals, contentMode is video-vs-text); describeFeedGenerator returns only a service DID + feed URIs + policy links; and the third-party builders (skyfeed.me/.xyz, graze.social, blueskyfeedcreator) publish NO definition records in their creators\' public repos — configs stay server-side. A feed is a black box behind getFeedSkeleton. CONSEQUENCE: /h/ hashtags are targetable BY CONSTRUCTION (write #x, you are in the #x stream) while /f/ feeds are not — the only inclusion instructions live in the human description prose, which is why the feed card renders it whole. Any future compose-to-feed affordance can only parse that prose heuristically and must be labeled a guess.',
+    date: '2026-08-26', status: 'open' },
+
   // ---- the ring dial (plan 2026-08-25-1, 3b) ----
   { id: 'DL-016', kind: 'frontier', capability: 'feeds', tier: 'wide', label: 'Ring beyond the cap',
     description: 'mutuals+1 draws the first 25 members (D6-measured cap; latency is not the bound — board noise is). The chip reports the TRUE member count; drawing the full ring (sampling, rotation, or paging members) is this frontier.',

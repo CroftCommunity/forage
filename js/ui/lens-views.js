@@ -15,6 +15,20 @@ let manager = null;        // null = not booted; 'unavailable' = origin has no O
 let session = null;        // the lens session shape, set after restore
 let lens = createLens({});
 let bootStarted = false;
+// which feeds the account has saved (join state). Fetched ONCE per session
+// and shared — the header card and the sidebar both need it, and a race
+// between them showed the wrong Join/Leave label.
+const savedFeedUris = new Set();
+let savedFeedsPromise = null;
+function ensureSavedFeeds() {
+  if (!session) return Promise.resolve(savedFeedUris);
+  if (!savedFeedsPromise) {
+    savedFeedsPromise = lens.fields()
+      .then((fs) => { for (const f of fs) if (f.kind === 'feed') savedFeedUris.add(f.id); return fs; })
+      .catch(() => []);
+  }
+  return savedFeedsPromise;
+}
 
 const rerender = () => window.dispatchEvent(new HashChangeEvent('hashchange'));
 
@@ -70,6 +84,8 @@ async function adoptSession(s) {
   } catch { /* keep the did */ }
   session = { did: s.did, handle, fetchHandler: (p, i) => manager.fetch(p, i) };
   lens = createLens({ session });
+  savedFeedUris.clear();
+  savedFeedsPromise = null;
   // 3f: mirror the account's moderation posture — mute a word on bsky.app and
   // it is muted here. A failure runs unfiltered WITH WORDS, never silently.
   try {
@@ -254,7 +270,10 @@ const lensRow = (p, view = 'card') => postRow(p, !!session, {
 });
 
 function lensSidebar() {
-  const fieldsCard = el('div', { class: 'card' }, el('h2', {}, 'Feeds'));
+  const fieldsCard = el('div', { class: 'card' },
+    el('div', { class: 'row spread' },
+      el('h2', { style: 'margin:0' }, el('a', { href: '#/feeds' }, 'Feeds')),
+      el('a', { href: '#/feeds', class: 'xs' }, 'discover ›')));
   const list = el('div', { class: 'stack' });
   fieldsCard.append(list);
   if (!session) {
@@ -267,7 +286,7 @@ function lensSidebar() {
       'Guest boards. Sign in and these become YOUR feeds.'));
   } else {
     list.append(skeleton(3));
-    lens.fields().then((fields) => {
+    ensureSavedFeeds().then((fields) => {
       list.replaceChildren(...fields.map((f) => {
         const entry = { slug: f.slug, humanSlug: f.humanSlug, title: f.title, kind: f.kind,
           source: f.kind === 'author' ? { kind: 'author', actor: f.id }
@@ -300,6 +319,8 @@ function sessionCard() {
       try { await manager.signOut(); } catch (e) { toast(e.message, 'err'); }
       session = null;
       lens = createLens({});
+      savedFeedUris.clear();
+      savedFeedsPromise = null;
       activeRing = 'world';
       toast('Signed out.', 'ok');
       rerender();
@@ -423,6 +444,12 @@ export function lensFieldView(params) {
       moreHost.append(more);
     }
   };
+  const headerHost = el('div', {});
+  if (entry.source.kind === 'feed' && entry.source.uri) {
+    Promise.all([lens.feedInfo(entry.source.uri), ensureSavedFeeds()])
+      .then(([info]) => headerHost.replaceChildren(feedHeaderCard(info)))
+      .catch(() => {}); // the board still works without its card
+  }
   lens.feed(entry.source, { title: entry.title }).then((f) => {
     allPosts.push(...f.posts);
     nextCursor = f.cursor || null;
@@ -432,6 +459,7 @@ export function lensFieldView(params) {
         el('div', { class: 'row', style: 'gap:6px' },
           chip('likes-only scores (DL-011)'),
           chip('ranking: feed order (DL-010)'))),
+      headerHost,
       boardToolbar(repaint),
       f.posts.length ? card : emptyState('Nothing here', 'This source returned no posts.'),
       moreHost);
@@ -467,6 +495,76 @@ function quotedContext(quoted) {
       el('a', { href: `https://bsky.app/profile/${quoted.author}`, target: '_blank', rel: 'noopener noreferrer' }, quoted.author)),
     el('div', { class: 'small' }, quoted.excerpt),
     el('div', { class: 'xs' }, el('a', { href: `#/p?uri=${encodeURIComponent(quoted.uri)}` }, 'open the original ↳')));
+}
+
+// 3j: the feed's card — avatar, description (where "post #tag to appear here"
+// lives, since feeds publish NO machine-readable criteria — probe-verified),
+// creator, likes, and Join/Leave.
+function feedHeaderCard(info, onChange) {
+  const savedNow = () => savedFeedUris.has(info.uri);
+  const btn = el('button', { class: 'btn sm' + (savedNow() ? '' : ' primary') }, savedNow() ? 'Leave' : 'Join');
+  btn.addEventListener('click', async () => {
+    if (!session) return toast('Sign in to join feeds — it saves to your Bluesky account.', 'err');
+    const want = !savedNow();
+    btn.disabled = true;
+    try {
+      await (want ? lens.pinFeed(info.uri) : lens.unpinFeed(info.uri));
+      if (want) savedFeedUris.add(info.uri); else savedFeedUris.delete(info.uri);
+      toast(want ? 'Joined — it is in your feeds on Bluesky too.' : 'Left the feed.', 'ok');
+      onChange?.();
+    } catch (e) { toast((want ? 'Join' : 'Leave') + ' failed: ' + e.message, 'err'); }
+    finally { btn.disabled = false; btn.replaceChildren(savedNow() ? 'Leave' : 'Join'); btn.classList.toggle('primary', !savedNow()); }
+  });
+  return el('div', { class: 'card', 'data-feed-header': '1' },
+    el('div', { class: 'row spread wrap', style: 'gap:10px;align-items:center' },
+      el('div', { class: 'row', style: 'gap:10px;align-items:center;min-width:0' },
+        info.avatar ? el('img', { src: info.avatar, alt: '', class: 'feed-avatar', loading: 'lazy' }) : null,
+        el('div', { style: 'min-width:0' },
+          el('h2', { style: 'margin:0' }, info.title),
+          el('div', { class: 'xs muted' }, `feed by @${info.creator} · ${fmtScore(info.likeCount)} likes`))),
+      btn),
+    info.description ? el('p', { class: 'small', style: 'margin:8px 0 0' }, info.description) : null,
+    info.online === false || info.valid === false
+      ? el('div', { class: 'xs muted' }, 'This feed’s server is not responding right now.') : null);
+}
+
+// 3j: feed discovery — /feeds. Popular generators, searchable (unauth-200),
+// each with its own Join.
+export function lensFeedsView() {
+  const results = el('div', { class: 'stack' }, skeleton(4));
+  const input = el('input', { type: 'text', placeholder: 'Search feeds…', 'data-feed-search': '1' });
+  const run = (query) => {
+    results.replaceChildren(skeleton(3));
+    lens.discoverFeeds({ query })
+      .then((feeds) => results.replaceChildren(...(feeds.length
+        ? feeds.map((f) => {
+            registerSource({ slug: f.uri.split('/').pop(), humanSlug: slugifyFeedName(f.title), title: f.title,
+              kind: 'feed', source: { kind: 'feed', uri: f.uri } });
+            return el('div', { class: 'card', 'data-discover-feed': f.uri },
+              el('div', { class: 'row spread wrap', style: 'gap:8px;align-items:center' },
+                el('div', { class: 'row', style: 'gap:8px;align-items:center;min-width:0' },
+                  f.avatar ? el('img', { src: f.avatar, alt: '', class: 'feed-avatar', loading: 'lazy' }) : null,
+                  el('div', { style: 'min-width:0' },
+                    el('a', { href: `#/f/${f.uri.split('/').pop()}` }, f.title),
+                    el('div', { class: 'xs muted' }, `by @${f.creator} · ${fmtScore(f.likeCount)} likes`)))),
+              f.description ? el('div', { class: 'xs muted', style: 'margin-top:4px' }, f.description) : null);
+          })
+        : [emptyState('No feeds found', query ? `Nothing matched “${query}”.` : 'Discovery returned nothing.')])))
+      .catch((e) => results.replaceChildren(emptyState('Discovery failed', e.message)));
+  };
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') run(input.value.trim() || undefined); });
+  const go = el('button', { class: 'btn sm primary' }, 'Search');
+  go.addEventListener('click', () => run(input.value.trim() || undefined));
+  run();
+  return {
+    main: el('div', {},
+      el('h1', {}, 'Discover feeds'),
+      el('p', { class: 'small muted' },
+        'Feeds are built by the community — each one decides its own content. How to get INTO a feed lives in its description; feeds publish no machine-readable rules.'),
+      el('div', { class: 'card' }, el('div', { class: 'row', style: 'gap:6px' }, input, go)),
+      results),
+    side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()),
+  };
 }
 
 // 3g: the hashtag board — /h/ in the Bluesky view. Session-gated (search is

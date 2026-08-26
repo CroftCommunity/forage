@@ -1196,6 +1196,18 @@ localStorage (static Pages site; same theme/skin pattern). Unit 3h:
 Iteration posture: LOCAL preview only (owner: "we can iterate local quicker")
 — no landing/deploy until the owner says so.
 
+### Amendment: 3j — feeds as first-class (2026-08-26 owner iteration)
+`/feeds` discovery (getPopularFeedGenerators, unauth-200, searchable via
+`query=`), the feed header card (avatar, description, creator, likes) on every
+feed board, and **Join/Leave** — the lens' SECOND write: putPreferences on
+savedFeedsPrefV2 (read-modify-write; the invariant scan now names exactly two
+write paths, records and preferences). Share links carry the fixed identity;
+human aliases still route. Research answered and ledgered as **DL-025**: feeds
+publish NO machine-readable criteria (verified against the lexicon,
+describeFeedGenerator, and three builders' repos) — that is the real
+feeds-vs-hashtags split, since hashtags ARE targetable by construction.
+Mobile-fit joins the corpus as W6 (croft-pwa's 320/360/390 lesson).
+
 ### Amendment: 3i — owner iteration batch on the local preview (2026-08-26)
 Owner findings from testing (deployed build + preview), all addressed:
 - **"Fields" was over-rebranding** — the bluesky population's boards are called

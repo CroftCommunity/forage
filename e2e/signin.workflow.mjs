@@ -56,6 +56,12 @@ export async function run() {
         items: [{ type: 'feed', value: WHATS_HOT, pinned: true, id: '1' },
                 { type: 'timeline', value: 'following', pinned: true, id: '2' }] }] },
       'getFeedGenerators': { feeds: [{ uri: WHATS_HOT, displayName: "What's Hot", likeCount: 1 }] },
+      'getPopularFeedGenerators': { feeds: [
+        { uri: 'at://did:plc:g/app.bsky.feed.generator/gardentalk', displayName: 'Garden Talk',
+          description: 'Post with #gardening to appear here.', likeCount: 12, creator: { handle: 'grower.test' } } ] },
+      'getFeedGenerator?': { view: { uri: WHATS_HOT, displayName: "What's Hot", description: 'the hot stuff',
+        likeCount: 99, creator: { handle: 'bsky.app' } }, isOnline: true, isValid: true },
+      'putPreferences': {},
       'getTrendingTopics': { topics: [
         { topic: 'Meadow Fest', displayName: 'Meadow Fest', description: 'campers assemble',
           link: '/profile/did:plc:trends/feed/meadow1' } ] },
@@ -86,12 +92,36 @@ export async function run() {
   assert.equal(await page.locator('#side [data-moderation-panel]').count(), 0, 'moderation lives on /me now');
 
   // the masthead @handle IS the profile link
+  await page.goto(`${s.origin}/#/`);
   await page.locator('.masthead a[href="#/me"]').click();
   await page.waitForSelector('text=@wtest.bsky.social');
   await page.waitForSelector('[data-moderation-panel]');
   await page.waitForSelector('text=Muted words');
 
-  // sign out (from the profile) returns to the signed-out card
+  // 3j: feed discovery — /feeds lists generators, searchable, each linkable
+  await page.goto(`${s.origin}/#/feeds`);
+  await page.waitForSelector('[data-discover-feed]');
+  await page.waitForSelector('text=Garden Talk');
+  await page.waitForSelector('text=Post with #gardening to appear here.');
+  await page.locator('[data-feed-search]').fill('garden');
+  await page.locator('button:has-text("Search")').click();
+  await page.waitForSelector('text=Garden Talk');
+
+  // 3j: a feed board carries its header card, and Join writes preferences
+  await page.goto(`${s.origin}/#/f/whats-hot`);
+  await page.waitForSelector('[data-feed-header]');
+  await page.waitForSelector('text=feed by @bsky.app');
+  const joinBtn = page.locator('[data-feed-header] button');
+  assert.equal(await joinBtn.innerText(), 'Leave', 'an already-saved feed offers Leave');
+  await joinBtn.click();
+  await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('putPreferences')));
+  const putBody = await page.evaluate(() => JSON.parse(window.__shimHits.find((h) => h.url.includes('putPreferences')).body));
+  const savedPref = putBody.preferences.find((p) => p.$type.includes('savedFeedsPrefV2'));
+  assert.ok(!savedPref.items.some((i) => i.value.includes('whats-hot')), 'leaving removed it from saved feeds');
+
+  // sign out lives on the profile now — go there, then out
+  await page.goto(`${s.origin}/#/me`);
+  await page.waitForSelector('button:has-text("Sign out")');
   await page.locator('button:has-text("Sign out")').click();
   await page.waitForSelector('text=Sign in with Bluesky', { timeout: 10000 });
 

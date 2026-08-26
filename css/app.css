@@ -277,3 +277,4 @@ hr.rule { border: none; border-top: 1px solid var(--border); margin: var(--s4) 0
   .comment-body { padding-left: calc(var(--gutter-hit) - 4px); }
   .shell { padding: var(--s2); }
 }
+.feed-avatar { width: 40px; height: 40px; border-radius: var(--radius-card); border: 1px solid var(--border); flex: none; }
