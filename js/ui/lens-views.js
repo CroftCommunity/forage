@@ -8,7 +8,7 @@
 
 import { el, timeAgo, fmtScore } from '../util.js';
 import { postRow, commentNode, voteBox, skeleton, emptyState, toast } from './components.js';
-import { createLens, LENS_PERMS, RING_CAP, facetSegments } from '../substrates/lens.js';
+import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName } from '../substrates/lens.js';
 import { initSession } from '../auth/session.js';
 
 let manager = null;        // null = not booted; 'unavailable' = origin has no OAuth client
@@ -97,6 +97,13 @@ const CURATED = [
   { slug: 'bsky.app', title: 'Bluesky Team', kind: 'author', source: { kind: 'author', actor: 'bsky.app' } },
 ];
 const sources = new Map(CURATED.map((c) => [c.slug, c]));
+// Register a source under its canonical slug AND its human alias (3i: route
+// on either, display the display name). First wins — an alias that would
+// collide with an existing key is dropped, never ambiguous.
+function registerSource(entry) {
+  if (!sources.has(entry.slug)) sources.set(entry.slug, entry);
+  if (entry.humanSlug && !sources.has(entry.humanSlug)) sources.set(entry.humanSlug, entry);
+}
 
 const chip = (label, title) => el('span', { class: 'frontier-chip', title }, label);
 
@@ -179,14 +186,16 @@ function lensSidebar() {
     list.append(skeleton(3));
     lens.fields().then((fields) => {
       list.replaceChildren(...fields.map((f) => {
-        sources.set(f.slug, { slug: f.slug, title: f.title, kind: f.kind,
+        const entry = { slug: f.slug, humanSlug: f.humanSlug, title: f.title, kind: f.kind,
           source: f.kind === 'author' ? { kind: 'author', actor: f.id }
-            : f.kind === 'timeline' ? { kind: 'timeline' } : { kind: f.kind, uri: f.id } });
+            : f.kind === 'timeline' ? { kind: 'timeline' } : { kind: f.kind, uri: f.id } };
+        registerSource(entry);
+        const linkSlug = f.humanSlug ?? f.slug;
         return el('div', { class: 'row spread' },
-          el('a', { href: `#/f/${f.slug}` }, `f/${f.slug}`),
+          el('a', { href: `#/f/${linkSlug}`, title: `#/f/${linkSlug}` }, `f/${f.title}`),
           el('span', { class: 'xs muted' }, `${f.kind}${f.pinned ? ' · pinned' : ''}`));
       }));
-    }).catch((e) => list.replaceChildren(el('div', { class: 'xs muted' }, 'Fields failed: ' + e.message)));
+    }).catch((e) => list.replaceChildren(el('div', { class: 'xs muted' }, 'Feeds failed: ' + e.message)));
   }
   return fieldsCard;
 }
@@ -220,7 +229,7 @@ function sessionCard() {
     return el('div', { class: 'card' }, el('div', { class: 'small' }, 'Finishing sign-in…'),
       el('div', { class: 'xs muted' }, 'Completing the Bluesky authorization redirect.'));
   }
-  const id = el('input', { type: 'text', placeholder: 'you.bsky.social' });
+  const id = el('input', { type: 'text', id: 'signin-handle', placeholder: 'you.bsky.social' });
   const btn = el('button', { class: 'btn primary sm' }, 'Sign in with Bluesky');
   const go = async () => {
     const handle = id.value.trim().replace(/^@+/, '');
@@ -319,14 +328,14 @@ export function lensFieldView(params) {
       const more = el('button', { class: 'btn sm', style: 'margin:8px' }, 'More');
       more.addEventListener('click', () => {
         more.remove();
-        lens.feed(entry.source, { title: entry.title, cursor: f.cursor })
+        lens.feed(entry.source, { title: entry.title, cursor: f.cursor, slug: entry.humanSlug ?? entry.slug })
           .then((next) => renderPage(next, card))
           .catch((e) => toast('More failed: ' + e.message, 'err'));
       });
       card.append(more);
     }
   };
-  lens.feed(entry.source, { title: entry.title }).then((f) => {
+  lens.feed(entry.source, { title: entry.title, slug: entry.humanSlug ?? entry.slug }).then((f) => {
     const card = el('div', { class: 'card' });
     renderPage(f, card);
     main.replaceChildren(

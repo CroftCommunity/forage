@@ -1216,3 +1216,12 @@ Owner findings from testing (deployed build + preview), all addressed:
 - **The dev bar is memory-only** scaffolding now.
 W1/W3 grew the matching assertions (devbar absent in bluesky; self-thread part
 is body, never a comment). 250/250 + 4 journeys green.
+- **Human feed slugs (owner, 2026-08-26: "route on either, display the display
+  name")** — a feed's slug is its RKEY (durable canon; some builders emit
+  TID-ish ones like aaaoiim2fhpf4); its displayName is owner-editable metadata,
+  NOT fixed and not unique. So: `slugifyFeedName` collapses the display name to
+  a shareable alias ('Stand Up Comedy' → standupcomedy), sources register under
+  BOTH keys first-wins (a collision drops the alias — an ambiguous link never
+  points at the wrong feed), links display `f/<Display Name>` with the alias
+  href, and the rkey URL keeps working forever. If an owner renames their feed,
+  old alias links die but canon survives — recorded honestly.

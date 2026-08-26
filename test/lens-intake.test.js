@@ -83,14 +83,50 @@ test('thread reads shape through to the standing thread contract', async () => {
   assert.equal(t.perms.canComment, false);
 });
 
-test('fields (the lens Fields list) resolve from savedFeedsPref + generator views', async () => {
+test('fields (the lens Feeds list) resolve from savedFeedsPref + generator views, with human slugs', async () => {
   const lens = createLens({ session: oauthSession([]), transport: makeTransport([]) });
   const fields = await lens.fields();
   const feedField = fields.find((f) => f.kind === 'feed');
-  assert.equal(feedField.slug, 'whats-hot');
+  assert.equal(feedField.slug, 'whats-hot', 'the rkey slug is the durable canonical');
+  assert.equal(feedField.humanSlug, 'whatshot', 'the display name collapses to a shareable alias');
   assert.equal(feedField.title, "What's Hot");
   assert.equal(feedField.pinned, true);
   assert.ok(fields.some((f) => f.kind === 'timeline')); // Following, session-only
+});
+
+// ---- 3i: human-readable feed slugs (display names are OWNER-EDITABLE
+// metadata — the alias is a convenience; the rkey URL is canon) ----
+
+test('slugifyFeedName collapses to a shareable slug; empty/degenerate → null', async () => {
+  const { slugifyFeedName } = await import('../js/substrates/lens.js');
+  assert.equal(slugifyFeedName('Stand Up Comedy'), 'standupcomedy');
+  assert.equal(slugifyFeedName("What's Hot"), 'whatshot');
+  assert.equal(slugifyFeedName('  For You! '), 'foryou');
+  assert.equal(slugifyFeedName('日本語のみ'), null, 'nothing collapsible → no alias, canon still works');
+  assert.equal(slugifyFeedName(''), null);
+  assert.equal(slugifyFeedName(undefined), null);
+});
+
+test('fields dedupe colliding human slugs — first keeps the alias, later ones fall back to canon', async () => {
+  const transport = async (url) => {
+    const u = new URL(url);
+    const json = (d) => ({ ok: true, status: 200, json: async () => d });
+    if (u.pathname.endsWith('getPreferences')) return json({ preferences: [{
+      $type: 'app.bsky.actor.defs#savedFeedsPrefV2',
+      items: [
+        { type: 'feed', value: 'at://did:plc:a/app.bsky.feed.generator/aaa111', pinned: true, id: '1' },
+        { type: 'feed', value: 'at://did:plc:b/app.bsky.feed.generator/bbb222', pinned: true, id: '2' },
+      ] }] });
+    if (u.pathname.endsWith('getFeedGenerators')) return json({ feeds: [
+      { uri: 'at://did:plc:a/app.bsky.feed.generator/aaa111', displayName: 'Art' },
+      { uri: 'at://did:plc:b/app.bsky.feed.generator/bbb222', displayName: 'ART!' },
+    ] });
+    return { ok: false, status: 404, json: async () => ({}) };
+  };
+  const session = { did: 'did:plc:me', handle: 'me', fetchHandler: async (p, i) => transport('https://pds.example' + p, i) };
+  const fields = await createLens({ session }).fields();
+  assert.equal(fields[0].humanSlug, 'art');
+  assert.equal(fields[1].humanSlug, null, 'a collision never silently points at the wrong feed');
 });
 
 test('guest refusals carry words: fields and search need a session', async () => {

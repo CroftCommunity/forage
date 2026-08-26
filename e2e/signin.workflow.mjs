@@ -74,13 +74,17 @@ export async function run() {
   await page.waitForSelector('text=Sign in with Bluesky');
   assert.equal(await page.locator('input[type="password"]').count(), 0, 'no password field exists anymore');
 
+  // the masthead Sign in control REACHES the card (focuses the handle input)
+  await page.locator('.masthead .who a:has-text("Sign in")').click();
+  await page.waitForFunction(() => document.activeElement?.id === 'signin-handle');
+
   // sign in: handle → button → (redirect-in-miniature) → signed-in identity
   await page.locator('input[placeholder="you.bsky.social"]').fill('wtest.bsky.social');
   await page.locator('button:has-text("Sign in with Bluesky")').click();
   await page.waitForSelector('text=@wtest.bsky.social', { timeout: 10000 });
 
   // the personal surface opens: saved feeds become Fields in the sidebar
-  await page.waitForSelector('a[href="#/f/whats-hot"]');
+  await page.waitForSelector('a[href="#/f/whatshot"]');
   await page.waitForSelector('a[href="#/f/following"]');
 
   // sign out returns to the signed-out card

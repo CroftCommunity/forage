@@ -256,6 +256,14 @@ export function computeMutuals(follows, followers) {
   return follows.filter((did) => fans.has(did));
 }
 
+// 3i: display names collapse to shareable aliases — but a displayName is
+// OWNER-EDITABLE generator metadata (not identity, not unique), so the alias
+// is a convenience and the rkey slug stays the durable canonical URL.
+export function slugifyFeedName(name) {
+  const slug = String(name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  return slug || null;
+}
+
 // OQ1: a lens Field's slug is the feed/list rkey (or the author handle).
 const slugForSource = (source) => {
   if (source.kind === 'author') return source.actor;
@@ -317,7 +325,7 @@ export function createLens({ session = null, transport = fetch } = {}) {
 
   return {
     // source: {kind:'feed'|'list', uri} | {kind:'author', actor} | {kind:'timeline'}
-    async feed(source, { cursor, title } = {}) {
+    async feed(source, { cursor, title, slug } = {}) {
       let data;
       if (source.kind === 'author') data = await get('app.bsky.feed.getAuthorFeed', { actor: source.actor, limit: 30, cursor });
       else if (source.kind === 'list') data = await get('app.bsky.feed.getListFeed', { list: source.uri, limit: 30, cursor });
@@ -326,6 +334,7 @@ export function createLens({ session = null, transport = fetch } = {}) {
         data = await get('app.bsky.feed.getTimeline', { limit: 30, cursor });
       } else data = await get('app.bsky.feed.getFeed', { feed: source.uri, limit: 30, cursor });
       const src = srcCtx(source, title);
+      if (slug) { src.fieldSlug = slug; src.fieldId = `lens:${slug}`; } // 3i: display slug override
       return { ...shapeLensFeed(data, src, {}, posture), ...src };
     },
 
@@ -372,11 +381,19 @@ export function createLens({ session = null, transport = fetch } = {}) {
         ? (await get('app.bsky.feed.getFeedGenerators', Object.fromEntries(feedUris.map((u, i) => [`feeds[${i}]`, u])))).feeds || []
         : [];
       const titleOf = new Map(gens.map((g) => [g.uri, g.displayName]));
-      return items.map((i) => ({
-        id: i.value, kind: i.type, pinned: !!i.pinned,
-        slug: slugForSource(i.type === 'author' ? { kind: 'author', actor: i.value } : i.type === 'timeline' ? { kind: 'timeline' } : { kind: i.type, uri: i.value }),
-        title: i.type === 'timeline' ? 'Following' : titleOf.get(i.value) || i.value.split('/').pop(),
-      }));
+      const taken = new Set();
+      return items.map((i) => {
+        const slug = slugForSource(i.type === 'author' ? { kind: 'author', actor: i.value } : i.type === 'timeline' ? { kind: 'timeline' } : { kind: i.type, uri: i.value });
+        const title = i.type === 'timeline' ? 'Following' : titleOf.get(i.value) || i.value.split('/').pop();
+        // the human alias: first feed with a name keeps it; a collision (or a
+        // name that collapses to nothing, or to an existing rkey) gets NO
+        // alias — an ambiguous link must never point at the wrong feed
+        let humanSlug = slugifyFeedName(title);
+        if (humanSlug && (taken.has(humanSlug) || humanSlug === slug)) humanSlug = humanSlug === slug ? humanSlug : null;
+        if (humanSlug) taken.add(humanSlug);
+        taken.add(slug);
+        return { id: i.value, kind: i.type, pinned: !!i.pinned, slug, humanSlug, title };
+      });
     },
 
     // ring: 'world' | 'following' | 'mutuals' | 'mutuals+1'. world/following
