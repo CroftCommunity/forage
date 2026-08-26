@@ -104,6 +104,17 @@ theme.onChange(render); // re-render so the toggle icon flips
 
 // ---------- boot ----------
 const hadState = store.hydrate();
+// An OAuth callback landing (code+state in the query OR the hash fragment —
+// atproto's browser default is response_mode=fragment) must complete the
+// exchange BEFORE the hash changes: boot the session first, then land on the
+// lens signed in.
+import('./auth/session.js').then(async ({ isOAuthCallback }) => {
+  if (isOAuthCallback(location.search) || isOAuthCallback(location.hash)) {
+    const lv = await import('./ui/lens-views.js');
+    await lv.ensureAuthBoot();
+    location.hash = '/lens';
+  }
+});
 if (!location.hash) location.hash = '/popular';
 if (!hadState) {
   // First ever visit: seed once so the demo has content, and land logged out on

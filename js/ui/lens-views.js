@@ -2,15 +2,54 @@
 // through the SAME components the memory tier uses — postRow and commentNode
 // consume the lens shapes unchanged. Read-first: every write surface is a
 // frontier chip backed by a ledger entry (DL-013..015), never a dead button.
-// The session is in-memory only, page-lifetime — scaffolding like the dev bar,
-// until a real OAuth flow arrives.
+// Identity is the OAuth session (2c): js/auth/session.js wraps the vendored
+// official client; the library owns persistence (IndexedDB) and refresh, so
+// sign-in survives reloads. The lens consumes { did, handle, fetchHandler }.
 
 import { el, timeAgo, fmtScore } from '../util.js';
 import { postRow, commentNode, skeleton, emptyState, toast } from './components.js';
 import { createLens, LENS_PERMS } from '../substrates/lens.js';
+import { initSession } from '../auth/session.js';
 
-let session = null;
+let manager = null;        // null = not booted; 'unavailable' = origin has no OAuth client
+let session = null;        // the lens session shape, set after restore
 let lens = createLens({});
+let bootStarted = false;
+
+const rerender = () => window.dispatchEvent(new HashChangeEvent('hashchange'));
+
+// Exported for main.js: an OAuth callback landing must complete the exchange
+// BEFORE the router replaces the hash (the code lives in the fragment).
+export async function ensureAuthBoot() { return bootAuth(); }
+
+async function bootAuth() {
+  if (bootStarted) return;
+  bootStarted = true;
+  try {
+    const m = await initSession();
+    if (!m) { manager = 'unavailable'; rerender(); return; }
+    manager = m;
+    m.onChange(() => rerender());
+    const s = await m.restore(); // restores a saved session OR completes a callback
+    if (s) await adoptSession(s);
+  } catch (e) {
+    manager = 'unavailable';
+    toast(e.message, 'err'); // vendor drift / metadata failures speak, never blank
+  }
+  rerender();
+}
+
+async function adoptSession(s) {
+  // Resolve the handle for display — unauth describeRepo (D2-proven); the DID
+  // stands in if resolution fails (display nicety, never a gate).
+  let handle = s.did;
+  try {
+    const r = await fetch(`https://bsky.social/xrpc/com.atproto.repo.describeRepo?repo=${encodeURIComponent(s.did)}`);
+    if (r.ok) handle = (await r.json()).handle ?? s.did;
+  } catch { /* keep the did */ }
+  session = { did: s.did, handle, fetchHandler: (p, i) => manager.fetch(p, i) };
+  lens = createLens({ session });
+}
 
 // Guest boards: the probe-verified unauth-200 surface (feed-URI and author
 // sources). Signed in, the list is replaced by the account's saved feeds.
@@ -22,17 +61,6 @@ const CURATED = [
 const sources = new Map(CURATED.map((c) => [c.slug, c]));
 
 const chip = (label, title) => el('span', { class: 'frontier-chip', title }, label);
-
-async function signIn(identifier, password) {
-  const res = await fetch('https://bsky.social/xrpc/com.atproto.server.createSession', {
-    method: 'POST', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ identifier, password }),
-  });
-  if (res.status !== 200) throw new Error(`sign-in failed (HTTP ${res.status})`);
-  const s = await res.json();
-  session = { service: 'https://bsky.social', did: s.did, handle: s.handle, accessJwt: s.accessJwt };
-  lens = createLens({ session });
-}
 
 function lensSidebar() {
   const fieldsCard = el('div', { class: 'card' }, el('h2', {}, 'Lens Fields'));
@@ -63,24 +91,44 @@ function lensSidebar() {
 }
 
 function sessionCard() {
-  if (session) {
+  if (manager === null) { bootAuth(); return el('div', { class: 'card' }, el('div', { class: 'xs muted' }, 'Connecting sign-in…')); }
+  if (manager === 'unavailable') {
     return el('div', { class: 'card' },
-      el('div', { class: 'small' }, `Signed in as ${session.handle}`),
-      el('div', { class: 'xs muted' }, 'Session lives in memory only; reload signs out.'));
+      el('div', { class: 'small' }, 'Read-only on this origin'),
+      el('div', { class: 'xs muted' }, 'Sign in with Bluesky works on forage.fyi and localhost (the OAuth client is origin-bound).'));
   }
-  const id = el('input', { type: 'text', placeholder: 'handle (e.g. you.bsky.social)' });
-  const pw = el('input', { type: 'password', placeholder: 'app password' });
-  const btn = el('button', { class: 'btn primary sm' }, 'Sign in');
-  btn.addEventListener('click', async () => {
-    try { await signIn(id.value.trim(), pw.value); toast('Signed in to the lens.', 'ok'); location.reload = null; window.dispatchEvent(new HashChangeEvent('hashchange')); }
-    catch (e) { toast(e.message, 'err'); }
-  });
+  if (session) {
+    const out = el('button', { class: 'btn sm' }, 'Sign out');
+    out.addEventListener('click', async () => {
+      try { await manager.signOut(); } catch (e) { toast(e.message, 'err'); }
+      session = null;
+      lens = createLens({});
+      toast('Signed out.', 'ok');
+      rerender();
+    });
+    return el('div', { class: 'card' },
+      el('div', { class: 'row spread' },
+        el('div', { class: 'small' }, `Signed in as @${session.handle}`), out),
+      el('div', { class: 'xs muted' }, 'Your Bluesky session (OAuth) — it survives reloads and refreshes itself.'));
+  }
+  if (manager.state && manager.state() === 'pending') {
+    return el('div', { class: 'card' }, el('div', { class: 'small' }, 'Finishing sign-in…'),
+      el('div', { class: 'xs muted' }, 'Completing the Bluesky authorization redirect.'));
+  }
+  const id = el('input', { type: 'text', placeholder: 'you.bsky.social' });
+  const btn = el('button', { class: 'btn primary sm' }, 'Sign in with Bluesky');
+  const go = async () => {
+    const handle = id.value.trim().replace(/^@+/, '');
+    if (!handle) return toast('Enter your Bluesky handle.', 'err');
+    try { await manager.signIn(handle); } catch (e) { toast('Sign-in failed: ' + e.message, 'err'); }
+  };
+  btn.addEventListener('click', go);
+  id.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
   return el('div', { class: 'card' },
-    el('h2', {}, 'Sign in (app password)'),
+    el('h2', {}, 'Sign in with Bluesky'),
     el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
-      'Unlocks your saved feeds as Fields, Following, and search. Held in memory only — scaffolding until OAuth.'),
+      'The official OAuth flow — you authorize on your own server; no credentials touch Forage. Unlocks your saved feeds as Fields, Following, and search.'),
     el('div', { class: 'field-row' }, el('label', {}, 'Handle'), id),
-    el('div', { class: 'field-row' }, el('label', {}, 'App pass'), pw),
     btn);
 }
 
