@@ -1,0 +1,76 @@
+/* phpBB (after hours) — Phase 3B, plan 2026-08-26-1. Sibling of `phpbb`.
+
+   HAND-AUTHORED, deliberately. Mechanically inverting a light palette is
+   exactly the failure mode the theme/skin collapse removed: OQ4 existed only
+   because one skin had to serve two palettes, and Phase 0 Finding 0.4 showed
+   how readily a synthesised palette produces pairs that exist in no real
+   theme (freecad-dark measured 1.19:1 that way, against its true 16.17:1).
+   One skin, one palette — so this one is read, not computed.
+
+   It keeps the board's GRAMMAR rather than its hexes: a filled category band,
+   striped rows, square corners, a 3D cell edge. Real phpBB dark styles work
+   the same way — SCS's dark subsilver2 and freecad-dark are separate styles,
+   not modes of their light counterparts.
+
+   CONTRAST (all measured, AA):
+     ink   #D6DCE4 on page  #1E2228   11.57:1  body
+     ink   on --card        #262B33   10.31:1  body
+     ink   on --row-even    #2C323B    9.36:1  body
+     ink   on --row-head    #333B45    8.22:1  body
+     muted #9AA5B1 on page             6.38:1  body
+     link  #7FBCE6 on card             6.94:1  body
+     hover #E8944A on card             5.94:1  body
+     band  #FFFFFF on #2A5788          7.45:1  large/UI
+*/
+
+:root {
+  --bg:          #1E2228;
+  --card:        #262B33;
+  --card-2:      #2C323B;
+  --text:        #D6DCE4;
+  --muted:       #9AA5B1;
+  --border:      #3E4650;
+
+  --link:        #7FBCE6;
+  --link-hover:  #E8944A;
+  --brand-ink:   #7FBCE6;
+  --brand-fill:  #2A5788;
+  --brand-fill-hover: #34689F;
+  --on-brand:    #FFFFFF;
+
+  --band-fill:   #2A5788;
+  --band-ink:    #FFFFFF;
+  --band-link:   #FFFFFF;
+  --nav-fill:    #2A323C;
+  --panel:       #262B33;
+  --row-odd:     #262B33;
+  --row-even:    #2C323B;
+  --row-head:    #333B45;
+
+  --boost:       #7FBCE6;
+  --bury:        #E8944A;
+  --tint:        #2C323B;
+
+  --gold-500:    #D4A94E;
+  --gold-strong: #E2BC64;
+  --danger:      #F0938A;
+  --danger-ink:  #F0938A;
+  --danger-tint: #3A2320;
+  --clay-600:    #A24D2C;
+  --stripe:      rgba(255,255,255,.04);
+
+  --font-body:   "Lucida Grande", Verdana, Helvetica, Arial, sans-serif;
+  --font-display: "Lucida Grande", Verdana, Helvetica, Arial, sans-serif;
+
+  --radius-card:  0px;
+  --radius-chip:  0px;
+  --radius-sm:    0px;
+  --radius-media: 0px;
+  --radius-round: 0px;
+
+  /* The bevel inverts for a dark surface: light edge still top-left, but both
+     edges pull toward the ground rather than toward white. */
+  --card-shadow: inset 1px 1px 0 #39414C, inset -1px -1px 0 #141820;
+
+  --color-scheme: dark;
+}

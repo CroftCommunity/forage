@@ -281,11 +281,31 @@ export async function run() {
       assert.equal(look.rows[1], 'rgb(220, 225, 229)', 'even rows carry subsilver2 .row2 #DCE1E5');
     }
 
-    // 3A ships phpbb with no dark sibling ON PURPOSE, which exercises the
-    // disabled-toggle path in production rather than only in a fixture.
-    // Phase 3B adds phpbb-dark and this expectation flips.
-    assert.equal(await page.locator('.themetoggle').first().isDisabled(), true,
-      'phpbb has no sibling yet, so the toggle reads as unavailable');
+    // 3B gave phpbb a sibling, so the toggle is live here and moves between
+    // two BOARDS — not between a board and Forage's own dark palette. That is
+    // the whole point of pairing: the toggle changes palette, never identity.
+    const tgl = page.locator('.themetoggle').first();
+    assert.equal(await tgl.isDisabled(), false, 'phpbb now has a dark sibling');
+    await tgl.click();
+    // Wait on the COMPUTED value, not the href: the attribute flips
+    // immediately but the sheet still has to load and apply.
+    await page.waitForFunction(() =>
+      getComputedStyle(document.querySelector('.masthead')).backgroundColor === 'rgb(42, 87, 136)');
+    const dark = await page.evaluate(() => ({
+      band: getComputedStyle(document.querySelector('.masthead')).backgroundColor,
+      scheme: getComputedStyle(document.documentElement).colorScheme,
+      radius: getComputedStyle(document.querySelector('.card')).borderRadius,
+    }));
+    assert.equal(dark.band, 'rgb(42, 87, 136)', 'the dark board keeps a filled band, in its own blue');
+    assert.match(dark.scheme, /dark/, 'native chrome follows the dark board');
+    assert.equal(dark.radius, '0px', 'still a board: square corners survive the palette swap');
+
+    await page.locator('.themetoggle').first().click();
+    await page.waitForFunction(() =>
+      getComputedStyle(document.querySelector('.masthead')).backgroundColor === 'rgb(70, 136, 206)');
+    assert.equal(
+      await page.evaluate(() => getComputedStyle(document.querySelector('.masthead')).backgroundColor),
+      'rgb(70, 136, 206)', 'and back to the light board, not to Forage');
   } finally {
     await board.close();
   }

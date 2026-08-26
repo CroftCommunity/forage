@@ -27,7 +27,8 @@ export const SKINS = Object.freeze({
   usenet: { label: 'Usenet gray (newsprint)', file: 'skins/usenet.css', palette: 'light' },
   // The classic phpBB board. Registered as always-available (owner, 2026-08-26):
   // a first-class entry, not tied to any mode.
-  phpbb: { label: 'phpBB (classic board)', file: 'skins/phpbb.css', palette: 'light' },
+  phpbb: { label: 'phpBB (classic board)', file: 'skins/phpbb.css', palette: 'light', pairedWith: 'phpbb-dark' },
+  'phpbb-dark': { label: 'phpBB (after hours)', file: 'skins/phpbb-dark.css', palette: 'dark', pairedWith: 'phpbb' },
 });
 
 // The sibling of a skin, or null when it ships only one palette. Null is a
