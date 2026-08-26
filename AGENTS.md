@@ -45,6 +45,27 @@ one**, they win; fix the document.
     answers "does it behave and feel right," never "does it hold up."
 11. When documentation and behavior disagree, behavior (schema plus scenario suite)
     wins and the documentation is corrected. Prose is never the source of truth.
+12. **For anything about Bluesky, there are TWO sources of truth and they answer
+    different questions.** The official *lexicons*
+    (`bluesky-social/atproto/lexicons/…`) say what is **legal** — required fields,
+    limits, shapes. The official *client*
+    (**`bluesky-social/social-app`** — verified to be what drives bsky.app:
+    `homepage: https://bsky.app`, MIT, actively maintained) says what the network
+    **actually does** — defaults, conventions, what other clients will expect. Ask
+    the lexicon before writing a record; ask the client before deciding how a field
+    should behave. Every wrong assumption this repo has shipped lived in the gap
+    between them: the lexicon does not mention content languages at all, and only
+    social-app's `src/state/persisted/schema.ts` shows they are app-local (DL-026),
+    that tags are 2-letter with the region stripped, and that a post's language
+    defaults to the device's. Where we differ from the client, **differ on purpose
+    and write down why** — forage does not default content languages to the device
+    (we never narrow what you see unasked) and does not fall back to `'en'` (we say
+    nothing rather than claim a language we do not know).
+    Read it with:
+    `gh api search/code?q=<term>+repo:bluesky-social/social-app` then
+    `gh api repos/bluesky-social/social-app/contents/<path> --jq .content | base64 -d`.
+    Cite file:line, and record match-or-diverge. Workspace-level entry:
+    `CroftC/.claude/DECISIONS.md` § Prior-art router.
 
 ## Procedures
 

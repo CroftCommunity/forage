@@ -112,6 +112,46 @@ Above the header, dashed to mark it as scaffolding:
 | Volunteer moderator | **Steward** |
 | Public mod log | **Audit log** |
 
+## Where Bluesky's behavior is defined (two sources, two questions)
+
+Forage is a lens onto Bluesky, so most of what it must get right is defined
+somewhere else. There are two authorities and they answer different questions:
+
+| Question | Source |
+|---|---|
+| What is **legal** — required fields, limits, record shapes | the official lexicons, `bluesky-social/atproto/lexicons/…` |
+| What the network **actually does** — defaults, conventions, what other clients expect | the official client, [`bluesky-social/social-app`](https://github.com/bluesky-social/social-app) |
+
+`social-app` is what drives bsky.app (its own repo metadata says so:
+`homepage: https://bsky.app`, MIT, actively maintained), which makes it the
+canonical reference for client behavior — the things a lexicon cannot tell you
+because they were never a matter of legality.
+
+Every wrong assumption this project has shipped lived in the gap between those
+two. The lexicon does not mention content languages at all; only the client's
+`src/state/persisted/schema.ts` shows they are stored **in the app**, that
+language tags are two letters with the region stripped, and that a post's
+language defaults to the device's.
+
+Reading it:
+
+```sh
+gh api "search/code?q=contentLanguages+repo:bluesky-social/social-app"
+gh api repos/bluesky-social/social-app/contents/src/state/persisted/schema.ts \
+  --jq .content | base64 -d
+```
+
+**Differing from it is allowed; differing by accident is not.** Two places
+Forage diverges on purpose, both recorded in the ledger: the official client
+defaults your content languages to your device's, and Forage defaults to no
+filter at all — narrowing what you see without being asked is the opposite of
+the point. And where the client falls back to `'en'` when the device says
+nothing, Forage says nothing, rather than claim a language it does not know.
+
+Details and the full discipline: `AGENTS.md` invariant 12, `ledger/divergence.js`
+(DL-026), and `CroftC/.claude/DECISIONS.md` § Prior-art router for the
+workspace-wide entry.
+
 ## Boards: feeds and hashtags are NOT the same promise
 
 Both render as boards — same rows, same sort bar, same card/compact view — and
