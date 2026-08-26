@@ -141,3 +141,61 @@ test('phase-1 finding: publish passes the browser language through to the record
   await lens.publish({ text: 'hello', navLang: 'pt-BR' });
   assert.deepEqual(calls[0].record.langs, ['pt'], 'the post says what language it is in');
 });
+
+// ---- Phase 2: delete your own post ----
+// 3w made Forage able to write and not to unwrite. That is a bad property for
+// a forum and a worse one for trust: a client that can post but not remove is
+// asking for more faith than it earns. The guard matters more than the button —
+// a delete that can reach another repo is a different capability wearing this
+// one's name.
+
+test('phase 2: canDelete is true only for YOUR OWN post, and only with a session', async () => {
+  const { canDelete } = await import('../js/substrates/lens.js');
+  const mine = { id: 'at://did:plc:me/app.bsky.feed.post/p1', authorId: 'did:plc:me' };
+  const theirs = { id: 'at://did:plc:you/app.bsky.feed.post/p2', authorId: 'did:plc:you' };
+  const session = { did: 'did:plc:me' };
+
+  assert.equal(canDelete(mine, session), true);
+  assert.equal(canDelete(theirs, session), false, 'never offer to delete someone else’s post');
+  assert.equal(canDelete(mine, null), false, 'no session, no delete');
+  // a masked or muted shape has authorId null — it must not match a null did
+  assert.equal(canDelete({ id: 'at://x/y/z', authorId: null }, { did: null }), false,
+    'null must never equal null into a delete');
+  assert.equal(canDelete({ id: 'at://x/y/z', authorId: null }, session), false);
+  // the at-uri has to agree with the author: a shape claiming to be ours while
+  // its uri points at another repo is not ours
+  assert.equal(canDelete({ id: 'at://did:plc:you/app.bsky.feed.post/p3', authorId: 'did:plc:me' }, session), false,
+    'the uri is the authority, not the label');
+});
+
+test('phase 2: deletePost removes MY post, and refuses a uri outside my repo', async () => {
+  const calls = [];
+  const fetchHandler = async (path, init = {}) => {
+    calls.push({ path, body: init.body ? JSON.parse(init.body) : null });
+    return { ok: true, status: 200, json: async () => ({}) };
+  };
+  const lens = createLens({ session: { did: 'did:plc:me', handle: 'me.test', fetchHandler } });
+
+  await lens.deletePost('at://did:plc:me/app.bsky.feed.post/3abc');
+  const del = calls.find((c) => c.path.includes('deleteRecord'));
+  assert.ok(del, 'deleteRecord called');
+  assert.deepEqual(del.body, { repo: 'did:plc:me', collection: 'app.bsky.feed.post', rkey: '3abc' });
+
+  // the guard: even called directly, it will not touch another repo
+  await assert.rejects(() => lens.deletePost('at://did:plc:someoneelse/app.bsky.feed.post/3xyz'),
+    /your own|own repo|not yours/i);
+  // and it will not delete a non-post record through the post path
+  await assert.rejects(() => lens.deletePost('at://did:plc:me/app.bsky.feed.like/3like'),
+    /post/i);
+  assert.equal(calls.filter((c) => c.path.includes('deleteRecord')).length, 1,
+    'exactly one delete reached the network — the refusals never called out');
+});
+
+test('phase 2: deletePost refuses without a session, and refuses a malformed uri', async () => {
+  await assert.rejects(() => createLens({}).deletePost('at://did:plc:me/app.bsky.feed.post/x'), /session|sign/i);
+  const fetchHandler = async () => ({ ok: true, status: 200, json: async () => ({}) });
+  const lens = createLens({ session: { did: 'did:plc:me', handle: 'me.test', fetchHandler } });
+  for (const bad of ['', 'not-a-uri', 'at://did:plc:me', 'https://bsky.app/profile/x/post/y']) {
+    await assert.rejects(() => lens.deletePost(bad), /uri|post/i, `${JSON.stringify(bad)} is not a post uri`);
+  }
+});

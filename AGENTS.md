@@ -104,11 +104,15 @@ adding another means arguing for it there first:
 | `createRecord` → `app.bsky.feed.like` | boost | DL-013 |
 | `deleteRecord` → `app.bsky.feed.like` | unboost | DL-013 |
 | `createRecord` → `app.bsky.feed.post` | publish a post or reply | 3w |
+| `deleteRecord` → `app.bsky.feed.post` | delete your OWN post or reply | phase 2 |
 | `putPreferences` (savedFeedsPrefV2) | join / leave a feed | 3j |
 | `putPreferences` (savedFeedsPrefV2) | favorite / unfavorite (pin) | 3s |
 
-No `putRecord` anywhere: the lens creates and unlikes, and never edits a
-record. Joining and favoriting are DIFFERENT states — saved is your list,
+No `putRecord` anywhere: the lens creates and deletes, and never edits a
+record — changing a post means deleting it and writing another, which is what
+the network itself does. **Every write addresses `session.did` and nothing
+else**, and the post delete additionally parses the at-uri and refuses one
+outside your repo; `test/invariants.test.js` asserts both, per occurrence. Joining and favoriting are DIFFERENT states — saved is your list,
 pinned is the top row of tabs — and conflating them rearranged the official
 app's tab bar for anyone who joined a feed here (3s).
 

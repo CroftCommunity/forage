@@ -90,12 +90,22 @@ export async function run() {
       'getQuotes?uri=at%3A%2F%2Fdid%3Aplc%3Acc%2Fapp.bsky.feed.post%2Fquote1': { posts: [
         { ...post('quote2', 'did:plc:bb', '2026-08-25T13:00:00Z').post,
           record: { text: 'quoting the quote', createdAt: '2026-08-25T13:00:00Z' } } ] },
+      // phase 2: a post of MY OWN, so delete can be exercised (routing is
+      // first-match-wins, so this specific key precedes the generic one)
+      'getPostThread?uri=at%3A%2F%2Fdid%3Aplc%3Ame%2Fapp.bsky.feed.post%2Fmine': { thread: {
+        post: { ...post('mine', 'did:plc:me', '2026-08-25T16:00:00Z').post,
+          record: { text: 'a post of my own', createdAt: '2026-08-25T16:00:00Z' } },
+        replies: [],
+      } },
+      'com.atproto.repo.deleteRecord': {},
       'getPostThread': { thread: {
         post: { ...post('b1', 'did:plc:bb', '2026-08-25T11:00:00Z').post, quoteCount: 1 },
         replies: [
           { post: { ...post('bpart2', 'did:plc:bb', '2026-08-25T11:05:00Z').post,
             record: { text: 'the continuation 2/2', createdAt: '2026-08-25T11:05:00Z' } }, replies: [] },
           { post: post('reply1', 'did:plc:aa', '2026-08-25T11:30:00Z').post, replies: [] },
+          { post: { ...post('myreply', 'did:plc:me', '2026-08-25T11:45:00Z').post,
+            record: { text: 'a reply of my own', createdAt: '2026-08-25T11:45:00Z' } }, replies: [] },
         ],
       } },
       'getQuotes': { posts: [
@@ -226,6 +236,43 @@ export async function run() {
   // anything else reads the DOM — a rerender mid-read detaches the nodes
   // under a running query (this flaked before the segment moved here).
   await page.waitForSelector('[data-kind="quote"][data-depth="0"]', { timeout: 15000 });
+
+  // Phase 2: you can remove what you wrote — and only what you wrote. This
+  // thread's head is did:plc:bb's, so the head carries no delete; the reply
+  // that is mine does. (A reply to my OWN post cannot test this: 3i hoists a
+  // same-author reply into the post body, so it never becomes a comment.)
+  assert.equal(await page.locator('.card > [data-delete-post]').count(), 0,
+    'no delete control on a post that is not yours');
+  // wait on the control itself, not on its text: the 3w reply above refetches
+  // the thread, and a text match can resolve against the render being replaced
+  await page.waitForSelector('.comment[data-node-id$="/myreply"] [data-delete-post]');
+  assert.equal(await page.locator('.comment[data-node-id$="/myreply"] [data-delete-post]').count(), 1,
+    'your own reply can be deleted');
+  assert.equal(await page.locator('.comment[data-node-id$="/reply1"] [data-delete-post]').count(), 0,
+    'someone else’s reply cannot');
+  await page.locator('.comment[data-node-id$="/myreply"] [data-delete-post]').click();
+  await page.locator('.comment[data-node-id$="/myreply"] [data-delete-post][data-armed="1"]').click();
+  await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('deleteRecord')
+    && JSON.parse(h.body).rkey === 'myreply'));
+  await page.waitForSelector('text=You deleted this reply.');
+
+  await page.goto(`${s.origin}/p?uri=${encodeURIComponent('at://did:plc:me/app.bsky.feed.post/mine')}`);
+  await page.waitForSelector('text=a post of my own');
+  await page.waitForSelector('[data-delete-post]');
+
+  // deleting is irreversible, so it takes two deliberate clicks rather than a
+  // blocking confirm() dialog (which would freeze the whole app)
+  await page.locator('[data-delete-post]').click();
+  await page.waitForSelector('[data-delete-post][data-armed="1"]');
+  assert.match(await page.locator('[data-delete-post]').innerText(), /really|sure|confirm/i,
+    'the second click is clearly a different act from the first');
+  await page.locator('[data-delete-post]').click();
+  await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('deleteRecord')));
+  const deletedBody = await page.evaluate(() => JSON.parse(window.__shimHits
+    .filter((h) => h.url.includes('deleteRecord')).at(-1).body));
+  assert.deepEqual(deletedBody, { repo: 'did:plc:me', collection: 'app.bsky.feed.post', rkey: 'mine' });
+  // and the thread says the post is gone rather than silently navigating away
+  await page.waitForSelector('text=This post was deleted');
 
   // …and the facet #tag in a board post is a doorway into /h/
   await page.goto(`${s.origin}/`);

@@ -9,14 +9,20 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 
 ## Needs the owner
 
-- **Pre-Spaces review** — the owner is reviewing phases 1–4 on forage.fyi before
-  phase 5 starts. Findings from that review land here.
+- **Phase 5 — the private BBS on Spaces** (plan 2026-08-25-1): **PAUSED behind the
+  public-site queue** (owner 2026-08-26: *"we are pausing it until we have the main
+  site in better shape"*). Not declined and no longer waiting on a review — the
+  pre-Spaces review happened as an iteration (3h–3x) and the owner then named the
+  queue that comes first. The split stays drafted and approved (5a–5d:
+  space-credential module, bbs substrate, mode UI, DOCKER-gated W5); local
+  rehearsal rig `ghcr.io/bluesky-social/atproto:pds-spaces-alpha` (D5 facts in the
+  plan). Roadmap row: E138.
 
-- **Phase 5 — the private BBS on Spaces** (plan 2026-08-25-1): PAUSED by the owner
-  2026-08-25 with phases 1–4 deployed. The split is drafted and user-approved
-  (5a–5d: space-credential module, bbs substrate, mode UI, DOCKER-gated W5);
-  implementation starts on the owner's go. Local rehearsal rig:
-  `ghcr.io/bluesky-social/atproto:pds-spaces-alpha` (D5 facts in the plan).
+- **Composing follow-ons** (plan 2026-08-26-1, DL-027): images ship in that plan's
+  phase 3. Still not built afterwards — video and gallery embeds, external link
+  cards, @mention facets (they need a resolveHandle per mention), self-labels
+  (content warnings), quote-posting from the composer, and editing a post
+  (`putRecord`, which the lens does not do at all).
 
 - ~~Push `main` + pull the `workflow_dispatch` hatch once~~ — DONE 2026-08-25: pushed
   `9f1cff4`; push-gate run 32792641974 and dispatched run 32792652759 both green;

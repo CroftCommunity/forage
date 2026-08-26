@@ -68,17 +68,27 @@ test('the lens exception holds: writes are records-none, likes-one-pair, prefere
   //     gained no power to delete anything
   //   • still no putRecord: the lens creates and unlikes; it never edits
   assert.equal((src.match(/createRecord/g) || []).length, 2, 'exactly two createRecord (the like, the post)');
-  assert.equal((src.match(/deleteRecord/g) || []).length, 1, 'exactly one deleteRecord — and it is the unlike');
+  // Phase 2 widens this to two deletes — unlike, and remove-your-own-post.
+  // The count alone is weak, so every occurrence is inspected: the OLD version
+  // of this check read src.indexOf('deleteRecord'), which with two deletes
+  // would have silently examined only the first (caught in Pass 2 review).
+  assert.equal((src.match(/deleteRecord/g) || []).length, 2, 'exactly two deleteRecord (the unlike, the post delete)');
   assert.match(src, /LIKE_COLLECTION = 'app\.bsky\.feed\.like'/, 'the like collection is a named constant');
   assert.match(src, /POST_COLLECTION = 'app\.bsky\.feed\.post'/, 'so is the post collection');
   assert.equal((src.match(/collection: LIKE_COLLECTION/g) || []).length, 2, 'the like pair binds to its constant');
-  assert.equal((src.match(/collection: POST_COLLECTION/g) || []).length, 1, 'publish binds to its own');
-  // the deleteRecord must sit with the like, not near publish: a delete under
-  // the publishing path would be a different capability wearing this one's name
-  const deleteAt = src.indexOf('deleteRecord');
-  const likeConst = src.indexOf("LIKE_COLLECTION = 'app.bsky.feed.like'");
-  assert.ok(deleteAt > likeConst, 'the delete lives under the like machinery');
-  assert.match(src.slice(deleteAt - 400, deleteAt), /unboost|unlike/i, 'and is reached only by unliking');
+  assert.equal((src.match(/collection: POST_COLLECTION/g) || []).length, 2, 'publish and delete bind to theirs');
+
+  // every write names its repo, and every one of them names the SESSION's repo.
+  // This is the assertion that actually matters: a write that can address
+  // another repo is a different capability wearing this one's name.
+  const repoArgs = [...src.matchAll(/repo:\s*([^,\n]+)/g)].map((m) => m[1].trim());
+  assert.ok(repoArgs.length >= 4, `expected every write to name a repo, found ${repoArgs.length}`);
+  for (const arg of repoArgs) {
+    assert.match(arg, /^session(\?)?\.did$/, `a write addresses ${arg} — every write must address session.did`);
+  }
+  // and the post delete is guarded by a parsed-uri ownership check, not by the
+  // UI alone: the guard has to hold when deletePost is called directly
+  assert.match(src, /parsed\.did !== session\.did/, 'deletePost refuses a uri outside the session repo');
   // the record itself is built by the PURE composer, never assembled inline —
   // that is where the lexicon limits and byte-indexed facets are enforced
   assert.match(src, /import \{ buildPost, withTag \} from '\.\.\/compose\.js'/,

@@ -8,7 +8,7 @@
 
 import { el, timeAgo, fmtScore } from '../util.js';
 import { postRow, commentNode, voteBox, skeleton, emptyState, toast } from './components.js';
-import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow, affordanceFor, feedCardModel, threadNodeStyle, feedPath, parseFeedRoute, sessionGateMessage } from '../substrates/lens.js';
+import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow, affordanceFor, feedCardModel, threadNodeStyle, feedPath, parseFeedRoute, sessionGateMessage, canDelete } from '../substrates/lens.js';
 import { initSession, createAccountRoster } from '../auth/session.js';
 import * as mediaScale from '../media-scale.js';
 import * as lang from '../lang.js';
@@ -677,6 +677,45 @@ function affordanceStrip(stream, onPosted) {
   return host;
 }
 
+// Phase 2: the delete control. Deleting is irreversible and federated — the
+// record leaves your repo but copies may already be elsewhere — so it takes
+// two deliberate clicks. NOT a confirm() dialog: a modal dialog freezes the
+// whole page, and this is a small enough act that arming the button in place
+// reads better than interrupting everything.
+function deleteControl(post, onDone) {
+  if (!canDelete(post, session)) return null;
+  let armed = false;
+  const b = el('button', { class: 'btn sm', 'data-delete-post': '1',
+    title: 'Delete this post from your Bluesky account' }, 'Delete');
+  const disarm = () => {
+    armed = false;
+    b.removeAttribute('data-armed');
+    b.classList.remove('danger');
+    b.replaceChildren('Delete');
+  };
+  b.addEventListener('click', async () => {
+    if (!armed) {
+      armed = true;
+      b.setAttribute('data-armed', '1');
+      b.classList.add('danger');
+      b.replaceChildren('Really delete?');
+      setTimeout(() => { if (armed) disarm(); }, 6000); // an unanswered arm relaxes
+      return;
+    }
+    b.disabled = true;
+    try {
+      await lens.deletePost(post.id);
+      toast('Deleted — it is gone from your Bluesky account too.', 'ok');
+      onDone?.();
+    } catch (e) {
+      toast('Delete failed: ' + e.message, 'err');
+      b.disabled = false;
+      disarm();
+    }
+  });
+  return b;
+}
+
 // 3w: the composer. The pure module owns what a post IS — the two limits, the
 // byte-indexed facets, the reply refs — so this only collects text and shows
 // the writer what the composer would say before they send it. The counter goes
@@ -1055,15 +1094,30 @@ export function lensThreadView(params, query) {
       p.quoted ? quotedContext(p.quoted) : null,
       t.quotesFailed ? el('div', { class: 'row', style: 'gap:6px;margin-top:6px' },
         chip(`${t.quoteCount} quote${t.quoteCount === 1 ? '' : 's'} — couldn't fetch`, 'getQuotes failed; replies still render. Reload to retry.')) : null,
-      (() => {
-        const b = el('button', { class: 'btn sm primary', 'data-reply-open': '1', style: 'margin-top:8px' }, 'Reply');
-        b.addEventListener('click', () => openReply(rootRef)); // replying to the post: parent IS root
-        return b;
-      })(),
+      el('div', { class: 'row', style: 'gap:6px;margin-top:8px;align-items:center' },
+        (() => {
+          const b = el('button', { class: 'btn sm primary', 'data-reply-open': '1' }, 'Reply');
+          b.addEventListener('click', () => openReply(rootRef)); // replying to the post: parent IS root
+          return b;
+        })(),
+        // phase 2: only ever rendered for a post that is genuinely yours
+        deleteControl(p, () => {
+          main.replaceChildren(emptyState('This post was deleted',
+            'It is gone from your Bluesky account. Anyone who already saw it may still have a copy — deleting removes the record, it does not un-send it.',
+            el('a', { class: 'btn', href: `/f/${src.fieldSlug}` }, 'Back to the board')));
+        })),
       replyHost));
     const ctx = { ...LENS_PERMS, locked: true, // vote/save/mod still gate; replying does not
       authorHref: (n) => `/u/${encodeURIComponent(n.author)}`, // 3k: authors reach OUR profile page (which links out)
-      nodeRenderer: (n, c) => lensNode(n, c) }; // 3r: a quote nested under a reply is still a quote
+      nodeRenderer: (n, c) => lensNode(n, c), // 3r: a quote nested under a reply is still a quote
+      // phase 2: a reply you regret is the commoner case than a post you
+      // regret, so your own replies carry the same control. Same guard, same
+      // two-click arming; the node simply removes itself when it is gone.
+      extraActions: (n) => deleteControl(n, () => {
+        const host = commentsCard.querySelector(`[data-node-id="${CSS.escape(n.id)}"]`);
+        if (host) host.replaceChildren(el('div', { class: 'xs muted', style: 'padding:6px 0' }, 'You deleted this reply.'));
+        else rerender();
+      }) };
     const commentsCard = el('div', { class: 'card' });
     const paintComments = (comments) => {
       commentsCard.replaceChildren(...comments.map((n) => lensNode(n, ctx)));

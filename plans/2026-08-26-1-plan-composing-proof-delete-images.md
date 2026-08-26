@@ -1,6 +1,6 @@
 # Composing, proved and completed: live proof → delete → images
 
-**Status:** Phases 1–3 planned; **phase 1 EXECUTED 2026-08-26** (composing live-proved; two findings fixed). Phases 2–3 pending.
+**Status:** Phases 1–3 planned; **phases 1–2 EXECUTED 2026-08-26**. Phase 3 (images) pending.
 **Repo:** `forage` (CroftCommunity/forage) · worktree `worktrees/forage/modes-bbs`
 **Predecessor:** `plans/2026-08-25-1-plan-backend-modes-bsky-writes.md` (3w shipped composing)
 
@@ -635,3 +635,48 @@ the phase's whole justification.
 **Done-when, met:** post and reply written through the composer, rendered and
 threaded correctly by an appview we did not write, then removed. 326 unit / 88
 conformance / 5 journeys green with both fixes pinned.
+
+### Phase 2 executed — 2026-08-26 — ✅ delete your own post
+
+**Two independent gates, because a delete that can reach another repo is a
+different capability wearing this one's name.** `canDelete` (pure) requires the
+post's `authorId` to equal the session DID *and* the at-uri to parse as an
+`app.bsky.feed.post` uri in that same repo — the uri is the authority, not the
+label, so a shape claiming to be ours while pointing elsewhere is refused. And
+`deletePost` re-checks the same thing at the network boundary, so the guard
+holds when it is called directly rather than through a button. `null === null`
+is explicitly excluded: a masked shape (whose `authorId` is null) can never
+match a session with no DID.
+
+**Confirmation is two clicks, not a dialog.** `confirm()` freezes the whole
+page, and the browser-automation guidance in this workspace calls that out
+directly; arming the button in place (`Delete` → `Really delete?`, coloured,
+relaxing after 6s if unanswered) is the same safety at none of the cost.
+
+**Replies too** (the plan's ADVISORY question, answered yes). A reply you
+regret is the commoner case. `commentNode` grew one seam — `ctx.extraActions` —
+which the memory tier does not pass, so its rows are untouched.
+
+**The invariant widened deliberately, and got stronger where it could.** Two
+`deleteRecord` calls now (unlike, delete-own-post), and the Pass 2 finding was
+real: the old check used `src.indexOf('deleteRecord')` and would have silently
+inspected only the first. It now asserts **per occurrence**, and adds the
+assertion that actually matters — *every* write in the lens addresses
+`session.did` and nothing else, checked by scanning every `repo:` argument.
+
+**Two things the execution taught:**
+
+- A reply to your *own* post cannot exercise reply-delete at all: 3i hoists an
+  unbroken same-author chain into the post **body**, so it never becomes a
+  comment. The journey fixture had to put the owned reply in someone else's
+  thread. Worth remembering — "my post with my reply" is not a reachable shape
+  in this UI.
+- The first journey assertion raced the 3w reply's refetch: waiting on the
+  reply's *text* could match the render being replaced. Waiting on the delete
+  control itself is deterministic. Same class as the phase-1/3x flake — in this
+  view, wait on the thing you are about to act on, never on text near it.
+
+**Done-when, met:** signed in, a post or reply you wrote can be deleted from
+inside Forage, the thread says so rather than silently navigating, and no
+control appears on anyone else's post. 329 unit / 88 conformance / 5 journeys
+green, journeys run 3× consecutively.

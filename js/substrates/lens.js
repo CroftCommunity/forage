@@ -383,6 +383,24 @@ export function withPinnedFeed(preferences, uri, pinned) {
   });
 }
 
+// Phase 2: who may delete what. The at-uri is the authority, not the label —
+// a shape claiming to be ours while its uri points at another repo is not ours,
+// and `null === null` must never resolve into a delete. Pure, so the button and
+// the network call ask the same question.
+const POST_URI = /^at:\/\/(did:[a-z0-9]+:[^/]+)\/app\.bsky\.feed\.post\/([^/]+)$/;
+
+export function parsePostUri(uri) {
+  const m = POST_URI.exec(String(uri || ''));
+  return m ? { did: m[1], rkey: m[2] } : null;
+}
+
+export function canDelete(post, session) {
+  if (!session?.did || !post?.authorId) return false;
+  if (post.authorId !== session.did) return false;
+  const parsed = parsePostUri(post.id);
+  return !!parsed && parsed.did === session.did;
+}
+
 // Phase-1 live-proof finding (2026-08-26): during the real smoke run, clicking
 // Reply on a freshly-loaded thread did nothing — no composer, no message. The
 // session was still restoring and the view re-rendered underneath the click.
@@ -766,6 +784,20 @@ export function createLens({ session = null, transport = fetch } = {}) {
         repo: session.did, collection: POST_COLLECTION, record,
       }, 'publish');
       return { uri: data.uri, cid: data.cid, record };
+    },
+
+    // Phase 2: remove MY post. Two independent gates, because a delete that can
+    // reach another repo is a different capability wearing this one's name:
+    // the uri must parse as an app.bsky.feed.post uri, AND its repo must be
+    // this session's. Neither is a UI concern — both hold when called directly.
+    async deletePost(uri) {
+      if (!session) throw new Error('lens: deleting needs a session — sign in first');
+      const parsed = parsePostUri(uri);
+      if (!parsed) throw new Error(`lens: not a post uri: ${JSON.stringify(uri)}`);
+      if (parsed.did !== session.did) throw new Error('lens: that post is not yours — Forage only deletes from your own repo');
+      return post('com.atproto.repo.deleteRecord', {
+        repo: session.did, collection: POST_COLLECTION, rkey: parsed.rkey,
+      }, 'delete post');
     },
 
     // unboost: delete MY like by its exact rkey.
