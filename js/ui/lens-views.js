@@ -8,7 +8,7 @@
 
 import { el, timeAgo, fmtScore } from '../util.js';
 import { postRow, commentNode, voteBox, skeleton, emptyState, toast } from './components.js';
-import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow, affordanceFor, feedCardModel, threadNodeStyle } from '../substrates/lens.js';
+import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow, affordanceFor, feedCardModel, threadNodeStyle, feedPath, parseFeedRoute } from '../substrates/lens.js';
 import { initSession, createAccountRoster } from '../auth/session.js';
 import * as mediaScale from '../media-scale.js';
 import * as lang from '../lang.js';
@@ -314,6 +314,13 @@ function renderBoard(card, posts) {
   }
 }
 
+// 3v: the breadcrumb on a board row is a link people copy, so give it the
+// shareable form whenever the registry knows who made the feed.
+const fieldHrefFor = (slug) => {
+  const entry = sources.get(slug);
+  return (entry && feedPath({ creator: entry.creator, rkey: entry.slug })) || `/f/${slug}`;
+};
+
 const lensRow = (p, view = 'card') => postRow(p, !!session, {
   onVote: lensVote(p),
   // 3i: never duplicate the title — a preview renders only when it adds
@@ -323,6 +330,7 @@ const lensRow = (p, view = 'card') => postRow(p, !!session, {
     : p.preview ? facetedBody({ ...p, body: p.preview }) : tagChips(p),
   authorBadge: verifiedBadge(p),
   metaExtra: langChip(p),
+  fieldHref: fieldHrefFor(p.fieldSlug),
   compact: view === 'compact',
 });
 
@@ -353,14 +361,15 @@ function lensSidebar() {
     list.append(skeleton(3));
     ensureSavedFeeds().then((fields) => {
       list.replaceChildren(...fields.map((f) => {
-        const entry = { slug: f.slug, humanSlug: f.humanSlug, title: f.title, kind: f.kind,
+        const entry = { slug: f.slug, humanSlug: f.humanSlug, title: f.title, kind: f.kind, creator: f.creator,
           source: f.kind === 'author' ? { kind: 'author', actor: f.id }
             : f.kind === 'timeline' ? { kind: 'timeline' } : { kind: f.kind, uri: f.id } };
         registerSource(entry);
         // share links carry the FIXED identity (the rkey); the human alias
         // still routes when typed
         return el('div', { class: 'row spread' },
-          el('a', { href: `/f/${f.slug}`, title: f.humanSlug ? `also #/f/${f.humanSlug}` : `/f/${f.slug}` }, `f/${f.title}`),
+          el('a', { href: feedPath({ creator: f.creator, rkey: f.slug }) || `/f/${f.slug}`,
+            title: f.creator ? `Shareable: /f/@${f.creator}/${f.slug}` : `/f/${f.slug}` }, `f/${f.title}`),
           el('span', { class: 'xs muted' }, `${f.kind}${f.pinned ? ' · pinned' : ''}`));
       }));
     }).catch((e) => list.replaceChildren(el('div', { class: 'xs muted' }, 'Feeds failed: ' + e.message)));
@@ -495,9 +504,38 @@ export function lensHomeView() {
   return { main, side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()) };
 }
 
+// 3v: /f/ has two shapes. A creator-qualified path (/f/@handle/rkey) is the
+// SHAREABLE one and resolves cold — handle → did → feed — so a stranger with
+// the link gets the board. A bare slug still works for in-session navigation
+// and for every link already shared, but it cannot resolve cold: an rkey has
+// no did, and nothing resolves one without a repo.
 export function lensFieldView(params) {
-  const entry = sources.get(params.slug);
-  if (!entry) return { main: emptyState('Unknown lens Field', 'Open the lens home first so its sources register.', el('a', { class: 'btn', href: '/' }, 'Lens home')), side: null };
+  const route = parseFeedRoute(params);
+  if (route.kind === 'slug') {
+    const entry = sources.get(route.slug);
+    if (!entry) {
+      return { main: emptyState('Unknown feed',
+        'This link is missing the feed’s creator, so it only works while browsing. Open Discover and find it by name — the link from there can be shared.',
+        el('a', { class: 'btn primary', href: '/feeds' }, 'Discover feeds')), side: null };
+    }
+    return feedBoardView(entry);
+  }
+
+  const host = el('div', {}, skeleton(6));
+  const side = el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar());
+  lens.resolveFeed({ handle: route.handle, rkey: route.rkey })
+    .then((info) => {
+      const entry = { slug: route.rkey, humanSlug: slugifyFeedName(info.title), title: info.title,
+        kind: 'feed', creator: info.creator, source: { kind: 'feed', uri: info.uri } };
+      registerSource(entry);
+      host.replaceChildren(feedBoardView(entry, info).main);
+    })
+    .catch((e) => host.replaceChildren(emptyState('Could not open that feed',
+      `@${route.handle} / ${route.rkey} — ${e.message}`, el('a', { class: 'btn', href: '/feeds' }, 'Discover feeds'))));
+  return { main: host, side };
+}
+
+function feedBoardView(entry, preInfo) {
   const main = el('div', {},
     el('div', { class: 'row spread wrap' },
       el('h1', {}, entry.title),
@@ -522,7 +560,8 @@ export function lensFieldView(params) {
   };
   const headerHost = el('div', {});
   if (entry.source.kind === 'feed' && entry.source.uri) {
-    Promise.all([lens.feedInfo(entry.source.uri), ensureSavedFeeds()])
+    // 3v: a cold resolve already fetched this — do not ask twice
+    Promise.all([preInfo ? Promise.resolve(preInfo) : lens.feedInfo(entry.source.uri), ensureSavedFeeds()])
       .then(([info]) => headerHost.replaceChildren(feedHeaderCard(info)))
       .catch(() => {}); // the board still works without its card
   }
@@ -764,13 +803,13 @@ export function lensFeedsView() {
       .then((feeds) => results.replaceChildren(...(feeds.length
         ? feeds.map((f) => {
             registerSource({ slug: f.uri.split('/').pop(), humanSlug: slugifyFeedName(f.title), title: f.title,
-              kind: 'feed', source: { kind: 'feed', uri: f.uri } });
+              kind: 'feed', creator: f.creator, source: { kind: 'feed', uri: f.uri } });
             return el('div', { class: 'card', 'data-discover-feed': f.uri },
               el('div', { class: 'row spread wrap', style: 'gap:8px;align-items:center' },
                 el('div', { class: 'row', style: 'gap:8px;align-items:center;min-width:0' },
                   f.avatar ? el('img', { src: f.avatar, alt: '', class: 'feed-avatar', loading: 'lazy' }) : null,
                   el('div', { style: 'min-width:0' },
-                    el('a', { href: `/f/${f.uri.split('/').pop()}` }, f.title),
+                    el('a', { href: feedPath({ creator: f.creator, uri: f.uri }) || `/f/${f.uri.split('/').pop()}` }, f.title),
                     el('div', { class: 'xs muted' }, `by @${f.creator} · ${fmtScore(f.likeCount)} likes`)))),
               f.description ? el('div', { class: 'xs muted', style: 'margin-top:4px' }, f.description) : null);
           })

@@ -119,6 +119,10 @@ export async function run() {
   await page.goto(`${s.origin}/feeds`);
   await page.waitForSelector('[data-discover-feed]');
   await page.waitForSelector('text=Garden Talk');
+  // 3v: the link discovery hands out is the SHAREABLE one — creator-qualified,
+  // so pasting it works for someone who has never opened Forage.
+  const shared = await page.locator('[data-discover-feed] a').first().getAttribute('href');
+  assert.match(shared, /^\/f\/@[^/]+\/[^/]+$/, `discovery links carry the creator, got ${shared}`);
   await page.waitForSelector('text=Post with #gardening to appear here.');
   await page.locator('[data-feed-search]').fill('garden');
   await page.locator('button:has-text("Search")').click();

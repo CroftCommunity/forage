@@ -99,6 +99,10 @@ router.route('/home', memoryOnly((p, q) => views.feedView('home', 'Home', q)));
 router.route('/popular', memoryOnly((p, q) => views.feedView('popular', 'Popular', q)));
 router.route('/all', memoryOnly((p, q) => views.feedView('all', 'All', q)));
 router.route('/f/:slug', byMode(lensViews.lensFieldView, views.fieldView));
+// 3v: the SHAREABLE feed path — /f/@creator/<rkey> resolves cold, which the
+// bare-rkey form cannot (an rkey has no did). Bluesky population only; the
+// memory tier's Fields are local and need no creator.
+router.route('/f/:handle/:rkey', byMode(lensViews.lensFieldView, views.fieldView));
 router.route('/f/:slug/settings', memoryOnly(views.fieldSettingsView));
 router.route('/f/:slug/mod/log', memoryOnly(views.auditView));
 router.route('/f/:slug/mod/queue', memoryOnly(views.queueView));

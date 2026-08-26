@@ -381,6 +381,30 @@ export function withPinnedFeed(preferences, uri, pinned) {
   });
 }
 
+// 3v: the canonical, SHAREABLE feed path. A feed's identity is
+// at://<did>/app.bsky.feed.generator/<rkey>; an rkey alone is not resolvable
+// (rkeys are not unique across creators, and no endpoint resolves one without
+// a repo), so a link that omits the creator only works for whoever already had
+// the feed in memory — which is exactly the bug found live on forage.fyi.
+// No creator, no shareable path: returning the bare form would hand out the
+// broken link.
+export function feedPath({ creator, rkey, uri } = {}) {
+  const handle = String(creator || '').trim().replace(/^@/, '');
+  const key = rkey || (uri ? String(uri).split('/').pop() : '');
+  if (!handle || !key) return null;
+  return `/f/@${handle}/${key}`;
+}
+
+// Which shape of /f/ route this is. Two segments means creator-qualified (the
+// leading @ is conventional, not load-bearing); one means a bare slug, which
+// still works for in-session navigation and every link already shared.
+export function parseFeedRoute(params = {}) {
+  if (params.rkey) {
+    return { kind: 'qualified', handle: String(params.handle || '').replace(/^@/, ''), rkey: params.rkey };
+  }
+  return { kind: 'slug', slug: params.slug };
+}
+
 // 3m: the affordance split (owner-ratified 2026-08-26). /f/ and /h/ share the
 // board chrome and differ in ONE place — what each promises about getting in.
 // A hashtag is targetable BY CONSTRUCTION (the tag is the membership rule); a
@@ -576,6 +600,9 @@ export function createLens({ session = null, transport = fetch } = {}) {
         ? (await get('app.bsky.feed.getFeedGenerators', Object.fromEntries(feedUris.map((u, i) => [`feeds[${i}]`, u])))).feeds || []
         : [];
       const titleOf = new Map(gens.map((g) => [g.uri, g.displayName]));
+      // 3v: the same response already names the creator — keep it, so every
+      // link the sidebar draws can be the shareable form.
+      const creatorOf = new Map(gens.map((g) => [g.uri, g.creator?.handle || null]));
       const taken = new Set();
       return items.map((i) => {
         const slug = slugForSource(i.type === 'author' ? { kind: 'author', actor: i.value } : i.type === 'timeline' ? { kind: 'timeline' } : { kind: i.type, uri: i.value });
@@ -587,7 +614,8 @@ export function createLens({ session = null, transport = fetch } = {}) {
         if (humanSlug && (taken.has(humanSlug) || humanSlug === slug)) humanSlug = humanSlug === slug ? humanSlug : null;
         if (humanSlug) taken.add(humanSlug);
         taken.add(slug);
-        return { id: i.value, kind: i.type, pinned: !!i.pinned, slug, humanSlug, title };
+        return { id: i.value, kind: i.type, pinned: !!i.pinned, slug, humanSlug, title,
+          creator: creatorOf.get(i.value) || null };
       });
     },
 
@@ -732,6 +760,18 @@ export function createLens({ session = null, transport = fetch } = {}) {
         creator: v.creator?.handle || '[unknown]',
         online: data.isOnline !== false, valid: data.isValid !== false,
       };
+    },
+
+    // 3v: resolve a SHARED feed link cold — handle → did → feed. Both calls
+    // are unauth-200 (verified live), so a stranger with the link gets the
+    // board, which is the entire point of a shareable URL. A did in the handle
+    // position is already resolved and is not looked up again.
+    async resolveFeed({ handle, rkey }) {
+      const did = String(handle || '').startsWith('did:')
+        ? handle
+        : (await get('com.atproto.identity.resolveHandle', { handle })).did;
+      if (!did) throw new Error(`lens: could not resolve @${handle} to an account`);
+      return this.feedInfo(`at://${did}/app.bsky.feed.generator/${rkey}`);
     },
 
     // 3j: discovery — popular generators, optionally searched. Unauth-200

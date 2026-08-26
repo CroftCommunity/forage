@@ -48,6 +48,7 @@ export async function run() {
       'getTrendingTopics': { topics: [
         { topic: 'Meadow Fest', displayName: 'Meadow Fest', description: 'campers assemble',
           link: '/profile/did:plc:trends/feed/meadow1' } ] },
+      'resolveHandle': { did: 'did:plc:trends' }, // 3v: a shared link resolves handle → did
       'getMutes': { mutes: [] },
       'getBlocks': { blocks: [] },
       'getListMutes': { lists: [] },
@@ -294,6 +295,15 @@ export async function run() {
   await page.locator('[data-board-toolbar] select').nth(2).selectOption('card');
   await page.waitForSelector('.media-strip img');
 
+  // 3v: a SHARED feed link, opened COLD — a fresh navigation with no prior
+  // in-app state, exactly like pasting the URL to someone else. The failure
+  // found live on forage.fyi was that /f/<rkey> cannot resolve, because an
+  // rkey has no did. The creator-qualified path can.
+  await page.goto(`${s.origin}/f/@curator.test/meadow1`);
+  await page.waitForSelector('[data-feed-header]', { timeout: 15000 });
+  await page.waitForSelector('text=Curated by @curator.test.');
+  assert.equal(await page.locator('text=Unknown lens Field').count(), 0,
+    'a pasted feed link resolves for someone who has never opened the app');
   assert.deepEqual(await s.shimMisses(), [], 'every network read had a fixture');
   await s.close();
 
