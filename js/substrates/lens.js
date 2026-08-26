@@ -172,6 +172,16 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
   };
 }
 
+// 3q: how a thread node is drawn. A quote-response is a top-level thread ON
+// the post (the OG post stays the container), so it gets a left WALL — the
+// same grammar the feed blurb uses: a wall means quoted material. A reply gets
+// the collapse gutter instead. Never both: with a bare quote node above them,
+// the walled replies below read as if they hung off the quote (2026-08-26).
+export function threadNodeStyle(node) {
+  const isTopQuote = node.kind === 'quote' && node.depth === 0;
+  return { kind: isTopQuote ? 'quote' : 'reply', walled: isTopQuote };
+}
+
 // One bsky threadViewPost tree -> our thread result shape.
 // 3e: replies AND quotes are ONE continuation — a quote is a response the
 // actor-centered view scattered onto the quoter's profile; the topic-centered

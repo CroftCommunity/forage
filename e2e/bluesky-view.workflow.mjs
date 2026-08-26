@@ -141,6 +141,25 @@ export async function run() {
   assert.match(await qnode.innerText(), /post quote1/, 'the quote body renders in the thread');
   assert.ok(await qnode.locator('a:has-text("open its thread")').count(), 'a quote opens as its own room');
 
+  // 3q: the quote is WALLED — a left rule and its own tinted block — so it
+  // reads as a top-level thread on the post instead of blending into the
+  // replies beneath it. The replies keep the collapse gutter; never both.
+  const qbox = await qnode.evaluate((n) => {
+    const cs = getComputedStyle(n);
+    return { wall: parseFloat(cs.borderLeftWidth), bg: cs.backgroundColor, gutters: n.querySelectorAll('.gutter').length };
+  });
+  assert.ok(qbox.wall >= 2, `the quote carries a left wall (got ${qbox.wall}px)`);
+  assert.equal(qbox.gutters, 0, 'a walled quote has no collapse gutter — the two grammars stay distinct');
+  const replyBox = await page.locator('.comment:not([data-kind="quote"])').first()
+    .evaluate((n) => ({ wall: parseFloat(getComputedStyle(n).borderLeftWidth), gutters: n.querySelectorAll('.gutter').length }));
+  assert.equal(replyBox.wall, 0, 'a reply is NOT walled');
+  assert.ok(replyBox.gutters >= 1, 'a reply keeps its collapse gutter');
+  // and the body is styled at all — .cmeta/.cbody had no rules, so the node
+  // used to render as default body text (2026-08-26)
+  const qFont = await qnode.locator('.quote-body').evaluate((n) => parseFloat(getComputedStyle(n).fontSize));
+  const rootFont = await page.evaluate(() => parseFloat(getComputedStyle(document.body).fontSize));
+  assert.ok(qFont < rootFont, `the quote body reads at comment scale (${qFont}px < ${rootFont}px)`);
+
   // …and the facet #tag in a board post is a doorway into /h/
   await page.goto(`${s.origin}/`);
   await page.locator('[data-ring-dial] button:has-text("Mutuals")').first().click();

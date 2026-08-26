@@ -8,7 +8,7 @@
 
 import { el, timeAgo, fmtScore } from '../util.js';
 import { postRow, commentNode, voteBox, skeleton, emptyState, toast } from './components.js';
-import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow, affordanceFor, feedCardModel } from '../substrates/lens.js';
+import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow, affordanceFor, feedCardModel, threadNodeStyle } from '../substrates/lens.js';
 import { initSession, createAccountRoster } from '../auth/session.js';
 
 let manager = null;        // null = not booted; 'unavailable' = origin has no OAuth client
@@ -493,17 +493,20 @@ export function lensFieldView(params) {
   return { main, side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()) };
 }
 
-// 3e: a quote-response rendered as thread continuation — the ❝ marker carries
-// the distinction; the node opens as its own thread (the conversation
-// branched into a new room, honestly).
+// 3e/3q: a quote-response rendered as thread continuation. 3q gives it a left
+// WALL — quoted material, the same grammar the feed blurb uses — so it reads
+// as a top-level thread ON the post rather than blending into the replies
+// below it (which carry the green collapse gutter instead). The ❝ marker keeps
+// the distinction in words; the node still opens as its own thread, because
+// the conversation genuinely branched into a new room.
 function quoteNode(node) {
-  return el('div', { class: 'comment', 'data-kind': 'quote' },
-    el('div', { class: 'cmeta' },
+  return el('div', { class: 'comment quote-node', 'data-kind': 'quote' },
+    el('div', { class: 'quote-meta' },
       el('span', { title: 'A quote-response: this author quoted the post above' }, '❝ '),
       node.author ? el('a', { href: `/u/${encodeURIComponent(node.author)}` }, node.author) : '[muted]',
       el('span', { class: 'muted' }, ` quoted this · ${timeAgo(node.createdTs)} ago · ${fmtScore(node.score)} likes`)),
-    el('div', { class: 'cbody' }, node.maskedRemoved ? el('span', { class: 'muted' }, node.title || '[muted]') : node.body),
-    el('div', { class: 'xs' },
+    el('div', { class: 'quote-body' }, node.maskedRemoved ? el('span', { class: 'muted' }, node.title || '[muted]') : node.body),
+    el('div', { class: 'xs quote-open' },
       el('a', { href: `/p?uri=${encodeURIComponent(node.quoteUri)}` }, 'open its thread ↳')));
 }
 
@@ -780,7 +783,9 @@ export function lensThreadView(params, query) {
       authorHref: (n) => `/u/${encodeURIComponent(n.author)}` }; // 3k: authors reach OUR profile page (which links out)
     const commentsCard = el('div', { class: 'card' });
     for (const node of t.comments) {
-      commentsCard.append(node.kind === 'quote' ? quoteNode(node) : commentNode(node, ctx));
+      // 3q: the substrate decides which nodes are walled quotes — the view
+      // never re-derives it, so a nested quote can't grow a second wall.
+      commentsCard.append(threadNodeStyle(node).walled ? quoteNode(node) : commentNode(node, ctx));
     }
     main.replaceChildren(head, t.comments.length ? commentsCard : emptyState('No replies', 'Nothing below this post yet.'));
   }).catch((e) => main.replaceChildren(emptyState('Lens fetch failed', e.message)));

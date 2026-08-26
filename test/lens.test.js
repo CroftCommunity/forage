@@ -141,6 +141,31 @@ test('3e: replies and quotes interleave time-ordered as ONE continuation; ties b
     'exactly what the appview returned — a detached quote simply is not in the list');
 });
 
+// 3q: a quote-response is a top-level thread ON the post — the OG post stays
+// the container. That is a rule about DEPTH, so it is pinned here and the view
+// reads it rather than deciding for itself.
+test('3q: quote nodes are always top-level; threadNodeStyle walls only those', async () => {
+  const { threadNodeStyle } = await import('../js/substrates/lens.js');
+  const threadResponse = { thread: {
+    post: qPost('root', 'did:plc:op', '2026-08-25T08:00:00Z'),
+    replies: [{ post: qPost('r1', 'did:plc:aa', '2026-08-25T09:00:00Z'), replies: [] }],
+  } };
+  const t = shapeLensThread(threadResponse, QSRC, { quotes: [qPost('q1', 'did:plc:bb', '2026-08-25T10:00:00Z')] });
+  for (const c of t.comments.filter((c) => c.kind === 'quote')) {
+    assert.equal(c.depth, 0, 'a quote never nests — it responds to the post, not to a reply');
+  }
+
+  // the wall marks quoted material. A reply gets the collapse gutter instead;
+  // the two must never appear on the same node or the thread reads as if the
+  // reply below belongs to the quote (observed 2026-08-26).
+  assert.deepEqual(threadNodeStyle({ kind: 'quote', depth: 0 }), { kind: 'quote', walled: true });
+  assert.deepEqual(threadNodeStyle({ kind: 'reply', depth: 0 }), { kind: 'reply', walled: false });
+  assert.deepEqual(threadNodeStyle({ kind: 'reply', depth: 3 }), { kind: 'reply', walled: false });
+  // defensive: if a quote ever arrived nested, it renders as an ordinary reply
+  // rather than stacking a second wall inside the gutter
+  assert.deepEqual(threadNodeStyle({ kind: 'quote', depth: 2 }), { kind: 'reply', walled: false });
+});
+
 test('3e: reply nodes carry kind=reply and nested children keep working', () => {
   const threadResponse = { thread: {
     post: qPost('root', 'did:plc:op', '2026-08-25T08:00:00Z'),
