@@ -69,3 +69,20 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 - One trivial mutation-audit residual: the rising-dispatch fixture's input order
   coincides with its expected order (2i write-up).
 - 5e(1) commit message lost the word "held" to zsh backtick expansion (cosmetic).
+
+## Bluesky-view polish (owner findings, 2026-08-26 local preview)
+
+- **mutuals+1 hangs on the skeleton** — the ring computation is serial-ish and
+  the board waits for the WHOLE fan-out before painting. Fix: paint
+  opportunistically (render each member's posts as they land), add per-request
+  timeouts (D6 saw a ~20s cold-start stall), and consider preloading the ring
+  membership on session restore. Related: DL-016 (cap) and E139 (Jetstream v2
+  freshness).
+- **`#/` hash routing vs clean paths** (`/f/gardening`): the hash router needs
+  no server rewrites, which is why it shipped; clean paths on GitHub Pages need
+  the 404.html SPA fallback trick (it works, and costs a redirect on cold load
+  plus a real 404 status for bots). Decide before the URLs are widely shared —
+  it is a one-way door for link durability.
+- **Naming note:** bsky.app uses the `#` glyph for FEEDS in its nav even though
+  hashtags exist. Our split is the honest one (DL-025): `/f/` feeds are not
+  targetable, `/h/` hashtags are.
