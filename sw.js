@@ -7,8 +7,9 @@
 // Bump CACHE whenever you want to force a clean re-cache on the very next load
 // (asset URLs are hashless, so the name is the version).
 
-const CACHE = 'forage-v11';
+const CACHE = 'forage-v12';
 const SHELL = [
+  './vendor/atproto-oauth-client-browser.js',
   './', './index.html',
   './css/tokens.css', './css/app.css',
   './js/main.js', './js/router.js', './js/store.js', './js/storage.js',

@@ -1,7 +1,7 @@
 # Plan: three modes — memory, the Bluesky view with a ring dial, and the private BBS
 
 date: 2026-08-25
-status: EXECUTING — Phase 1 COMPLETE (1a–1d shipped); next unit: 2a (OAuth vendor + drift check).
+status: EXECUTING — Phase 1 complete; 2a SHIPPED; next unit: 2b (session module).
 Execution in worktrees/forage/modes-bbs (branch claude/modes-bbs)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `10a8ade` (clean tree, pushed; forage.fyi deployed at forage-v11)
@@ -469,7 +469,7 @@ AGENTS.md line; TODO note recording the scoped-wiring deferral. Browser smoke: m
 round-trip with memory visibly unchanged. **Write-set:** `js/devbar.js`,
 `README.md` (+`AGENTS.md`/`TODO.md` — multi-commit, ≤3 per slice).
 
-#### 1d: Workflow-test harness + W1 — ✅ SHIPPED (added 2026-08-25, user direction; udm-patterned)
+#### 1d: Workflow-test harness + W1 — ✅ SHIPPED (`6caa168`+`3ef1f1b`+`c1ca1f9`) (udm-patterned)
 Full-workflow testing joins the gate NOW so the corpus grows with each phase
 instead of arriving as an afterthought. Pattern source: `l360/sdlc/udm/e2e`
 (read 2026-08-25) — a scenario COMPOSER (tests declare a named app state; the
@@ -529,7 +529,7 @@ corpus is JOURNEY files that grow, not one file per feature:**
 
 ### Phase 2 — OAuth (the identity seam, arecipe-precedent)
 
-#### 2a: Vendored client + drift check
+#### 2a: Vendored client + drift check — ✅ SHIPPED
 - [ ] `vendor/atproto-oauth-client-browser.js` — the D4 bundle, committed with a
   header recording package name/version/build command.
 - [ ] `test/vendor.test.js` — RED first: pinned sha256 + version string match (the
