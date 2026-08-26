@@ -340,6 +340,16 @@ test('3r: without onCascade, thread() makes exactly the two calls it always made
   assert.equal(calls.length, 2, 'the cascade is opt-in — no caller pays for it by accident');
 });
 
+// 3u: language rides on the shape, because filtering and annotating are both
+// policy over it (see test/lang.test.js for what the API actually publishes).
+test('3u: a post carries its declared langs; silence is an empty list, not a guess', () => {
+  const withLang = qPost('l1', 'did:plc:a', '2026-08-26T00:00:00Z',
+    { record: { text: 'chīsana', createdAt: '2026-08-26T00:00:00Z', langs: ['ja'] } });
+  assert.deepEqual(shapeLensPost(withLang, QSRC).langs, ['ja']);
+  assert.deepEqual(shapeLensPost(qPost('l2', 'did:plc:a', '2026-08-26T00:00:00Z'), QSRC).langs, [],
+    'no langs in the record means we know nothing — never that it is English');
+});
+
 // ---- 3i (2026-08-26 iteration): title/body, self-threads ----
 
 test('3i: a plain text post does NOT duplicate its text as a preview (title carries it; 300/300 synergy)', () => {

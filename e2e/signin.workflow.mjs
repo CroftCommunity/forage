@@ -98,6 +98,17 @@ export async function run() {
   await page.locator('.masthead a[title="Your Forage profile"]').click();
   await page.waitForSelector('text=@wtest.bsky.social');
   await page.waitForSelector('[data-moderation-panel]');
+
+  // 3u: content languages live here, and the page says plainly that Bluesky
+  // has no account-level language preference for us to honour (verified: no
+  // lang def in app.bsky.actor.defs — DL-026).
+  await page.waitForSelector('[data-lang-panel]');
+  const langText = await page.locator('[data-lang-panel]').innerText();
+  assert.match(langText, /Forage only|this device/i, 'the limitation is stated, not papered over');
+  await page.locator('[data-lang-panel] input[value="ja"]').check();
+  await page.waitForFunction(() => localStorage.getItem('forage.langs') === 'ja');
+  await page.locator('[data-lang-panel] button:has-text("Show every language")').click();
+  await page.waitForFunction(() => localStorage.getItem('forage.langs') === null);
   await page.waitForSelector('text=Muted words');
   // 3k: the account menu — this account listed active, add + sign out present
   await page.waitForSelector('[data-account-menu]');

@@ -11,6 +11,7 @@ import { postRow, commentNode, voteBox, skeleton, emptyState, toast } from './co
 import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow, affordanceFor, feedCardModel, threadNodeStyle } from '../substrates/lens.js';
 import { initSession, createAccountRoster } from '../auth/session.js';
 import * as mediaScale from '../media-scale.js';
+import * as lang from '../lang.js';
 import { MEDIA_SCALE } from '../media-scale.js';
 
 let manager = null;        // null = not booted; 'unavailable' = origin has no OAuth client
@@ -284,15 +285,25 @@ function applyMediaScale() {
 // One board renderer: applies the window sort and the view mode.
 function renderBoard(card, posts) {
   const view = boardView();
-  const ordered = sortWindow(posts, boardSort, boardTimeframe, Date.now());
+  // 3u: the language filter runs BEFORE the window sort, so "Top" ranks what
+  // you can actually read. Nothing is hidden silently — the count says so.
+  const prefs = lang.active();
+  const visible = prefs.length ? posts.filter((p) => lang.matches(p, prefs)) : posts;
+  const hidden = posts.length - visible.length;
+  const ordered = sortWindow(visible, boardSort, boardTimeframe, Date.now());
   // Top + a narrow timeframe can legitimately empty the board — say why
   // rather than showing a blank card (the journey caught this).
-  if (!ordered.length && posts.length) {
+  if (!ordered.length && visible.length) {
     card.replaceChildren(el('div', { class: 'xs muted', style: 'padding:10px' },
       `Nothing in the loaded posts falls within “${boardTimeframe === 'all' ? 'all time' : boardTimeframe}”. Try a wider timeframe, or load More.`));
     return;
   }
   card.replaceChildren(...ordered.map((p) => lensRow(p, view)));
+  if (hidden > 0) {
+    card.append(el('div', { class: 'xs muted', style: 'padding:6px', 'data-lang-hidden': String(hidden) },
+      `${hidden} post${hidden === 1 ? '' : 's'} hidden by your content languages (${prefs.join(', ')}). `,
+      el('a', { href: '/me' }, 'change that ›')));
+  }
   if (boardSort !== 'feed' || (boardSort === 'top' && boardTimeframe !== 'all')) {
     card.append(el('div', { class: 'xs muted', style: 'padding:6px' },
       'Sorted within the loaded posts — load More to widen the window.'));
@@ -311,8 +322,17 @@ const lensRow = (p, view = 'card') => postRow(p, !!session, {
     : (p.media && !p.maskedRemoved) ? el('div', {}, mediaNode(p), tagChips(p) || '')
     : p.preview ? facetedBody({ ...p, body: p.preview }) : tagChips(p),
   authorBadge: verifiedBadge(p),
+  metaExtra: langChip(p),
   compact: view === 'compact',
 });
+
+// 3u: name the language when the post declared one you do not read. With no
+// preference stored the browser's language stands in, so a mixed board is
+// legible before anyone has chosen anything.
+function langChip(p) {
+  const code = lang.annotate(p, lang.active(), typeof navigator !== 'undefined' ? navigator.language : null);
+  return code ? el('span', { class: 'chip lang-chip', 'data-lang-chip': code, title: `This post declares its language as ${code}` }, code) : null;
+}
 
 function lensSidebar() {
   const fieldsCard = el('div', { class: 'card' },
@@ -816,6 +836,47 @@ function trendingRail() {
 
 // 3i (owner): the signed-in identity + moderation mirror live on YOUR page,
 // not the front page. The masthead @handle links here.
+// 3u: content languages. Bluesky publishes a post's declared language
+// (app.bsky.feed.post.langs) but has NO account-level language preference —
+// verified against app.bsky.actor.defs, where no such def exists. The official
+// app's setting is app-local. So this one is ours, it lives on this device
+// only, and the panel says so rather than implying it syncs. (DL-026)
+const LANG_CHOICES = [
+  ['en', 'English'], ['ja', '日本語'], ['pt', 'Português'], ['es', 'Español'],
+  ['de', 'Deutsch'], ['fr', 'Français'], ['ko', '한국어'], ['uk', 'Українська'],
+];
+
+function languagePanel(onChange) {
+  const current = new Set(lang.active());
+  const boxes = LANG_CHOICES.map(([code, label]) => {
+    const box = el('input', { type: 'checkbox', value: code });
+    box.checked = current.has(code);
+    box.addEventListener('change', () => {
+      if (box.checked) current.add(code); else current.delete(code);
+      lang.set([...current]);
+      onChange?.();
+    });
+    return el('label', { class: 'row', style: 'gap:6px;align-items:center' }, box, el('span', { class: 'small' }, label));
+  });
+  const clearBtn = el('button', { class: 'btn sm' }, 'Show every language');
+  clearBtn.addEventListener('click', () => {
+    current.clear();
+    lang.clear();
+    for (const l of boxes) l.querySelector('input').checked = false;
+    onChange?.();
+  });
+  return el('div', { class: 'card', 'data-lang-panel': '1' },
+    el('h2', { style: 'margin:0 0 4px' }, 'Content languages'),
+    el('p', { class: 'xs muted', style: 'margin:0 0 8px' },
+      'Bluesky posts declare their own language, but the account has no language setting for Forage to follow — '
+      + 'the official app keeps that choice inside the app. So this one is Forage only, stored on this device, '
+      + 'and it never changes anything on your Bluesky account.'),
+    el('div', { class: 'row wrap', style: 'gap:10px' }, ...boxes),
+    el('p', { class: 'xs muted', style: 'margin:8px 0 4px' },
+      'With nothing selected, every language shows. A post that declares no language is never hidden.'),
+    clearBtn);
+}
+
 export function lensProfileView() {
   if (!session) {
     return { main: el('div', {}, el('h1', {}, 'Your profile'),
@@ -825,10 +886,10 @@ export function lensProfileView() {
   // capture the handle NOW: an in-flight profile fetch must not read a
   // session that sign-out has since cleared (the journey caught this).
   const handle = session.handle;
-  const main = el('div', {}, skeleton(3), accountMenu(), moderationPanel());
+  const main = el('div', {}, skeleton(3), accountMenu(), languagePanel(), moderationPanel());
   lens.profile(handle)
-    .then((p) => { if (session) main.replaceChildren(profileHeader(p), accountMenu(), moderationPanel()); })
-    .catch(() => { if (session) main.replaceChildren(el('h1', {}, `@${handle}`), accountMenu(), moderationPanel()); });
+    .then((p) => { if (session) main.replaceChildren(profileHeader(p), accountMenu(), languagePanel(), moderationPanel()); })
+    .catch(() => { if (session) main.replaceChildren(el('h1', {}, `@${handle}`), accountMenu(), languagePanel(), moderationPanel()); });
   return { main, side: null };
 }
 

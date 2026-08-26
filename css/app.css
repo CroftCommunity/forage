@@ -176,6 +176,9 @@ kbd { background: var(--green-100); border: 1px solid var(--border); border-radi
 .comment.collapsed > .comment-body > .comment-actions,
 .comment.collapsed > .children { display: none; }
 .collapse-note { font-size: var(--t-xs); color: var(--muted); }
+/* 3u: the language chip — a post's own declaration, not our guess. */
+.chip.lang-chip { text-transform: uppercase; letter-spacing: .04em; font-size: var(--t-xs); }
+
 /* 3s: the favorite star. Pressed = pinned to the top row of your feeds. */
 .btn.star { padding: 4px 8px; line-height: 1; font-size: 16px; }
 .btn.star[aria-pressed="true"] { color: var(--brand); border-color: var(--brand); }

@@ -71,6 +71,9 @@ export async function run() {
       'getFeed': { feed: [
         { post: { ...post('tp1', 'did:plc:cc', '2026-08-25T12:00:00Z').post, likeCount: 50 } },
         { post: { ...post('tp2', 'did:plc:cc', '2026-08-25T15:00:00Z').post, likeCount: 2 } },
+        // 3u: a post that DECLARES a language other than the reader's
+        { post: { ...post('tpja', 'did:plc:cc', '2026-08-25T15:10:00Z').post,
+          record: { text: '宇宙の力に立ち向かう', createdAt: '2026-08-25T15:10:00Z', langs: ['ja'] } } },
         { post: { ...post('tp3', 'did:plc:cc', '2026-08-25T15:30:00Z').post,
           record: { text: '', createdAt: '2026-08-25T15:30:00Z' },
           embed: { $type: 'app.bsky.embed.images#view', images: [
@@ -247,6 +250,22 @@ export async function run() {
   await page.waitForSelector('[data-board-toolbar] [data-media-scale]', { state: 'hidden' });
   await page.locator('[data-board-toolbar] select').last().selectOption('card');
   await page.waitForSelector('[data-board-toolbar] [data-media-scale]');
+
+  // 3u: a post declaring a language you do not read is ANNOTATED, not hidden,
+  // until you say otherwise. Then the filter hides it and SAYS it did — a
+  // silent filter is a lie.
+  await page.waitForSelector('text=宇宙の力に立ち向かう');
+  await page.waitForSelector('[data-lang-chip="ja"]');
+  assert.equal(await page.locator('[data-lang-chip]').count(), 1, 'only the foreign post is annotated');
+  await page.evaluate(() => localStorage.setItem('forage.langs', 'en'));
+  await page.locator('[data-board-toolbar] select').first().selectOption('new');
+  await page.waitForSelector('text=宇宙の力に立ち向かう', { state: 'detached' });
+  await page.waitForSelector('[data-lang-hidden]');
+  assert.match(await page.locator('[data-lang-hidden]').innerText(), /1 post/,
+    'the board says what the language filter removed');
+  await page.evaluate(() => localStorage.removeItem('forage.langs'));
+  await page.locator('[data-board-toolbar] select').first().selectOption('feed');
+  await page.waitForSelector('text=宇宙の力に立ち向かう');
 
   // 3i segment: the board toolbar — window sorts, honestly scoped
   await page.waitForSelector('[data-board-toolbar]');

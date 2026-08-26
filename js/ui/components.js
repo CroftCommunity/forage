@@ -89,6 +89,7 @@ export function postRow(p, viewerCanVote, opts = {}) {
     p.format === 'link' && p.url ? el('span', { class: 'domain' }, domainOf(p.url)) : null,
     el('a', { href: link }, `${p.commentCount} comments`),
     p.edited ? el('span', { class: 'muted' }, 'edited') : null,
+    opts.metaExtra || null, // 3u: the lens hangs a language chip here
   );
   const body = opts.bodyNode !== undefined ? opts.bodyNode
     : (p.format === 'text' && p.body && !p.maskedRemoved

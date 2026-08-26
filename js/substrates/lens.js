@@ -118,6 +118,10 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
     myVote: post.viewer?.like ? 1 : 0,
     cid: post.cid ?? null, likeUri: post.viewer?.like ?? null, // 3c: the boost write pair's inputs
     facets: record.facets || [],
+    // 3u: the post's SELF-DECLARED language(s) — app.bsky.feed.post.langs,
+    // verified present in the lexicon and live. Optional: a post that said
+    // nothing has an empty list, and is never treated as foreign.
+    langs: Array.isArray(record.langs) ? record.langs : [],
     verified: posture.hideBadges ? null
       : post.author?.verification?.verifiedStatus === 'valid' ? 'valid'
       : post.author?.verification?.trustedVerifierStatus === 'valid' ? 'trusted' : null,
