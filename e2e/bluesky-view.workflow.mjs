@@ -150,7 +150,10 @@ export async function run() {
   const afterFirstDial = await graphCalls();
   assert.ok(afterFirstDial > 0, 'the first dial did read the graph');
   await page.locator('[data-ring-dial] button:has-text("World")').first().click();
-  await page.waitForTimeout(300);
+  // wait for the World dial to have SETTLED rather than sleeping at it: a fixed
+  // delay before an assertion that nothing happened can only be too short or
+  // wasteful, and under load it is the former (croftc-e2's observation).
+  await page.waitForFunction(() => !document.querySelector('.skeleton'), null, { timeout: 15000 });
   await page.locator('[data-ring-dial] button:has-text("Mutuals")').first().click();
   await page.waitForSelector('text=post b1');
   assert.equal(await graphCalls(), afterFirstDial,
@@ -266,11 +269,23 @@ export async function run() {
   // thread's head is did:plc:bb's, so the head carries no delete; the reply
   // that is mine does. (A reply to my OWN post cannot test this: 3i hoists a
   // same-author reply into the post body, so it never becomes a comment.)
+  // This thread is still SETTLING when we get here: the 3w reply above triggers
+  // a refetch, and the quote cascade repaints the comment list again when it
+  // lands. waitForSelector is not enough — it can see the control and have it
+  // swapped out before .count() runs, which is exactly how this failed in CI
+  // (0 !== 1) after passing locally many times. So wait for the whole SHAPE we
+  // are about to assert, and let the asserts be confirmations that cannot race.
+  await page.waitForFunction(() => {
+    const mine = document.querySelector('.comment[data-node-id$="/myreply"]');
+    const theirs = document.querySelector('.comment[data-node-id$="/reply1"]');
+    if (!mine || !theirs) return false;
+    return mine.querySelectorAll('[data-delete-post]').length === 1
+      && theirs.querySelectorAll('[data-delete-post]').length === 0
+      && document.querySelectorAll('.card > [data-delete-post]').length === 0;
+  }, null, { timeout: 20000 });
+
   assert.equal(await page.locator('.card > [data-delete-post]').count(), 0,
     'no delete control on a post that is not yours');
-  // wait on the control itself, not on its text: the 3w reply above refetches
-  // the thread, and a text match can resolve against the render being replaced
-  await page.waitForSelector('.comment[data-node-id$="/myreply"] [data-delete-post]');
   assert.equal(await page.locator('.comment[data-node-id$="/myreply"] [data-delete-post]').count(), 1,
     'your own reply can be deleted');
   assert.equal(await page.locator('.comment[data-node-id$="/reply1"] [data-delete-post]').count(), 0,
