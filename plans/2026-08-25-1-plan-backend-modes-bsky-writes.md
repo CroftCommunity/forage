@@ -233,7 +233,7 @@ Firsthand, current tree (details in the prior plan where noted):
 ## Documentation Impact
 
 - `README.md` — modes paragraph (1c); OAuth sign-in (2c); front door + ring dial +
-  lens writes (3d); skins (4b); BBS mode + its alpha caveat (5, at split).
+  lens writes (3d); quotes-as-continuation ledger proposal (3e); skins (4b); BBS mode + its alpha caveat (5, at split).
 - `index.html` — if the front-door flip or Settings pref needs head-inline changes
   (theme-flash precedent), 3d owns them; grepped otherwise-unaffected.
 - `TODO.md` — OAuth line closes (2c); DL-013 + lens polish lines close (3d); scoped
@@ -294,6 +294,13 @@ user-approved checkpoints.
   (serial ~590ms); one cold-start stall of ~20s observed → per-request timeouts
   required. **The cap ships at 25.** Mutuals math trivial at test-account scale;
   pagination costs 1 request per 100 edges per side.
+- **D7 ✅ (added 2026-08-25, user direction: quotes are thread continuation)** —
+  `app.bsky.feed.getQuotes` is UNAUTH-public (200 on public appview), cursored,
+  returns full post views whose `embed` is `app.bsky.embed.record#view` with the
+  quoted original's uri + text inlined; thread post views carry `quoteCount`
+  alongside `replyCount`; a quote post in any feed renders its quoted context
+  for free. Fixtures `wide-quotes.json`, `wide-quote-post-view.json` (redacted).
+  Probe posts (own accounts, both sides) deleted.
 
 Original task specs (all executed as written):
 
@@ -327,6 +334,12 @@ Original task specs (all executed as written):
   **Success:** the gated read/write loop demonstrated end to end, or a precise list
   of what's missing → phase 5 re-scoped at its split. **Disposition:**
   keep-as-fixture (responses; throwaway scripts).
+- [x] **D7: Quote-post mechanics** (added post-Phase-0 on user direction, executed
+  2026-08-25). Probe (own test accounts): original post (user1) + quote post via
+  `app.bsky.embed.record` (user2) + plain reply (user2); `getQuotes` unauth +
+  authed; thread `quoteCount`; quote-post feed view embed shape; delete all.
+  **Success:** the read surface for quotes-as-continuation confirmed (unauth
+  status, pagination, embedded-view shape). **Disposition:** keep-as-fixture.
 - [x] **D6: Ring-dial cost measurements.** For the test account: mutuals computation
   (follows ∩ followers, paginated) — count + wall time; merged author-feed board for
   N ∈ {5, 15, 25} members — wall time + request count. Output: the measured cap the
@@ -466,6 +479,31 @@ same commit. PHASE-GATE: OQ3 (own-test-post-only live validation, confirmed).
 - [ ] Live smoke (Broad): OAuth sign-in → ring dial through mutuals → boost/unboost
   on own test post (evidence recorded); README updated (front door + modes + ring).
 Multi-commit ≤3.
+
+#### 3e: Quotes as thread continuation (added 2026-08-25, user direction; D7-grounded)
+The user's observation: on Bluesky people respond by replying AND by quoting, and a
+topic-centered lens should present BOTH as the thread's continuation (the network's
+actor-centered view scatters quotes onto the quoter's profile). Also the BBS idiom.
+- [ ] `js/substrates/lens.js` — thread shape gains quote-responses: fetch
+  `getQuotes(uri)` (unauth-public per D7) alongside the thread; each quote node is
+  a continuation entry marked `kind: 'quote'` (replies are `kind: 'reply'`),
+  time-interleaved with replies; carries the quote's own uri so it opens as its
+  own thread. Inbound: any post whose `embed` is `record#view` renders quoted
+  context (uri + excerpt) — free per D7.
+- [ ] `js/ui/lens-views.js` — thread view renders one continuation with distinct
+  markers (↳ reply / ❝ quote); quoted-context block on quote posts links to the
+  original's thread; "N quotes" from `quoteCount` when the fetch fails (chip).
+- [ ] `test/lens.test.js` — RED first over canned thread+quotes pages:
+  interleave is time-ordered across kinds (tie → deterministic); a quote node
+  opens as its own thread root; `getQuotes` failure degrades to the count chip
+  with words, replies still render; **detached quotes**: a quote absent from
+  `getQuotes` (author detached it via postgate) simply doesn't appear — we render
+  exactly what the appview returns, never re-derive from search.
+- [ ] `ledger/divergence.js` — proposal entry: quote-respond as a first-class
+  schema event (the BBS/memory tiers have replies only; invariant 8 — wide-tier
+  behavior carries a proposal before it renders); lands with the 3e commit.
+**Wiring:** hermetic thread tests + the 3d live smoke extends to open a thread with
+a known quote (own test post pair). Multi-commit ≤3.
 
 ### Phase 4 — Skins
 
@@ -712,3 +750,14 @@ deleted, OAuth session signed out, Docker container+volume removed. Plan changes
 Reasoning's hosted-PDS sentence corrected; phase 5 gained "D5 inputs to the
 split"; no phase restructuring required — the phase-5 split (mandatory, after
 user review of these findings) now has its factual basis.
+
+### D7 + 3e added — 2026-08-25 (user direction: quotes are thread continuation)
+User observation mid-execution: Bluesky conversations continue through BOTH replies
+and quote posts; a topic-centered lens should present both as one thread
+continuation. Probe D7 ran same-session (Discovery Exemption): getQuotes is
+unauth-public with cursors and embedded-view shapes; thread views carry quoteCount;
+inbound quoted-context rendering is free. Phase 3 gained unit 3e (interleaved
+continuation with distinct markers, failure chip, postgate-detachment honesty —
+render only what the appview returns — and the invariant-8 ledger proposal for
+quote-respond as a schema event). Documentation Impact: 3e's ledger entry noted on
+the ledger line; README thread-view mention rides 3d's update.
