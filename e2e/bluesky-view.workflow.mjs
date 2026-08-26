@@ -75,6 +75,9 @@ export async function run() {
       // what Bluesky's `top` actually looks like (a probe returned 152, 113,
       // 1478, 122, 168 likes in that order). If the board re-sorted this
       // locally, `topB` would jump to the front and the journey would catch it.
+      // 4g: this journey opens feed boards, so the card's adoption read needs a
+      // fixture like any other. Constellation is fenced in the shim (hermetic).
+      'constellation.microcosm.blue/links?target=': { total: 0, linking_records: [] },
       'searchPosts?q=%23camp&tag=camp&limit=30&sort=top&since=': { posts: [
         withLikes(post('topA', 'did:plc:cc', '2026-08-20T13:00:00Z').post, 152),
         withLikes(post('topB', 'did:plc:cc', '2026-08-21T13:00:00Z').post, 1478),

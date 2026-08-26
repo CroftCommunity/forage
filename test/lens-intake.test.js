@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createLens, sortFeeds, filterFeeds, platforms, likeWindow, feedLiveness, liveFeeds, searchWindow } from '../js/substrates/lens.js';
+import { createLens, sortFeeds, filterFeeds, platforms, likeWindow, feedLiveness, liveFeeds, searchWindow, tidTime, countRecent } from '../js/substrates/lens.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const fixture = (n) => JSON.parse(readFileSync(join(root, 'test/fixtures/atproto', `${n}.json`), 'utf8'));
@@ -307,6 +307,82 @@ test('3j: discoverFeeds lists popular generators and searches by query; guests g
   assert.ok(calls[0].includes('getPopularFeedGenerators'));
   await lens.discoverFeeds({ query: 'garden' });
   assert.ok(calls[1].includes('query=garden'), 'the query rides through');
+});
+
+// ---- 4g: adoption signals from Constellation (ADR-003) ----
+// The AppView exposes ONE popularity signal for a feed (likeCount, plus the
+// windows 4c counts). It exposes nothing about how a feed is recommended, and
+// DL-029 records why that gap is permanent. Constellation's backlink index
+// answers it — and its rows are time-windowable for free, because an atproto
+// rkey is a TID encoding a microsecond timestamp.
+
+test('4g: tidTime decodes an rkey to its creation instant', () => {
+  // cross-checked against app.bsky.feed.getLikes createdAt on the SAME record
+  // (probe 2026-08-26): the decode landed 0.15s from the server's own value.
+  assert.equal(tidTime('3mtyzi64agb2i').toISOString().slice(0, 19), '2026-08-26T19:02:27');
+  assert.equal(tidTime('3mtyxzszyhl2i').toISOString().slice(0, 19), '2026-08-26T18:36:32');
+  assert.ok(tidTime('3lgwdn7vd722r') < tidTime('3mtyzi64agb2i'), 'TIDs sort chronologically');
+});
+
+test('4g: tidTime rejects a malformed rkey rather than inventing a date', () => {
+  assert.throws(() => tidTime('not!a!tid'), /not a tid/i);
+  assert.throws(() => tidTime(''), /not a tid/i);
+});
+
+test('4g: countRecent windows backlink rows by their rkey alone — no extra fetches', () => {
+  const now = Date.parse('2026-08-26T20:00:00Z');
+  const rows = [
+    { rkey: '3mtyzi64agb2i' },   // 2026-08-26 19:02 — ~1h ago
+    { rkey: '3mtyxzszyhl2i' },   // 2026-08-26 18:36 — ~1.4h ago
+    { rkey: '3lgwdn7vd722r' },   // 2025-01-something — well outside 30d
+  ];
+  assert.deepEqual(countRecent(rows, now), { d7: 2, d30: 2, total: 3 });
+});
+
+test('4g: adoption asks for quotes and starter packs, and windows both', async () => {
+  const now = Date.parse('2026-08-26T20:00:00Z');
+  const asked = [];
+  const transport = async (url) => {
+    asked.push(url);
+    const coll = new URL(url).searchParams.get('collection');
+    return { ok: true, status: 200, json: async () => ({
+      total: coll === 'app.bsky.feed.post' ? 4287 : 965,
+      linking_records: [{ rkey: '3mtyzi64agb2i' }, { rkey: '3lgwdn7vd722r' }],
+    }) };
+  };
+  const out = await createLens({ transport })
+    .adoption('at://did:plc:a/app.bsky.feed.generator/x', { nowMs: now });
+  assert.equal(asked.length, 2);
+  assert.ok(asked.every((u) => u.includes('constellation.microcosm.blue')));
+  assert.ok(asked.some((u) => u.includes('app.bsky.feed.post')), 'quotes');
+  assert.ok(asked.some((u) => u.includes('app.bsky.graph.starterpack')), 'starter packs');
+  assert.equal(out.quotes.total, 4287);
+  assert.equal(out.quotes.d7, 1, 'the ancient row falls outside the window');
+  assert.equal(out.packs.total, 965);
+});
+
+test('4g: adoption degrades to ABSENT when the host is down — never to zero', async () => {
+  const transport = async () => ({ ok: false, status: 503, json: async () => ({}) });
+  const out = await createLens({ transport }).adoption('at://did:plc:a/app.bsky.feed.generator/x');
+  assert.equal(out, null,
+    'a signal we could not fetch must not render as "0 shares" — ADR-003 point 2');
+});
+
+test('4g: adoption sends nothing about the viewer — ADR-003 point 4', async () => {
+  const seen = [];
+  const transport = async (url, init) => {
+    seen.push({ url, headers: init?.headers || {} });
+    return { ok: true, status: 200, json: async () => ({ total: 0, linking_records: [] }) };
+  };
+  const session = { did: 'did:plc:me', handle: 'me.test', fetchHandler: async () => { throw new Error('the viewer session must never touch Constellation'); } };
+  await createLens({ session, transport }).adoption('at://did:plc:a/app.bsky.feed.generator/x');
+  assert.equal(seen.length, 2, 'it went through the plain transport, not the session');
+  for (const { url, headers } of seen) {
+    assert.ok(!url.includes('did:plc:me'), url);
+    assert.ok(!JSON.stringify(headers).includes('did:plc:me'));
+    assert.ok(!('authorization' in headers), 'no credentials leave for a third-party host');
+    assert.match(headers['user-agent'] || '', /forage/i, 'the operator asks us to identify');
+  }
 });
 
 // ---- 4f: /f/ boards deepen on a BUDGET, and say which way it ended ----

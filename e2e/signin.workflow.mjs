@@ -109,6 +109,11 @@ export async function run() {
       // will not answer — is not reachable through the shim, which only speaks
       // 200; its unit test covers it.)
       [`getFeed?feed=${enc(FRESHEST)}`]: { feed: [] },
+      // 4g: Constellation is FENCED in the shim like every Bluesky host, so this
+      // journey is hermetic. Two rows, one recent and one ancient, so the
+      // week-window is exercised by the TID decode alone.
+      'constellation.microcosm.blue/links?target=': { total: 4287, linking_records: [
+        { rkey: '3mtyzi64agb2i' }, { rkey: '3lgwdn7vd722r' }] },
       'putPreferences': {},
       'getProfile': { did: 'did:plc:w2test', handle: 'wtest.bsky.social', displayName: 'W Tester',
         avatar: 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==', description: 'a test bio', followersCount: 5, followsCount: 7, postsCount: 9 },
@@ -254,6 +259,14 @@ export async function run() {
   await page.goto(`${s.origin}/f/whats-hot`);
   await page.waitForSelector('[data-feed-header]');
   await page.waitForSelector('text=Curated by @bsky.app.');
+  // 4g: the feed card carries adoption signals the AppView does not have —
+  // shares (posts quoting this feed) and starter-pack inclusions, both
+  // windowed from the backlink rkeys alone.
+  await page.waitForSelector('[data-adoption="shown"]');
+  const adoption = await page.locator('[data-adoption]').textContent();
+  assert.match(adoption, /4\.3k shares|4287 shares/, `got: ${adoption}`);
+  assert.match(adoption, /starter pack/, `got: ${adoption}`);
+
   // 4f: Top + a window on a /f/ board pages BACKWARDS on a budget and reports
   // which of the three ways it ended — covered, exhausted, or out of budget.
   // A generator has no server window (DL-028), so this is the honest substitute.

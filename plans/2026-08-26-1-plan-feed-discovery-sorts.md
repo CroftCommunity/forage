@@ -1,9 +1,9 @@
 # Plan: sorting, filtering and time windows — for feed discovery and for boards
 
 date: 2026-08-26
-status: **4a–4f SHIPPED** — everything in this plan that is not gated on an owner
-decision. 4g (Constellation) remains blocked on OQ2; OQ3–OQ5 open.
-Gate green: 333 unit tests, 5/5 workflows. DL-027/028/029 landed.
+status: **4a–4g SHIPPED — the plan is complete.** OQ1/OQ2/OQ3/OQ4 closed; OQ5 open
+(owner), plus 4g's scope cut for the owner to accept or reverse.
+Gate green: 339 unit tests, 5/5 workflows. DL-027–DL-030 landed; ADR-003 recorded.
 Execution in worktrees/forage/feed-discovery-sorts (branch claude/feed-discovery-sorts)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `f08fa9d` (clean tree)
@@ -307,6 +307,33 @@ getLikes    : 2026-08-26T19:02:27.165Z          ← 0.15s apart
 
 For You: 5 quotes in 24h / 55 in 7d; 8 starter-pack adds in 24h / 44 in 7d.
 
+### D10 — `getLikes` on a generator is CONTRACTUAL, and no rate ceiling was reached (2026-08-26)
+
+Closing OQ3 and OQ4, both by evidence rather than judgement.
+
+**OQ3 — is `getLikes` on a feed generator a supported use, or incidental?** The official
+lexicon settles it. `app.bsky.feed.getLikes` is described as *"Get like records which
+reference **a subject** (by AT-URI and CID)"*, and its `uri` parameter is *"AT-URI of
+the **subject** (eg, a post record)."* A post is given as an **example**, not the
+constraint — the endpoint is defined over subjects generally. It is also not in the
+`unspecced` namespace. So 4c rests on a documented general-subject endpoint, not on a
+happy accident, and needs no silent-degradation path for "they took it away."
+
+**OQ4 — the rate ceiling.** `getLikes` returns **no `ratelimit-*` headers at all**, so
+a client cannot self-regulate reactively; the concurrency cap and per-request timeout
+are the only control, which is what 4c and 4d already use. Measured against that:
+
+```
+3 × (117 requests @ concurrency 8)   351 reqs / 32s   200×349, 0 429s, 2 client-side ERR
+1 × (600 requests @ concurrency 24)  600 reqs / 26s   200×595, 0 429s, 5 client-side ERR
+                                     ~950 reqs / ~60s, zero 429, zero server 4xx/5xx
+```
+
+No ceiling was reached at roughly 5× the burst 4c actually issues. The handful of ERRs
+were client-side timeouts under concurrency, not server refusals. And the degradation
+path is already right if a 429 ever does arrive: `get()` throws on a non-2xx, which
+leaves a feed **unmeasured** in 4c and **silent** in 4d — never a wrong number.
+
 ### D8 — what does not exist
 
 - **Subscriber / "joined" counts.** Joins live in `savedFeedsPrefV2`, which is
@@ -435,7 +462,27 @@ surface that earned it. 4 unit tests + a journey segment. Original description f
 budget (pages + wall-clock) is hit, then sort locally and report which of the three
 outcomes happened (D4). Exhausted and budget-hit get distinct words.
 
-**4g — T2 Constellation.** Gated behind the ADR below. "Most shared" and "In starter
+**4g — T2 Constellation. ✅ SHIPPED 2026-08-26, with one deliberate scope cut.**
+Landed as: `tidTime(rkey)` (pure TID→Date decoder, asserted against real rkeys whose
+`getLikes` timestamps we probed — the cross-check is a test, not a one-off);
+`countRecent(rows, nowMs)` windows backlink rows by rkey alone, so a window costs no
+extra request; `lens.adoption(uri)` fetches quotes + starter-pack inclusions through
+the **plain transport, never the session**, and returns `null` — never zeroes — when the
+host does not answer. The feed card renders "4.3k shares (5 this week) · 965 starter
+packs", or renders nothing at all. `constellation.microcosm.blue` is now FENCED in the
+workflow shim, which immediately caught an unfixtured read in a second journey.
+ADR-003 + DL-030 record the dependency. 6 unit tests + a journey segment.
+
+**THE SCOPE CUT — owner's call to reverse.** The plan said "Most shared" and "In
+starter packs" as corpus-wide *sorts*. Built as sorts, each would fire ~222 requests at
+a **volunteer-run public instance** every time someone picked one — against a host whose
+own front page asks "please do not build the torment nexus." So adoption ships **per
+feed, on the card you are already looking at** (2 requests), not as a sort over 111
+feeds. Everything needed for the sorts exists — `adoption()` is already the right shape
+to fan out — so this is one wiring change if the owner decides the citizenship trade is
+acceptable, or wants it gated behind an explicit "measure these" button.
+
+ Gated behind the ADR below. "Most shared" and "In starter
 packs", with TID-decoded windows.
 
 ## Ledger entries — LANDED 2026-08-26 (DL-027, DL-028, DL-029 in `ledger/divergence.js`)
@@ -467,18 +514,20 @@ packs", with TID-decoded windows.
   unveiled; bsky.app's own logged-out view warns on it. Forage currently invents no
   default the account never asked for, which is defensible but is a *choice*. Worth
   an explicit answer before more label-bearing surfaces land.
-- **OQ2 — Constellation as a dependency.** T2 is the only tier that reaches a
-  non-Bluesky host. ADR-002 fixed lens intake as AppView pull; adding
-  `constellation.microcosm.blue` is an amendment to that, not a quiet addition.
-  Wants `docs/adr/0003-*.md` + a `CroftC/.claude/DECISIONS.md` row in the same
-  change. Their operator asks for a project name + contact in the user-agent.
-- **OQ3 — is `getLikes`-on-a-generator contractual?** It is not `unspecced`, but no
-  Bluesky surface uses it this way, so it could change without notice. 4c is the
-  whole "Rising" feature; worth deciding whether it degrades to Most-liked silently
-  or says so.
-- **OQ4 — rate limits, unmeasured.** The 234-request and 915-request runs were
-  clean, but one clean run is not a limit. Wants a measured ceiling before 4d ships
-  a fan-out over search results.
+- ~~**OQ2 — Constellation as a dependency.**~~ **RECORDED 2026-08-26 as
+  `docs/adr/0003-constellation-backlinks.md`**, on the owner's "tier 2 sounds
+  awesome" (2026-08-26). The ADR narrows the dependency to backlink counts on feed
+  generators — not an intake path, so ADR-002 stands for everything it actually
+  decided — and makes degrade-to-absent non-negotiable. Registry row owed in
+  `CroftC/.claude/DECISIONS.md` (meta-repo, ask-first to push).
+- ~~**OQ3 — is `getLikes`-on-a-generator contractual?**~~ **CLOSED 2026-08-26 by D10:
+  yes.** The lexicon defines it over *subjects*, naming a post only as an example, and
+  it is not `unspecced`. No degradation path needed.
+- ~~**OQ4 — rate limits, unmeasured.**~~ **CLOSED 2026-08-26 by D10.** ~950 requests
+  in ~60s, including a burst at 5× 4c's real shape, produced zero 429s and zero server
+  errors. No `ratelimit-*` headers exist on the endpoint, so the concurrency cap and
+  timeout stay the control — and a 429, if one ever arrives, already degrades to
+  *unmeasured* (4c) or *silent* (4d) rather than to a wrong number.
 
 ## E139: answered for discovery, still open for posts
 

@@ -785,13 +785,31 @@ function feedHeaderCard(info, onChange) {
     } catch (e) { toast((want ? 'Join' : 'Leave') + ' failed: ' + e.message, 'err'); }
     finally { btn.disabled = false; btn.replaceChildren(savedNow() ? 'Leave' : 'Join'); btn.classList.toggle('primary', !savedNow()); }
   });
+  // 4g (ADR-003): adoption signals no Bluesky endpoint exposes — how many
+  // people QUOTED this feed, how many starter packs include it. Two requests
+  // to Constellation for the one feed you are looking at, never a fan-out over
+  // a corpus. It renders only if it answers: an absent signal must never read
+  // as "0 shares" (ADR-003 point 2), so this line simply does not appear.
+  const adoption = el('div', { class: 'xs muted', 'data-adoption': 'pending' });
+  lens.adoption(info.uri).then((a) => {
+    if (!a) { adoption.remove(); return; }
+    const part = (n, recent, one, many) =>
+      n ? `${fmtScore(n)} ${n === 1 ? one : many}${recent ? ` (${recent} this week)` : ''}` : null;
+    const bits = [part(a.quotes.total, a.quotes.d7, 'share', 'shares'),
+                  part(a.packs.total, a.packs.d7, 'starter pack', 'starter packs')].filter(Boolean);
+    if (!bits.length) { adoption.remove(); return; }
+    adoption.setAttribute('data-adoption', 'shown');
+    adoption.replaceChildren(bits.join(' · '));
+  }).catch(() => adoption.remove());
+
   return el('div', { class: 'card', 'data-feed-header': '1', 'data-affordance': 'curated' },
     el('div', { class: 'row spread wrap', style: 'gap:10px;align-items:center' },
       el('div', { class: 'row', style: 'gap:10px;align-items:center;min-width:0' },
         m.avatar ? el('img', { src: m.avatar, alt: '', class: 'feed-avatar', loading: 'lazy' }) : null,
         el('div', { style: 'min-width:0' },
           el('div', { class: 'small' }, el('strong', {}, m.headline)),
-          el('div', { class: 'xs muted' }, `${fmtScore(m.likeCount)} likes`))),
+          el('div', { class: 'xs muted' }, `${fmtScore(m.likeCount)} likes`),
+          adoption)),
       el('div', { class: 'row', style: 'gap:6px;align-items:center' }, star, btn)),
     el('div', { class: 'feed-blurb' + (m.blurbIsOwnWords ? '' : ' muted'), 'data-feed-blurb': m.blurbIsOwnWords ? 'feed' : 'ours' },
       m.blurb),

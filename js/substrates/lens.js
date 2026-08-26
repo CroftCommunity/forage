@@ -378,6 +378,52 @@ export function searchWindow(sort, timeframe, nowMs) {
   return { sort: 'top', since: new Date(nowMs - span).toISOString() };
 }
 
+// ---- 4g: adoption signals from Constellation (ADR-003) ----
+// The AppView counts likes on a feed and nothing else about how it is USED —
+// and DL-029 records why that gap is permanent. Constellation indexes atproto
+// backlinks, so it can answer "how many people quoted this feed" and "how many
+// starter packs include it": a recommendation in someone's own words, and a
+// curator staking their pack on it. Neither exists anywhere in app.bsky.
+//
+// ADR-003 bounds the dependency: counts on feed generators only (never an
+// intake path), degrade-to-ABSENT always, no viewer identity ever, and a
+// user-agent that says who we are because the operator asks.
+export const CONSTELLATION = 'https://constellation.microcosm.blue';
+const CONSTELLATION_UA = 'forage (forage.fyi; chase@owasp.org)';
+const BACKLINKS = [
+  { key: 'quotes', collection: 'app.bsky.feed.post', path: '.embed.record.uri' },
+  { key: 'packs', collection: 'app.bsky.graph.starterpack', path: '.feeds[].uri' },
+];
+
+// An atproto rkey is a TID: 13 base32-sortable chars, of which the top 53 bits
+// (after the leading zero) are MICROSECONDS since the epoch and the low 10 are
+// a clock id. So a backlink row carries its own timestamp and the window costs
+// no extra request. Cross-checked against getLikes createdAt on the same
+// record: 0.15s apart (probe 2026-08-26).
+const TID_ALPHABET = '234567abcdefghijklmnopqrstuvwxyz';
+export function tidTime(rkey) {
+  if (typeof rkey !== 'string' || rkey.length !== 13 || [...rkey].some((c) => !TID_ALPHABET.includes(c))) {
+    throw new Error(`not a TID: ${JSON.stringify(rkey)}`);
+  }
+  let n = 0n;
+  for (const c of rkey) n = n * 32n + BigInt(TID_ALPHABET.indexOf(c));
+  return new Date(Number(n >> 10n) / 1000);
+}
+
+// Pure: windows a page of backlink rows by rkey alone. A row whose rkey will
+// not decode is counted in the total and left out of the windows — it is a
+// real link with an unreadable clock, not a reason to fail the whole signal.
+export function countRecent(rows, nowMs) {
+  let d7 = 0; let d30 = 0;
+  for (const r of rows) {
+    let age;
+    try { age = nowMs - tidTime(r.rkey).getTime(); } catch { continue; }
+    if (age < WINDOW_MS.d7) d7 += 1;
+    if (age < WINDOW_MS.d30) d30 += 1;
+  }
+  return { d7, d30, total: rows.length };
+}
+
 // ---- 4b: sorting and filtering the discovery corpus (T0) ----
 // Every dimension here is already in the getPopularFeedGenerators payload, so
 // these cost NOTHING extra. They can be honest about the whole corpus because
@@ -987,6 +1033,29 @@ export function createLens({ session = null, transport = fetch } = {}) {
         if (Date.now() - started > timeoutMs) break;
       }
       return { posts, cursor, pages, outcome, reachedHours: Math.round(reachedMs / 3600_000) };
+    },
+
+    // 4g: the two adoption counts for one feed. Goes through the PLAIN
+    // transport, never the session — a third-party host learns nothing about
+    // who is looking (ADR-003 point 4). Returns null, never zeroes, when the
+    // host will not answer: an absent signal must not render as "0 shares".
+    async adoption(uri, { nowMs = Date.now(), timeoutMs = 6000 } = {}) {
+      try {
+        const pages = await Promise.all(BACKLINKS.map(async ({ collection, path }) => {
+          const qs = new URLSearchParams({ target: uri, collection, path, limit: String(LIKE_PAGE) });
+          const res = await withTimeout(
+            transport(`${CONSTELLATION}/links?${qs}`, { headers: { 'user-agent': CONSTELLATION_UA } }),
+            timeoutMs);
+          if (!res.ok) throw new Error(`constellation: HTTP ${res.status}`);
+          return res.json();
+        }));
+        return Object.fromEntries(BACKLINKS.map(({ key }, i) => [key, {
+          ...countRecent(pages[i].linking_records || [], nowMs),
+          total: pages[i].total ?? 0,
+        }]));
+      } catch {
+        return null;   // ADR-003 point 2: degrade to absent, with words upstairs
+      }
     },
 
     // 4d: one getFeed per feed, limit=1 — freshness needs the newest post, not
