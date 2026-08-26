@@ -57,12 +57,47 @@ new domains with 146.112.x.x block pages). Trust only the authoritative NS
 registration kept. Renew-or-lapse is an open owner decision at renewal time
 (discovery ROADMAP_TODO E122). Do not point anything at it.
 
+## Clean paths on Pages (no rewrite rules)
+
+Forage uses real paths (`/h/gardening`, `/f/@creator/rkey`), and GitHub Pages has no
+rewrite configuration. Two things make that work, and both must stay true:
+
+- **`404.html` is a byte-identical copy of `index.html`** — Pages serves it for any
+  unknown path, so a deep link boots the app. `test/shell.test.js` asserts the two
+  files stay identical; if you edit one, copy it to the other.
+- **The service worker answers navigations from the cached shell**, which turns those
+  deep links into real `200`s once it is installed, and makes them work offline.
+
+**Known caveat:** a visitor's (or a crawler's) *first* hit on a deep link, before the
+worker is installed, gets Pages' **404 status** with the correct body. Search engines
+may treat that as a missing page. The only real fixes are a host with rewrite rules or
+prerendering — neither is done; decide if and when discoverability matters.
+
+Every asset reference must be **absolute**. A route-relative `./icons/x.png` resolves
+against `/f/` on a deep link and 404s; `test/invariants.test.js` scans for them.
+
 ## Service worker & deploys
 
 Assets are hashless; the SW (`sw.js`) serves the shell stale-while-revalidate, so a
 normal deploy is picked up on the visitor's next load. **Bump `CACHE`**
 (`forage-vN`) whenever you need a forced clean re-cache on first load — shell
 changes, icon/manifest changes, anything a returning visitor must see immediately.
+
+**Two rules about `SHELL`, both learned the hard way (v20/v21, 2026-08-26):**
+
+1. **Every runtime module must be listed**, and `test/shell.test.js` fails the build
+   if one is missing. Adding a module means adding it to `SHELL` *and* bumping `CACHE`.
+2. **No duplicate URLs.** `Cache.addAll()` rejects the entire install if two entries
+   resolve to the same URL — and `'/'` and `'./'` are the same URL. When this happened,
+   the worker **never installed**, silently: `caches.open()` had already created the
+   cache, so a cache existed with nothing in it, there was no offline shell, and deep
+   links kept returning 404 status for two releases. Nothing in the console said so.
+   The version readout in Settings is what surfaced it ("no cached shell on this
+   device"), and `test/shell.test.js` now resolves every entry and fails on collisions.
+
+Verifying a deploy actually took: `curl -s https://forage.fyi/sw.js | grep CACHE`
+should show the version you shipped, and Settings → the version row should say
+*current* rather than *stale* after a reload.
 
 ## Brand assets
 

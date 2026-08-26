@@ -3,7 +3,9 @@
 ## Identity (workspace architecture)
 
 **Scope:** The social forum (forage.fyi, /f/ convention, behavior-scale build; events per `docs/adr/`).
-**Not this repo:** generic atproto auth (workspace prior art — DECISIONS.md; OAuth pending).
+**Not this repo:** generic atproto auth (workspace prior art — DECISIONS.md). Forage
+runs the vendored official `@atproto/oauth-client-browser`; loopback OAuth against the
+real auth server is live-verified.
 **Provides:** the forage site. **Consumes:** AppView pulls (ADR 0002).
 Card + altitudes: `CroftC/.claude/ARCHITECTURE.md`.
 
@@ -14,10 +16,8 @@ tier dial. This page is the law agents execute against; it is deliberately short
 Sources of truth, in order: `js/schema.js`, `scenarios/`, `js/config/routing.js`,
 `ledger/divergence.js`. Modes are named routing tables (`MODES` there) with a
 store-side lifecycle: network modes are RAM-only and `forage.state` is written by
-the memory mode alone (`test/store-modes.test.js` is the teeth). (The latter two arrive in phases 3–4 of
-`plans/2026-08-24-1-plan-behavior-scale-scaffolding.md`; until then the plan is the
-routing/ledger authority.) When these disagree with any document **including this
-one**, they win; fix the document.
+the memory mode alone (`test/store-modes.test.js` is the teeth). When these disagree
+with any document **including this one**, they win; fix the document.
 
 ## Invariants
 
@@ -113,9 +113,18 @@ resolved by the active presentation mode (`js/mode.js`):
 `/` home · `/f/@creator/:rkey` feed board (the SHAREABLE form) · `/f/:slug` the
 same board in-session · `/h/:tag` hashtag board · `/p?uri=` thread ·
 `/u/:handle` profile · `/me` your session + accounts + moderation mirror ·
-`/feeds` discovery · `/mode` · `/settings`. Cross-population routes gate with
-words. A feed link must carry its CREATOR to survive being pasted: an rkey has
-no DID, and nothing resolves one without a repo (3v). Human aliases still route.
+`/feeds` discovery · `/mode` · `/settings` · `/frontiers` (the divergence ledger,
+rendered). Cross-population routes gate with words. A feed link must carry its
+CREATOR to survive being pasted: an rkey has no DID, and nothing resolves one
+without a repo (3v). Human aliases still route.
+
+Two generations of link stay alive on purpose, because both were shared before
+the current scheme existed: `#/…` fragments bridge to their clean path at boot
+AND live (`hashchange`), and the `/lens/…` prefix redirects to its unprefixed
+equivalent. Neither is a route to write new links against; both exist so old
+ones do not rot. An OAuth fragment response (`code` + `state`) is never mistaken
+for a route — that bridge explicitly refuses it, which is what stops it eating a
+sign-in callback.
 
 The lens writes, and `test/invariants.test.js` counts every one of them —
 adding another means arguing for it there first:
@@ -144,14 +153,17 @@ Every task ends with:
 
 1. `npm test` — the whole gate (characterization, purity, invariant scans; CI runs
    the identical command).
-2. `npm run conformance` — once phase 4 lands; until then this line is inert and
-   `npm test` is the full gate.
+2. `npm run conformance` — replays the scenario library on two substrates and
+   compares observables (88 today). Live; not optional.
 2b. `npm run workflows` — the workflow corpus (`e2e/*.workflow.mjs`): the app as
    a running system in a real browser, shim-backed and hermetic; LIVE=1/DOCKER=1
    unlock the credentialed/daemon-bound journeys locally.
-3. The acceptance checklist items for affected screens, executed seat by seat via
-   the dev-bar persona switcher (seat-level and observable: "switch to seat
-   `newbie.moss`; Create Field is gated with the probation message").
+3. The acceptance checklist items for affected screens. In the MEMORY population
+   that means seat by seat via the dev-bar persona switcher (seat-level and
+   observable: "switch to seat `newbie.moss`; Create Field is gated with the
+   probation message"). The Bluesky population has no seats — it has one real
+   account — so its equivalent is the signed-out / restoring / signed-in triad,
+   and anything that writes is checked against a test account, never the owner's.
 4. A report of results, including tolerated differences with ledger ids.
 
 ## Escalation
