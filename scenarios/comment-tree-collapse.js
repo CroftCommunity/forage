@@ -7,8 +7,8 @@ const DAY = 86400;
 const events = [
   { t: -30 * DAY, actor: 'u_sage', type: 'account.registered', payload: { handle: 'sage' } },
   { t: -30 * DAY + 1, actor: 'u_fern', type: 'account.registered', payload: { handle: 'fern' } },
-  { t: 0, actor: 'u_sage', type: 'field.created', payload: { id: 'f_grove', slug: 'grove', title: 'Grove' } },
-  { t: 10, actor: 'u_fern', type: 'post.created', payload: { id: 'p_tree', fieldId: 'f_grove', format: 'text', title: 'Deep thread' } },
+  { t: 0, actor: 'u_sage', type: 'feed.created', payload: { id: 'f_grove', slug: 'grove', title: 'Grove' } },
+  { t: 10, actor: 'u_fern', type: 'post.created', payload: { id: 'p_tree', feedId: 'f_grove', format: 'text', title: 'Deep thread' } },
   { t: 20, actor: 'u_sage', type: 'comment.created', payload: { id: 'c_top', postId: 'p_tree', bodyMd: 'Top comment' } },
   { t: 30, actor: 'u_fern', type: 'comment.created', payload: { id: 'c_reply', postId: 'p_tree', parentId: 'c_top', bodyMd: 'A reply' } },
   { t: 40, actor: 'u_sage', type: 'comment.edited', payload: { commentId: 'c_reply', patch: { bodyMd: 'A reply (edited)' } } },

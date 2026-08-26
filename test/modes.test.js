@@ -89,8 +89,8 @@ test('1a wiring: with a registered bbs substrate and mode=bbs, a REAL action div
   const before = store.getEvents().length;
   setMode('bbs');
   try {
-    const anyField = Object.keys(store.getState().fields)[0];
-    await actions.createPost({ fieldId: anyField, format: 'text', title: 'diverted', bodyMd: 'x' });
+    const anyFeed = Object.keys(store.getState().feeds)[0];
+    await actions.createPost({ feedId: anyFeed, format: 'text', title: 'diverted', bodyMd: 'x' });
   } finally {
     setMode('memory');
   }

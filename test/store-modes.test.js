@@ -123,8 +123,8 @@ test('1b wiring: a REAL action in a network mode lands in RAM via the registered
   // RAM dataset is empty — give the entry point something to post into
   store.loadEvents(buildSeed());
   store.setPersona('u_fern');
-  const anyField = Object.keys(store.getState().fields)[0];
-  await actions.createPost({ fieldId: anyField, format: 'text', title: 'camp post', bodyMd: 'x' });
+  const anyFeed = Object.keys(store.getState().feeds)[0];
+  await actions.createPost({ feedId: anyFeed, format: 'text', title: 'camp post', bodyMd: 'x' });
   assert.equal(Object.values(store.getState().posts).some((p) => p.title === 'camp post'), true,
     'the post is visible via selectors in RAM');
   assert.equal(rawKey(), before, 'forage.state byte-identical through the whole journey');

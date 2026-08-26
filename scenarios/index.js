@@ -2,7 +2,7 @@
 // (test/coverage.test.js) walks EVENT_TYPES and fails on any mutation type no
 // scenario exercises (invariant 6, mechanical). Seed (4c) replays this list.
 
-import { fieldLifecycle } from './field-lifecycle.js';
+import { feedLifecycle } from './feed-lifecycle.js';
 import { postVoteRank } from './post-vote-rank.js';
 import { commentTreeCollapse } from './comment-tree-collapse.js';
 import { modRemoveMask } from './mod-remove-mask.js';
@@ -14,7 +14,7 @@ import { searchVisibility } from './search-visibility.js';
 import { demoExtras } from './demo-extras.js';
 
 export const SCENARIOS = [
-  fieldLifecycle,
+  feedLifecycle,
   postVoteRank,
   commentTreeCollapse,
   modRemoveMask,

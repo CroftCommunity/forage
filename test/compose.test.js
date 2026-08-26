@@ -9,7 +9,7 @@
 //   • facets: byte-indexed annotations (app.bsky.richtext.facet), the same
 //     shape the reader already decodes in facetSegments.
 //   • tags: "Additional hashtags, in addition to any included in post text
-//     and facets" — so a tag in the text needs a FACET, not this field.
+//     and facets" — so a tag in the text needs a FACET, not this feed.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { POST_LIMITS, graphemes, byteLength, detectFacets, withTag, buildPost } from '../js/compose.js';
@@ -80,7 +80,7 @@ test('3w: buildPost produces a record the lexicon accepts, and nothing else', ()
   assert.equal(rec.createdAt, '2026-08-26T12:00:00.000Z');
   assert.equal(rec.facets.length, 1);
   assert.deepEqual(rec.langs, ['en']);
-  assert.equal(rec.tags, undefined, 'a tag written in the text is a FACET, never also the tags field');
+  assert.equal(rec.tags, undefined, 'a tag written in the text is a FACET, never also the tags feed');
   assert.equal(rec.embed, undefined, 'no media in this unit — absent, not null');
   assert.equal(rec.reply, undefined);
 });

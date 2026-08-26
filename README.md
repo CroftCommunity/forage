@@ -164,23 +164,30 @@ Memory sandbox only — the Bluesky view has one real account, not eight seats.
 | 2 | `owner.sage` | Owner of `gardening` |
 | 3 | `steward.briar` | Steward of `gardening` + plain member elsewhere (dual-hat) |
 | 4 | `member.fern` | Established member — the default reader seat |
-| 5 | `newbie.moss` | Probation: rate-limited, cannot create Fields |
+| 5 | `newbie.moss` | Probation: rate-limited, cannot create feeds |
 | 6 | `banned.thorn` | Banned from `gardening`, active elsewhere |
 | 7 | `heavy.aspen` | High reputation, at the post rate limit, saved items populated |
 | 8 | `pristine.dove` | Never receives seed activity — first-run and empty states forever |
 
 ## Nomenclature
 
-The two populations do not share every word, on purpose. A **Field** is a thing you
-join and stewards moderate; a **feed** is somebody else's program. Calling a feed a
-Field would promise governance that does not exist there.
+Both populations call the place posts live a **feed**. That was not always true —
+the sandbox called it a *Field* until 2026-08-26 — and the rename went all the way
+down, through the event vocabulary and the `fyi.forage.feed` lexicon, rather than
+stopping at the labels. One product, one word.
+
+What the two populations do *not* share is what a feed can promise:
 
 | Concept | Memory sandbox | Bluesky view |
 |---|---|---|
-| The place posts live | **Field** (`/f/:slug`) | **feed** (`/f/@creator/:rkey`) or **hashtag** (`/h/:tag`) |
+| The place posts live | **feed** (`/f/:slug`) | **feed** (`/f/@creator/:rkey`) or **hashtag** (`/h/:tag`) |
+| Who governs it | its **stewards** — you join, they moderate, the audit log is public | nobody. A Bluesky feed is somebody else's program; you cannot join it in that sense, and you cannot post into it |
 | Rating | **Boost / Bury** | **Boost** only — a real like; Bluesky has no bury (DL-011) |
-| Volunteer moderator | **Steward** | none — moderation is your own account's mutes, blocks, labelers and muted words |
-| Public mod log | **Audit log** | none — nothing here moderates anyone else |
+| The rendered stream | **board** | **board** |
+
+So "feed" names the same *shape* in both, and the governance is what differs — which
+is the honest split, because it is the part a reader can actually feel. The private
+BBS (phase 5) is where a feed regains membership and gatekeeping.
 
 Shared: a **post** is a post, a **thread** is a thread, and in the Bluesky view a
 thread continues through quotes as well as replies, because a quote is a reply the

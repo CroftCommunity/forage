@@ -138,9 +138,30 @@ export function exitMode() {
 }
 
 // Hydrate from storage on boot. Returns true if there was saved state.
+// The Feed → feed rename (2026-08-26) changed the event vocabulary itself, so
+// a log written before it cannot be folded by the current reducer. Pre-1.0
+// carries no migration layer — but the reducer's switch has no default branch,
+// which means a legacy log would fold into an EMPTY world: the worst possible
+// failure, indistinguishable from a first visit. Detect it and say so instead.
+export function legacyLog(events) {
+  if (!Array.isArray(events)) return false;
+  // These two strings are deliberately the OLD vocabulary and must never be
+  // renamed with the rest — this function exists to recognise pre-rename data,
+  // so a search-and-replace over it silently inverts its meaning and makes it
+  // reject every CURRENT log instead. (It did, once. The tests caught it.)
+  return events.some((e) => String(e?.type || '').startsWith('field.')
+    || (e?.payload && Object.prototype.hasOwnProperty.call(e.payload, 'fieldId')));
+}
+
 export function hydrate() {
   const data = storage.load();
   if (!data) return false;
+  if (legacyLog(data.events)) {
+    // Loud, and recoverable: the sandbox is a local instrument, so the honest
+    // move is to name what happened and let the reader choose to clear it.
+    store.legacy = true;
+    return false;
+  }
   store.events = data.events || [];
   store.personaId = data.persona ?? DEFAULT_PERSONA_ID;
   store.dev = { latency: 0, failNext: false, frontiers: true, ...(data.dev || {}) };

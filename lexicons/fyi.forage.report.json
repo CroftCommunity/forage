@@ -10,7 +10,7 @@
         "type": "object",
         "required": [
           "subject",
-          "field",
+          "feed",
           "reason",
           "createdAt"
         ],
@@ -20,7 +20,7 @@
             "format": "at-uri",
             "description": "The reported post or comment"
           },
-          "field": {
+          "feed": {
             "type": "string",
             "format": "at-uri",
             "description": "The Field it was reported in"

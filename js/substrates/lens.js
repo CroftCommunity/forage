@@ -14,8 +14,8 @@ export const LENS_PERMS = Object.freeze({
   viewerId: null, loggedIn: false, admin: false, probation: false,
   isSteward: false, isOwner: false, bannedHere: false, banInfo: null,
   canView: true, canVote: false, canComment: false, canPost: false,
-  canReport: false, canCreateField: false, canModerate: false,
-  canManageField: false, canSuspendAccount: false, canCloseField: false,
+  canReport: false, canCreateFeed: false, canModerate: false,
+  canManageFeed: false, canSuspendAccount: false, canCloseFeed: false,
   reportWeight: 0,
 });
 
@@ -151,8 +151,8 @@ export function facetSegments(text, facets) {
 const maskedByViewer = (post) =>
   !!(post.author?.viewer?.muted || post.author?.viewer?.blockedBy || post.viewer?.muted);
 
-// One bsky post view -> our post shape. `src` names the Field this lens
-// surface renders as: { fieldId, fieldSlug, fieldTitle }.
+// One bsky post view -> our post shape. `src` names the Feed this lens
+// surface renders as: { feedId, feedSlug, feedTitle }.
 export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
   const record = post.record || {};
   const createdTs = Date.parse(record.createdAt || post.indexedAt);
@@ -160,7 +160,7 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
   const external = post.embed?.external;
   const text = record.text || '';
   const base = {
-    id: post.uri, fieldId: src.fieldId, fieldSlug: src.fieldSlug, fieldTitle: src.fieldTitle,
+    id: post.uri, feedId: src.feedId, feedSlug: src.feedSlug, feedTitle: src.feedTitle,
     format: external ? 'link' : 'text', tagId: null,
     nsfw: [...labels].some((l) => NSFW_LABELS.has(l)), spoiler: false,
     createdTs, createdSec: Math.floor(createdTs / 1000),
@@ -356,7 +356,7 @@ export function shapeLensFeed(feedResponse, src, { sort = 'lens', timeframe = 'a
     .map((item) => shapeLensPost(item.post, src, posture))
     .filter((p) => !p.hidden); // label-hidden: dropped from lists
   return {
-    scope: `lens:${src.fieldSlug}`, sort, timeframe,
+    scope: `lens:${src.feedSlug}`, sort, timeframe,
     perms: LENS_PERMS,
     posts,
     cursor: feedResponse.cursor,
@@ -725,7 +725,7 @@ export function feedCardModel(info) {
   };
 }
 
-// OQ1: a lens Field's slug is the feed/list rkey (or the author handle).
+// OQ1: a lens Feed's slug is the feed/list rkey (or the author handle).
 const slugForSource = (source) => {
   if (source.kind === 'author') return source.actor;
   if (source.kind === 'timeline') return 'following';
@@ -736,7 +736,7 @@ const slugForSource = (source) => {
 // With a session — the OAUTH shape { did, handle, fetchHandler } from
 // js/auth/session.js — every read flows through the DPoP-bound fetchHandler
 // with a RELATIVE /xrpc path (the library owns auth headers, tokens, and
-// refresh; the lens builds none of it) and the personal surfaces (fields,
+// refresh; the lens builds none of it) and the personal surfaces (feeds,
 // search, timeline) open up.
 // THE write pair (DL-013): boost = a real Bluesky like.
 const LIKE_COLLECTION = 'app.bsky.feed.like';
@@ -795,7 +795,7 @@ export function createLens({ session = null, transport = fetch } = {}) {
 
   const srcCtx = (source, title) => {
     const slug = slugForSource(source);
-    return { fieldId: `lens:${slug}`, fieldSlug: slug, fieldTitle: title || slug };
+    return { feedId: `lens:${slug}`, feedSlug: slug, feedTitle: title || slug };
   };
 
   return {
@@ -809,7 +809,7 @@ export function createLens({ session = null, transport = fetch } = {}) {
         data = await get('app.bsky.feed.getTimeline', { limit: 30, cursor });
       } else data = await get('app.bsky.feed.getFeed', { feed: source.uri, limit: 30, cursor });
       const src = srcCtx(source, title);
-      if (slug) { src.fieldSlug = slug; src.fieldId = `lens:${slug}`; } // 3i: display slug override
+      if (slug) { src.feedSlug = slug; src.feedId = `lens:${slug}`; } // 3i: display slug override
       return { ...shapeLensFeed(data, src, {}, posture), ...src };
     },
 
@@ -839,7 +839,7 @@ export function createLens({ session = null, transport = fetch } = {}) {
     // it: QUOTE_CASCADE_DEPTH, and the counts the appview already gave us —
     // a quote reporting no replies and no quotes is never asked about.
     async thread(uri, src, { onCascade } = {}) {
-      const source = src || { fieldId: 'lens:thread', fieldSlug: 'thread', fieldTitle: 'Thread' };
+      const source = src || { feedId: 'lens:thread', feedSlug: 'thread', feedTitle: 'Thread' };
       const [data, quotesRes] = await Promise.all([
         get('app.bsky.feed.getPostThread', { uri, depth: 10 }),
         get('app.bsky.feed.getQuotes', { uri, limit: 50 }).catch(() => null), // degrade, never break the thread
@@ -877,10 +877,10 @@ export function createLens({ session = null, transport = fetch } = {}) {
       return shape();
     },
 
-    // The lens Fields list: pinned/saved feeds + lists from preferences,
+    // The lens Feeds list: pinned/saved feeds + lists from preferences,
     // display names resolved through getFeedGenerators. Session-only.
-    async fields() {
-      if (!session) throw new Error('lens: Fields come from your saved feeds — needs a session');
+    async feeds() {
+      if (!session) throw new Error('lens: Feeds come from your saved feeds — needs a session');
       const prefs = await get('app.bsky.actor.getPreferences');
       const saved = (prefs.preferences || []).find((p) => (p.$type || '').includes('savedFeedsPref'));
       const items = saved?.items || [];
@@ -973,7 +973,7 @@ export function createLens({ session = null, transport = fetch } = {}) {
       const ringInfo = resumed ? { members: Object.keys(resumed.m) } : await this.ringMembers(ring);
       const cursors = resumed ? resumed.m : Object.fromEntries((ringInfo.members ?? []).map((d) => [d, undefined]));
       const failures = [];
-      const src0 = { fieldId: `lens:ring:${ring}`, fieldSlug: `ring:${ring}`, fieldTitle: ring === 'mutuals' ? 'Mutuals' : 'Mutuals +1' };
+      const src0 = { feedId: `lens:ring:${ring}`, feedSlug: `ring:${ring}`, feedTitle: ring === 'mutuals' ? 'Mutuals' : 'Mutuals +1' };
       const withTimeout = (p, did) => new Promise((resolve) => {
         let settled = false;
         const timer = setTimeout(() => { if (!settled) { settled = true; failures.push(did); resolve(null); } }, timeoutMs);
@@ -1083,7 +1083,7 @@ export function createLens({ session = null, transport = fetch } = {}) {
         if (!session) throw new Error('lens: hashtag streams need a session (search is 403 unauthenticated) — sign in first');
         const win = searchWindow(sort, timeframe, nowMs);
         const data = await get('app.bsky.feed.searchPosts', { q: `#${key}`, tag: key, limit: 30, ...win });
-        const src = { fieldId: `lens:h:${key}`, fieldSlug: `h:${key}`, fieldTitle: `#${key}` };
+        const src = { feedId: `lens:h:${key}`, feedSlug: `h:${key}`, feedTitle: `#${key}` };
         // wholeCorpus: this ordering came from the server over EVERYTHING that
         // matched, so the board must not print the "sorted within the loaded
         // posts" caveat — it would be a lie here.
@@ -1318,7 +1318,7 @@ export function createLens({ session = null, transport = fetch } = {}) {
     async search(q) {
       if (!session) throw new Error('lens: search needs a session (403 unauth — probe-verified)');
       const data = await get('app.bsky.feed.searchPosts', { q, limit: 30 });
-      const src = { fieldId: 'lens:search', fieldSlug: 'search', fieldTitle: `Search: ${q}` };
+      const src = { feedId: 'lens:search', feedSlug: 'search', feedTitle: `Search: ${q}` };
       return { posts: (data.posts || [])
         .filter((p) => !posture.blockedDids.has(p.author?.did))
         .map((p) => shapeLensPost(p, src, posture))

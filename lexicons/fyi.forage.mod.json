@@ -10,7 +10,7 @@
         "type": "object",
         "required": [
           "action",
-          "field",
+          "feed",
           "createdAt"
         ],
         "properties": {
@@ -29,7 +29,7 @@
               "stewardRemoved"
             ]
           },
-          "field": {
+          "feed": {
             "type": "string",
             "format": "at-uri",
             "description": "The Field this action applies to"

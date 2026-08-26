@@ -150,10 +150,10 @@ export async function run() {
   });
   const { page } = s;
 
-  // signed-out: the OAuth card, no app-password field anywhere
+  // signed-out: the OAuth card, no app-password feed anywhere
   await page.goto(`${s.origin}/`);
   await page.waitForSelector('text=Sign in with Bluesky');
-  assert.equal(await page.locator('input[type="password"]').count(), 0, 'no password field exists anymore');
+  assert.equal(await page.locator('input[type="password"]').count(), 0, 'no password feed exists anymore');
 
   // OQ5 (owner, 2026-08-26): a LOGGED-OUT visitor gets the strictest stance —
   // bluebird's label floor, which is wider than the adult switch and admits no
@@ -292,7 +292,7 @@ export async function run() {
   // 4a: it is gone from the sidebar too, even though the account JOINED it —
   // membership does not override the account's moderation setting.
   assert.equal(await page.locator('.side >> text=After Dark').count(), 0,
-    'a joined adult feed does not appear in Fields');
+    'a joined adult feed does not appear in Feeds');
 
   // 4a: and its board never paints. A BARE slug never registers (nothing that
   // survives the posture can register it), so that link lands on the

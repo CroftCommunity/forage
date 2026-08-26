@@ -5,12 +5,12 @@
 export function emptyState() {
   return {
     users: {},        // id -> {id, handle, email, registeredTs, suspended, prefs}
-    fields: {},       // id -> field
+    feeds: {},       // id -> feed
     posts: {},        // id -> post
     comments: {},     // id -> comment
     votes: {},        // 'type:id' -> { userId: value }
     saves: {},        // userId -> Set('type:id')
-    reports: [],      // {id, subjectType, subjectId, fieldId, reason, ruleId, detail, reporterId, ts, resolvedBy, resolution}
+    reports: [],      // {id, subjectType, subjectId, feedId, reason, ruleId, detail, reporterId, ts, resolvedBy, resolution}
     audit: [],        // chronological mod.* events (the public log IS these)
     notifications: {},// userId -> [ {id, ts, kind, subjectType, subjectId, fromId, read} ]
     _counter: 0,
@@ -35,8 +35,8 @@ export function reduce(state, ev) {
       if (s.users[actor]) s.users[actor].prefs = { ...s.users[actor].prefs, ...p.patch };
       break;
 
-    case 'field.created':
-      s.fields[p.id] = {
+    case 'feed.created':
+      s.feeds[p.id] = {
         id: p.id, slug: p.slug, title: p.title, description: p.description || '',
         settings: { requireTags: false, nsfwAllowed: true, automod: [], rules: [], ...(p.settings || {}) },
         createdTs: ev.ts, ownerId: actor,
@@ -45,24 +45,24 @@ export function reduce(state, ev) {
         banned: {}, // userId -> {ts, reason, duration}
       };
       break;
-    case 'field.settingsUpdated':
-      if (s.fields[p.fieldId]) {
+    case 'feed.settingsUpdated':
+      if (s.feeds[p.feedId]) {
         const { description, title, ...rest } = p.patch;
-        if (description !== undefined) s.fields[p.fieldId].description = description;
-        if (title !== undefined) s.fields[p.fieldId].title = title;
-        s.fields[p.fieldId].settings = { ...s.fields[p.fieldId].settings, ...rest };
+        if (description !== undefined) s.feeds[p.feedId].description = description;
+        if (title !== undefined) s.feeds[p.feedId].title = title;
+        s.feeds[p.feedId].settings = { ...s.feeds[p.feedId].settings, ...rest };
       }
       break;
-    case 'field.joined':
-      if (s.fields[p.fieldId] && actor) s.fields[p.fieldId].members.add(actor);
+    case 'feed.joined':
+      if (s.feeds[p.feedId] && actor) s.feeds[p.feedId].members.add(actor);
       break;
-    case 'field.left':
-      if (s.fields[p.fieldId] && actor) s.fields[p.fieldId].members.delete(actor);
+    case 'feed.left':
+      if (s.feeds[p.feedId] && actor) s.feeds[p.feedId].members.delete(actor);
       break;
 
     case 'post.created':
       s.posts[p.id] = {
-        id: p.id, fieldId: p.fieldId, authorId: actor, format: p.format,
+        id: p.id, feedId: p.feedId, authorId: actor, format: p.format,
         title: p.title, bodyMd: p.bodyMd || '', url: p.url || '', tagId: p.tagId || null,
         nsfw: !!p.nsfw, spoiler: !!p.spoiler, createdTs: ev.ts,
         deleted: false, removed: false, removedReason: '', locked: false, pinned: false,
@@ -111,7 +111,7 @@ export function reduce(state, ev) {
     case 'report.filed':
       s.reports.push({
         id: p.id || `r${s.reports.length}`, subjectType: p.subjectType, subjectId: p.subjectId,
-        fieldId: p.fieldId, reason: p.reason, ruleId: p.ruleId || null, detail: p.detail || '',
+        feedId: p.feedId, reason: p.reason, ruleId: p.ruleId || null, detail: p.detail || '',
         reporterId: actor, ts: ev.ts, resolvedBy: null, resolution: null,
       });
       break;
@@ -161,16 +161,16 @@ function applyMod(s, ev, p) {
     case 'mod.pinned':   setSubject(s, p, { pinned: true }); break;
     case 'mod.unpinned': setSubject(s, p, { pinned: false }); break;
     case 'mod.banned':
-      if (s.fields[p.fieldId]) s.fields[p.fieldId].banned[p.userId] = { ts: ev.ts, reason: p.reason || '', duration: p.duration || null };
+      if (s.feeds[p.feedId]) s.feeds[p.feedId].banned[p.userId] = { ts: ev.ts, reason: p.reason || '', duration: p.duration || null };
       break;
     case 'mod.unbanned':
-      if (s.fields[p.fieldId]) delete s.fields[p.fieldId].banned[p.userId];
+      if (s.feeds[p.feedId]) delete s.feeds[p.feedId].banned[p.userId];
       break;
     case 'mod.stewardAdded':
-      if (s.fields[p.fieldId]) s.fields[p.fieldId].stewards.add(p.userId);
+      if (s.feeds[p.feedId]) s.feeds[p.feedId].stewards.add(p.userId);
       break;
     case 'mod.stewardRemoved':
-      if (s.fields[p.fieldId]) s.fields[p.fieldId].stewards.delete(p.userId);
+      if (s.feeds[p.feedId]) s.feeds[p.feedId].stewards.delete(p.userId);
       break;
   }
 }

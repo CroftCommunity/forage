@@ -78,15 +78,15 @@ function postBadges(p) {
 
 // ---------- post row (feed) ----------
 export function postRow(p, viewerCanVote, opts = {}) {
-  const link = `/f/${p.fieldSlug}/p/${p.id}`;
+  const link = `/f/${p.feedSlug}/p/${p.id}`;
   const titleLink = p.format === 'link' && p.url
     ? el('a', { href: p.url, target: '_blank', rel: 'noopener noreferrer' }, p.title)
     : el('a', { href: link }, p.title);
   const meta = el('div', { class: 'postmeta' },
     // 3v: the lens passes a creator-qualified href when it has one, so a
-    // copied breadcrumb resolves for a stranger. Memory Fields are local and
+    // copied breadcrumb resolves for a stranger. Memory Feeds are local and
     // need no creator, so the plain slug stays the default.
-    el('a', { href: opts.fieldHref || `/f/${p.fieldSlug}` }, `f/${p.fieldSlug}`),
+    el('a', { href: opts.feedHref || `/f/${p.feedSlug}` }, `f/${p.feedSlug}`),
     p.author ? el('span', {}, `by ${p.author}`, opts.authorBadge || '') : el('span', { class: 'muted' }, 'by [removed]'),
     el('span', {}, timeAgo(p.createdTs) + ' ago'),
     p.format === 'link' && p.url ? el('span', { class: 'domain' }, domainOf(p.url)) : null,
@@ -186,7 +186,7 @@ function renderChildren(container, node, ctx) {
 
   // continuation stub past depth 10 (spec §9 / acceptance)
   if (node.deferred > 0) {
-    container.append(el('a', { class: 'continue-stub', href: `/f/${ctx.fieldSlug}/p/${node.postId}?focus=${node.id}` },
+    container.append(el('a', { class: 'continue-stub', href: `/f/${ctx.feedSlug}/p/${node.postId}?focus=${node.id}` },
       `→ continue this thread (${node.deferred} more)`));
   }
 }
@@ -247,7 +247,7 @@ function reportButton(type, id, ctx) {
   btn.addEventListener('click', async () => {
     const reason = prompt('Report reason (Spam, Incivility, Off-topic, Rule violation):', 'Spam');
     if (!reason) return;
-    try { await actions.report(type, id, ctx.fieldId, reason, ''); toast('Report filed.', 'ok'); } catch {}
+    try { await actions.report(type, id, ctx.feedId, reason, ''); toast('Report filed.', 'ok'); } catch {}
   });
   return btn;
 }

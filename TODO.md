@@ -83,7 +83,7 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
   app-password card deleted; live loopback round-trip validated.
 - ~~Comment author links inside lens threads~~ — DONE 2026-08-25 (3d): they link
   OUT to bsky.app (the lens tenet).
-- ~~Lens pagination~~ — DONE 2026-08-25 (3d): field boards and ring boards page
+- ~~Lens pagination~~ — DONE 2026-08-25 (3d): feed boards and ring boards page
   with More.
 
 ## Small

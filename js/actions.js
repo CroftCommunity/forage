@@ -35,7 +35,7 @@ export async function setVote(subjectType, subjectId, value) {
   const s = store.getState(), viewer = store.getPersonaId(), now = store.nowSec();
   const p = sel.permissions(s, viewer, subjectField(s, subjectType, subjectId), now);
   if (!p.loggedIn) { toastFn('Log in to vote.', 'err'); throw new Error('gated'); }
-  if (p.bannedHere) { toastFn('You are banned in this Field.', 'err'); throw new Error('banned'); }
+  if (p.bannedHere) { toastFn('You are banned in this Feed.', 'err'); throw new Error('banned'); }
   return guardedWrite('voting', 'vote.set', { subjectType, subjectId, value });
 }
 
@@ -47,7 +47,7 @@ export async function setSave(subjectType, subjectId, saved) {
 export async function createComment(postId, parentId, bodyMd) {
   const s = store.getState(), viewer = store.getPersonaId(), now = store.nowSec();
   const post = s.posts[postId];
-  const p = sel.permissions(s, viewer, post.fieldId, now);
+  const p = sel.permissions(s, viewer, post.feedId, now);
   if (!p.canComment) throw new Error('cannot comment');
   if (post.locked && !p.canModerate) { toastFn('This thread is locked.', 'err'); throw new Error('locked'); }
   const lim = sel.limits(s, viewer, now, store.getEvents());
@@ -55,24 +55,24 @@ export async function createComment(postId, parentId, bodyMd) {
   return guardedWrite('commenting', 'comment.created', { id: genId('c'), postId, parentId: parentId || undefined, bodyMd });
 }
 
-export async function createPost({ fieldId, format, title, bodyMd, url, tagId, nsfw, spoiler }) {
+export async function createPost({ feedId, format, title, bodyMd, url, tagId, nsfw, spoiler }) {
   const s = store.getState(), viewer = store.getPersonaId(), now = store.nowSec();
-  const p = sel.permissions(s, viewer, fieldId, now);
+  const p = sel.permissions(s, viewer, feedId, now);
   if (!p.canPost) throw new Error('cannot post');
   const lim = sel.limits(s, viewer, now, store.getEvents());
   if (!lim.canPost) { toastFn(`Rate limited — wait ${lim.postWaitSec}s before posting.`, 'err'); throw new Error('rate'); }
-  // automod evaluation (spec §9): field rules, time-boxed, may 'hold'.
-  const field = s.fields[fieldId];
-  const held = evalAutomod(field, `${title} ${bodyMd || ''}`);
+  // automod evaluation (spec §9): feed rules, time-boxed, may 'hold'.
+  const feed = s.feeds[feedId];
+  const held = evalAutomod(feed, `${title} ${bodyMd || ''}`);
   const id = genId('p');
-  const ev = await guardedWrite('posting', 'post.created', { id, fieldId, format, title,
+  const ev = await guardedWrite('posting', 'post.created', { id, feedId, format, title,
     bodyMd, url, tagId, nsfw: !!nsfw, spoiler: !!spoiler, held: !!held });
   if (held) toastFn('Held for steward review (automod).', 'ok');
   return ev;
 }
 
-function evalAutomod(field, text) {
-  const rules = field?.settings?.automod || [];
+function evalAutomod(feed, text) {
+  const rules = feed?.settings?.automod || [];
   const started = performance.now();
   const hay = text.toLowerCase();
   for (const r of rules) {
@@ -82,35 +82,35 @@ function evalAutomod(field, text) {
   return null;
 }
 
-export async function report(subjectType, subjectId, fieldId, reason, detail, ruleId) {
+export async function report(subjectType, subjectId, feedId, reason, detail, ruleId) {
   if (!store.getPersonaId()) { toastFn('Log in to report.', 'err'); throw new Error('gated'); }
-  return guardedWrite('reporting', 'report.filed', { id: genId('rep'), subjectType, subjectId, fieldId, reason, detail, ruleId });
+  return guardedWrite('reporting', 'report.filed', { id: genId('rep'), subjectType, subjectId, feedId, reason, detail, ruleId });
 }
 
 // ---- mod actions ----
 export async function mod(type, payload) {
   const s = store.getState(), viewer = store.getPersonaId();
-  const fieldId = payload.fieldId || subjectField(s, payload.subjectType, payload.subjectId);
-  const p = sel.permissions(s, viewer, fieldId, store.nowSec());
+  const feedId = payload.feedId || subjectField(s, payload.subjectType, payload.subjectId);
+  const p = sel.permissions(s, viewer, feedId, store.nowSec());
   if (!p.canModerate) throw new Error('not a steward');
   return guardedWrite('moderation', type, payload);
 }
 
-export async function joinField(fieldId, join) {
+export async function joinFeed(feedId, join) {
   if (!store.getPersonaId()) { toastFn('Log in to join.', 'err'); throw new Error('gated'); }
-  return substrateFor('fields').write(join ? 'field.joined' : 'field.left', { fieldId }); // no latency; instant UX
+  return substrateFor('feeds').write(join ? 'feed.joined' : 'feed.left', { feedId }); // no latency; instant UX
 }
 
-export async function createField({ slug, title, description }) {
+export async function createFeed({ slug, title, description }) {
   const s = store.getState(), viewer = store.getPersonaId(), now = store.nowSec();
   const p = sel.permissions(s, viewer, undefined, now);
-  if (!p.canCreateField) {
-    const msg = p.probation ? 'Probation accounts cannot create Fields yet.' : 'Log in to create a Field.';
+  if (!p.canCreateFeed) {
+    const msg = p.probation ? 'Probation accounts cannot create Feeds yet.' : 'Log in to create a Feed.';
     toastFn(msg, 'err'); throw new Error(msg);
   }
   const id = genId('f');
   // the reducer makes the creator steward + member; no separate join needed
-  return guardedWrite('fields', 'field.created', { id, slug, title, description: description || '' });
+  return guardedWrite('feeds', 'feed.created', { id, slug, title, description: description || '' });
 }
 
 export async function markNotificationsRead(notificationIds) {
@@ -123,10 +123,10 @@ export async function updatePrefs(patch) {
   return substrateFor('prefs').write('prefs.updated', { patch });
 }
 
-export async function updateFieldSettings(fieldId, patch) {
+export async function updateFeedSettings(feedId, patch) {
   const s = store.getState(), viewer = store.getPersonaId();
-  if (!sel.permissions(s, viewer, fieldId, store.nowSec()).canManageField) throw new Error('not owner');
-  return guardedWrite('fields', 'field.settingsUpdated', { fieldId, patch });
+  if (!sel.permissions(s, viewer, feedId, store.nowSec()).canManageFeed) throw new Error('not owner');
+  return guardedWrite('feeds', 'feed.settingsUpdated', { feedId, patch });
 }
 
 export async function registerAccount(handle, email) {
@@ -136,7 +136,7 @@ export async function registerAccount(handle, email) {
 }
 
 function subjectField(s, type, id) {
-  if (type === 'post') return s.posts[id]?.fieldId;
-  if (type === 'comment') { const c = s.comments[id]; return c ? s.posts[c.postId]?.fieldId : null; }
+  if (type === 'post') return s.posts[id]?.feedId;
+  if (type === 'comment') { const c = s.comments[id]; return c ? s.posts[c.postId]?.feedId : null; }
   return null;
 }

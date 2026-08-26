@@ -53,7 +53,7 @@ test('guest: feed source reads public.api.bsky.app with no auth header', async (
   const lens = createLens({ transport: makeTransport(log) });
   const f = await lens.feed({ kind: 'feed', uri: WHATS_HOT });
   assert.equal(f.posts.length, 3);
-  assert.equal(f.fieldSlug, 'whats-hot');           // OQ1: slug = the feed rkey
+  assert.equal(f.feedSlug, 'whats-hot');           // OQ1: slug = the feed rkey
   assert.equal(log[0].host, 'public.api.bsky.app');
   assert.equal(log[0].auth, null);
 });
@@ -78,20 +78,20 @@ test('a session routes through the DPoP fetchHandler with a relative /xrpc path 
 
 test('thread reads shape through to the standing thread contract', async () => {
   const lens = createLens({ transport: makeTransport([]) });
-  const t = await lens.thread(fixture('wide-getPostThread').thread.post.uri, { fieldSlug: 'whats-hot', fieldTitle: "What's Hot", fieldId: 'lens:whats-hot' });
+  const t = await lens.thread(fixture('wide-getPostThread').thread.post.uri, { feedSlug: 'whats-hot', feedTitle: "What's Hot", feedId: 'lens:whats-hot' });
   assert.ok(t.post.id.startsWith('at://'));
   assert.equal(t.perms.canComment, false);
 });
 
-test('fields (the lens Feeds list) resolve from savedFeedsPref + generator views, with human slugs', async () => {
+test('feeds (the lens Feeds list) resolve from savedFeedsPref + generator views, with human slugs', async () => {
   const lens = createLens({ session: oauthSession([]), transport: makeTransport([]) });
-  const fields = await lens.fields();
-  const feedField = fields.find((f) => f.kind === 'feed');
+  const feeds = await lens.feeds();
+  const feedField = feeds.find((f) => f.kind === 'feed');
   assert.equal(feedField.slug, 'whats-hot', 'the rkey slug is the durable canonical');
   assert.equal(feedField.humanSlug, 'whatshot', 'the display name collapses to a shareable alias');
   assert.equal(feedField.title, "What's Hot");
   assert.equal(feedField.pinned, true);
-  assert.ok(fields.some((f) => f.kind === 'timeline')); // Following, session-only
+  assert.ok(feeds.some((f) => f.kind === 'timeline')); // Following, session-only
 });
 
 // ---- 3i: human-readable feed slugs (display names are OWNER-EDITABLE
@@ -107,7 +107,7 @@ test('slugifyFeedName collapses to a shareable slug; empty/degenerate → null',
   assert.equal(slugifyFeedName(undefined), null);
 });
 
-test('fields dedupe colliding human slugs — first keeps the alias, later ones fall back to canon', async () => {
+test('feeds dedupe colliding human slugs — first keeps the alias, later ones fall back to canon', async () => {
   const transport = async (url) => {
     const u = new URL(url);
     const json = (d) => ({ ok: true, status: 200, json: async () => d });
@@ -124,14 +124,14 @@ test('fields dedupe colliding human slugs — first keeps the alias, later ones 
     return { ok: false, status: 404, json: async () => ({}) };
   };
   const session = { did: 'did:plc:me', handle: 'me', fetchHandler: async (p, i) => transport('https://pds.example' + p, i) };
-  const fields = await createLens({ session }).fields();
-  assert.equal(fields[0].humanSlug, 'art');
-  assert.equal(fields[1].humanSlug, null, 'a collision never silently points at the wrong feed');
+  const feeds = await createLens({ session }).feeds();
+  assert.equal(feeds[0].humanSlug, 'art');
+  assert.equal(feeds[1].humanSlug, null, 'a collision never silently points at the wrong feed');
 });
 
-test('guest refusals carry words: fields and search need a session', async () => {
+test('guest refusals carry words: feeds and search need a session', async () => {
   const lens = createLens({ transport: makeTransport([]) });
-  await assert.rejects(() => lens.fields(), /session/);
+  await assert.rejects(() => lens.feeds(), /session/);
   await assert.rejects(() => lens.search('gardening'), /session/);
 });
 
@@ -173,7 +173,7 @@ test('3g: hashtag streams are session-gated with words; signed in they search by
   const s = await lens.stream({ kind: 'hashtag', key: 'gardening' });
   assert.equal(s.posts.length, 3);
   assert.ok(log.some((c) => c.path.includes('searchPosts') && c.path.includes('tag=gardening')));
-  assert.equal(s.fieldSlug, 'h:gardening');
+  assert.equal(s.feedSlug, 'h:gardening');
 });
 
 test('3g: trending maps unspecced topics to FEED-stream descriptors (link → at-uri)', async () => {
@@ -792,7 +792,7 @@ test('4a: discovery applies the account posture to FEEDS — adult-labelled feed
   assert.equal(feeds[0].warnLabels, undefined, 'and what remains is not veiled');
 });
 
-test('4a: a JOINED adult feed drops out of the Fields list too — one rule on every feed surface', async () => {
+test('4a: a JOINED adult feed drops out of the Feeds list too — one rule on every feed surface', async () => {
   const ADULT = 'at://did:plc:x/app.bsky.feed.generator/afterdark';
   const CLEAN = 'at://did:plc:g/app.bsky.feed.generator/gardentalk';
   const fetchHandler = async (path) => {
@@ -807,8 +807,8 @@ test('4a: a JOINED adult feed drops out of the Fields list too — one rule on e
       { uri: ADULT, displayName: 'After Dark', labels: [{ val: 'porn' }] }] });
     return { ok: false, status: 404, json: async () => ({}) };
   };
-  const fields = await createLens({ session: { did: 'did:plc:me', handle: 'me.test', fetchHandler } }).fields();
-  assert.deepEqual(fields.map((f) => f.title), ['Garden Talk', 'Following'],
+  const feeds = await createLens({ session: { did: 'did:plc:me', handle: 'me.test', fetchHandler } }).feeds();
+  assert.deepEqual(feeds.map((f) => f.title), ['Garden Talk', 'Following'],
     'the adult feed is gone from the sidebar; joining it earlier does not override the account setting');
 });
 
@@ -918,7 +918,7 @@ test('3p: feedCardModel never restates the feed title — the <h1> above it alre
 
   // the dupe observed 2026-08-26: the card said "Funny" under a heading that
   // already said "Funny", and then a SECOND box repeated the description.
-  assert.equal(m.title, undefined, 'the card carries no title field at all — it cannot drift back');
+  assert.equal(m.title, undefined, 'the card carries no title feed at all — it cannot drift back');
   assert.doesNotMatch(m.headline, /Funny/, 'the headline says who curates, not what it is called');
   assert.equal(m.headline, 'Curated by @alexismadd.bsky.social.');
   assert.equal(m.avatar, 'https://cdn.test/a.png', 'the logo stays — it is the one thing worth the space');

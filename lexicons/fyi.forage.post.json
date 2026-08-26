@@ -9,16 +9,16 @@
       "record": {
         "type": "object",
         "required": [
-          "field",
+          "feed",
           "format",
           "title",
           "createdAt"
         ],
         "properties": {
-          "field": {
+          "feed": {
             "type": "string",
             "format": "at-uri",
-            "description": "The fyi.forage.field record this post belongs to"
+            "description": "The fyi.forage.feed record this post belongs to"
           },
           "format": {
             "type": "string",

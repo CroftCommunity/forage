@@ -9,14 +9,14 @@
       "record": {
         "type": "object",
         "required": [
-          "field",
+          "feed",
           "createdAt"
         ],
         "properties": {
-          "field": {
+          "feed": {
             "type": "string",
             "format": "at-uri",
-            "description": "The fyi.forage.field joined"
+            "description": "The fyi.forage.feed joined"
           },
           "createdAt": {
             "type": "string",

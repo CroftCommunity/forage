@@ -160,7 +160,7 @@ Every task ends with:
    unlock the credentialed/daemon-bound journeys locally.
 3. The acceptance checklist items for affected screens. In the MEMORY population
    that means seat by seat via the dev-bar persona switcher (seat-level and
-   observable: "switch to seat `newbie.moss`; Create Field is gated with the
+   observable: "switch to seat `newbie.moss`; Create feed is gated with the
    probation message"). The Bluesky population has no seats — it has one real
    account — so its equivalent is the signed-out / restoring / signed-in triad,
    and anything that writes is checked against a test account, never the owner's.

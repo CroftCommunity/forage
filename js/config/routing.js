@@ -10,7 +10,7 @@ export const routing = {
   commenting:    'memory',
   voting:        'memory',
   saving:        'memory',
-  fields:        'memory',
+  feeds:        'memory',
   moderation:    'memory',
   reporting:     'memory',
   notifications: 'memory',

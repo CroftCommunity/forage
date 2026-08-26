@@ -9,7 +9,7 @@ import {
   feedDisposition, EMPTY_POSTURE,
 } from '../js/substrates/lens.js';
 
-const SRC = { fieldId: 'lens:x', fieldSlug: 'x', fieldTitle: 'X' };
+const SRC = { feedId: 'lens:x', feedSlug: 'x', feedTitle: 'X' };
 const NOW = Date.parse('2026-08-25T12:00:00Z');
 
 const mkPost = (over = {}) => ({

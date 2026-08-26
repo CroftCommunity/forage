@@ -11,16 +11,16 @@ const fold = (events) => events.reduce((s, e) => reduce(s, e), emptyState());
 let seq = 0;
 const ev = (type, payload, actor, ts) => ({ id: `t_${seq++}`, type, actor, ts, payload });
 
-// A log touching users, fields, posts, comments, votes, saves, and a
+// A log touching users, feeds, posts, comments, votes, saves, and a
 // benign mod event — deliberately NO report.filed/mod.removed pair, whose
 // notification ts is wall-clock today (see the todo at the bottom).
 function sampleLog() {
   return [
     ev('account.registered', { handle: 'alice' }, 'u_a', 100),
     ev('account.registered', { handle: 'bob' }, 'u_b', 110),
-    ev('field.created', { id: 'f1', slug: 'gardening', title: 'Gardening' }, 'u_a', 120),
-    ev('field.joined', { fieldId: 'f1' }, 'u_b', 130),
-    ev('post.created', { id: 'p1', fieldId: 'f1', format: 'text', title: 'Hello' }, 'u_a', 140),
+    ev('feed.created', { id: 'f1', slug: 'gardening', title: 'Gardening' }, 'u_a', 120),
+    ev('feed.joined', { feedId: 'f1' }, 'u_b', 130),
+    ev('post.created', { id: 'p1', feedId: 'f1', format: 'text', title: 'Hello' }, 'u_a', 140),
     ev('comment.created', { id: 'c1', postId: 'p1', bodyMd: 'First' }, 'u_b', 150),
     ev('comment.created', { id: 'c2', postId: 'p1', parentId: 'c1', bodyMd: 'Reply' }, 'u_a', 160),
     ev('vote.set', { subjectType: 'post', subjectId: 'p1', value: 1 }, 'u_b', 170),
@@ -83,7 +83,7 @@ test('reputation sums net scores of non-removed content only', () => {
 
 function reportedLog() {
   const log = sampleLog();
-  log.push(ev('report.filed', { id: 'r1', subjectType: 'comment', subjectId: 'c1', fieldId: 'f1', reason: 'spam' }, 'u_a', 300));
+  log.push(ev('report.filed', { id: 'r1', subjectType: 'comment', subjectId: 'c1', feedId: 'f1', reason: 'spam' }, 'u_a', 300));
   log.push(ev('mod.removed', { subjectType: 'comment', subjectId: 'c1', reason: 'rule 2' }, 'u_a', 310));
   return log;
 }
@@ -137,14 +137,14 @@ test('self-replies and quiet comments do not notify', () => {
 
 // ---- 2i gap-closers: full-shape pins and the untested mutation types ----
 
-test('post.created: exact default shape when optional fields are omitted', () => {
+test('post.created: exact default shape when optional feeds are omitted', () => {
   const s = fold([
     ev('account.registered', { handle: 'a' }, 'u_a', 100),
-    ev('field.created', { id: 'f1', slug: 'g', title: 'G' }, 'u_a', 110),
-    ev('post.created', { id: 'p1', fieldId: 'f1', format: 'text', title: 'T' }, 'u_a', 120),
+    ev('feed.created', { id: 'f1', slug: 'g', title: 'G' }, 'u_a', 110),
+    ev('post.created', { id: 'p1', feedId: 'f1', format: 'text', title: 'T' }, 'u_a', 120),
   ]);
   assert.deepStrictEqual(s.posts.p1, {
-    id: 'p1', fieldId: 'f1', authorId: 'u_a', format: 'text',
+    id: 'p1', feedId: 'f1', authorId: 'u_a', format: 'text',
     title: 'T', bodyMd: '', url: '', tagId: null,
     nsfw: false, spoiler: false, createdTs: 120,
     deleted: false, removed: false, removedReason: '', locked: false, pinned: false,
@@ -152,9 +152,9 @@ test('post.created: exact default shape when optional fields are omitted', () =>
   });
 });
 
-test('field.created: exact default shape, creator becomes steward and member', () => {
-  const s = fold([ev('field.created', { id: 'f1', slug: 'g', title: 'G' }, 'u_a', 100)]);
-  const f = s.fields.f1;
+test('feed.created: exact default shape, creator becomes steward and member', () => {
+  const s = fold([ev('feed.created', { id: 'f1', slug: 'g', title: 'G' }, 'u_a', 100)]);
+  const f = s.feeds.f1;
   assert.deepStrictEqual(f.settings, { requireTags: false, nsfwAllowed: true, automod: [], rules: [] });
   assert.equal(f.description, '');
   assert.equal(f.ownerId, 'u_a');
@@ -176,18 +176,18 @@ test('account.registered defaults + prefs.updated merge + account.suspended', ()
   assert.deepStrictEqual(s.users.u_a.suspended, { reason: 'spam', ts: 120 });
 });
 
-test('field.settingsUpdated routes title/description out of settings; field.left removes membership', () => {
+test('feed.settingsUpdated routes title/description out of settings; feed.left removes membership', () => {
   const s = fold([
     ev('account.registered', { handle: 'a' }, 'u_a', 100),
     ev('account.registered', { handle: 'b' }, 'u_b', 101),
-    ev('field.created', { id: 'f1', slug: 'g', title: 'G' }, 'u_a', 110),
-    ev('field.joined', { fieldId: 'f1' }, 'u_b', 120),
-    ev('field.settingsUpdated', { fieldId: 'f1', patch: { title: 'G2', description: 'd', requireTags: true } }, 'u_a', 130),
-    // a partial patch must not clobber the fields it omits
-    ev('field.settingsUpdated', { fieldId: 'f1', patch: { nsfwAllowed: false } }, 'u_a', 135),
-    ev('field.left', { fieldId: 'f1' }, 'u_b', 140),
+    ev('feed.created', { id: 'f1', slug: 'g', title: 'G' }, 'u_a', 110),
+    ev('feed.joined', { feedId: 'f1' }, 'u_b', 120),
+    ev('feed.settingsUpdated', { feedId: 'f1', patch: { title: 'G2', description: 'd', requireTags: true } }, 'u_a', 130),
+    // a partial patch must not clobber the feeds it omits
+    ev('feed.settingsUpdated', { feedId: 'f1', patch: { nsfwAllowed: false } }, 'u_a', 135),
+    ev('feed.left', { feedId: 'f1' }, 'u_b', 140),
   ]);
-  const f = s.fields.f1;
+  const f = s.feeds.f1;
   assert.equal(f.title, 'G2');
   assert.equal(f.description, 'd');
   assert.equal(f.settings.nsfwAllowed, false);
@@ -211,12 +211,12 @@ test('edits patch and flag; author deletes mark deleted; save.set retracts', () 
   assert.ok(!s.saves.u_b.has('post:p1'));
 });
 
-test('report.filed: exact stored shape, optional fields defaulted', () => {
+test('report.filed: exact stored shape, optional feeds defaulted', () => {
   const log = sampleLog();
-  log.push(ev('report.filed', { id: 'r9', subjectType: 'post', subjectId: 'p1', fieldId: 'f1', reason: 'spam' }, 'u_b', 300));
+  log.push(ev('report.filed', { id: 'r9', subjectType: 'post', subjectId: 'p1', feedId: 'f1', reason: 'spam' }, 'u_b', 300));
   const [r] = fold(log).reports;
   assert.deepStrictEqual(r, {
-    id: 'r9', subjectType: 'post', subjectId: 'p1', fieldId: 'f1', reason: 'spam',
+    id: 'r9', subjectType: 'post', subjectId: 'p1', feedId: 'f1', reason: 'spam',
     ruleId: null, detail: '', reporterId: 'u_b', ts: 300, resolvedBy: null, resolution: null,
   });
 });
@@ -230,19 +230,19 @@ test('mod flags set and clear both ways; ban info stored and cleared; steward ad
   assert.equal(s.posts.p1.locked, false);
   assert.equal(s.posts.p1.pinned, true);
   log.push(ev('mod.unpinned', { subjectType: 'post', subjectId: 'p1' }, 'u_a', 320));
-  log.push(ev('mod.banned', { fieldId: 'f1', userId: 'u_b', reason: 'r', duration: 7 }, 'u_a', 330));
-  log.push(ev('mod.stewardAdded', { fieldId: 'f1', userId: 'u_b' }, 'u_a', 340));
+  log.push(ev('mod.banned', { feedId: 'f1', userId: 'u_b', reason: 'r', duration: 7 }, 'u_a', 330));
+  log.push(ev('mod.stewardAdded', { feedId: 'f1', userId: 'u_b' }, 'u_a', 340));
   s = fold(log);
   assert.equal(s.posts.p1.pinned, false);
-  assert.deepStrictEqual(s.fields.f1.banned.u_b, { ts: 330, reason: 'r', duration: 7 });
-  assert.ok(s.fields.f1.stewards.has('u_b'));
-  log.push(ev('mod.banned', { fieldId: 'f1', userId: 'u_a' }, 'u_a', 350)); // defaults
-  log.push(ev('mod.unbanned', { fieldId: 'f1', userId: 'u_b' }, 'u_a', 360));
-  log.push(ev('mod.stewardRemoved', { fieldId: 'f1', userId: 'u_b' }, 'u_a', 370));
+  assert.deepStrictEqual(s.feeds.f1.banned.u_b, { ts: 330, reason: 'r', duration: 7 });
+  assert.ok(s.feeds.f1.stewards.has('u_b'));
+  log.push(ev('mod.banned', { feedId: 'f1', userId: 'u_a' }, 'u_a', 350)); // defaults
+  log.push(ev('mod.unbanned', { feedId: 'f1', userId: 'u_b' }, 'u_a', 360));
+  log.push(ev('mod.stewardRemoved', { feedId: 'f1', userId: 'u_b' }, 'u_a', 370));
   s = fold(log);
-  assert.deepStrictEqual(s.fields.f1.banned.u_a, { ts: 350, reason: '', duration: null });
-  assert.equal(s.fields.f1.banned.u_b, undefined);
-  assert.ok(!s.fields.f1.stewards.has('u_b'));
+  assert.deepStrictEqual(s.feeds.f1.banned.u_a, { ts: 350, reason: '', duration: null });
+  assert.equal(s.feeds.f1.banned.u_b, undefined);
+  assert.ok(!s.feeds.f1.stewards.has('u_b'));
 });
 
 test('mod.removed on a POST notifies its author; self-moderation does not notify', () => {
@@ -261,8 +261,8 @@ test('mod.removed on a POST notifies its author; self-moderation does not notify
 
 test('resolveReports touches only matching, still-open reports', () => {
   const log = sampleLog();
-  log.push(ev('report.filed', { id: 'r1', subjectType: 'comment', subjectId: 'c1', fieldId: 'f1', reason: 'a' }, 'u_a', 300));
-  log.push(ev('report.filed', { id: 'r2', subjectType: 'comment', subjectId: 'c2', fieldId: 'f1', reason: 'b' }, 'u_a', 301));
+  log.push(ev('report.filed', { id: 'r1', subjectType: 'comment', subjectId: 'c1', feedId: 'f1', reason: 'a' }, 'u_a', 300));
+  log.push(ev('report.filed', { id: 'r2', subjectType: 'comment', subjectId: 'c2', feedId: 'f1', reason: 'b' }, 'u_a', 301));
   log.push(ev('mod.removed', { subjectType: 'comment', subjectId: 'c1' }, 'u_a', 310));
   log.push(ev('mod.approved', { subjectType: 'comment', subjectId: 'c1' }, 'u_b', 320)); // r1 already resolved
   const s = fold(log);
@@ -276,8 +276,8 @@ test('resolveReports touches only matching, still-open reports', () => {
 test('comment.created: exact default shape', () => {
   const s = fold([
     ev('account.registered', { handle: 'a' }, 'u_a', 100),
-    ev('field.created', { id: 'f1', slug: 'g', title: 'G' }, 'u_a', 105),
-    ev('post.created', { id: 'p1', fieldId: 'f1', format: 'text', title: 'T' }, 'u_a', 110),
+    ev('feed.created', { id: 'f1', slug: 'g', title: 'G' }, 'u_a', 105),
+    ev('post.created', { id: 'p1', feedId: 'f1', format: 'text', title: 'T' }, 'u_a', 110),
     ev('comment.created', { id: 'c1', postId: 'p1', bodyMd: 'B' }, 'u_a', 120),
   ]);
   assert.deepStrictEqual(s.comments.c1, {
@@ -293,10 +293,10 @@ test('a fresh account carries the exact default prefs', () => {
     { theme: 'auto', commentThreshold: -4, defaultSort: 'hot', defaultFeed: 'home' });
 });
 
-test('field.created merges caller-supplied settings over the defaults', () => {
-  const s = fold([ev('field.created',
+test('feed.created merges caller-supplied settings over the defaults', () => {
+  const s = fold([ev('feed.created',
     { id: 'f1', slug: 'g', title: 'G', settings: { requireTags: true, rules: [{ title: 'r1' }] } }, 'u_a', 100)]);
-  assert.deepStrictEqual(s.fields.f1.settings,
+  assert.deepStrictEqual(s.feeds.f1.settings,
     { requireTags: true, nsfwAllowed: true, automod: [], rules: [{ title: 'r1' }] });
 });
 
@@ -307,21 +307,21 @@ test('events referencing unknown targets are IGNORED, never a crash', () => {
   const danglers = [
     ev('account.suspended', { userId: 'u_ghost', reason: 'x' }, 'u_a', 200),
     ev('prefs.updated', { patch: { theme: 'dark' } }, 'u_ghost', 201),
-    ev('field.settingsUpdated', { fieldId: 'f_ghost', patch: { title: 'X' } }, 'u_a', 202),
-    ev('field.joined', { fieldId: 'f_ghost' }, 'u_a', 203),
-    ev('field.left', { fieldId: 'f_ghost' }, 'u_a', 204),
+    ev('feed.settingsUpdated', { feedId: 'f_ghost', patch: { title: 'X' } }, 'u_a', 202),
+    ev('feed.joined', { feedId: 'f_ghost' }, 'u_a', 203),
+    ev('feed.left', { feedId: 'f_ghost' }, 'u_a', 204),
     ev('post.edited', { postId: 'p_ghost', patch: { title: 'X' } }, 'u_a', 205),
     ev('post.deletedByAuthor', { postId: 'p_ghost' }, 'u_a', 206),
     ev('comment.edited', { commentId: 'c_ghost', patch: { bodyMd: 'X' } }, 'u_a', 207),
     ev('comment.deletedByAuthor', { commentId: 'c_ghost' }, 'u_a', 208),
-    ev('mod.banned', { fieldId: 'f_ghost', userId: 'u_a' }, 'u_a', 209),
-    ev('mod.stewardAdded', { fieldId: 'f_ghost', userId: 'u_a' }, 'u_a', 210),
+    ev('mod.banned', { feedId: 'f_ghost', userId: 'u_a' }, 'u_a', 209),
+    ev('mod.stewardAdded', { feedId: 'f_ghost', userId: 'u_a' }, 'u_a', 210),
     ev('mod.removed', { subjectType: 'post', subjectId: 'p_ghost' }, 'u_a', 211),
     ev('mod.locked', { subjectType: 'comment', subjectId: 'c_ghost' }, 'u_a', 212),
   ];
   const s = fold([...base, ...danglers]);           // must not throw
   assert.deepStrictEqual(s.users, fold(base).users); // and must change nothing user-visible
-  assert.deepStrictEqual(s.fields, {});
+  assert.deepStrictEqual(s.feeds, {});
 });
 
 test('notification.read flips read on the named ids only', () => {

@@ -1,18 +1,18 @@
 // Event schema + payload validation (spec §5.1, pulled forward per build order step 1).
 // Validation is intentionally light but real: unknown types and missing required
-// fields throw at dispatch time, so the contract is enforced from day one.
+// feeds throw at dispatch time, so the contract is enforced from day one.
 
 export const EVENT_TYPES = {
   'account.registered':      ['handle'],
   'account.suspended':       ['userId', 'reason'],
   'prefs.updated':           ['patch'],
 
-  'field.created':           ['id', 'slug', 'title'],
-  'field.settingsUpdated':   ['fieldId', 'patch'],
-  'field.joined':            ['fieldId'],
-  'field.left':              ['fieldId'],
+  'feed.created':           ['id', 'slug', 'title'],
+  'feed.settingsUpdated':   ['feedId', 'patch'],
+  'feed.joined':            ['feedId'],
+  'feed.left':              ['feedId'],
 
-  'post.created':            ['id', 'fieldId', 'format', 'title'],
+  'post.created':            ['id', 'feedId', 'format', 'title'],
   'post.edited':             ['postId', 'patch'],
   'post.deletedByAuthor':    ['postId'],
 
@@ -23,7 +23,7 @@ export const EVENT_TYPES = {
   'vote.set':                ['subjectType', 'subjectId', 'value'],
   'save.set':                ['subjectType', 'subjectId', 'saved'],
 
-  'report.filed':            ['id', 'subjectType', 'subjectId', 'fieldId', 'reason'],
+  'report.filed':            ['id', 'subjectType', 'subjectId', 'feedId', 'reason'],
 
   'mod.removed':             ['subjectType', 'subjectId'],
   'mod.approved':            ['subjectType', 'subjectId'],
@@ -31,10 +31,10 @@ export const EVENT_TYPES = {
   'mod.unlocked':            ['subjectType', 'subjectId'],
   'mod.pinned':              ['subjectType', 'subjectId'],
   'mod.unpinned':            ['subjectType', 'subjectId'],
-  'mod.banned':              ['fieldId', 'userId'],
-  'mod.unbanned':            ['fieldId', 'userId'],
-  'mod.stewardAdded':        ['fieldId', 'userId'],
-  'mod.stewardRemoved':      ['fieldId', 'userId'],
+  'mod.banned':              ['feedId', 'userId'],
+  'mod.unbanned':            ['feedId', 'userId'],
+  'mod.stewardAdded':        ['feedId', 'userId'],
+  'mod.stewardRemoved':      ['feedId', 'userId'],
 
   'notification.read':       ['notificationIds'],
 };
@@ -53,7 +53,7 @@ export function validateEvent(ev) {
   }
   for (const key of req) {
     if (ev.payload == null || ev.payload[key] === undefined) {
-      throw new Error(`${ev.type} missing required field: ${key}`);
+      throw new Error(`${ev.type} missing required feed: ${key}`);
     }
   }
   if (ev.type === 'vote.set' && ![-1, 0, 1].includes(ev.payload.value)) {

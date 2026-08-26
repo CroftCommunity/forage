@@ -34,7 +34,7 @@ const roster = createAccountRoster();
 function ensureSavedFeeds() {
   if (!session) return Promise.resolve(savedFeedUris);
   if (!savedFeedsPromise) {
-    savedFeedsPromise = lens.fields()
+    savedFeedsPromise = lens.feeds()
       .then((fs) => {
         for (const f of fs) {
           if (f.kind !== 'feed') continue;
@@ -337,7 +337,7 @@ function renderBoard(card, posts, { wholeCorpus = false } = {}) {
 
 // 3v: the breadcrumb on a board row is a link people copy, so give it the
 // shareable form whenever the registry knows who made the feed.
-const fieldHrefFor = (slug) => {
+const feedHrefFor = (slug) => {
   const entry = sources.get(slug);
   return (entry && feedPath({ creator: entry.creator, rkey: entry.slug })) || `/f/${slug}`;
 };
@@ -351,7 +351,7 @@ const lensRow = (p, view = 'card') => postRow(p, !!session, {
     : p.preview ? facetedBody({ ...p, body: p.preview }) : tagChips(p),
   authorBadge: verifiedBadge(p),
   metaExtra: langChip(p),
-  fieldHref: fieldHrefFor(p.fieldSlug),
+  feedHref: feedHrefFor(p.feedSlug),
   compact: view === 'compact',
 });
 
@@ -364,12 +364,12 @@ function langChip(p) {
 }
 
 function lensSidebar() {
-  const fieldsCard = el('div', { class: 'card' },
+  const feedsCard = el('div', { class: 'card' },
     el('div', { class: 'row spread' },
       el('h2', { style: 'margin:0' }, el('a', { href: '/feeds' }, 'Feeds')),
       el('a', { href: '/feeds', class: 'xs' }, 'discover ›')));
   const list = el('div', { class: 'stack' });
-  fieldsCard.append(list);
+  feedsCard.append(list);
   if (!session) {
     for (const c of CURATED) {
       list.append(el('div', { class: 'row spread' },
@@ -380,8 +380,8 @@ function lensSidebar() {
       'Guest boards. Sign in and these become YOUR feeds.'));
   } else {
     list.append(skeleton(3));
-    ensureSavedFeeds().then((fields) => {
-      list.replaceChildren(...fields.map((f) => {
+    ensureSavedFeeds().then((feeds) => {
+      list.replaceChildren(...feeds.map((f) => {
         const entry = { slug: f.slug, humanSlug: f.humanSlug, title: f.title, kind: f.kind, creator: f.creator,
           source: f.kind === 'author' ? { kind: 'author', actor: f.id }
             : f.kind === 'timeline' ? { kind: 'timeline' } : { kind: f.kind, uri: f.id } };
@@ -395,7 +395,7 @@ function lensSidebar() {
       }));
     }).catch((e) => list.replaceChildren(el('div', { class: 'xs muted' }, 'Feeds failed: ' + e.message)));
   }
-  return fieldsCard;
+  return feedsCard;
 }
 
 function sessionCard() {
@@ -444,8 +444,8 @@ function sessionCard() {
   return el('div', { class: 'card' },
     el('h2', {}, 'Sign in with Bluesky'),
     el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
-      'The official OAuth flow — you authorize on your own server; no credentials touch Forage. Unlocks your saved feeds as Fields, Following, and search.'),
-    el('div', { class: 'field-row' }, el('label', {}, 'Handle'), id),
+      'The official OAuth flow — you authorize on your own server; no credentials touch Forage. Unlocks your saved feeds as Feeds, Following, and search.'),
+    el('div', { class: 'feed-row' }, el('label', {}, 'Handle'), id),
     btn);
 }
 
@@ -493,7 +493,7 @@ function ringBoard(ring, cursor) {
     for (const p of board.posts) card.append(lensRow(p));
     for (const a of card.querySelectorAll('a[href*="/p/at:"]')) {
       const m = a.getAttribute('href').match(/\/p\/(at:.+)$/);
-      if (m) a.setAttribute('href', `/p?uri=${encodeURIComponent(m[1])}&from=${board.fieldSlug}`);
+      if (m) a.setAttribute('href', `/p?uri=${encodeURIComponent(m[1])}&from=${board.feedSlug}`);
     }
     const more = board.cursor ? el('button', { class: 'btn sm' }, 'More') : null;
     if (more) more.addEventListener('click', () => { into.replaceChildren(ringBoard(ring, board.cursor)); });
@@ -532,7 +532,7 @@ export function lensHomeView() {
 // the link gets the board. A bare slug still works for in-session navigation
 // and for every link already shared, but it cannot resolve cold: an rkey has
 // no did, and nothing resolves one without a repo.
-export function lensFieldView(params) {
+export function lensFeedView(params) {
   const route = parseFeedRoute(params);
   if (route.kind === 'slug') {
     const entry = sources.get(route.slug);
@@ -1352,8 +1352,8 @@ export function lensThreadView(params, query) {
   const uri = query.uri ? decodeURIComponent(query.uri) : null;
   if (!uri) return { main: emptyState('No thread', 'Missing post uri.'), side: null };
   const from = sources.get(query.from);
-  const src = from ? { fieldId: `lens:${from.slug}`, fieldSlug: from.slug, fieldTitle: from.title }
-                   : { fieldId: 'lens:thread', fieldSlug: 'thread', fieldTitle: 'Thread' };
+  const src = from ? { feedId: `lens:${from.slug}`, feedSlug: from.slug, feedTitle: from.title }
+                   : { feedId: 'lens:thread', feedSlug: 'thread', feedTitle: 'Thread' };
   const main = el('div', {}, skeleton(8));
   // 3r: the cascade repaints in place — a quote of a quote is worth showing,
   // never worth making the thread wait.
@@ -1379,7 +1379,7 @@ export function lensThreadView(params, query) {
       voteBox('post', p.id, p, !!session, 'col', lensVote(p)),
       el('div', {},
       el('div', { class: 'row wrap', style: 'gap:6px' },
-        el('a', { href: `/f/${src.fieldSlug}`, class: 'xs' }, `f/${src.fieldSlug}`),
+        el('a', { href: `/f/${src.feedSlug}`, class: 'xs' }, `f/${src.feedSlug}`),
         p.nsfw ? el('span', { class: 'chip badge-nsfw' }, 'NSFW') : null),
       el('h1', {}, p.title.slice(0, 300)),
       el('div', { class: 'postmeta' },
@@ -1407,7 +1407,7 @@ export function lensThreadView(params, query) {
         deleteControl(p, () => {
           main.replaceChildren(emptyState('This post was deleted',
             'It is gone from your Bluesky account. Anyone who already saw it may still have a copy — deleting removes the record, it does not un-send it.',
-            el('a', { class: 'btn', href: `/f/${src.fieldSlug}` }, 'Back to the board')));
+            el('a', { class: 'btn', href: `/f/${src.feedSlug}` }, 'Back to the board')));
         })),
       replyHost));
     const ctx = { ...LENS_PERMS, locked: true, // vote/save/mod still gate; replying does not

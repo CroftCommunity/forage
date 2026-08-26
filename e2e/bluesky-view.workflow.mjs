@@ -498,7 +498,7 @@ export async function run() {
   await page.goto(`${s.origin}/f/@curator.test/meadow1`);
   await page.waitForSelector('[data-feed-header]', { timeout: 15000 });
   await page.waitForSelector('text=Curated by @curator.test.');
-  assert.equal(await page.locator('text=Unknown lens Field').count(), 0,
+  assert.equal(await page.locator('text=Unknown lens Feed').count(), 0,
     'a pasted feed link resolves for someone who has never opened the app');
   assert.deepEqual(await s.shimMisses(), [], 'every network read had a fixture');
   await s.close();

@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { emptyState, reduce } from '../js/reducers.js';
-import { feed, thread } from '../js/selectors.js';
+import { board, thread } from '../js/selectors.js';
 import { shapeLensPost, shapeLensThread, shapeLensFeed, LENS_PERMS, createLens } from '../js/substrates/lens.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -20,18 +20,18 @@ const fixture = (n) => JSON.parse(readFileSync(join(root, 'test/fixtures/atproto
 function memoryShapes() {
   const log = [
     { id: 'e1', type: 'account.registered', actor: 'u_a', ts: 1000, payload: { handle: 'a' } },
-    { id: 'e2', type: 'field.created', actor: 'u_a', ts: 2000, payload: { id: 'f1', slug: 'g', title: 'G' } },
-    { id: 'e3', type: 'post.created', actor: 'u_a', ts: 3000, payload: { id: 'p1', fieldId: 'f1', format: 'text', title: 'T', bodyMd: 'B' } },
+    { id: 'e2', type: 'feed.created', actor: 'u_a', ts: 2000, payload: { id: 'f1', slug: 'g', title: 'G' } },
+    { id: 'e3', type: 'post.created', actor: 'u_a', ts: 3000, payload: { id: 'p1', feedId: 'f1', format: 'text', title: 'T', bodyMd: 'B' } },
     { id: 'e4', type: 'comment.created', actor: 'u_a', ts: 4000, payload: { id: 'c1', postId: 'p1', bodyMd: 'C', quiet: true } },
   ];
   const s = log.reduce((st, e) => reduce(st, e), emptyState());
   return {
-    post: feed(s, null, 'field:g', 'hot', 'all', 5).posts[0],
+    post: board(s, null, 'feed:g', 'hot', 'all', 5).posts[0],
     node: thread(s, null, 'p1', 'best', 5).comments[0],
   };
 }
 
-const SRC = { fieldId: 'lens:whats-hot', fieldSlug: 'whats-hot', fieldTitle: "What's Hot" };
+const SRC = { feedId: 'lens:whats-hot', feedSlug: 'whats-hot', feedTitle: "What's Hot" };
 
 test('a lens post carries every key the memory post shape has', () => {
   const bskyPost = fixture('wide-getFeed').feed[0].post;
@@ -43,7 +43,7 @@ test('a lens post carries every key the memory post shape has', () => {
   assert.equal(shaped.downs, 0);
   assert.equal(shaped.commentCount, bskyPost.replyCount);
   assert.equal(shaped.author, bskyPost.author.handle);
-  assert.equal(shaped.fieldSlug, 'whats-hot');
+  assert.equal(shaped.feedSlug, 'whats-hot');
   assert.equal(typeof shaped.createdSec, 'number');
 });
 
@@ -70,7 +70,7 @@ test('a lens feed mirrors the feed result shape, guest perms locked down', () =>
     assert.equal(f.perms[k], false, k);
   }
   assert.equal(f.perms.canView, true);
-  assert.deepStrictEqual(LENS_PERMS.canCreateField, false);
+  assert.deepStrictEqual(LENS_PERMS.canCreateFeed, false);
 });
 
 test('a muted author masks through the SAME masked shape the memory tier uses', () => {
@@ -110,7 +110,7 @@ test('link embeds shape as link posts; plain text shapes as text', () => {
 
 // ---- 3e: quotes as thread continuation (D7-grounded) ----
 
-const QSRC = { fieldId: 'lens:q', fieldSlug: 'q', fieldTitle: 'Q' };
+const QSRC = { feedId: 'lens:q', feedSlug: 'q', feedTitle: 'Q' };
 const qPost = (rkey, did, ts, extra = {}) => ({
   uri: `at://${did}/app.bsky.feed.post/${rkey}`, cid: 'cid-' + rkey,
   author: { did, handle: did.slice(8) + '.test' },

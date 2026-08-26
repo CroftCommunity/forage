@@ -11,7 +11,7 @@ const ev = (type, payload, actor = 'u_alice', rest = {}) =>
 // ---- accepts ----
 
 test('accepts a minimal valid post.created', () => {
-  assert.equal(validateEvent(ev('post.created', { id: 'p1', fieldId: 'f1', format: 'text', title: 'hi' })), true);
+  assert.equal(validateEvent(ev('post.created', { id: 'p1', feedId: 'f1', format: 'text', title: 'hi' })), true);
 });
 
 test('accepts account.registered with no actor (bootstrap exemption)', () => {
@@ -41,15 +41,15 @@ test('rejects an unknown event type', () => {
   assert.throws(() => validateEvent(ev('post.upvoted', {})), /unknown event type/);
 });
 
-test('rejects a missing required field, naming it', () => {
+test('rejects a missing required feed, naming it', () => {
   assert.throws(
-    () => validateEvent(ev('post.created', { id: 'p1', fieldId: 'f1', format: 'text' })),
-    /post\.created missing required field: title/,
+    () => validateEvent(ev('post.created', { id: 'p1', feedId: 'f1', format: 'text' })),
+    /post\.created missing required feed: title/,
   );
 });
 
-test('rejects a null payload when fields are required', () => {
-  assert.throws(() => validateEvent(ev('post.created', null)), /missing required field/);
+test('rejects a null payload when feeds are required', () => {
+  assert.throws(() => validateEvent(ev('post.created', null)), /missing required feed/);
 });
 
 test('rejects vote.set with an out-of-range value', () => {
@@ -59,30 +59,30 @@ test('rejects vote.set with an out-of-range value', () => {
 });
 
 test('rejects actor: undefined on a non-registration event', () => {
-  const e = { type: 'post.created', ts: 1000, payload: { fieldId: 'f1', format: 'text', title: 'hi' } };
+  const e = { type: 'post.created', ts: 1000, payload: { feedId: 'f1', format: 'text', title: 'hi' } };
   assert.throws(() => validateEvent(e), /requires an actor/);
 });
 
 // ---- hardened rules (2b): both sides of each ----
 
 test('actor null AND undefined rejected on every type except account.registered', () => {
-  const payload = { fieldId: 'f1', format: 'text', title: 'hi' };
+  const payload = { feedId: 'f1', format: 'text', title: 'hi' };
   assert.throws(() => validateEvent(ev('post.created', payload, null)), /requires an actor/);
   assert.throws(() => validateEvent({ type: 'post.created', ts: 1, payload }), /requires an actor/);
   // the exemption itself is pinned: registration still bootstraps actorless
   assert.equal(validateEvent({ type: 'account.registered', ts: 1, payload: { handle: 'x' } }), true);
 });
 
-for (const type of ['post.created', 'comment.created', 'field.created', 'report.filed']) {
+for (const type of ['post.created', 'comment.created', 'feed.created', 'report.filed']) {
   const full = {
-    'post.created': { fieldId: 'f1', format: 'text', title: 'hi' },
+    'post.created': { feedId: 'f1', format: 'text', title: 'hi' },
     'comment.created': { postId: 'p1', bodyMd: 'hi' },
-    'field.created': { slug: 'g', title: 'G' },
-    'report.filed': { subjectType: 'post', subjectId: 'p1', fieldId: 'f1', reason: 'spam' },
+    'feed.created': { slug: 'g', title: 'G' },
+    'report.filed': { subjectType: 'post', subjectId: 'p1', feedId: 'f1', reason: 'spam' },
   }[type];
 
   test(`${type} requires payload.id — rejects without, accepts with`, () => {
-    assert.throws(() => validateEvent(ev(type, full)), /missing required field: id/);
+    assert.throws(() => validateEvent(ev(type, full)), /missing required feed: id/);
     assert.equal(validateEvent(ev(type, { id: 'x1', ...full })), true);
   });
 }
@@ -92,8 +92,8 @@ for (const type of ['post.created', 'comment.created', 'field.created', 'report.
 test('store.commit refuses an id-less post.created (validation wired at dispatch)', async () => {
   const store = await import('../js/store.js');
   assert.throws(
-    () => store.commit('post.created', { fieldId: 'f1', format: 'text', title: 'x' }, { actor: 'u_a' }),
-    /missing required field: id/,
+    () => store.commit('post.created', { feedId: 'f1', format: 'text', title: 'x' }, { actor: 'u_a' }),
+    /missing required feed: id/,
   );
   assert.throws(
     () => store.commit('vote.set', { subjectType: 'post', subjectId: 'p1', value: 1 }, { actor: null }),
@@ -101,7 +101,7 @@ test('store.commit refuses an id-less post.created (validation wired at dispatch
   );
 });
 
-// ---- 2i gap-closers: every required-field list is load-bearing ----
+// ---- 2i gap-closers: every required-feed list is load-bearing ----
 
 // The pinned vocabulary. Deliberately a full second copy: a test that reads
 // EVENT_TYPES as its own spec is self-referential and kills nothing (a lesson
@@ -111,11 +111,11 @@ const REQUIRED = {
   'account.registered':      ['handle'],
   'account.suspended':       ['userId', 'reason'],
   'prefs.updated':           ['patch'],
-  'field.created':           ['id', 'slug', 'title'],
-  'field.settingsUpdated':   ['fieldId', 'patch'],
-  'field.joined':            ['fieldId'],
-  'field.left':              ['fieldId'],
-  'post.created':            ['id', 'fieldId', 'format', 'title'],
+  'feed.created':           ['id', 'slug', 'title'],
+  'feed.settingsUpdated':   ['feedId', 'patch'],
+  'feed.joined':            ['feedId'],
+  'feed.left':              ['feedId'],
+  'post.created':            ['id', 'feedId', 'format', 'title'],
   'post.edited':             ['postId', 'patch'],
   'post.deletedByAuthor':    ['postId'],
   'comment.created':         ['id', 'postId', 'bodyMd'],
@@ -123,17 +123,17 @@ const REQUIRED = {
   'comment.deletedByAuthor': ['commentId'],
   'vote.set':                ['subjectType', 'subjectId', 'value'],
   'save.set':                ['subjectType', 'subjectId', 'saved'],
-  'report.filed':            ['id', 'subjectType', 'subjectId', 'fieldId', 'reason'],
+  'report.filed':            ['id', 'subjectType', 'subjectId', 'feedId', 'reason'],
   'mod.removed':             ['subjectType', 'subjectId'],
   'mod.approved':            ['subjectType', 'subjectId'],
   'mod.locked':              ['subjectType', 'subjectId'],
   'mod.unlocked':            ['subjectType', 'subjectId'],
   'mod.pinned':              ['subjectType', 'subjectId'],
   'mod.unpinned':            ['subjectType', 'subjectId'],
-  'mod.banned':              ['fieldId', 'userId'],
-  'mod.unbanned':            ['fieldId', 'userId'],
-  'mod.stewardAdded':        ['fieldId', 'userId'],
-  'mod.stewardRemoved':      ['fieldId', 'userId'],
+  'mod.banned':              ['feedId', 'userId'],
+  'mod.unbanned':            ['feedId', 'userId'],
+  'mod.stewardAdded':        ['feedId', 'userId'],
+  'mod.stewardRemoved':      ['feedId', 'userId'],
   'notification.read':       ['notificationIds'],
 };
 
@@ -144,7 +144,7 @@ test('EVENT_TYPES matches the pinned vocabulary exactly', () => {
   assert.deepStrictEqual(EVENT_TYPES, REQUIRED);
 });
 
-test('every pinned entry: minimal event validates; dropping ANY required field throws naming it', () => {
+test('every pinned entry: minimal event validates; dropping ANY required feed throws naming it', () => {
   for (const [type, required] of Object.entries(REQUIRED)) {
     const payload = Object.fromEntries(required.map((k) => [k, sampleValue(type, k)]));
     assert.equal(validateEvent(ev(type, payload)), true, `${type} minimal accept`);
@@ -152,7 +152,7 @@ test('every pinned entry: minimal event validates; dropping ANY required field t
       const broken = { ...payload };
       delete broken[key];
       assert.throws(() => validateEvent(ev(type, broken)),
-        new RegExp(`missing required field: ${key}`), `${type} must require ${key}`);
+        new RegExp(`missing required feed: ${key}`), `${type} must require ${key}`);
     }
   }
 });
@@ -169,5 +169,5 @@ test('MOD_TYPES is exactly the ten mod.* types', async () => {
 test('EVENT_TYPES is the complete mutation vocabulary (27 types, all with required lists)', () => {
   const types = Object.keys(EVENT_TYPES);
   assert.equal(types.length, 27);
-  for (const t of types) assert.ok(Array.isArray(EVENT_TYPES[t]), `${t} has a required-fields list`);
+  for (const t of types) assert.ok(Array.isArray(EVENT_TYPES[t]), `${t} has a required-feeds list`);
 });

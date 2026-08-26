@@ -12,6 +12,10 @@ import { frontiers } from '../../ledger/divergence.js';
 import { humanWait } from '../engines/limits.js';
 import { postRow, commentNode, voteBox, emptyState, gate, errorState, toast } from './components.js';
 
+// A board scope for one feed. Derived, not spelled: the old literal was the
+// length of 'field:' and the rename silently cut a character off every slug.
+const FEED_SCOPE = 'feed:';
+
 const V = () => store.getPersonaId();
 const S = () => store.getState();
 const NOW = () => store.nowSec(); // the one place views resolve the clock
@@ -22,15 +26,15 @@ function tabs(items, active) {
 }
 
 // ---------- sidebar builders ----------
-function fieldsSidebar() {
-  const list = sel.fieldList(S(), V());
+function feedsSidebar() {
+  const list = sel.feedList(S(), V());
   return el('div', { class: 'card' },
-    el('h2', {}, 'Fields'),
+    el('h2', {}, 'Feeds'),
     el('div', { class: 'stack' }, ...list.map((f) => el('div', { class: 'row spread' },
       el('a', { href: `/f/${f.slug}` }, `f/${f.slug}`),
       el('span', { class: 'xs muted' }, `${f.memberCount}${f.joined ? ' · joined' : ''}`)))),
     el('hr', { class: 'rule' }),
-    el('a', { class: 'btn sm', href: '/create-field' }, '+ Create a Field'),
+    el('a', { class: 'btn sm', href: '/create-feed' }, '+ Create a feed'),
     ' ',
     el('a', { class: 'btn sm', href: '/frontiers' }, 'Frontiers'));
 }
@@ -49,9 +53,9 @@ function limitsSidebar() {
 
 // ---------- feeds ----------
 const SORTS = ['hot', 'new', 'top', 'controversial', 'rising'];
-export function feedView(scope, title, query) {
+export function boardView(scope, title, query) {
   const sort = query.sort || (S().users[V()]?.prefs?.defaultSort ?? 'hot');
-  const data = sel.feed(S(), V(), scope, sort, 'all', NOW());
+  const data = sel.board(S(), V(), scope, sort, 'all', NOW());
   const main = el('div', {});
 
   // Logged-out banner with the primary tagline (acceptance §12).
@@ -60,46 +64,46 @@ export function feedView(scope, title, query) {
       el('img', { class: 'hero-art', src: '/assets/logo-wordmark.jpg', alt: 'Forage — a rook in a wreath as the O' }),
       el('div', { class: 'hero-copy' },
         el('strong', { style: 'font-family:var(--font-display);font-size:18px' }, 'Forage the open web.'),
-        el('div', { class: 'xs muted' }, 'You are browsing logged out. Join a Field to start posting.')),
+        el('div', { class: 'xs muted' }, 'You are browsing logged out. Join a Feed to start posting.')),
       el('a', { class: 'btn primary sm', href: '/signup' }, 'Sign up')));
   }
 
   main.append(el('div', { class: 'row spread wrap' },
     el('h1', {}, title),
-    scope.startsWith('field:') && data.perms.canPost
-      ? el('a', { class: 'btn primary sm', href: `/submit?f=${scope.slice(6)}` }, '+ New post') : null));
+    scope.startsWith('feed:') && data.perms.canPost
+      ? el('a', { class: 'btn primary sm', href: `/submit?f=${scope.slice(FEED_SCOPE.length)}` }, '+ New post') : null));
 
-  const base = scope.startsWith('field:') ? `/f/${scope.slice(6)}` : `/${scope}`;
+  const base = scope.startsWith('feed:') ? `/f/${scope.slice(FEED_SCOPE.length)}` : `/${scope}`;
   main.append(el('div', { class: 'tabs' }, ...SORTS.map((s) =>
     el('a', { class: 'tab' + (s === sort ? ' active' : ''), href: `${base}?sort=${s}` }, s[0].toUpperCase() + s.slice(1)))));
 
   if (!data.posts.length) {
     main.append(emptyState('Nothing growing here yet',
-      scope === 'home' ? 'Join a Field to fill your Home.' : 'Be the first to post.',
-      el('a', { class: 'btn primary', href: scope === 'home' ? '/all' : '/create-field' },
-        scope === 'home' ? 'Discover Fields' : 'Create a Field')));
+      scope === 'home' ? 'Join a Feed to fill your Home.' : 'Be the first to post.',
+      el('a', { class: 'btn primary', href: scope === 'home' ? '/all' : '/create-feed' },
+        scope === 'home' ? 'Discover feeds' : 'Create a feed')));
   } else {
     const card = el('div', { class: 'card' });
     for (const p of data.posts) card.append(postRow(p, data.perms.canVote));
     main.append(card);
   }
-  return { main, side: el('div', { class: 'side' }, limitsSidebar(), fieldsSidebar()) };
+  return { main, side: el('div', { class: 'side' }, limitsSidebar(), feedsSidebar()) };
 }
 
-// ---------- field (about + feed) ----------
-export function fieldView(params, query) {
-  const f = sel.field(S(), V(), params.slug, NOW());
-  if (!f) return { main: emptyState('No such Field', 'This Field does not exist.'), side: el('div', {}, fieldsSidebar()) };
-  const feed = feedView(`field:${params.slug}`, f.title, query);
+// ---------- feed (about + feed) ----------
+export function feedView(params, query) {
+  const f = sel.feed(S(), V(), params.slug, NOW());
+  if (!f) return { main: emptyState('No such Feed', 'This Feed does not exist.'), side: el('div', {}, feedsSidebar()) };
+  const feed = boardView(`feed:${params.slug}`, f.title, query);
 
   const banNotice = f.perms.bannedHere
-    ? el('div', { class: 'notice ban' }, el('strong', {}, 'You are banned from this Field. '),
+    ? el('div', { class: 'notice ban' }, el('strong', {}, 'You are banned from this Feed. '),
         `Reason: ${esc(f.perms.banInfo.reason || 'unspecified')}. You can read but not participate. `,
         el('a', { href: `/f/${f.slug}/mod/log` }, 'See the public audit log.'))
     : null;
 
   const joinBtn = el('button', { class: 'btn' + (f.joined ? '' : ' primary') }, f.joined ? 'Joined ✓' : 'Join');
-  joinBtn.addEventListener('click', async () => { try { await actions.joinField(f.id, !f.joined); } catch {} });
+  joinBtn.addEventListener('click', async () => { try { await actions.joinFeed(f.id, !f.joined); } catch {} });
 
   const about = el('div', { class: 'card' },
     el('h2', {}, `f/${f.slug}`),
@@ -113,14 +117,14 @@ export function fieldView(params, query) {
     el('div', { class: 'row wrap', style: 'margin-top:8px;gap:6px' },
       el('a', { class: 'btn sm', href: `/f/${f.slug}/mod/log` }, 'Audit log'),
       f.perms.canModerate ? el('a', { class: 'btn sm', href: `/f/${f.slug}/mod/queue` }, 'Mod queue') : null,
-      f.perms.canManageField ? el('a', { class: 'btn sm', href: `/f/${f.slug}/settings` }, 'Field settings') : null));
+      f.perms.canManageFeed ? el('a', { class: 'btn sm', href: `/f/${f.slug}/settings` }, 'Feed settings') : null));
 
   const rules = f.rules.length ? el('div', { class: 'card' }, el('h2', {}, 'Rules'),
     el('ol', { style: 'margin:0;padding-left:18px' }, ...f.rules.map((r) =>
       el('li', { class: 'small', style: 'margin-bottom:6px' }, el('strong', {}, r.title), r.body ? el('div', { class: 'xs muted' }, r.body) : null)))) : null;
 
   const main = el('div', {}, banNotice, feed.main);
-  return { main, side: el('div', { class: 'side' }, about, rules, limitsSidebar(), fieldsSidebar()) };
+  return { main, side: el('div', { class: 'side' }, about, rules, limitsSidebar(), feedsSidebar()) };
 }
 
 // ---------- thread ----------
@@ -136,7 +140,7 @@ export function threadView(params, query) {
       voteBox('post', p.id, p, t.perms.canVote),
       el('div', { class: 'grow' },
         el('div', { class: 'row wrap', style: 'gap:6px' },
-          el('a', { href: `/f/${p.fieldSlug}`, class: 'xs' }, `f/${p.fieldSlug}`),
+          el('a', { href: `/f/${p.feedSlug}`, class: 'xs' }, `f/${p.feedSlug}`),
           p.pinned ? el('span', { class: 'chip badge-pin' }, '📌 pinned') : null,
           p.locked ? el('span', { class: 'chip badge-locked' }, '🔒 locked') : null,
           p.nsfw ? el('span', { class: 'chip badge-nsfw' }, 'NSFW') : null,
@@ -149,7 +153,7 @@ export function threadView(params, query) {
           p.author ? el('a', { href: `/u/${p.author}` }, p.author) : el('span', { class: 'muted' }, '[removed]'),
           el('span', {}, timeAgo(p.createdTs) + ' ago'),
           el('span', {}, `${p.commentCount} comments`),
-          t.perms.canReport ? linkAction('report', () => doReport('post', p.id, p.fieldId)) : null,
+          t.perms.canReport ? linkAction('report', () => doReport('post', p.id, p.feedId)) : null,
           saveInline('post', p.id, p.saved),
           ...(t.perms.canModerate ? modInline('post', p) : [])))));
   main.append(head);
@@ -159,19 +163,19 @@ export function threadView(params, query) {
   // composer
   if (t.perms.canComment && !t.locked) main.append(composer(p.id));
   else if (!t.perms.loggedIn) main.append(gate('Log in to join the discussion.'));
-  else if (t.perms.bannedHere) main.append(el('div', { class: 'notice ban' }, 'You are banned in this Field and cannot comment.'));
+  else if (t.perms.bannedHere) main.append(el('div', { class: 'notice ban' }, 'You are banned in this Feed and cannot comment.'));
 
   // comments
   const ctx = { canVote: t.perms.canVote, canComment: t.perms.canComment, canReport: t.perms.canReport,
-    canModerate: t.perms.canModerate, locked: t.locked, fieldId: p.fieldId, fieldSlug: p.fieldSlug };
-  const sortRow = tabs([['Best', `/f/${p.fieldSlug}/p/${p.id}?sort=best`], ['Top', `/f/${p.fieldSlug}/p/${p.id}?sort=top`],
-    ['New', `/f/${p.fieldSlug}/p/${p.id}?sort=new`], ['Controversial', `/f/${p.fieldSlug}/p/${p.id}?sort=controversial`]],
+    canModerate: t.perms.canModerate, locked: t.locked, feedId: p.feedId, feedSlug: p.feedSlug };
+  const sortRow = tabs([['Best', `/f/${p.feedSlug}/p/${p.id}?sort=best`], ['Top', `/f/${p.feedSlug}/p/${p.id}?sort=top`],
+    ['New', `/f/${p.feedSlug}/p/${p.id}?sort=new`], ['Controversial', `/f/${p.feedSlug}/p/${p.id}?sort=controversial`]],
     (query.sort || 'best'));
   main.append(el('div', { class: 'card' },
     el('div', { class: 'row spread' }, el('h2', {}, `${t.total} comments`), null), sortRow,
     ...(t.comments.length ? t.comments.map((c) => commentNode(c, ctx)) : [el('div', { class: 'muted small' }, 'No comments yet.')])));
 
-  return { main, side: el('div', { class: 'side' }, fieldsSidebar()) };
+  return { main, side: el('div', { class: 'side' }, feedsSidebar()) };
 }
 
 function composer(postId) {
@@ -186,7 +190,7 @@ function composer(postId) {
 
 function linkAction(label, fn) { const b = el('button', { class: 'linkish' }, label); b.style.cssText = 'background:none;border:none;color:var(--muted);cursor:pointer;padding:0;font-size:13px'; b.addEventListener('click', fn); return b; }
 function saveInline(type, id, saved) { return linkAction(saved ? 'unsave' : 'save', async () => { try { await actions.setSave(type, id, !saved); } catch {} }); }
-async function doReport(type, id, fieldId) { const r = prompt('Report reason:', 'Spam'); if (!r) return; try { await actions.report(type, id, fieldId, r, ''); toast('Report filed.', 'ok'); } catch {} }
+async function doReport(type, id, feedId) { const r = prompt('Report reason:', 'Spam'); if (!r) return; try { await actions.report(type, id, feedId, r, ''); toast('Report filed.', 'ok'); } catch {} }
 function modInline(type, p) {
   const act = (label, evType, extra = {}) => linkAction(label, async () => {
     const reason = evType === 'mod.removed' ? (prompt('Reason:', 'Rule violation') || '') : '';
@@ -208,7 +212,7 @@ const ACTION_LABEL = {
 };
 export function auditView(params) {
   const log = sel.auditLog(S(), V(), params.slug);
-  if (!log) return { main: emptyState('No such Field', ''), side: null };
+  if (!log) return { main: emptyState('No such Feed', ''), side: null };
   const main = el('div', {}, el('h1', {}, `Audit log — f/${log.slug}`),
     el('p', { class: 'muted small' }, 'This log is public. Every steward action appears here.'));
   if (!log.entries.length) main.append(emptyState('Nothing logged yet', 'Steward actions will show up here.'));
@@ -224,13 +228,13 @@ export function auditView(params) {
     }
     main.append(card);
   }
-  return { main, side: el('div', { class: 'side' }, fieldsSidebar()) };
+  return { main, side: el('div', { class: 'side' }, feedsSidebar()) };
 }
 
 // ---------- mod queue ----------
 export function queueView(params) {
   const q = sel.modQueue(S(), V(), params.slug, NOW());
-  if (!q) return { main: emptyState('No such Field', ''), side: null };
+  if (!q) return { main: emptyState('No such Feed', ''), side: null };
   if (q.gated) return { main: gate('Only stewards can see the mod queue.'), side: null };
   const main = el('div', {}, el('h1', {}, `Mod queue — f/${q.slug}`),
     el('p', { class: 'muted small' }, 'Keys: j/k move · a approve · r remove'));
@@ -264,7 +268,7 @@ export function queueView(params) {
   render(); main.append(list);
   return wrapSide(main, params.slug);
 }
-function wrapSide(main, slug) { return { main, side: el('div', { class: 'side' }, el('div', { class: 'card' }, el('a', { href: `/f/${slug}` }, '← back to Field'), el('br'), el('a', { href: `/f/${slug}/mod/log` }, 'Public audit log')), fieldsSidebar()) }; }
+function wrapSide(main, slug) { return { main, side: el('div', { class: 'side' }, el('div', { class: 'card' }, el('a', { href: `/f/${slug}` }, '← back to feed'), el('br'), el('a', { href: `/f/${slug}/mod/log` }, 'Public audit log')), feedsSidebar()) }; }
 
 async function actOn(item, evType, slug) {
   const subjectType = item.kind === 'report' ? item.r.subjectType : 'post';
@@ -318,7 +322,7 @@ export function profileView(params, query) {
   }
   if (!card.children.length) card.append(el('div', { class: 'muted small' }, 'Nothing here yet.'));
   main.append(card);
-  return { main, side: el('div', { class: 'side' }, fieldsSidebar()) };
+  return { main, side: el('div', { class: 'side' }, feedsSidebar()) };
 }
 function profileComment(c) {
   return el('div', { class: 'postrow' }, el('div', {}),
@@ -368,12 +372,12 @@ export function searchView(params, query) {
 // ---------- submission wizard (4 linear steps) ----------
 export function submitView(params, query) {
   if (!V()) return { main: gate('Log in to post.'), side: null };
-  const state = { step: 1, fieldSlug: query.f || '', format: 'text', title: '', body: '', url: '', tagId: '', nsfw: false, spoiler: false };
-  const fields = sel.fieldList(S(), V());
+  const state = { step: 1, feedSlug: query.f || '', format: 'text', title: '', body: '', url: '', tagId: '', nsfw: false, spoiler: false };
+  const feeds = sel.feedList(S(), V());
   const host = el('div', { class: 'card' });
   const render = () => {
     host.innerHTML = '';
-    host.append(el('div', { class: 'wizard-steps' }, ...['Field', 'Format', 'Content', 'Review'].map((s, i) =>
+    host.append(el('div', { class: 'wizard-steps' }, ...['Feed', 'Format', 'Content', 'Review'].map((s, i) =>
       el('span', { class: 'step' + (state.step === i + 1 ? ' active' : '') }, `${i + 1}. ${s}`))));
     if (state.step === 1) step1();
     else if (state.step === 2) step2();
@@ -384,11 +388,11 @@ export function submitView(params, query) {
   const back = () => { state.step--; render(); };
 
   function step1() {
-    const sel2 = el('select', { class: 'form' }, el('option', { value: '' }, '— choose a Field —'),
-      ...fields.map((f) => el('option', { value: f.slug, selected: f.slug === state.fieldSlug || false }, `f/${f.slug}`)));
-    sel2.addEventListener('change', () => (state.fieldSlug = sel2.value));
-    host.append(fieldRow('Post to which Field?', sel2),
-      el('button', { class: 'btn primary', onclick: () => { if (!state.fieldSlug) return toast('Pick a Field.', 'err'); next(); } }, 'Next →'));
+    const sel2 = el('select', { class: 'form' }, el('option', { value: '' }, '— choose a feed —'),
+      ...feeds.map((f) => el('option', { value: f.slug, selected: f.slug === state.feedSlug || false }, `f/${f.slug}`)));
+    sel2.addEventListener('change', () => (state.feedSlug = sel2.value));
+    host.append(fieldRow('Post to which Feed?', sel2),
+      el('button', { class: 'btn primary', onclick: () => { if (!state.feedSlug) return toast('Pick a Feed.', 'err'); next(); } }, 'Next →'));
   }
   function step2() {
     const tabsEl = el('div', { class: 'format-tabs' },
@@ -404,8 +408,8 @@ export function submitView(params, query) {
     return t;
   }
   function step3() {
-    const field = fields.find((f) => f.slug === state.fieldSlug);
-    const fdata = sel.field(S(), V(), state.fieldSlug, NOW());
+    const feed = feeds.find((f) => f.slug === state.feedSlug);
+    const fdata = sel.feed(S(), V(), state.feedSlug, NOW());
     const title = el('input', { type: 'text', value: state.title, placeholder: 'Title' });
     title.addEventListener('input', () => (state.title = title.value));
     host.append(fieldRow('Title', title));
@@ -427,7 +431,7 @@ export function submitView(params, query) {
     if (fdata?.settings.requireTags) {
       const tag = el('input', { type: 'text', value: state.tagId, placeholder: 'e.g. guide, help, chat' });
       tag.addEventListener('input', () => (state.tagId = tag.value));
-      host.append(fieldRow('Tag (required in this Field)', tag));
+      host.append(fieldRow('Tag (required in this Feed)', tag));
     }
     const nsfw = el('input', { type: 'checkbox' }); nsfw.checked = state.nsfw; nsfw.addEventListener('change', () => (state.nsfw = nsfw.checked));
     const spoiler = el('input', { type: 'checkbox' }); spoiler.checked = state.spoiler; spoiler.addEventListener('change', () => (state.spoiler = spoiler.checked));
@@ -437,16 +441,16 @@ export function submitView(params, query) {
         el('button', { class: 'btn', onclick: back }, '← Back'),
         el('button', { class: 'btn primary', onclick: () => {
           if (!state.title.trim()) return toast('Title is required.', 'err');
-          if (fdata?.settings.requireTags && !state.tagId.trim()) return toast('This Field requires a tag.', 'err');
+          if (fdata?.settings.requireTags && !state.tagId.trim()) return toast('This Feed requires a tag.', 'err');
           if (state.format === 'link' && !state.url.trim()) return toast('URL is required.', 'err');
           next();
         } }, 'Review →')));
   }
   function step4() {
-    const fdata = sel.field(S(), V(), state.fieldSlug, NOW());
+    const fdata = sel.feed(S(), V(), state.feedSlug, NOW());
     const wouldHold = (fdata?.settings.automod || []).some((r) => `${state.title} ${state.body}`.toLowerCase().includes((r.match || '').toLowerCase()));
     host.append(el('div', { class: 'stack' },
-      el('div', { class: 'muted xs' }, `Posting to f/${state.fieldSlug} as ${state.format}`),
+      el('div', { class: 'muted xs' }, `Posting to f/${state.feedSlug} as ${state.format}`),
       el('h2', {}, state.title),
       state.format === 'text' ? el('div', { class: 'small', html: mdLite(state.body) }) : el('a', { href: state.url, target: '_blank' }, state.url),
       state.tagId ? el('span', { class: 'tag' }, state.tagId) : null,
@@ -456,12 +460,12 @@ export function submitView(params, query) {
         el('button', { class: 'btn primary', onclick: submit }, 'Submit'))));
   }
   async function submit() {
-    const field = sel.field(S(), V(), state.fieldSlug, NOW());
+    const feed = sel.feed(S(), V(), state.feedSlug, NOW());
     try {
-      const ev = await actions.createPost({ fieldId: field.id, format: state.format, title: state.title.trim(),
+      const ev = await actions.createPost({ feedId: feed.id, format: state.format, title: state.title.trim(),
         bodyMd: state.body, url: state.url.trim(), tagId: state.tagId.trim() || null, nsfw: state.nsfw, spoiler: state.spoiler });
       toast('Posted.', 'ok');
-      go(`/f/${state.fieldSlug}/p/${ev.payload.id}`);
+      go(`/f/${state.feedSlug}/p/${ev.payload.id}`);
     } catch (e) { /* rate-limit toast already shown */ }
   }
 
@@ -469,10 +473,10 @@ export function submitView(params, query) {
   return { main: el('div', {}, el('h1', {}, 'New post'), host), side: null };
 }
 
-// ---------- create field ----------
-export function createFieldView() {
+// ---------- create feed ----------
+export function createFeedView() {
   const perms = sel.permissions(S(), V(), undefined, NOW());
-  if (!perms.canCreateField) return { main: gate(perms.probation ? 'Probation accounts cannot create Fields yet.' : 'Log in to create a Field.'), side: null };
+  if (!perms.canCreateFeed) return { main: gate(perms.probation ? 'Probation accounts cannot create Feeds yet.' : 'Log in to create a Feed.'), side: null };
   const slug = el('input', { type: 'text', placeholder: 'slug (lowercase, no spaces)' });
   const title = el('input', { type: 'text', placeholder: 'Title' });
   const desc = el('textarea', { placeholder: 'Description' });
@@ -483,13 +487,13 @@ export function createFieldView() {
     el('button', { class: 'btn primary', onclick: async () => {
       const s = slug.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
       if (!s || !title.value.trim()) return toast('Slug and title required.', 'err');
-      if (Object.values(S().fields).some((f) => f.slug === s)) return toast('That slug is taken.', 'err');
+      if (Object.values(S().feeds).some((f) => f.slug === s)) return toast('That slug is taken.', 'err');
       try {
-        await actions.createField({ slug: s, title: title.value.trim(), description: desc.value.trim() });
+        await actions.createFeed({ slug: s, title: title.value.trim(), description: desc.value.trim() });
       } catch { return; } // the action already toasted the refusal
-      toast('Field created.', 'ok'); go(`/f/${s}`);
-    } }, 'Create Field'));
-  return { main: el('div', {}, el('h1', {}, 'Create a Field'), host), side: null };
+      toast('Feed created.', 'ok'); go(`/f/${s}`);
+    } }, 'Create feed'));
+  return { main: el('div', {}, el('h1', {}, 'Create a feed'), host), side: null };
 }
 
 // 3g: the memory-mode /h/ tag stream — same route scheme as the Bluesky view.
@@ -500,23 +504,23 @@ export function tagStreamView(params) {
   for (const p of r.posts) card.append(postRow(p, r.perms.canVote));
   const main = el('div', {},
     el('h1', {}, `#${r.tag}`),
-    el('div', { class: 'xs muted', style: 'margin-bottom:8px' }, 'Tagged posts across every Field.'),
+    el('div', { class: 'xs muted', style: 'margin-bottom:8px' }, 'Tagged posts across every Feed.'),
     r.posts.length ? card : emptyState('No tagged posts', `Nothing carries #${r.tag} yet.`));
   return { main, side: null };
 }
 
-// ---------- field settings (owner) ----------
-export function fieldSettingsView(params) {
-  const f = sel.field(S(), V(), params.slug, NOW());
-  if (!f) return { main: emptyState('No such Field', ''), side: null };
-  if (!f.perms.canManageField) return { main: gate('Only the owner can change Field settings.'), side: null };
+// ---------- feed settings (owner) ----------
+export function feedSettingsView(params) {
+  const f = sel.feed(S(), V(), params.slug, NOW());
+  if (!f) return { main: emptyState('No such Feed', ''), side: null };
+  if (!f.perms.canManageFeed) return { main: gate('Only the owner can change Feed settings.'), side: null };
   const desc = el('textarea', {}); desc.value = f.description;
   const reqTags = el('input', { type: 'checkbox' }); reqTags.checked = f.settings.requireTags;
   const host = el('div', { class: 'card' },
     fieldRow('Description', desc),
     el('label', { class: 'xs' }, reqTags, ' Require a tag on every post'),
     el('div', { style: 'margin-top:12px' }, el('button', { class: 'btn primary', onclick: async () => {
-      await actions.updateFieldSettings(f.id, { requireTags: reqTags.checked, description: desc.value.trim() });
+      await actions.updateFeedSettings(f.id, { requireTags: reqTags.checked, description: desc.value.trim() });
       toast('Settings saved.', 'ok'); go(`/f/${f.slug}`);
     } }, 'Save')));
   return { main: el('div', {}, el('h1', {}, `Settings — f/${f.slug}`),
@@ -525,18 +529,18 @@ export function fieldSettingsView(params) {
 
 // A <label> that merely sits NEXT TO an input names nothing. A screen reader
 // announces "edit text, blank", and clicking the label does not focus the
-// field. Both are fixed by one association: label[for] -> control[id].
+// feed. Both are fixed by one association: label[for] -> control[id].
 //
 // Centralised because the bare pattern was repeated at 17 call sites and 14 of
 // them were unlabelled — this is not a thing to remember per form. Rows that
 // hold a LINK or a readout rather than a control (Mode, Accounts, Version) are
-// not form fields; they keep their plain label and are left alone.
-let fieldSeq = 0;
+// not form feeds; they keep their plain label and are left alone.
+let feedSeq = 0;
 export function fieldRow(labelText, control, ...extra) {
   const isControl = /^(INPUT|SELECT|TEXTAREA)$/.test(control?.tagName ?? '');
-  if (!isControl) return el('div', { class: 'field-row' }, el('label', {}, labelText), control, ...extra);
-  if (!control.id) control.id = `fr-${++fieldSeq}`;
-  return el('div', { class: 'field-row' }, el('label', { for: control.id }, labelText), control, ...extra);
+  if (!isControl) return el('div', { class: 'feed-row' }, el('label', {}, labelText), control, ...extra);
+  if (!control.id) control.id = `fr-${++feedSeq}`;
+  return el('div', { class: 'feed-row' }, el('label', { for: control.id }, labelText), control, ...extra);
 }
 
 // ---------- settings / prefs ----------
@@ -573,11 +577,11 @@ export function settingsView() {
   skinSel.addEventListener('change', () => skins.setSkin(skinSel.value));
   const themeCard = el('div', { class: 'card' },
     fieldRow('Skin', skinSel),
-    el('div', { class: 'field-row' }, el('label', {}, 'Mode'),
+    el('div', { class: 'feed-row' }, el('label', {}, 'Mode'),
       el('a', { href: '/mode' }, 'Bluesky view ↔ Memory sandbox — choose at /mode')),
-    el('div', { class: 'field-row' }, el('label', {}, 'Accounts'),
+    el('div', { class: 'feed-row' }, el('label', {}, 'Accounts'),
       el('a', { href: '/me' }, 'Switch account, add another, or sign out')),
-    el('div', { class: 'field-row' }, el('label', {}, 'Version'), versionOut),
+    el('div', { class: 'feed-row' }, el('label', {}, 'Version'), versionOut),
     el('div', { class: 'xs muted' }, 'Skin and mode are this device only.'));
 
   if (!V()) {
@@ -604,19 +608,19 @@ const DEVBAR_DOCS = [
     seats: [
       ['Logged out', 'Public reads only; every write shows an auth gate.'],
       ['admin.wren', 'Site admin — can suspend accounts and act sitewide.'],
-      ['owner.sage', 'Owner of f/gardening — Field settings, rules, held-post review.'],
+      ['owner.sage', 'Owner of f/gardening — Feed settings, rules, held-post review.'],
       ['steward.briar', 'Steward of f/gardening, plain member elsewhere — the dual-hat mod experience.'],
       ['member.fern', 'Established member — the default reader seat.'],
-      ['newbie.moss', 'On probation — rate-limited, cannot create Fields, low report weight.'],
+      ['newbie.moss', 'On probation — rate-limited, cannot create Feeds, low report weight.'],
       ['banned.thorn', 'Banned in f/gardening (read-only there), active elsewhere.'],
       ['heavy.aspen', 'High reputation, sitting at the post rate limit, saved items populated.'],
       ['pristine.dove', 'Never seeded — the permanent first-run / empty-state seat.'],
     ] },
   { name: 'Seed', kind: 'button',
-    what: 'Loads the scripted demo scenario: five Fields, varied posts (long/link/duplicate/NSFW/spoiler/pinned/locked/removed/held), a public audit log, in-flight moderation states, and a generated ~1,000-comment stress thread.',
+    what: 'Loads the scripted demo scenario: five feeds, varied posts (long/link/duplicate/NSFW/spoiler/pinned/locked/removed/held), a public audit log, in-flight moderation states, and a generated ~1,000-comment stress thread.',
     when: 'To get the populated demo back after clearing, or to reset to a known-good starting state. Deterministic — you get the same world every time.' },
   { name: 'Delete All', kind: 'button',
-    what: 'Wipes all local data (the entire event log in your browser) back to the genuine first-run state — no Fields, no posts, logged out.',
+    what: 'Wipes all local data (the entire event log in your browser) back to the genuine first-run state — no Feeds, no posts, logged out.',
     when: 'To see cold-start and empty states as a brand-new visitor would, or to start over. Nothing leaves your browser; this only clears local storage.' },
   { name: 'Export', kind: 'button',
     what: 'Downloads the whole event log as a JSON file (forage-export.json). Because state is a pure fold over that log, the file is a complete, portable snapshot.',

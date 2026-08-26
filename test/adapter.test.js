@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { routing, substrateFor, CAPABILITIES } from '../js/config/routing.js';
 
-const ALL = ['posting', 'commenting', 'voting', 'saving', 'fields', 'moderation',
+const ALL = ['posting', 'commenting', 'voting', 'saving', 'feeds', 'moderation',
   'reporting', 'notifications', 'accounts', 'prefs'];
 
 test('the routing table covers exactly the ten capabilities, all on memory', () => {
@@ -38,7 +38,7 @@ test('3b wiring: a real action travels UI-entry -> actions -> adapter -> memory 
   store.loadEvents(buildSeed());
   store.setPersona('u_fern');
   const before = store.getEvents().length;
-  const ev = await actions.createPost({ fieldId: Object.values(store.getState().fields)[0].id,
+  const ev = await actions.createPost({ feedId: Object.values(store.getState().feeds)[0].id,
     format: 'text', title: 'Adapter wiring proof', bodyMd: 'x' });
   assert.equal(store.getEvents().length, before + 1);
   assert.equal(store.getState().posts[ev.payload.id].title, 'Adapter wiring proof');

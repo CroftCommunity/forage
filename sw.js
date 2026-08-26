@@ -7,7 +7,7 @@
 // Bump CACHE whenever you want to force a clean re-cache on the very next load
 // (asset URLs are hashless, so the name is the version).
 
-const CACHE = 'forage-v35';
+const CACHE = 'forage-v36';
 const SHELL = [
   '/', '/404.html', '/skins/bbs.css', '/skins/usenet.css', '/skins/usenet-dark.css', '/skins/forage-dark.css', '/skins/phpbb.css', '/skins/phpbb-dark.css',
   '/vendor/atproto-oauth-client-browser.js', '/js/auth/session.js', '/js/skins.js',
@@ -19,7 +19,7 @@ const SHELL = [
   '/js/substrates/atproto.js', '/js/substrates/lens.js', '/js/ui/components.js',
   '/js/ui/views.js', '/js/ui/lens-views.js', '/data/seed.js', '/scenarios/ban-readonly.js',
   '/scenarios/comment-tree-collapse.js', '/scenarios/demo-extras.js',
-  '/scenarios/field-lifecycle.js', '/scenarios/format.js', '/scenarios/index.js',
+  '/scenarios/feed-lifecycle.js', '/scenarios/format.js', '/scenarios/index.js',
   '/scenarios/mod-remove-mask.js', '/scenarios/post-vote-rank.js',
   '/scenarios/rate-limit-probation.js', '/scenarios/report-resolve-notify.js',
   '/scenarios/save-and-profile.js', '/scenarios/search-visibility.js', '/ledger/divergence.js',

@@ -26,7 +26,7 @@ export function fetchShim({ responses = {} } = {}) {
         if (url.includes(needle)) {
           // Phase 3: uploadBlob sends raw bytes, not JSON. String(aBlob) is
           // "[object Blob]" — useless and quietly misleading — so a binary
-          // body is recorded as its type and size instead, and the body field
+          // body is recorded as its type and size instead, and the body feed
           // stays a string only when it genuinely is one.
           const raw = init && init.body;
           const isBinary = raw && typeof raw !== 'string';

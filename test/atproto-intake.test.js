@@ -13,18 +13,18 @@ import {
 const SERVICE = 'https://pds.example';
 const alice = 'did:plc:alice', bob = 'did:plc:bob';
 
-// A canned two-member world: alice owns a field + roster; bob posted in it.
+// A canned two-member world: alice owns a feed + roster; bob posted in it.
 const RECORDS = {
   [alice]: {
-    'fyi.forage.field': [{ rkey: 'f_g', value: { $type: 'fyi.forage.field', slug: 'g', title: 'G', createdAt: '2026-08-25T00:00:00.000Z' } }],
-    'fyi.forage.membership': [{ rkey: 'f_g', value: { $type: 'fyi.forage.membership', field: `at://${alice}/fyi.forage.field/f_g`, createdAt: '2026-08-25T00:00:01.000Z' } }],
+    'fyi.forage.feed': [{ rkey: 'f_g', value: { $type: 'fyi.forage.feed', slug: 'g', title: 'G', createdAt: '2026-08-25T00:00:00.000Z' } }],
+    'fyi.forage.membership': [{ rkey: 'f_g', value: { $type: 'fyi.forage.membership', feed: `at://${alice}/fyi.forage.feed/f_g`, createdAt: '2026-08-25T00:00:01.000Z' } }],
   },
   [bob]: {
-    'fyi.forage.membership': [{ rkey: 'f_g', value: { $type: 'fyi.forage.membership', field: `at://${alice}/fyi.forage.field/f_g`, createdAt: '2026-08-25T00:00:02.000Z' } }],
+    'fyi.forage.membership': [{ rkey: 'f_g', value: { $type: 'fyi.forage.membership', feed: `at://${alice}/fyi.forage.feed/f_g`, createdAt: '2026-08-25T00:00:02.000Z' } }],
     // two pages, to prove cursor pagination
     'fyi.forage.post': [
-      { rkey: 'p_1', value: { $type: 'fyi.forage.post', field: `at://${alice}/fyi.forage.field/f_g`, format: 'text', title: 'One', createdAt: '2026-08-25T00:01:00.000Z' } },
-      { rkey: 'p_2', value: { $type: 'fyi.forage.post', field: `at://${alice}/fyi.forage.field/f_g`, format: 'text', title: 'Two', createdAt: '2026-08-25T00:02:00.000Z' } },
+      { rkey: 'p_1', value: { $type: 'fyi.forage.post', feed: `at://${alice}/fyi.forage.feed/f_g`, format: 'text', title: 'One', createdAt: '2026-08-25T00:01:00.000Z' } },
+      { rkey: 'p_2', value: { $type: 'fyi.forage.post', feed: `at://${alice}/fyi.forage.feed/f_g`, format: 'text', title: 'Two', createdAt: '2026-08-25T00:02:00.000Z' } },
     ],
   },
 };
@@ -39,7 +39,7 @@ async function fakeTransport(url) {
   if (u.pathname.endsWith('com.atproto.repo.getRecord')) {
     return json({ uri: `at://${alice}/fyi.forage.roster/self`, value: {
       $type: 'fyi.forage.roster', members: [alice, bob],
-      fields: [`at://${alice}/fyi.forage.field/f_g`], updatedAt: '2026-08-25T00:00:00.000Z',
+      feeds: [`at://${alice}/fyi.forage.feed/f_g`], updatedAt: '2026-08-25T00:00:00.000Z',
     } });
   }
   if (u.pathname.endsWith('com.atproto.repo.listRecords')) {
@@ -64,14 +64,14 @@ test('WIRE_COLLECTIONS is the lexicon set minus the roster', () => {
 test('fetchRoster reads the self-keyed singleton from the founding DID', async () => {
   const roster = await fetchRoster({ service: SERVICE, rosterDid: alice, transport: fakeTransport });
   assert.deepStrictEqual(roster.members, [alice, bob]);
-  assert.equal(roster.fields.length, 1);
+  assert.equal(roster.feeds.length, 1);
 });
 
 test('fetchScopedEvents pulls every member x collection, paginates, decodes, sorts', async () => {
   const events = await fetchScopedEvents({ service: SERVICE, dids: [alice, bob], transport: fakeTransport });
   for (const e of events) assert.equal(validateEvent(e), true);
   const types = events.map((e) => e.type);
-  assert.deepStrictEqual(types, ['field.created', 'field.joined', 'field.joined', 'post.created', 'post.created']);
+  assert.deepStrictEqual(types, ['feed.created', 'feed.joined', 'feed.joined', 'post.created', 'post.created']);
   assert.ok(events.every((e, i) => i === 0 || events[i - 1].ts <= e.ts), 'sorted by ts');
   // pagination actually happened: bob's posts came one per page
   const decoded = calls.map(decodeURIComponent);
@@ -89,16 +89,16 @@ test('the writer maps events to XRPC record ops whose bodies satisfy the lexicon
   };
   const writer = createScopedWriter({
     service: SERVICE, did: bob, accessJwt: 'jwt', transport: writerTransport,
-    uriFor: (id) => ({ f_g: `at://${alice}/fyi.forage.field/f_g`, p_1: `at://${bob}/fyi.forage.post/p_1` })[id],
+    uriFor: (id) => ({ f_g: `at://${alice}/fyi.forage.feed/f_g`, p_1: `at://${bob}/fyi.forage.post/p_1` })[id],
   });
-  await writer.write('post.created', { id: 'p_9', fieldId: 'f_g', format: 'text', title: 'Hi' }, { ts: 1756080000000 });
+  await writer.write('post.created', { id: 'p_9', feedId: 'f_g', format: 'text', title: 'Hi' }, { ts: 1756080000000 });
   await writer.write('vote.set', { subjectType: 'post', subjectId: 'p_1', value: 1 }, { ts: 1756080001000 });
   await writer.write('vote.set', { subjectType: 'post', subjectId: 'p_1', value: 0 }, { ts: 1756080002000 });
 
   assert.equal(ops[0].path.endsWith('com.atproto.repo.createRecord'), true);
   assert.equal(ops[0].body.collection, 'fyi.forage.post');
   assert.equal(ops[0].body.rkey, 'p_9'); // outbound: local id IS the rkey
-  for (const req of ['field', 'format', 'title', 'createdAt']) {
+  for (const req of ['feed', 'format', 'title', 'createdAt']) {
     assert.ok(ops[0].body.record[req] !== undefined, `post record has ${req}`);
   }
   assert.equal(ops[1].body.collection, 'fyi.forage.vote');

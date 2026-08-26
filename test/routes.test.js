@@ -4,7 +4,7 @@
 // present and correct, because the defect lives in the order, not the lines.
 //
 // Found live 2026-08-26: `/f/:handle/:rkey` sat above `/f/:slug/settings`, so
-// `/f/gardening/settings` matched handle=gardening, rkey=settings. Field
+// `/f/gardening/settings` matched handle=gardening, rkey=settings. Feed
 // settings was unreachable in both modes on production — in lens mode it fired
 // a doomed resolveHandle against the literal string "settings".
 import { test } from 'node:test';
@@ -70,7 +70,7 @@ test('the specific /f/ sub-routes outrank the generic two-segment shape', () => 
   const generic = patterns.indexOf('/f/:handle/:rkey');
   const settings = patterns.indexOf('/f/:slug/settings');
   assert.notEqual(generic, -1, 'the creator-qualified feed route still exists');
-  assert.notEqual(settings, -1, 'the field settings route still exists');
+  assert.notEqual(settings, -1, 'the feed settings route still exists');
   assert.ok(settings < generic,
     '/f/:slug/settings must be registered BEFORE /f/:handle/:rkey — both are two ' +
     'segments under /f/, so whichever is first wins, and the generic one must be ' +

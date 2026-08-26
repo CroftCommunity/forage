@@ -37,7 +37,7 @@ const URI = (did, coll, rkey) => `at://${did}/${coll}/${rkey}`;
 test('a lexicon-true post record decodes to a valid post.created (+edited when editedAt)', () => {
   const rec = {
     did: 'did:plc:alice', collection: 'fyi.forage.post', rkey: '3mtufm5bswr2t',
-    value: { $type: 'fyi.forage.post', field: URI('did:plc:alice', 'fyi.forage.field', 'f_orchard'),
+    value: { $type: 'fyi.forage.post', feed: URI('did:plc:alice', 'fyi.forage.feed', 'f_orchard'),
       format: 'text', title: 'Hello', bodyMd: 'Body', createdAt: '2026-08-25T00:00:00.000Z',
       editedAt: '2026-08-25T01:00:00.000Z' },
   };
@@ -49,7 +49,7 @@ test('a lexicon-true post record decodes to a valid post.created (+edited when e
   assert.equal(created.actor, 'did:plc:alice');
   assert.equal(created.ts, Date.parse('2026-08-25T00:00:00.000Z'));
   assert.equal(created.payload.id, 'p_did:plc:alice_3mtufm5bswr2t');
-  assert.equal(created.payload.fieldId, 'f_orchard');
+  assert.equal(created.payload.feedId, 'f_orchard');
   assert.equal(edited.type, 'post.edited');
   assert.equal(edited.ts, Date.parse('2026-08-25T01:00:00.000Z'));
   assert.equal(validateEvent(edited), true);
@@ -58,16 +58,16 @@ test('a lexicon-true post record decodes to a valid post.created (+edited when e
 test('vote/save/membership/mod/report/comment records decode to valid events', () => {
   const alice = 'did:plc:alice';
   const post = URI(alice, 'fyi.forage.post', 'p_a');
-  const fieldUri = URI(alice, 'fyi.forage.field', 'f_orchard');
+  const feedUri = URI(alice, 'fyi.forage.feed', 'f_orchard');
   const cases = [
     [{ did: alice, collection: 'fyi.forage.comment', rkey: 'c_1', value: { subject: post, bodyMd: 'hi', createdAt: '2026-08-25T00:00:01.000Z' } }, 'comment.created'],
     [{ did: alice, collection: 'fyi.forage.vote', rkey: 'v1', value: { subject: post, value: -1, createdAt: '2026-08-25T00:00:02.000Z' } }, 'vote.set'],
     [{ did: alice, collection: 'fyi.forage.save', rkey: 's1', value: { subject: post, createdAt: '2026-08-25T00:00:03.000Z' } }, 'save.set'],
-    [{ did: alice, collection: 'fyi.forage.field', rkey: 'f_orchard', value: { slug: 'orchard', title: 'Orchard', createdAt: '2026-08-25T00:00:04.000Z' } }, 'field.created'],
-    [{ did: alice, collection: 'fyi.forage.membership', rkey: 'm1', value: { field: fieldUri, createdAt: '2026-08-25T00:00:05.000Z' } }, 'field.joined'],
-    [{ did: alice, collection: 'fyi.forage.mod', rkey: 'mod1', value: { action: 'removed', field: fieldUri, subject: post, reason: 'r', createdAt: '2026-08-25T00:00:06.000Z' } }, 'mod.removed'],
-    [{ did: alice, collection: 'fyi.forage.mod', rkey: 'mod2', value: { action: 'banned', field: fieldUri, targetDid: 'did:plc:bob', createdAt: '2026-08-25T00:00:07.000Z' } }, 'mod.banned'],
-    [{ did: alice, collection: 'fyi.forage.report', rkey: 'rep1', value: { subject: post, field: fieldUri, reason: 'spam', createdAt: '2026-08-25T00:00:08.000Z' } }, 'report.filed'],
+    [{ did: alice, collection: 'fyi.forage.feed', rkey: 'f_orchard', value: { slug: 'orchard', title: 'Orchard', createdAt: '2026-08-25T00:00:04.000Z' } }, 'feed.created'],
+    [{ did: alice, collection: 'fyi.forage.membership', rkey: 'm1', value: { feed: feedUri, createdAt: '2026-08-25T00:00:05.000Z' } }, 'feed.joined'],
+    [{ did: alice, collection: 'fyi.forage.mod', rkey: 'mod1', value: { action: 'removed', feed: feedUri, subject: post, reason: 'r', createdAt: '2026-08-25T00:00:06.000Z' } }, 'mod.removed'],
+    [{ did: alice, collection: 'fyi.forage.mod', rkey: 'mod2', value: { action: 'banned', feed: feedUri, targetDid: 'did:plc:bob', createdAt: '2026-08-25T00:00:07.000Z' } }, 'mod.banned'],
+    [{ did: alice, collection: 'fyi.forage.report', rkey: 'rep1', value: { subject: post, feed: feedUri, reason: 'spam', createdAt: '2026-08-25T00:00:08.000Z' } }, 'report.filed'],
   ];
   for (const [rec, type] of cases) {
     const [e] = recordToEvents(rec);
@@ -92,9 +92,9 @@ test('the probe jetstream envelope yields did/collection/rkey the codec accepts'
 function sampleEvents() {
   return [
     ev('account.registered', { handle: 'alice' }, 'did:plc:alice', 1000),
-    ev('field.created', { id: 'f_g', slug: 'g', title: 'G' }, 'did:plc:alice', 2000),
-    ev('field.joined', { fieldId: 'f_g' }, 'did:plc:bob', 3000),
-    ev('post.created', { id: 'p_1', fieldId: 'f_g', format: 'text', title: 'T', bodyMd: 'B' }, 'did:plc:bob', 4000),
+    ev('feed.created', { id: 'f_g', slug: 'g', title: 'G' }, 'did:plc:alice', 2000),
+    ev('feed.joined', { feedId: 'f_g' }, 'did:plc:bob', 3000),
+    ev('post.created', { id: 'p_1', feedId: 'f_g', format: 'text', title: 'T', bodyMd: 'B' }, 'did:plc:bob', 4000),
     ev('post.edited', { postId: 'p_1', patch: { title: 'T2' } }, 'did:plc:bob', 5000),
     ev('vote.set', { subjectType: 'post', subjectId: 'p_1', value: 1 }, 'did:plc:alice', 6000),
     ev('vote.set', { subjectType: 'post', subjectId: 'p_1', value: 0 }, 'did:plc:alice', 7000), // retraction
@@ -107,7 +107,7 @@ function sampleEvents() {
 test('encodeEvents: creates, applies edits in place, deletes retractions, keeps locals', () => {
   const { records, locals } = encodeEvents(sampleEvents());
   const byColl = (c) => records.filter((r) => r.collection === c);
-  assert.equal(byColl('fyi.forage.field').length, 1);
+  assert.equal(byColl('fyi.forage.feed').length, 1);
   assert.equal(byColl('fyi.forage.membership').length, 1);
   const [post] = byColl('fyi.forage.post');
   assert.equal(post.value.title, 'T2');            // edit applied in place
@@ -143,5 +143,5 @@ test('decode(encode(events)) folds to the same observable state (spot check)', a
   assert.equal(b.posts.p_1.edited, true);
   assert.deepStrictEqual(tally(b, 'post', 'p_1'), tally(a, 'post', 'p_1')); // retraction-as-absence == vote.set(0)
   assert.deepStrictEqual(b.users, a.users);           // locals pass through
-  assert.ok(b.fields.f_g.members.has('did:plc:bob'));
+  assert.ok(b.feeds.f_g.members.has('did:plc:bob'));
 });

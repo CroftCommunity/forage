@@ -16,8 +16,8 @@ const COLLECTIONS = [
   'fyi.forage.comment',    // comment.created (+edited/deleted likewise)
   'fyi.forage.vote',       // vote.set 1|-1; retraction = record delete
   'fyi.forage.save',       // save.set true; unsave = record delete
-  'fyi.forage.field',      // field.created (+settingsUpdated via putRecord)
-  'fyi.forage.membership', // field.joined; field.left = record delete
+  'fyi.forage.feed',      // feed.created (+settingsUpdated via putRecord)
+  'fyi.forage.membership', // feed.joined; feed.left = record delete
   'fyi.forage.mod',        // the mod.* family, one action record in the steward's repo
   'fyi.forage.report',     // report.filed
   'fyi.forage.roster',     // the scoped tier's membership, in the founding DID's repo (key: self)
@@ -41,7 +41,7 @@ test('every pinned collection has a lexicon file whose id matches', () => {
     assert.ok(doc.defs.main.key, `${id}: record key declared`);
     const rec = doc.defs.main.record;
     assert.equal(rec.type, 'object');
-    assert.ok(Array.isArray(rec.required) && rec.required.length > 0, `${id}: required fields`);
+    assert.ok(Array.isArray(rec.required) && rec.required.length > 0, `${id}: required feeds`);
     for (const req of rec.required) assert.ok(rec.properties[req], `${id}: required ${req} is defined`);
   }
 });
@@ -58,8 +58,8 @@ test('every event type is either wire-mapped or a named local-only omission', as
     'post.created': 'fyi.forage.post', 'post.edited': 'fyi.forage.post', 'post.deletedByAuthor': 'fyi.forage.post',
     'comment.created': 'fyi.forage.comment', 'comment.edited': 'fyi.forage.comment', 'comment.deletedByAuthor': 'fyi.forage.comment',
     'vote.set': 'fyi.forage.vote', 'save.set': 'fyi.forage.save',
-    'field.created': 'fyi.forage.field', 'field.settingsUpdated': 'fyi.forage.field',
-    'field.joined': 'fyi.forage.membership', 'field.left': 'fyi.forage.membership',
+    'feed.created': 'fyi.forage.feed', 'feed.settingsUpdated': 'fyi.forage.feed',
+    'feed.joined': 'fyi.forage.membership', 'feed.left': 'fyi.forage.membership',
     'report.filed': 'fyi.forage.report',
   };
   for (const type of Object.keys(EVENT_TYPES)) {

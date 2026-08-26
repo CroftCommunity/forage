@@ -34,7 +34,7 @@ export function resolveEvents(scenario, baseSec) {
 
 // The event vocabulary maps onto routed capabilities by prefix.
 const CAPABILITY_BY_PREFIX = {
-  account: 'accounts', prefs: 'prefs', field: 'fields', post: 'posting',
+  account: 'accounts', prefs: 'prefs', feed: 'feeds', post: 'posting',
   comment: 'commenting', vote: 'voting', save: 'saving', report: 'reporting',
   mod: 'moderation', notification: 'notifications',
 };
@@ -75,13 +75,13 @@ export function replayOnMemory(scenario, baseSec) {
 // Named probes: each is seat-level and observable, evaluated through the real
 // selectors. Results are plain JSON-able values so substrates compare exactly.
 const PROBES = {
-  perm: (state, seat, { fieldId, key }, now) => sel.permissions(state, seat, fieldId, now)[key],
+  perm: (state, seat, { feedId, key }, now) => sel.permissions(state, seat, feedId, now)[key],
   tally: (state, _seat, { type, id }) => tally(state, type, id),
   unread: (state, seat) => sel.notifications(state, seat).unread,
-  fieldInfo: (state, seat, { slug, key }, now) => sel.field(state, seat, slug, now)?.[key] ?? null,
+  feedInfo2: (state, seat, { slug, key }, now) => sel.feed(state, seat, slug, now)?.[key] ?? null,
   auditTypes: (state, seat, { slug }) => sel.auditLog(state, seat, slug)?.entries.map((e) => e.type) ?? null,
   feedIds: (state, seat, { scope, sort = 'hot', timeframe = 'all' }, now) =>
-    sel.feed(state, seat, scope, sort, timeframe, now).posts.map((p) => p.id),
+    sel.board(state, seat, scope, sort, timeframe, now).posts.map((p) => p.id),
   // one key of one node in the rendered comment tree (depth-first search by id)
   threadNode: (state, seat, { postId, id, key, sort = 'best' }, now) => {
     const t = sel.thread(state, seat, postId, sort, now);

@@ -127,23 +127,23 @@ const boot = async () => {
   return { store, actions };
 };
 
-test('createField: probation seat refuses at write time; established seat succeeds', async () => {
+test('createFeed: probation seat refuses at write time; established seat succeeds', async () => {
   const { store, actions } = await boot();
   store.setPersona('u_moss'); // probation
-  await assert.rejects(() => actions.createField({ slug: 'mossland', title: 'Mossland' }), /probation|cannot create/i);
-  assert.equal(Object.values(store.getState().fields).some((f) => f.slug === 'mossland'), false);
+  await assert.rejects(() => actions.createFeed({ slug: 'mossland', title: 'Mossland' }), /probation|cannot create/i);
+  assert.equal(Object.values(store.getState().feeds).some((f) => f.slug === 'mossland'), false);
 
   store.setPersona('u_fern'); // established member
-  const ev = await actions.createField({ slug: 'ferns', title: 'Ferns', description: 'fronds' });
-  const f = store.getState().fields[ev.payload.id];
+  const ev = await actions.createFeed({ slug: 'ferns', title: 'Ferns', description: 'fronds' });
+  const f = store.getState().feeds[ev.payload.id];
   assert.equal(f.slug, 'ferns');
   assert.ok(f.members.has('u_fern')); // creator is a member via the reducer
 });
 
-test('createField: logged-out refuses', async () => {
+test('createFeed: logged-out refuses', async () => {
   const { store, actions } = await boot();
   store.setPersona(null);
-  await assert.rejects(() => actions.createField({ slug: 'x', title: 'X' }));
+  await assert.rejects(() => actions.createFeed({ slug: 'x', title: 'X' }));
 });
 
 test('markNotificationsRead flows through the adapter and flips the badge', async () => {

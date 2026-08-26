@@ -1,7 +1,7 @@
 // 2b: the OAuth session module (plan 2026-08-25-1). Hermetic: the vendored
 // client is a PORT here — tests drive the state machine over a fake; the real
 // client is exercised by the 2c live loopback validation. The metadata
-// document is pinned field-by-field (the auth server fetches it verbatim;
+// document is pinned feed-by-feed (the auth server fetches it verbatim;
 // drift = every sign-in breaks).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

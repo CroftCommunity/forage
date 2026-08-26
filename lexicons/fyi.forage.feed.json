@@ -1,6 +1,6 @@
 {
   "lexicon": 1,
-  "id": "fyi.forage.field",
+  "id": "fyi.forage.feed",
   "defs": {
     "main": {
       "type": "record",
