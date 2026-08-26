@@ -4,7 +4,8 @@ date: 2026-08-26
 status: PHASE 0 COMPLETE (2026-08-26) — vocabulary ratified on measured evidence; OQ1/OQ4/OQ5 decided by owner. Phases 1–4 awaiting go.
 Execution in `worktrees/forage/skin-chrome` (branch `claude/skin-chrome`)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
-baseline: `main` @ `f6012bf` (clean tree)
+baseline: `main` @ `f08fa9d` (rebased 2026-08-26 from `f6012bf`; main moved when
+claude/modes-bbs landed 3p-3u, which touched `css/app.css` and `sw.js`)
 parent plan: `plans/2026-08-25-1-plan-backend-modes-bsky-writes.md` — this plan is the
 **expansion of that plan's Phase 4 (Skins)**, whose 4a (mechanism) and 4b (bbs +
 usenet skins) both SHIPPED. Nothing here contradicts 4a; it widens the token
@@ -34,9 +35,10 @@ Two hard constraints are already in place and are load-bearing, not incidental:
    mechanism's whole integrity story — skins cannot smuggle component rewrites.
 2. **The current token set cannot express forum chrome.** It has no token for a
    masthead fill, a category band, row striping, a link-hover colour, or a bevel; and
-   most radii in `css/app.css` are hardcoded (`4px` at lines 20/37/44/134/198,
-   `8px`/`10px` at 59/61/62, `999px`/`50%` at 57/71/75/282), so `--radius-card: 0`
-   alone cannot square the UI. A phpBB skin written today would be a palette swap on
+   most radii in `css/app.css` are hardcoded (`4px` at lines 20/37/44/134/214,
+   `8px`/`10px` at 59/61/62, `999px`/`50%` at 57/71/75/304 — re-verified against
+   `f08fa9d`; the last two shifted from 198/282 when 3p-3u grew the file 282→304),
+   so `--radius-card: 0` alone cannot square the UI. A phpBB skin written today would be a palette swap on
    Forage's shapes.
 
 The gap is therefore in the **vocabulary**, not the mechanism.
@@ -190,7 +192,9 @@ Established this session against real sources, not memory:
 - **VA5** — prosilver is **GPL-2.0** (`style.cfg` header). Licensing of derived skins
   is OQ1.
 - **VA6** — `css/app.css` hardcodes radii at the lines listed in the Problem
-  Statement, so squaring the UI requires tokenizing them. *(read in-repo)*
+  Statement, so squaring the UI requires tokenizing them. *(read in-repo; re-verified
+  against `f08fa9d` after the rebase — two line refs had gone stale, which is why the
+  plan cites line numbers with a commit rather than bare)*
 
 Not yet verified, and Phase 0 exists to verify it:
 
@@ -915,3 +919,22 @@ to three hand-synced blocks and then collapsing them would do the dark-block wor
 canonical range `^1.61.1` with the lockfile pinned to **1.61.1**. Verified: a bare
 caret resolved to **1.62.1**, which would have diverged forage from croft-pwa (1.61.1)
 and required a firefox-1538 download absent from the local cache. 280 unit tests green.
+
+### Phase 1A executed — 2026-08-26
+
+Registry metadata, sibling pairing, and OS-preference resolution. Nothing visible
+changes: `default` has no sibling until 1B, so the dark branch falls back to `default`.
+11 unit tests + 1 wiring test (drives `activeSkin()` through stored / transient / OS
+with storage, matchMedia and the minimum DOM stubbed).
+
+**Mutation pass, 8 mutations, 7 killed on the first run.** The survivor is worth
+recording: removing validatePairing's self-pair guard left the suite green, because a
+self-pair trivially shares its own palette and the same-palette guard threw instead —
+and the assertion matched only `/day/`, which both messages contain. Sharpened to
+assert `/itself/`; the mutation now dies. Classified as a **real gap, not an equivalent
+mutant**: both versions throw, but the message differs, and an inaccurate refusal
+message is a behaviour regression under the workspace enforcement posture.
+
+**Rebased onto `f08fa9d`** mid-phase after `claude/modes-bbs` landed 3p-3u. Clean —
+no overlap with 1A's files. Two `css/app.css` line references in this plan had gone
+stale (198→214, 282→304) and were corrected; suite went 292→314 tests on the new base.
