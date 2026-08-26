@@ -180,4 +180,63 @@ export async function run() {
   } finally {
     await tog.close();
   }
+
+  // --- the chrome vocabulary must be INERT by default (Phase 2) ----------
+  // 15 new tokens now sit between app.css and every rule that paints chrome.
+  // Each default is a passthrough to what the rule used before, so the default
+  // skin has to render exactly as it did. Unit tests can check the declared
+  // strings; only a browser can confirm the CASCADE actually resolves to the
+  // same paint. A wrong passthrough is a site-wide visual regression that no
+  // token assertion would catch.
+  const inert = await scenario('seeded');
+  try {
+    const { page } = inert;
+    await page.goto(`${inert.origin}/popular`);
+    await page.waitForSelector('.masthead');
+
+    const seen = await page.evaluate(() => {
+      const cs = (sel) => {
+        const n = document.querySelector(sel);
+        return n ? getComputedStyle(n) : null;
+      };
+      const mast = cs('.masthead');
+      const card = cs('.card');
+      const row = cs('.postrow');
+      const tabs = cs('.tabs');
+      return {
+        mastBg: mast?.backgroundColor ?? null,
+        cardBg: card?.backgroundColor ?? null,
+        cardShadow: card?.boxShadow ?? null,
+        rowBg: row?.backgroundColor ?? null,
+        tabsBg: tabs?.backgroundColor ?? null,
+      };
+    });
+
+    assert.equal(seen.mastBg, seen.cardBg,
+      '--band-fill must resolve to the card surface, as the masthead used directly before');
+    assert.equal(seen.cardShadow, 'none', '--card-shadow must be flat by default; bevels are a skin choice');
+    assert.equal(seen.rowBg, 'rgba(0, 0, 0, 0)', '--row-odd/--row-even must be transparent: rows are unstriped by default');
+    if (seen.tabsBg !== null) {
+      assert.equal(seen.tabsBg, 'rgba(0, 0, 0, 0)', '--nav-fill must be transparent by default');
+    }
+
+    // …and a skin must be able to move every one of them. This is the other
+    // half: a token that is inert by default AND unreachable by a skin would
+    // pass the assertions above while being useless.
+    await page.evaluate(() => {
+      const st = document.createElement('style');
+      st.textContent = ':root{--band-fill:#123456;--row-odd:#654321;--card-shadow:inset 0 0 0 2px #abcdef;}';
+      document.head.append(st);
+    });
+    const moved = await page.evaluate(() => ({
+      mastBg: getComputedStyle(document.querySelector('.masthead')).backgroundColor,
+      rowBg: getComputedStyle(document.querySelector('.postrow')).backgroundColor,
+      cardShadow: getComputedStyle(document.querySelector('.card')).boxShadow,
+    }));
+    assert.equal(moved.mastBg, 'rgb(18, 52, 86)', 'a skin can repaint the band');
+    assert.equal(moved.rowBg, 'rgb(101, 67, 33)', 'a skin can stripe the rows');
+    assert.match(moved.cardShadow, /inset/, 'a skin can bevel the surfaces');
+  } finally {
+    await inert.close();
+  }
 }

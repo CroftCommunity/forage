@@ -73,6 +73,28 @@
   /* Type scale 13/14/16/20/26 */
   --t-xs: 13px; --t-sm: 14px; --t-md: 16px; --t-lg: 20px; --t-xl: 26px;
 
+  /* ---- forum chrome (Phase 2, plan 2026-08-26-1) ----
+     Named for what a FORUM has, because those names come from the selectors
+     real phpBB styles carry (.headerbar/.forumbg, .bg1/.bg2/.bg3, .navbar,
+     .panel, a:hover). Naming them this way makes importing a theme a
+     near-identity mapping instead of a translation with judgement in it.
+
+     EVERY default below is a passthrough to whatever the rule used before, so
+     the default skin renders exactly as it did and only a skin can move it. */
+  --link-hover:   var(--link);      /* today a:hover only underlines */
+  --band-fill:    var(--card);      /* masthead + category bands */
+  --band-ink:     var(--text);
+  --band-link:    var(--link);
+  --nav-fill:     transparent;      /* the tab strip has no fill today */
+  --panel:        var(--card);      /* side/aside surfaces */
+  --row-odd:      transparent;      /* post rows are unstriped today */
+  --row-even:     transparent;
+  --row-head:     transparent;      /* section header bars */
+  --card-shadow:  none;             /* bevels ride here; flat by default */
+
+  --radius-sm:    4px;
+  --radius-media: 8px;
+  --radius-round: 50%;
   --radius-card: 6px;
   --radius-chip: 999px;
   --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;

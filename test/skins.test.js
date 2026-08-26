@@ -442,3 +442,60 @@ test('1G: every SHELL url resolves to a file that exists', () => {
   }
   assert.deepEqual(missing, [], 'SHELL urls with no file on disk break cache.addAll');
 });
+
+// ---------------------------------------------------------------------------
+// Phase 2 — the forum-chrome vocabulary.
+// The roles are named for what a FORUM has (band, rows, nav strip, panel),
+// derived from the selectors real phpBB styles carry, so importing a theme is
+// a near-identity mapping rather than a translation with judgement in it.
+// Every default is a PASSTHROUGH to what the rule used before, so the default
+// skin renders byte-identically and only a skin can change anything.
+// ---------------------------------------------------------------------------
+
+const CHROME_TOKENS = {
+  // token            default (must reproduce today's rendering exactly)
+  '--link-hover':   'var(--link)',      // today a:hover only underlines
+  '--band-fill':    'var(--card)',      // the masthead is a card surface today
+  '--band-ink':     'var(--text)',
+  '--band-link':    'var(--link)',
+  '--nav-fill':     'transparent',      // .tabs has no fill today
+  '--panel':        'var(--card)',
+  '--row-odd':      'transparent',      // post rows are unstriped today
+  '--row-even':     'transparent',
+  '--row-head':     'transparent',
+  '--card-shadow':  'none',             // bevels ride here; flat by default
+  '--radius-sm':    '4px',
+  '--radius-media': '8px',
+  '--radius-round': '50%',
+};
+
+test('2: every forum-chrome token is declared in tokens.css', () => {
+  const tokens = declaredTokens(readFileSync(join(root, 'css/tokens.css'), 'utf8'));
+  for (const name of Object.keys(CHROME_TOKENS)) {
+    assert.ok(tokens.has(name), `${name} must be declared or no skin can assign it`);
+  }
+});
+
+test('2: every chrome default is a PASSTHROUGH — the default skin cannot shift', () => {
+  const decls = blockTokens(readFileSync(join(root, 'css/tokens.css'), 'utf8'), ':root');
+  for (const [name, expected] of Object.entries(CHROME_TOKENS)) {
+    const actual = (decls.get(name) ?? '').replace(/\s*\/\*.*$/, '').trim();
+    assert.equal(actual, expected,
+      `${name} default is ${actual}, not ${expected} — a non-passthrough default changes today's look`);
+  }
+});
+
+test('2: app.css CONSUMES every chrome token — a declared-but-unused token is a lie', () => {
+  const app = readFileSync(join(root, 'css/app.css'), 'utf8');
+  for (const name of Object.keys(CHROME_TOKENS)) {
+    assert.match(app, new RegExp(`var\\(${name.replace(/-/g, '\\-')}\\)`),
+      `${name} is declared but nothing reads it — a skin setting it would see no effect`);
+  }
+});
+
+test('2: the hardcoded radii are tokenised, so a skin can square the UI', () => {
+  const app = readFileSync(join(root, 'css/app.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const raw = [...app.matchAll(/border-radius:\s*(\d+px|50%)/g)].map((m) => m[1]);
+  assert.deepEqual(raw, [],
+    `app.css still hardcodes ${raw.length} radius value(s) — --radius-card:0 cannot square the UI while these remain`);
+});
