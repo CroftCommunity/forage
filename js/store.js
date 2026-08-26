@@ -5,6 +5,9 @@ import { emptyState, reduce } from './reducers.js';
 import { validateEvent } from './schema.js';
 import * as storage from './storage.js';
 import { DEFAULT_PERSONA_ID } from './personas.js';
+// Benign import cycle (store → routing → memory substrate → store): every
+// binding is only dereferenced at call time, never during module evaluation.
+import { setMode as routingSetMode } from './config/routing.js';
 
 const listeners = new Set();
 
@@ -80,12 +83,58 @@ export function setDev(patch) {
 export function reset() {
   store.events = [];
   store.state = emptyState();
-  storage.clearAll();
+  // In a network mode, reset clears the RAM dataset ONLY — `forage.state`
+  // belongs to the memory tier and is never cleared from here (1b invariant).
+  if (!activeNetworkMode) storage.clearAll();
   notify();
 }
 
 function persist() {
+  // THE 1b invariant, structurally: while a network mode is active the memory
+  // key is never written. Not best-effort — every persist path funnels here.
+  if (activeNetworkMode) return;
   storage.save({ events: store.events, persona: store.personaId, dev: store.dev });
+}
+
+// ---- mode lifecycle (1b): network modes are RAM-only, memory is untouchable ----
+
+let activeNetworkMode = null; // null = memory mode
+
+export function activeMode() { return activeNetworkMode ?? 'memory'; }
+
+// Enter a network mode: routing flips to the mode's table, the RAM dataset
+// starts EMPTY (the mode's substrate fills it — pull-on-entry), and
+// persistence to `forage.state` suspends until exitMode.
+export function enterMode(name) {
+  if (name === 'memory') {
+    throw new Error('memory is not entered — use exitMode() to return to it');
+  }
+  if (activeNetworkMode) {
+    throw new Error(`already in ${activeNetworkMode} mode — exitMode() first`);
+  }
+  routingSetMode(name); // throws with words on an unknown mode; nothing changed
+  activeNetworkMode = name;
+  store.events = [];
+  store.state = emptyState();
+  console.info(`forage: entered ${name} mode — RAM only, forage.state suspended`);
+  notify();
+}
+
+// Exit back to memory: clear the network RAM dataset FIRST (so an absent key
+// lands in a genuinely empty memory state — no leak), then restore from the
+// untouched key.
+export function exitMode() {
+  if (!activeNetworkMode) {
+    throw new Error('no network mode is active — nothing to exit');
+  }
+  const leaving = activeNetworkMode;
+  activeNetworkMode = null;
+  routingSetMode('memory');
+  store.events = [];
+  store.state = emptyState();
+  const had = hydrate();
+  console.info(`forage: exited ${leaving} mode — memory restored${had ? '' : ' (empty)'}`);
+  notify();
 }
 
 // Hydrate from storage on boot. Returns true if there was saved state.
