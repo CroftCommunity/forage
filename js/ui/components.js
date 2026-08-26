@@ -118,7 +118,9 @@ export function commentNode(node, ctx) {
   });
 
   const author = node.author
-    ? el('a', { href: `#/u/${node.author}` }, node.author)
+    ? (ctx.authorHref
+      ? el('a', { href: ctx.authorHref(node), target: '_blank', rel: 'noopener noreferrer', title: 'Profiles live on bsky.app — Forage is a lens' }, node.author)
+      : el('a', { href: `#/u/${node.author}` }, node.author))
     : el('span', { class: 'removed-stub' }, node.deleted ? '[deleted]' : '[removed]');
   const note = el('span', { class: 'collapse-note' });
   const meta = el('div', { class: 'comment-meta' },

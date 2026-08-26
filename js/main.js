@@ -106,6 +106,10 @@ theme.onChange(render); // re-render so the toggle icon flips
 
 // ---------- boot ----------
 const hadState = store.hydrate();
+// 3d: the front door. The unauth Bluesky view is forage.fyi's default route
+// (OQ4); the preference is a device-local Settings choice (theme.js
+// precedent — its own key, never forage.state).
+const frontPref = (() => { try { return localStorage.getItem('forage.front') || 'bluesky'; } catch { return 'bluesky'; } })();
 // An OAuth callback landing (code+state in the query OR the hash fragment —
 // atproto's browser default is response_mode=fragment) must complete the
 // exchange BEFORE the hash changes: boot the session first, then land on the
@@ -117,10 +121,12 @@ import('./auth/session.js').then(async ({ isOAuthCallback }) => {
     location.hash = '/lens';
   }
 });
-if (!location.hash) location.hash = '/popular';
-if (!hadState) {
-  // First ever visit: seed once so the demo has content, and land logged out on
-  // #/popular. After Delete All the app shows the genuine cleared/empty state.
+if (!location.hash) location.hash = frontPref === 'memory' ? '/popular' : '/lens';
+if (!hadState && !location.hash.startsWith('#/lens')) {
+  // First ever visit ON A MEMORY ROUTE: seed once so the demo has content.
+  // Seeding is a memory-mode entry event — the lens front door must write
+  // NOTHING to forage.state (3d named check; the workflow pins it). After
+  // Delete All the app shows the genuine cleared/empty state.
   import('../data/seed.js').then(({ buildSeed }) => { store.loadEvents(buildSeed()); });
 }
 render();

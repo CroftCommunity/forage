@@ -527,8 +527,16 @@ export function settingsView() {
   const themeSel = el('select', { class: 'form' }, ...['auto', 'light', 'dark'].map((t) =>
     el('option', { value: t, selected: themeCtl.getTheme() === t || false }, t === 'auto' ? 'Auto (match system)' : t)));
   themeSel.addEventListener('change', () => themeCtl.setTheme(themeSel.value));
+  // 3d (OQ4): the front-door/mode preference is a device-local setting —
+  // "it's local to them". The dev-bar Mode control is a scaffolding mirror.
+  const frontSel = el('select', { class: 'form' },
+    el('option', { value: 'bluesky', selected: (localStorage.getItem('forage.front') || 'bluesky') === 'bluesky' || false }, 'Bluesky view (the live network)'),
+    el('option', { value: 'memory', selected: localStorage.getItem('forage.front') === 'memory' || false }, 'Memory (the local sandbox)'));
+  frontSel.addEventListener('change', () => { try { localStorage.setItem('forage.front', frontSel.value); } catch {} });
   const themeCard = el('div', { class: 'card' },
-    el('div', { class: 'field-row' }, el('label', {}, 'Theme'), themeSel));
+    el('div', { class: 'field-row' }, el('label', {}, 'Theme'), themeSel),
+    el('div', { class: 'field-row' }, el('label', {}, 'Front door'), frontSel),
+    el('div', { class: 'xs muted' }, 'Where forage.fyi lands on arrival — this device only.'));
 
   if (!V()) {
     return { main: el('div', {}, el('h1', {}, 'Preferences'), themeCard,
