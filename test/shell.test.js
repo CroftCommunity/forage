@@ -33,8 +33,21 @@ test('every runtime module on disk is precached in sw.js SHELL', () => {
   assert.ok(shellMatch, 'sw.js has a SHELL list');
   const shell = shellMatch[1];
   for (const file of RUNTIME) {
-    assert.ok(shell.includes(`'./${file}'`), `sw.js SHELL is missing ./${file} (add it and bump CACHE)`);
+    assert.ok(shell.includes(`'/${file}'`), `sw.js SHELL is missing /${file} (add it and bump CACHE)`);
   }
+});
+
+// Cache.addAll() REJECTS the whole install on duplicate URLs — and './' and
+// '/' are the same URL. That shipped in v20 and killed the service worker
+// (install failed, no worker, no offline, deep links stayed 404s). The
+// version readout in Settings is what surfaced it.
+test('SHELL entries resolve to DISTINCT urls (a duplicate fails cache.addAll, killing install)', () => {
+  const sw = readFileSync(join(root, 'sw.js'), 'utf8');
+  const shell = sw.match(/const SHELL = \[([\s\S]*?)\];/)[1];
+  const entries = [...shell.matchAll(/'([^']+)'/g)].map((m) => m[1]);
+  const resolved = entries.map((e) => new URL(e, 'https://x/').pathname);
+  const dupes = resolved.filter((u, i) => resolved.indexOf(u) !== i);
+  assert.deepStrictEqual([...new Set(dupes)], [], `duplicate SHELL urls would reject cache.addAll: ${[...new Set(dupes)]}`);
 });
 
 test('the SHELL precaches the app shell itself so clean-path deep links work offline (3n)', () => {
@@ -58,7 +71,7 @@ test('404.html is byte-identical to index.html (Pages serves it for every deep l
 
 test('every SHELL js entry exists on disk (no stale precache entries)', () => {
   const sw = readFileSync(join(root, 'sw.js'), 'utf8');
-  const entries = [...sw.matchAll(/'\.\/(js\/[^']+|data\/[^']+)'/g)].map((m) => m[1]);
+  const entries = [...sw.matchAll(/'\/(js\/[^']+|data\/[^']+)'/g)].map((m) => m[1]);
   assert.ok(entries.length > 0);
   for (const e of entries) {
     assert.ok(statSync(join(root, e)).isFile(), `sw.js precaches ./${e} which does not exist`);

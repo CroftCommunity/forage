@@ -7,34 +7,23 @@
 // Bump CACHE whenever you want to force a clean re-cache on the very next load
 // (asset URLs are hashless, so the name is the version).
 
-const CACHE = 'forage-v21';
+const CACHE = 'forage-v22';
 const SHELL = [
-  '/', '/404.html',
-  './skins/bbs.css', './skins/usenet.css',
-  './vendor/atproto-oauth-client-browser.js', './js/auth/session.js', './js/skins.js', './js/version.js', './js/mode.js', './js/ui/mode-view.js',
-  './', './index.html',
-  './css/tokens.css', './css/app.css',
-  './js/main.js', './js/router.js', './js/store.js', './js/storage.js',
-  './js/schema.js', './js/reducers.js', './js/selectors.js', './js/personas.js',
-  './js/actions.js', './js/util.js', './js/prng.js', './js/devbar.js',
-  './js/theme.js', './js/engines/rank.js', './js/engines/limits.js',
-  './js/config/routing.js', './js/substrates/memory.js', './js/substrates/atproto.js', './js/substrates/lens.js',
-  './js/ui/components.js', './js/ui/views.js', './js/ui/lens-views.js',
-  './data/seed.js',
-  './scenarios/ban-readonly.js',
-  './scenarios/comment-tree-collapse.js',
-  './scenarios/demo-extras.js',
-  './scenarios/field-lifecycle.js',
-  './scenarios/format.js',
-  './scenarios/index.js',
-  './scenarios/mod-remove-mask.js',
-  './scenarios/post-vote-rank.js',
-  './scenarios/rate-limit-probation.js',
-  './scenarios/report-resolve-notify.js',
-  './scenarios/save-and-profile.js',
-  './scenarios/search-visibility.js',
-  './ledger/divergence.js',
-  './manifest.webmanifest', './icons/favicon-32.png', './icons/icon-192.png',
+  '/', '/404.html', '/skins/bbs.css', '/skins/usenet.css',
+  '/vendor/atproto-oauth-client-browser.js', '/js/auth/session.js', '/js/skins.js',
+  '/js/version.js', '/js/mode.js', '/js/ui/mode-view.js', '/css/tokens.css', '/css/app.css',
+  '/js/main.js', '/js/router.js', '/js/store.js', '/js/storage.js', '/js/schema.js',
+  '/js/reducers.js', '/js/selectors.js', '/js/personas.js', '/js/actions.js', '/js/util.js',
+  '/js/prng.js', '/js/devbar.js', '/js/theme.js', '/js/engines/rank.js',
+  '/js/engines/limits.js', '/js/config/routing.js', '/js/substrates/memory.js',
+  '/js/substrates/atproto.js', '/js/substrates/lens.js', '/js/ui/components.js',
+  '/js/ui/views.js', '/js/ui/lens-views.js', '/data/seed.js', '/scenarios/ban-readonly.js',
+  '/scenarios/comment-tree-collapse.js', '/scenarios/demo-extras.js',
+  '/scenarios/field-lifecycle.js', '/scenarios/format.js', '/scenarios/index.js',
+  '/scenarios/mod-remove-mask.js', '/scenarios/post-vote-rank.js',
+  '/scenarios/rate-limit-probation.js', '/scenarios/report-resolve-notify.js',
+  '/scenarios/save-and-profile.js', '/scenarios/search-visibility.js', '/ledger/divergence.js',
+  '/manifest.webmanifest', '/icons/favicon-32.png', '/icons/icon-192.png',
 ];
 
 self.addEventListener('install', (e) => {
