@@ -309,4 +309,27 @@ export async function run() {
   } finally {
     await board.close();
   }
+
+  // --- a skin rides the SHELL, not a population (Phase 5) ----------------
+  // Skins and modes are independent axes (4a, user 2026-08-25): any skin in any
+  // mode. The phpBB board dressing the Bluesky view is legal — off-theme, but
+  // legal — and this pins that so a future mode change cannot quietly couple
+  // the two. It is the assertion that would fail if someone made a skin
+  // mode-scoped as a "fix".
+  const across = await scenario('first-visit', {
+    mode: 'bluesky',
+    initScripts: ["try { localStorage.setItem('forage.skin', 'phpbb'); } catch {}"],
+  });
+  try {
+    await across.page.goto(`${across.origin}/`);
+    await across.page.waitForSelector('.masthead');
+    assert.equal(
+      await across.page.evaluate(() => getComputedStyle(document.querySelector('.masthead')).backgroundColor),
+      'rgb(70, 136, 206)', 'the phpBB band dresses the Bluesky view too — skins ride the shell');
+    assert.equal(
+      await across.page.evaluate(() => localStorage.getItem('forage.mode')), 'bluesky',
+      'and the mode is genuinely the other one, not a silent fallback to memory');
+  } finally {
+    await across.close();
+  }
 }
