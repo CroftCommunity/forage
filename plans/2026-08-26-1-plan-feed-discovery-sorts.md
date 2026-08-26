@@ -1,8 +1,9 @@
 # Plan: sorting, filtering and time windows — for feed discovery and for boards
 
 date: 2026-08-26
-status: IN PROGRESS — research filed; **4a–4d SHIPPED** (discovery is done). 4e (`/h/`
-true top windows) next. Gate green: 325 unit tests, 5/5 workflows.
+status: IN PROGRESS — research filed; **4a–4e SHIPPED**; DL-027/028/029 landed.
+4f (`/f/` budgeted deepening) next; 4g still gated on OQ2.
+Gate green: 329 unit tests, 5/5 workflows.
 Execution in worktrees/forage/feed-discovery-sorts (branch claude/feed-discovery-sorts)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `f08fa9d` (clean tree)
@@ -401,7 +402,18 @@ and must not be labelled as such). Default ON for **search** results, off for br
 the search bar": it is a filter *on search*, defaulted on, with a visible "showing N
 of M — K stale or unreachable" line so the filtering is never silent.
 
-**4e — `/h/` true top windows.** `stream({kind:'hashtag'})` gains `sort`/`since`/
+**4e — `/h/` true top windows. ✅ SHIPPED 2026-08-26.**
+Landed as: pure `searchWindow(sort, timeframe, nowMs)` → `{sort, since?}`; `stream()`
+takes `sort`/`timeframe`/`nowMs` and passes them to `searchPosts`; the hashtag board's
+toolbar now **re-queries** instead of re-sorting, and the stream returns
+`wholeCorpus: true` so `renderBoard` skips the local sort AND drops the "sorted within
+the loaded posts" caveat, which would be a lie there. The board says whose ranking it
+is, and that Bluesky's "top" weighs engagement rather than likes alone. The 3u language
+filter still applies — it is a content filter, not an ordering, so it composes with
+either path. 4 unit tests + a journey segment in `e2e/bluesky-view.workflow.mjs`.
+Original description follows.
+
+ `stream({kind:'hashtag'})` gains `sort`/`since`/
 `until` passthrough to `searchPosts`; the board toolbar's Top+timeframe stops being
 a window re-sort for hashtag boards and becomes a real query. The "Sorted within the
 loaded posts" line must NOT render on this path — it would now be a lie. Needs a new
@@ -415,7 +427,7 @@ outcomes happened (D4). Exhausted and budget-hit get distinct words.
 **4g — T2 Constellation.** Gated behind the ADR below. "Most shared" and "In starter
 packs", with TID-decoded windows.
 
-## Ledger entries this plan owes
+## Ledger entries — LANDED 2026-08-26 (DL-027, DL-028, DL-029 in `ledger/divergence.js`)
 
 - **DL-027 tolerance** — discovery ordering is Forage-local. The AppView's popular
   order is an opaque score; every sort we offer above it is computed here.

@@ -66,6 +66,11 @@ export async function run() {
       ] },
       'com.atproto.repo.createRecord': { uri: 'at://did:plc:me/app.bsky.feed.like/3w3like', cid: 'lc' },
       'com.atproto.repo.deleteRecord': {},
+      // 4e: the /h/ toolbar RE-QUERIES rather than re-sorting, so the shim
+      // answers the windowed query differently. First match wins, so the
+      // top-of-week key precedes the plain one.
+      'searchPosts?q=%23camp&tag=camp&limit=30&sort=top&since=':
+        { posts: [post('topofweek', 'did:plc:cc', '2026-08-20T13:00:00Z').post] },
       'searchPosts': { posts: [post('tagged1', 'did:plc:cc', '2026-08-25T13:00:00Z').post] },
       'getAuthorFeed?actor=did%3Aplc%3Atrends': { feed: [post('trendpost', 'did:plc:cc', '2026-08-25T14:00:00Z')] },
       'getFeed': { feed: [
@@ -197,6 +202,20 @@ export async function run() {
   await page.waitForSelector('a[data-tag="camp"]');
   await page.locator('a[data-tag="camp"]').first().click();
   await page.waitForSelector('h1:has-text("#camp")');
+  await page.waitForSelector('text=post tagged1');
+
+  // 4e: "Top · this week" on a hashtag board is a REAL query, not a re-sort of
+  // what loaded — searchPosts takes sort and since server-side. The board
+  // refetches and the loaded-window caveat is gone, because it would be a lie.
+  await page.locator('[data-board-toolbar] select').first().selectOption('top');
+  await page.locator('[data-board-toolbar] select').nth(1).selectOption('week');
+  await page.waitForSelector('text=post topofweek');
+  await page.waitForSelector('[data-whole-corpus]:has-text("ranked every #camp post")');
+  assert.equal(await page.locator('text=Sorted within the loaded posts').count(), 0,
+    'the /f/ caveat must not follow a server-ranked board');
+  await page.waitForSelector('text=weighs engagement, not likes alone');
+
+  await page.locator('[data-board-toolbar] select').first().selectOption('feed');
   await page.waitForSelector('text=post tagged1');
 
   // 3m: the affordance split — a hashtag PROMISES a deterministic way in

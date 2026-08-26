@@ -357,6 +357,27 @@ export function sortWindow(posts, sort, timeframe, nowMs) {
   return [...window].sort((a, b) => (sort === 'new' ? b.createdTs - a.createdTs : b.score - a.score));
 }
 
+// 4e: /h/ boards ride searchPosts, which takes sort=top|latest plus since/until
+// SERVER-SIDE (probe-verified with a session 2026-08-26). So a hashtag board's
+// "Top · this week" is a real query over the whole corpus, not a re-sort of the
+// page we happened to load — the one place the DL-010 limitation genuinely
+// lifts. /f/ generator boards have no equivalent: getFeedSkeleton takes only
+// limit and cursor, which is what DL-028 records.
+//
+// NOTE on honesty: Bluesky's `top` is an engagement-weighted RELEVANCE ranking,
+// not a likeCount sort — a probe returned 152, 113, 1478, 122, 168 likes in that
+// order. It is "top" in Bluesky's sense, and the UI says whose ranking it is.
+export function searchWindow(sort, timeframe, nowMs) {
+  if (!['feed', 'new', 'top'].includes(sort)) {
+    throw new Error(`unknown window sort: ${sort} (known: feed, new, top)`);
+  }
+  if (sort !== 'top') return { sort: 'latest' };
+  if (timeframe === 'all') return { sort: 'top' };
+  const span = TIMEFRAME_MS[timeframe];
+  if (!span) throw new Error(`unknown timeframe: ${timeframe} (known: day, week, month, year, all)`);
+  return { sort: 'top', since: new Date(nowMs - span).toISOString() };
+}
+
 // ---- 4b: sorting and filtering the discovery corpus (T0) ----
 // Every dimension here is already in the getPopularFeedGenerators payload, so
 // these cost NOTHING extra. They can be honest about the whole corpus because
@@ -820,13 +841,17 @@ export function createLens({ session = null, transport = fetch } = {}) {
     // 3g: content streams — one abstraction, two keys. 'feed' opens any
     // feed-generator at-uri (trending topics resolve to these, D8);
     // 'hashtag' is searchPosts tag= (session-gated, worded refusal).
-    async stream({ kind, key } = {}) {
+    async stream({ kind, key, sort = 'feed', timeframe = 'all', nowMs = Date.now() } = {}) {
       if (kind === 'feed') return this.feed({ kind: 'feed', uri: key });
       if (kind === 'hashtag') {
         if (!session) throw new Error('lens: hashtag streams need a session (search is 403 unauthenticated) — sign in first');
-        const data = await get('app.bsky.feed.searchPosts', { q: `#${key}`, tag: key, limit: 30 });
+        const win = searchWindow(sort, timeframe, nowMs);
+        const data = await get('app.bsky.feed.searchPosts', { q: `#${key}`, tag: key, limit: 30, ...win });
         const src = { fieldId: `lens:h:${key}`, fieldSlug: `h:${key}`, fieldTitle: `#${key}` };
-        return { ...shapeLensFeed({ feed: (data.posts || []).map((p) => ({ post: p })), cursor: data.cursor }, src, {}, posture), ...src };
+        // wholeCorpus: this ordering came from the server over EVERYTHING that
+        // matched, so the board must not print the "sorted within the loaded
+        // posts" caveat — it would be a lie here.
+        return { ...shapeLensFeed({ feed: (data.posts || []).map((p) => ({ post: p })), cursor: data.cursor }, src, {}, posture), ...src, wholeCorpus: true };
       }
       throw new Error(`lens: unknown stream kind: ${kind} (known: feed, hashtag)`);
     },

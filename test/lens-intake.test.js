@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createLens, sortFeeds, filterFeeds, platforms, likeWindow, feedLiveness, liveFeeds } from '../js/substrates/lens.js';
+import { createLens, sortFeeds, filterFeeds, platforms, likeWindow, feedLiveness, liveFeeds, searchWindow } from '../js/substrates/lens.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const fixture = (n) => JSON.parse(readFileSync(join(root, 'test/fixtures/atproto', `${n}.json`), 'utf8'));
@@ -307,6 +307,62 @@ test('3j: discoverFeeds lists popular generators and searches by query; guests g
   assert.ok(calls[0].includes('getPopularFeedGenerators'));
   await lens.discoverFeeds({ query: 'garden' });
   assert.ok(calls[1].includes('query=garden'), 'the query rides through');
+});
+
+// ---- 4e: /h/ boards get a TRUE top window, not a re-sort of what loaded ----
+// searchPosts takes sort=top|latest plus since/until SERVER-SIDE (probed with a
+// session 2026-08-26, plan D3), so "Top · this week" on a hashtag board is one
+// query over the whole corpus. /f/ generator boards have no such lever — the
+// asymmetry is real and DL-028 names it.
+
+test('4e: searchWindow maps the board controls onto searchPosts params', () => {
+  const now = Date.parse('2026-08-26T12:00:00Z');
+  assert.deepEqual(searchWindow('new', 'day', now), { sort: 'latest' },
+    'newest-first needs no window — a window would hide posts, not order them');
+  assert.deepEqual(searchWindow('feed', 'all', now), { sort: 'latest' });
+  assert.deepEqual(searchWindow('top', 'all', now), { sort: 'top' },
+    'top of all time is the unbounded query');
+  assert.deepEqual(searchWindow('top', 'week', now),
+    { sort: 'top', since: '2026-08-19T12:00:00.000Z' });
+  assert.deepEqual(searchWindow('top', 'day', now),
+    { sort: 'top', since: '2026-08-25T12:00:00.000Z' });
+  assert.throws(() => searchWindow('top', 'fortnight', now), /unknown timeframe/i);
+  assert.throws(() => searchWindow('sideways', 'day', now), /unknown window sort/i);
+});
+
+test('4e: a hashtag stream sends the window to the server and says the scope is whole', async () => {
+  const now = Date.parse('2026-08-26T12:00:00Z');
+  const seen = [];
+  const fetchHandler = async (path) => {
+    seen.push(path);
+    return { ok: true, status: 200, json: async () => ({ posts: [] }) };
+  };
+  const lens = createLens({ session: { did: 'did:plc:me', handle: 'me.test', fetchHandler } });
+  const board = await lens.stream({ kind: 'hashtag', key: 'gardening', sort: 'top', timeframe: 'week', nowMs: now });
+  assert.ok(seen[0].includes('sort=top'), seen[0]);
+  assert.ok(seen[0].includes('since=2026-08-19'), seen[0]);
+  assert.ok(seen[0].includes('tag=gardening'), seen[0]);
+  assert.equal(board.wholeCorpus, true,
+    'the board must be able to tell the user this ranked everything, not just what loaded');
+});
+
+test('4e: a hashtag stream defaults to latest and sends no window', async () => {
+  const seen = [];
+  const fetchHandler = async (path) => { seen.push(path); return { ok: true, status: 200, json: async () => ({ posts: [] }) }; };
+  await createLens({ session: { did: 'did:plc:me', handle: 'me.test', fetchHandler } })
+    .stream({ kind: 'hashtag', key: 'gardening' });
+  assert.ok(seen[0].includes('sort=latest'), seen[0]);
+  assert.ok(!seen[0].includes('since='), 'no window unless one was asked for');
+});
+
+test('4e: a FEED stream carries no server window — the generator has no such lever', async () => {
+  const transport = async (url) => {
+    assert.ok(!url.includes('sort=top'), 'getFeedSkeleton takes only limit and cursor');
+    return { ok: true, status: 200, json: async () => ({ feed: [] }) };
+  };
+  const board = await createLens({ transport })
+    .stream({ kind: 'feed', key: 'at://did:plc:a/app.bsky.feed.generator/x', sort: 'top', timeframe: 'week' });
+  assert.notEqual(board.wholeCorpus, true, 'a /f/ board never claims whole-corpus scope');
 });
 
 // ---- 4d: liveness — which feeds in a search result actually still work ----

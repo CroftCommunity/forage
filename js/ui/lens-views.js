@@ -284,17 +284,22 @@ function applyMediaScale() {
 }
 
 // One board renderer: applies the window sort and the view mode.
-function renderBoard(card, posts) {
+function renderBoard(card, posts, { wholeCorpus = false } = {}) {
   const view = boardView();
   // 3u: the language filter runs BEFORE the window sort, so "Top" ranks what
   // you can actually read. Nothing is hidden silently — the count says so.
+  // It still applies when the server ranked (4e): language is a content
+  // filter, not an ordering, so it composes with either.
   const prefs = lang.active();
   const visible = prefs.length ? posts.filter((p) => lang.matches(p, prefs)) : posts;
   const hidden = posts.length - visible.length;
-  const ordered = sortWindow(visible, boardSort, boardTimeframe, Date.now());
+  // 4e: when the SERVER ranked the whole corpus (a /h/ board), the posts arrive
+  // already ordered — re-sorting locally would shuffle a ranking we did not
+  // compute, and the window has already been applied at the query.
+  const ordered = wholeCorpus ? visible : sortWindow(visible, boardSort, boardTimeframe, Date.now());
   // Top + a narrow timeframe can legitimately empty the board — say why
   // rather than showing a blank card (the journey caught this).
-  if (!ordered.length && visible.length) {
+  if (!wholeCorpus && !ordered.length && visible.length) {
     card.replaceChildren(el('div', { class: 'xs muted', style: 'padding:10px' },
       `Nothing in the loaded posts falls within “${boardTimeframe === 'all' ? 'all time' : boardTimeframe}”. Try a wider timeframe, or load More.`));
     return;
@@ -305,7 +310,7 @@ function renderBoard(card, posts) {
       `${hidden} post${hidden === 1 ? '' : 's'} hidden by your content languages (${prefs.join(', ')}). `,
       el('a', { href: '/me' }, 'change that ›')));
   }
-  if (boardSort !== 'feed' || (boardSort === 'top' && boardTimeframe !== 'all')) {
+  if (!wholeCorpus && (boardSort !== 'feed' || (boardSort === 'top' && boardTimeframe !== 'all'))) {
     card.append(el('div', { class: 'xs muted', style: 'padding:6px' },
       'Sorted within the loaded posts — load More to widen the window.'));
   }
@@ -964,15 +969,34 @@ export function lensHashtagView(params) {
       side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()) };
   }
   const main = el('div', {}, el('h1', {}, `#${tag}`), skeleton(6));
-  lens.stream({ kind: 'hashtag', key: tag }).then((board) => {
-    const card = el('div', { class: 'card' });
-    const repaint = () => renderBoard(card, board.posts);
-    main.replaceChildren(el('h1', {}, `#${tag}`),
-      affordanceStrip({ kind: 'hashtag', key: tag }),
-      boardToolbar(repaint),
-      board.posts.length ? card : emptyState('A quiet tag', `No recent posts carry #${tag}.`));
-    repaint();
-  }).catch((e) => main.replaceChildren(el('h1', {}, `#${tag}`), emptyState('Hashtag fetch failed', e.message)));
+  const card = el('div', { class: 'card' });
+  const note = el('div', { class: 'xs muted', style: 'padding:6px', 'data-whole-corpus': '1' });
+  // 4e: the toolbar RE-QUERIES here rather than re-sorting what loaded.
+  // searchPosts takes sort and since server-side, so a hashtag board's "Top ·
+  // this week" ranks every post that matched — the one place DL-010's
+  // limitation genuinely lifts. The loaded-window caveat must not follow it.
+  const load = (first) => {
+    if (!first) card.replaceChildren(skeleton(3));
+    lens.stream({ kind: 'hashtag', key: tag, sort: boardSort, timeframe: boardTimeframe, nowMs: Date.now() })
+      .then((board) => {
+        if (first) {
+          main.replaceChildren(el('h1', {}, `#${tag}`),
+            affordanceStrip({ kind: 'hashtag', key: tag }),
+            boardToolbar(() => load(false)),
+            board.posts.length ? card : emptyState('A quiet tag', `No recent posts carry #${tag}.`),
+            note);
+        }
+        renderBoard(card, board.posts, { wholeCorpus: board.wholeCorpus });
+        note.replaceChildren(boardSort === 'top'
+          ? `Bluesky ranked every #${tag} post${boardTimeframe === 'all' ? '' : ` from the last ${boardTimeframe}`} — not only the ones loaded here. Its “top” weighs engagement, not likes alone.`
+          : '');
+      })
+      .catch((e) => {
+        if (first) main.replaceChildren(el('h1', {}, `#${tag}`), emptyState('Hashtag fetch failed', e.message));
+        else card.replaceChildren(emptyState('Hashtag fetch failed', e.message));
+      });
+  };
+  load(true);
   return { main, side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()) };
 }
 
