@@ -8,7 +8,7 @@
 
 import { el, timeAgo, fmtScore } from '../util.js';
 import { postRow, commentNode, skeleton, emptyState, toast } from './components.js';
-import { createLens, LENS_PERMS, RING_CAP } from '../substrates/lens.js';
+import { createLens, LENS_PERMS, RING_CAP, facetSegments } from '../substrates/lens.js';
 import { initSession } from '../auth/session.js';
 
 let manager = null;        // null = not booted; 'unavailable' = origin has no OAuth client
@@ -49,6 +49,35 @@ async function adoptSession(s) {
   } catch { /* keep the did */ }
   session = { did: s.did, handle, fetchHandler: (p, i) => manager.fetch(p, i) };
   lens = createLens({ session });
+  // 3f: mirror the account's moderation posture — mute a word on bsky.app and
+  // it is muted here. A failure runs unfiltered WITH WORDS, never silently.
+  try {
+    await lens.loadPosture();
+  } catch (e) {
+    toast('Moderation settings could not load — the lens is running unfiltered: ' + e.message, 'err');
+  }
+}
+
+// 3f: the read-only Moderation panel — we mirror and respect; the network's
+// own surface manages (the lens tenet applied to settings). putPreferences-
+// based management from Forage is a registered frontier.
+function moderationPanel() {
+  if (!session) return null;
+  const p = lens.posture();
+  const line = (label, value) => el('div', { class: 'row spread' },
+    el('span', { class: 'xs' }, label), el('span', { class: 'xs muted' }, String(value)));
+  return el('div', { class: 'card', 'data-moderation-panel': '1' },
+    el('h2', {}, 'Your moderation'),
+    el('div', { class: 'xs muted', style: 'margin-bottom:4px' },
+      'Mirrored from your account — Forage stores none of it.'),
+    line('Muted words', p.mutedWords.length),
+    line('Muted accounts', p.mutedDids.size),
+    line('Blocked accounts', p.blockedDids.size),
+    line('Label filters', p.labelPrefs.size),
+    line('Adult content', p.adultEnabled ? 'enabled' : 'off'),
+    el('div', { class: 'xs', style: 'margin-top:6px' },
+      el('a', { href: 'https://bsky.app/moderation', target: '_blank', rel: 'noopener noreferrer' },
+        'Edit on bsky.app ↗')));
 }
 
 // Guest boards: the probe-verified unauth-200 surface (feed-URI and author
@@ -78,7 +107,40 @@ function lensVote(p) {
     }
   };
 }
-const lensRow = (p) => postRow(p, !!session, { onVote: lensVote(p) });
+// 3f: facet-aware body — links live, mentions link OUT (the lens tenet),
+// #tags emphasized (they become /h/ doorways at 3g). Byte-indexed decode in
+// the substrate; this only renders segments.
+function facetedBody(p) {
+  if (p.maskedRemoved || !p.body) return null;
+  const segs = facetSegments(p.body, p.facets);
+  const nodes = segs.map((seg) => {
+    if (!seg.facet) return seg.text;
+    if (seg.facet.type === 'link') return el('a', { href: seg.facet.value, target: '_blank', rel: 'noopener noreferrer' }, seg.text);
+    if (seg.facet.type === 'mention') return el('a', { href: `https://bsky.app/profile/${seg.facet.value}`, target: '_blank', rel: 'noopener noreferrer', title: 'Profiles live on bsky.app — Forage is a lens' }, seg.text);
+    if (seg.facet.type === 'tag') return el('em', { 'data-tag': seg.facet.value, title: 'Hashtag' }, seg.text);
+    return seg.text;
+  });
+  const bodyEl = el('div', { class: 'clamp' }, ...nodes);
+  if (p.warnLabels) {
+    const veil = el('details', { 'data-warn': p.warnLabels.join(',') },
+      el('summary', { class: 'xs muted' }, `content warning: ${p.warnLabels.join(', ')} — click to view`), bodyEl);
+    return veil;
+  }
+  return bodyEl;
+}
+
+// 3f: the network's trust signals, display-only — never a gate.
+function verifiedBadge(p) {
+  if (p.verified === 'valid') return el('span', { class: 'xs', title: 'Verified on Bluesky' }, ' ✓');
+  if (p.verified === 'trusted') return el('span', { class: 'xs', title: 'Trusted verifier on Bluesky' }, ' ✪');
+  return '';
+}
+
+const lensRow = (p) => postRow(p, !!session, {
+  onVote: lensVote(p),
+  bodyNode: p.format === 'text' ? facetedBody(p) : null,
+  authorBadge: verifiedBadge(p),
+});
 
 function lensSidebar() {
   const fieldsCard = el('div', { class: 'card' }, el('h2', {}, 'Lens Fields'));
@@ -197,7 +259,7 @@ export function lensHomeView() {
   if (activeRing !== 'world') {
     const title = activeRing === 'following' ? 'Following' : activeRing === 'mutuals' ? 'Mutuals' : 'Mutuals +1';
     return { main: el('div', {}, el('h1', {}, title), ringDial(), ringBoard(activeRing)),
-      side: el('div', { class: 'side' }, sessionCard(), lensSidebar()) };
+      side: el('div', { class: 'side' }, sessionCard(), moderationPanel(), lensSidebar()) };
   }
   const main = el('div', {},
     el('h1', {}, 'The Lens'),
@@ -212,7 +274,7 @@ export function lensHomeView() {
       el('h2', {}, 'Browse'),
       el('div', { class: 'stack' },
         ...CURATED.map((c) => el('div', {}, el('a', { href: `#/lens/f/${c.slug}` }, `f/${c.slug}`), el('span', { class: 'xs muted' }, ` — ${c.title}`))))));
-  return { main, side: el('div', { class: 'side' }, sessionCard(), lensSidebar()) };
+  return { main, side: el('div', { class: 'side' }, sessionCard(), moderationPanel(), lensSidebar()) };
 }
 
 export function lensFieldView(params) {
@@ -240,7 +302,7 @@ export function lensFieldView(params) {
       if (m) a.setAttribute('href', `#/lens/p?uri=${encodeURIComponent(m[1])}&from=${entry.slug}`);
     }
   }).catch((e) => main.replaceChildren(emptyState('Lens fetch failed', e.message)));
-  return { main, side: el('div', { class: 'side' }, sessionCard(), lensSidebar()) };
+  return { main, side: el('div', { class: 'side' }, sessionCard(), moderationPanel(), lensSidebar()) };
 }
 
 // 3e: a quote-response rendered as thread continuation — the ❝ marker carries
@@ -293,5 +355,5 @@ export function lensThreadView(params, query) {
     }
     main.replaceChildren(head, t.comments.length ? commentsCard : emptyState('No replies', 'Nothing below this post yet.'));
   }).catch((e) => main.replaceChildren(emptyState('Lens fetch failed', e.message)));
-  return { main, side: el('div', { class: 'side' }, sessionCard(), lensSidebar()) };
+  return { main, side: el('div', { class: 'side' }, sessionCard(), moderationPanel(), lensSidebar()) };
 }

@@ -84,14 +84,15 @@ export function postRow(p, viewerCanVote, opts = {}) {
     : el('a', { href: link }, p.title);
   const meta = el('div', { class: 'postmeta' },
     el('a', { href: `#/f/${p.fieldSlug}` }, `f/${p.fieldSlug}`),
-    p.author ? el('span', {}, `by ${p.author}`) : el('span', { class: 'muted' }, 'by [removed]'),
+    p.author ? el('span', {}, `by ${p.author}`, opts.authorBadge || '') : el('span', { class: 'muted' }, 'by [removed]'),
     el('span', {}, timeAgo(p.createdTs) + ' ago'),
     p.format === 'link' && p.url ? el('span', { class: 'domain' }, domainOf(p.url)) : null,
     el('a', { href: link }, `${p.commentCount} comments`),
     p.edited ? el('span', { class: 'muted' }, 'edited') : null,
   );
-  const body = p.format === 'text' && p.body && !p.maskedRemoved
-    ? el('div', { class: 'clamp' }, p.body) : null;
+  const body = opts.bodyNode !== undefined ? opts.bodyNode
+    : (p.format === 'text' && p.body && !p.maskedRemoved
+      ? el('div', { class: 'clamp' }, p.body) : null);
 
   const right = el('div', {},
     el('div', { class: 'row wrap', style: 'gap:6px;align-items:center' }, ...postBadges(p)),

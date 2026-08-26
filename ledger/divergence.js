@@ -68,6 +68,12 @@ export const LEDGER = [
     reason: 'Invariant 8 — behavior present at one tier carries a proposal before it renders. Decide when the BBS mode (phase 5) or a scenario cares.',
     date: '2026-08-25', status: 'open' },
 
+  { id: 'DL-019', kind: 'tolerance', capability: 'moderation', tier: 'wide',
+    description: 'The wide tier\'s moderation posture is ACCOUNT-derived (getPreferences + graph endpoints — muted words, label filters, adult toggle, mutes, blocks), while the memory tier\'s is EVENT-derived (local mod events). Same masking semantics, different source of authority; Forage stores no wide-tier moderation state (piggy-back principle, D10).',
+    reason: 'A word muted on bsky.app must be muted here with no Forage UI — one posture, owned by the account.',
+    tolerance: 'masking outcomes only; the authority source is not compared',
+    date: '2026-08-25', status: 'active' },
+
   // ---- the ring dial (plan 2026-08-25-1, 3b) ----
   { id: 'DL-016', kind: 'frontier', capability: 'feeds', tier: 'wide', label: 'Ring beyond the cap',
     description: 'mutuals+1 draws the first 25 members (D6-measured cap; latency is not the bound — board noise is). The chip reports the TRUE member count; drawing the full ring (sampling, rotation, or paging members) is this frontier.',
