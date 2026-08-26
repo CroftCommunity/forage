@@ -253,9 +253,10 @@ through the fixture**, so the journey catches that class forever after.
    record, the returned uri/cid, and the independently-fetched record all
    recorded in the Review Log.
 2. **Verification:** `npm test && npm run conformance && node e2e/run.mjs` still
-   green (proving any discovered fix is pinned), plus the raw
-   `getRecord` output pasted into the Review Log. If nothing was found, the
-   Review Log says so explicitly and names what was checked.
+   green (proving any discovered fix is pinned), plus the raw `getRecord`
+   output pasted into the Review Log. **A run that finds nothing is a result,
+   not an absent one** — the Review Log must name what was checked and state
+   that it held, or a future reader cannot tell this phase from an unrun one.
 
 **Validation:** **Broad.** This phase *is* validation — external system,
 real auth, real writes. Tests alone are definitionally insufficient here; that
@@ -282,7 +283,11 @@ is the entire premise.
       `POST_COLLECTION` (delete-own-post), each under its marker. The assertion
       that a delete is reachable only by unliking is replaced by a narrower,
       truer one: each delete binds to its own named collection, and neither can
-      target a repo other than the session's.
+      target a repo other than the session's. **Pass 2:** the current check uses
+      `src.indexOf('deleteRecord')` (the FIRST occurrence) — with two deletes
+      that silently inspects only one. Assert per occurrence.
+- [ ] `AGENTS.md` — add the delete row to the write table (Pass 2 finding: the
+      table went two commits stale before this plan existed).
 - [ ] UI: a Delete control on posts you own — on the thread head and on your own
       comments — behind a confirm step, since it is irreversible.
 - [ ] Journey (RED first): sign in, post to a hashtag, delete it, assert the
@@ -389,7 +394,12 @@ text, and the boards that already render images render these.
 - [ ] Journey (RED first): attach a fixture image, fill alt text, post, assert
       the `createRecord` body carries a well-formed `embed.images` with the blob
       ref and alt; assert Post is disabled with alt text missing; assert a
-      5th image is refused with words.
+      5th image is refused with words. **Also assert an image on a REPLY** —
+      the lexicon puts `embed` on the post record, so a reply carries images as
+      naturally as a top-level post, and it is the same composer component
+      (Pass 2 finding: this was unspecified).
+- [ ] `e2e/harness/shim.mjs` is shared by all five journeys — after changing it
+      for binary bodies, run all five, not just this one.
 - [ ] `ledger/divergence.js` — DL-027 loses images; video, gallery, external
       link cards, self-labels, mention facets, and editing remain.
 - [ ] `sw.js` cache bump.
@@ -491,4 +501,65 @@ discovery step was added, because the lexicon documents a 2 MB cap but says
 restrictions are enforced at reference time — which means the PDS, not the
 lexicon, is the authority on what actually fails.
 
-Not yet reviewed (Pass 2) or quality-gated (Pass 3).
+### Pass 2: Gap analysis — 2026-08-26
+
+Six findings, four fixed in the plan, one fixed in the repo immediately, one
+accepted.
+
+1. **Doc drift, already shipped (fixed in the repo, `bd964f4`).** `AGENTS.md`
+   claimed "Two writes exist in the lens and only two" — untrue since 3s
+   (favorite) and 3w (publish), both mine. Replaced with a table of every write
+   and its origin, plus the rules that did survive (no `putRecord`; saved ≠
+   pinned), and the shareable `/f/@creator/:rkey` route. This is the exact
+   failure Documentation Impact exists to prevent, and it happened anyway
+   because 3s/3w had no plan doc to carry the section. Consequence for this
+   plan: **each phase updates `AGENTS.md`'s write table in its own commit**,
+   phase 2 (delete) and phase 3 (images do not add a write, but the composer
+   description changes).
+2. **The invariant test's delete assertion breaks under two deletes.**
+   `test/invariants.test.js` does `src.indexOf('deleteRecord')` and asserts the
+   400 characters before it mention unlike. With a second `deleteRecord` that
+   check silently keeps passing while only inspecting the first. Phase 2 must
+   assert **per occurrence**, not on the first index. Added to phase 2's
+   changes.
+3. **Replies with images were unspecified.** The lexicon puts `embed` on the
+   post record, so a reply can carry images as naturally as a top-level post,
+   and the composer is one component used in both places. Phase 3 covers both;
+   the journey asserts an image on a reply too.
+4. **Phase 1 had no explicit "nothing found" outcome.** A live proof that finds
+   nothing is a *result*, not an absence of one, and needs recording or a future
+   reader cannot tell the phase from an unrun one. Done-when now requires the
+   Review Log to name what was checked even when everything passed.
+5. **`e2e/harness/shim.mjs` is shared by five journeys** and phase 3 changes it
+   for binary bodies. Already in the risks; promoted to an explicit instruction
+   to run all five after touching it.
+6. **Accepted, not fixed:** phase 1 writes to a real public account and
+   "deleted" means removed-from-repo, not never-federated. Inherent to proving
+   anything against a real network; mitigated by an unremarkable smoke text and
+   a quiet tag.
+
+### Pass 3: Quality gates — 2026-08-26
+
+- **TDD ordering:** every phase names its RED test before its implementation.
+  Phase 1 and phase 3.0 are the two exceptions and both invoke the Discovery
+  Exemption explicitly, with a stated disposition (throwaway) and a rule that
+  anything *found* returns as a RED test first. Checked: no phase says "add
+  tests" after a GREEN step.
+- **Wiring tests:** phases 2 and 3 each name a journey segment that drives the
+  entry point, not a unit test on the new function. Phase 1's wiring test is
+  conditional by nature (there is nothing new to wire) and says so, rather than
+  claiming a test it will not write.
+- **Validation calibration:** phase 1 Broad, phase 2 Moderate, phase 3 Broad.
+  Not uniform — phase 2 is a small guarded write against machinery already
+  proved, and saying so is the point of the field.
+- **Verification commands exercise entry points:** phase 2 and 3 verify with
+  `node e2e/run.mjs` (the journey), not `node --test test/compose.test.js`.
+  Phase 1 verifies with raw `getRecord` output, which is the only honest gate
+  for a claim about the real network.
+- **Diagnostic readiness:** phase 1 records the sent record, the returned
+  uri/cid, AND the independently-fetched record — three artifacts, so a
+  disagreement between them localizes the fault instead of just reporting one.
+- **Isolation honesty:** the Concurrency Map declares full sequence and gives
+  the real reason (near-total write-set overlap), not a mechanism.
+- **Gate confirmed:** open questions are all PHASE-GATED or ADVISORY; none
+  BLOCKING, so execution can start at phase 1.
