@@ -18,6 +18,12 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
   scoped tier; probe the alpha, diff membership semantics against the roster+masking
   built here; its own plan.
 
+- **Jetstream v2 stream freshness** (user, 2026-08-25): full investigation of how
+  best to keep the content streams (feeds, /h/ hashtags, trending, quotes) fresh
+  with the newly released Jetstream v2 — its own plan. Prior probes: filtered v1
+  tail 676ms write→event; v2 `planSnapshot` was 401 token-gated. Context:
+  `plans/2026-08-25-1-plan-backend-modes-bsky-writes.md` (NOT-doing list).
+
 ## Ledgered (see `ledger/divergence.js`)
 
 - **DL-013 boost-as-like** — the first lens WRITE; promote when write-scope opens.

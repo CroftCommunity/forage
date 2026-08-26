@@ -97,9 +97,28 @@ Spaces integration (and Spaces is alpha — sandbox PDS, breaking changes).
   mode launches wearing its skin. BBS last and coarse — it has the largest unknowns
   and a mandatory pre-execution split after its discovery probe, same protocol the
   prior plan used for its network phases.
+- **Content streams — one abstraction, two keys (user, 2026-08-25):** `/f/` and
+  `/h/` are two spellings of the same thing, a content stream: `/f/` keyed by a
+  feed/Field, `/h/` keyed by a hashtag. The lens field view generalizes to a
+  stream view; trending topics (D8: each resolves to a feed generator) are a
+  DISCOVERY RAIL of `/f/`-kind streams, not a third kind. `/h/` is session-gated
+  (searchPosts, D8); in memory mode `/h/:tag` maps to the native tag concept via
+  a selector, so the route scheme is a platform concept, not a lens hack.
+- **Bluesky primitives sorting rule (user-ratified 2026-08-25):** topic-shaped
+  primitives (feeds, hashtags, quotes, trending) get first-class stream/thread
+  surfaces; person-shaped primitives (profiles, mentions, follows) become
+  aperture or link OUT; policy/trust-shaped primitives (labels, mutes, gates,
+  verification) are respected and rendered honestly, never re-invented. Lists
+  and starter packs are registered frontiers (list-backed Fields), not built now.
 - **What this plan does NOT do:** wire the all-public scoped mode into the app
-  (machinery kept; in-app wiring deferred until wanted); Jetstream; matrix-style
-  per-capability `hybrid` rows; Spaces GA hardening (alpha only, by definition).
+  (machinery kept; in-app wiring deferred until wanted); DMs/chat (separate
+  private service, wrong shape for a forum); list-backed Fields + starter packs
+  (frontier entries, 3g); matrix-style per-capability `hybrid` rows; Spaces GA
+  hardening (alpha only, by definition); **Jetstream v2** — live freshness for
+  these streams is a NAMED FOLLOW-UP investigation (user 2026-08-25: "full
+  investigation of how best to handle these with the new released jetstream2");
+  recorded in TODO.md; prior probes: filtered v1 tail 676ms write→event, v2
+  planSnapshot token-gated.
 
 ## Verified Assumptions
 
@@ -233,7 +252,11 @@ Firsthand, current tree (details in the prior plan where noted):
 ## Documentation Impact
 
 - `README.md` — modes paragraph (1c); OAuth sign-in (2c); front door + ring dial +
-  lens writes (3d); quotes-as-continuation ledger proposal (3e); skins (4b); BBS mode + its alpha caveat (5, at split).
+  lens writes (3d); quotes-as-continuation ledger proposal (3e); honest-rendering
+  note (3f); `/h/` streams + trending rail (3g); skins (4b); BBS mode + its alpha
+  caveat (5, at split).
+- `TODO.md` — Jetstream v2 stream-freshness investigation added as a named
+  follow-up (this session, doc commit); OAuth/DL-013 closures as before.
 - `index.html` — if the front-door flip or Settings pref needs head-inline changes
   (theme-flash precedent), 3d owns them; grepped otherwise-unaffected.
 - `TODO.md` — OAuth line closes (2c); DL-013 + lens polish lines close (3d); scoped
@@ -294,6 +317,22 @@ user-approved checkpoints.
   (serial ~590ms); one cold-start stall of ~20s observed → per-request timeouts
   required. **The cap ships at 25.** Mutuals math trivial at test-account scale;
   pagination costs 1 request per 100 edges per side.
+- **D8 ✅ (added 2026-08-25, user direction: trending in, /h/ streams)** —
+  `app.bsky.unspecced.getTrendingTopics` AND `getTrends` are UNAUTH-200. Each
+  trending topic's `link` resolves to a FEED GENERATOR (`/profile/<did>/feed/<id>`)
+  — trending is a source of feed streams, not a third stream kind. `getTrends`
+  adds postCount, status (saturating/cooling), category, startedAt, actor
+  profiles. Both are `unspecced` (may break without notice — ledger entry +
+  graceful degradation required). Hashtag search re-confirmed: `searchPosts`
+  403 unauth / 200 authed with `tag=` param + hitsTotal → `/h/:tag` is a
+  signed-in surface. Fixtures `wide-getTrendingTopics.json`, `wide-getTrends.json`.
+- **D9 ✅ (added 2026-08-25, user direction: represent verification)** — post
+  author views in EVERY feed/thread payload already carry `verification`:
+  `{verifications[], verifiedStatus: 'valid'|'none', trustedVerifierStatus:
+  'valid'|'none'}` (e.g. npr.org verified-by-Bluesky; bsky.app itself is
+  trustedVerifier). Rendering checkmarks costs zero extra requests. Author
+  views also carry `labels` (saw `!no-unauthenticated`) — the masking layer's
+  input is already in hand. Fixture `wide-author-verification.json`.
 - **D7 ✅ (added 2026-08-25, user direction: quotes are thread continuation)** —
   `app.bsky.feed.getQuotes` is UNAUTH-public (200 on public appview), cursored,
   returns full post views whose `embed` is `app.bsky.embed.record#view` with the
@@ -334,6 +373,12 @@ Original task specs (all executed as written):
   **Success:** the gated read/write loop demonstrated end to end, or a precise list
   of what's missing → phase 5 re-scoped at its split. **Disposition:**
   keep-as-fixture (responses; throwaway scripts).
+- [x] **D8: Trending + hashtag-search surfaces** (added on user direction, executed
+  2026-08-25, read-only). getTrendingTopics/getTrends unauth status + shapes;
+  searchPosts tag gate re-check. **Disposition:** keep-as-fixture.
+- [x] **D9: Verification shape** (added on user direction, executed 2026-08-25,
+  read-only). Author-view `verification` in feed payloads; labels availability.
+  **Disposition:** keep-as-fixture.
 - [x] **D7: Quote-post mechanics** (added post-Phase-0 on user direction, executed
   2026-08-25). Probe (own test accounts): original post (user1) + quote post via
   `app.bsky.embed.record` (user2) + plain reply (user2); `getQuotes` unauth +
@@ -504,6 +549,55 @@ actor-centered view scatters quotes onto the quoter's profile). Also the BBS idi
   behavior carries a proposal before it renders); lands with the 3e commit.
 **Wiring:** hermetic thread tests + the 3d live smoke extends to open a thread with
 a known quote (own test post pair). Multi-commit ≤3.
+
+#### 3f: Honest rendering — facets, labels→masking, mutes, verification
+(Added 2026-08-25, user-ratified tier 1 + verification.) Correctness, not features:
+a lens that drops these misrepresents the network.
+- [ ] `js/substrates/lens.js` — shapes carry `facets` (mention/link/tag spans),
+  author `labels`, author `verification` (D9: already in every payload), and the
+  signed-in viewer's mutes (getMutes, probe-verified) are applied IN THE SHAPE
+  LAYER as masking (policy in selectors/substrate, never components).
+- [ ] `js/ui/lens-views.js` — post text renders facet-aware (links live, mentions
+  link OUT per the tenet, `#tags` become `/h/` links once 3g lands — until then
+  plain emphasized); label-bearing content renders through the existing masking
+  affordances (hide/warn chips); verified authors get the checkmark
+  (`verifiedStatus === 'valid'`), trusted verifiers a distinct mark — display
+  only, never a gate.
+- [ ] `test/lens.test.js` — RED first over fixture payloads: facet spans map to
+  byte-correct offsets (facets are BYTE-indexed, not UTF-16 — the boundary
+  case: a post with an emoji before the tag); a muted author's posts are masked
+  in board shapes; a labeled post carries its masking state; verification
+  states render for valid/none/trusted-verifier. Fixture-driven (D8/D9 files).
+**Wiring:** hermetic tests + the 3d smoke visually confirms a verified author and
+a facet-linked post. Multi-commit ≤3.
+
+#### 3g: Content streams — /h/ hashtag boards + the trending rail
+(Added 2026-08-25, user direction: "/f for feed/field and /h for hashtag … treat
+them as content streams either way"; trending promoted IN.)
+- [ ] `js/substrates/lens.js` — the field/board fetch generalizes to
+  `stream({kind: 'feed'|'hashtag', key, session})`: `feed` = today's sources +
+  any feed-generator at-uri (which is what trending links resolve to, D8);
+  `hashtag` = searchPosts `tag=` (session-gated — guests refuse with words +
+  sign-in affordance); `trending()` = getTrendingTopics (unauth) mapped to
+  feed-stream descriptors.
+- [ ] `js/main.js` + `js/ui/lens-views.js` — route `#/h/:tag` (Bluesky view) →
+  hashtag stream view (same stream component as `/f/`); trending rail on the
+  lens home (each topic opens its feed stream); `#/h/:tag` in MEMORY mode → a
+  selector-backed native tag stream (posts across fields carrying the tag) so
+  the route scheme is mode-symmetric.
+- [ ] `ledger/divergence.js` — entries land WITH their chips: trending rides an
+  `unspecced` API (degrades to absent-with-words when it breaks); `/h/` is
+  session-gated at the wide tier while memory `/h/` is open (tier divergence);
+  frontier entries for list-backed Fields and starter packs (registered, not
+  built — same commit as this deferral per invariant 7).
+- [ ] `test/` — RED first: stream dispatch by kind (unknown kind refuses with
+  words); hashtag stream refuses without a session; trending mapper turns D8
+  fixture topics into feed descriptors (link parsing boundary: the at-uri is
+  derived from the `/profile/<did>/feed/<rkey>` link shape); memory tag
+  selector returns cross-field tagged posts (empty tag → empty, not crash).
+**Wiring:** `#/h/:tag` reachable from a rendered facet tag (3f) and from the
+trending rail; 3d live smoke extends: open a trending topic, open a hashtag
+board signed-in. Multi-commit ≤3.
 
 ### Phase 4 — Skins
 
@@ -761,3 +855,18 @@ continuation with distinct markers, failure chip, postgate-detachment honesty �
 render only what the appview returns — and the invariant-8 ledger proposal for
 quote-respond as a schema event). Documentation Impact: 3e's ledger entry noted on
 the ledger line; README thread-view mention rides 3d's update.
+
+### Primitives ratified: 3f + 3g added, trending + verification IN — 2026-08-25
+User walk-through of the Bluesky-primitives map: tier 1 (facets, labels→masking,
+mutes) ratified → unit 3f, WITH verification promoted in ("we should represent
+verification"); trending promoted in ("I would like to do trending"); the route
+scheme set by the user — `/f/` for feed/field, `/h/` for hashtag, "treat them as
+content streams either way" → unit 3g generalizes the board fetch to one stream
+abstraction with two keys, mode-symmetric (`/h/` in memory = native tag selector).
+Probes D8/D9 ran same-session (read-only): trending endpoints unauth-200 and each
+topic resolves to a FEED GENERATOR (no third stream kind needed; unspecced-API
+fragility → ledger entry with degradation); verification + labels already ride
+every author view (zero extra requests). Frontiers registered at 3g: list-backed
+Fields, starter packs. NOT-doing updated: DMs out; **Jetstream v2 investigation
+recorded as a named follow-up in TODO.md** (user: "full investigation of how best
+to handle these with the new released jetstream2") — not folded into this plan.
