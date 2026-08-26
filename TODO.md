@@ -9,6 +9,9 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 
 ## Needs the owner
 
+- **Pre-Spaces review** — the owner is reviewing phases 1–4 on forage.fyi before
+  phase 5 starts. Findings from that review land here.
+
 - **Phase 5 — the private BBS on Spaces** (plan 2026-08-25-1): PAUSED by the owner
   2026-08-25 with phases 1–4 deployed. The split is drafted and user-approved
   (5a–5d: space-credential module, bbs substrate, mode UI, DOCKER-gated W5);
@@ -80,11 +83,13 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 - **Composing** — the hashtag affordance strip carries a disabled "Post to #x"
   button (3m). Writing posts is not built; when it is, that button is the
   deterministic path (feeds get no equivalent — DL-025).
-- **`#/` hash routing vs clean paths** (`/f/gardening`): the hash router needs
-  no server rewrites, which is why it shipped; clean paths on GitHub Pages need
-  the 404.html SPA fallback trick (it works, and costs a redirect on cold load
-  plus a real 404 status for bots). Decide before the URLs are widely shared —
-  it is a one-way door for link durability.
+- ~~hash routing vs clean paths~~ — DECIDED + SHIPPED 2026-08-26 (3n, owner):
+  clean paths with the 404.html fallback; the service worker upgrades deep
+  links to 200s; legacy `#/` links bridge at boot and live. Verified on
+  forage.fyi at forage-v22.
+- **Crawler caveat (from 3n):** a bot's FIRST hit on a deep link gets Pages'
+  404 status (the body is correct). Only real fix is a host with rewrites, or
+  prerendering. Decide if/when discoverability matters.
 - **Naming note:** bsky.app uses the `#` glyph for FEEDS in its nav even though
   hashtags exist. Our split is the honest one (DL-025): `/f/` feeds are not
   targetable, `/h/` hashtags are.
