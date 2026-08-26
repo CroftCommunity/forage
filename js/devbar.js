@@ -6,6 +6,7 @@ import * as storage from './storage.js';
 import { PERSONAS } from './personas.js';
 import { buildSeed } from '../data/seed.js';
 import { el } from './util.js';
+import * as skins from './skins.js';
 import { toast } from './ui/components.js';
 
 export function devBar() {
@@ -20,8 +21,12 @@ export function devBar() {
     ...['memory', 'bbs'].map((m) => el('option', { value: m, selected: store.activeMode() === m || false }, m)));
   mode.addEventListener('change', () => {
     try {
-      if (mode.value === 'memory') store.exitMode();
-      else store.enterMode(mode.value);
+      if (mode.value === 'memory') { store.exitMode(); skins.clearTransient(); }
+      else {
+        store.enterMode(mode.value);
+        // the BBS mode DEFAULTS to its skin; an explicit user choice wins
+        if (mode.value === 'bbs' && skins.SKINS.bbs) skins.setTransient('bbs');
+      }
       toast(`Mode: ${store.activeMode()}${store.activeMode() === 'memory' ? '' : ' (RAM only — nothing persists)'}`, 'ok');
     } catch (e) { toast(e.message, 'err'); mode.value = store.activeMode(); }
   });

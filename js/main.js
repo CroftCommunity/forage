@@ -6,6 +6,7 @@ import * as sel from './selectors.js';
 import * as actions from './actions.js';
 import { el } from './util.js';
 import { devBar } from './devbar.js';
+import * as skins from './skins.js';
 import { toast } from './ui/components.js';
 import { setToaster } from './actions.js';
 import * as views from './ui/views.js';
@@ -100,9 +101,11 @@ function render() {
 store.subscribe(render);
 window.addEventListener('hashchange', render);
 
-// ---------- theme ----------
+// ---------- theme + skin ----------
 theme.apply();
 theme.onChange(render); // re-render so the toggle icon flips
+skins.apply();
+skins.onChange(render);
 
 // ---------- boot ----------
 const hadState = store.hydrate();

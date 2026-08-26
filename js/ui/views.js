@@ -5,6 +5,7 @@ import { el, esc, mdLite, timeAgo, domainOf, fmtScore } from '../util.js';
 import * as store from '../store.js';
 import * as sel from '../selectors.js';
 import * as actions from '../actions.js';
+import * as skins from '../skins.js';
 import { go } from '../router.js';
 import { frontiers } from '../../ledger/divergence.js';
 import { humanWait } from '../engines/limits.js';
@@ -533,10 +534,16 @@ export function settingsView() {
     el('option', { value: 'bluesky', selected: (localStorage.getItem('forage.front') || 'bluesky') === 'bluesky' || false }, 'Bluesky view (the live network)'),
     el('option', { value: 'memory', selected: localStorage.getItem('forage.front') === 'memory' || false }, 'Memory (the local sandbox)'));
   frontSel.addEventListener('change', () => { try { localStorage.setItem('forage.front', frontSel.value); } catch {} });
+  // 4a: the skin picker — skins and modes are independent axes; any skin in
+  // any mode. Device-local, like theme and front door.
+  const skinSel = el('select', { class: 'form' }, ...Object.entries(skins.SKINS).map(([id, s]) =>
+    el('option', { value: id, selected: skins.activeSkin() === id || false }, s.label)));
+  skinSel.addEventListener('change', () => skins.setSkin(skinSel.value));
   const themeCard = el('div', { class: 'card' },
     el('div', { class: 'field-row' }, el('label', {}, 'Theme'), themeSel),
+    el('div', { class: 'field-row' }, el('label', {}, 'Skin'), skinSel),
     el('div', { class: 'field-row' }, el('label', {}, 'Front door'), frontSel),
-    el('div', { class: 'xs muted' }, 'Where forage.fyi lands on arrival — this device only.'));
+    el('div', { class: 'xs muted' }, 'Skin and front door are this device only.'));
 
   if (!V()) {
     return { main: el('div', {}, el('h1', {}, 'Preferences'), themeCard,

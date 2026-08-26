@@ -1,7 +1,7 @@
 # Plan: three modes — memory, the Bluesky view with a ring dial, and the private BBS
 
 date: 2026-08-25
-status: EXECUTING — PHASE 3 COMPLETE (capstone live smoke: all 7 arcs green on real Bluesky); next: 4a (skins mechanism).
+status: EXECUTING — Phase 3 complete; 4a SHIPPED (skin mechanism + scan); next: 4b (the BBS skin + one more).
 Execution in worktrees/forage/modes-bbs (branch claude/modes-bbs)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `10a8ade` (clean tree, pushed; forage.fyi deployed at forage-v11)
@@ -612,7 +612,7 @@ proof changes terms in the SAME commit: the exception is exactly the like
 create+delete pair (any other write through lens.js stays red). DL-013 → shipped,
 same commit. PHASE-GATE: OQ3 (own-test-post-only live validation, confirmed).
 
-#### 3d: Polish, the front door, and live validation — ✅ SHIPPED (phase capstone)
+#### 3d: Polish, the front door, and live validation — ✅ SHIPPED (`f34c89a`+`d061f2c`+`ff01ed7`) (phase capstone)
 - [ ] OQ4 consequences land HERE (scheduled, not just recorded in the OQ):
   `js/main.js` empty-hash default flips `#/popular` → `#/lens` (the unauth Bluesky
   view is the front door); the Settings view gains the mode/front-door preference
@@ -745,7 +745,7 @@ hashtag board signed-in. Multi-commit ≤3.
 
 ### Phase 4 — Skins
 
-#### 4a: The mechanism
+#### 4a: The mechanism — ✅ SHIPPED
 - [ ] `js/skins.js` + `skins/` registry — a skin = a stylesheet layering over
   `tokens.css` (+ optional skin-scoped extras), applied via a managed `<link>`,
   persisted (device-local pref), composing WITH light/dark where the skin permits;
