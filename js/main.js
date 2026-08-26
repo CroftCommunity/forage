@@ -35,6 +35,7 @@ function masthead() {
   // 3h: populations do not mix — the Bluesky masthead carries NO memory
   // chrome (no persona, no notifications, no memory search).
   if (pmode.active() === 'bluesky') {
+    const who = lensViews.sessionIdentity();
     return el('header', { class: 'masthead' },
       el('a', { class: 'wordmark', href: '#/' },
         el('img', { class: 'wordmark-glyph', src: './icons/icon-192.png', alt: '' }), 'Forage'),
@@ -42,7 +43,10 @@ function masthead() {
         el('a', { href: '#/', class: 'small' }, 'Home'),
         el('a', { href: '#/mode', class: 'small' }, 'Mode'),
         el('a', { href: '#/settings', class: 'small' }, 'Settings')),
-      el('div', { class: 'who' }, themeBtn0));
+      el('div', { class: 'who' }, themeBtn0,
+        who === 'connecting' ? el('span', { class: 'small muted' }, '…')
+          : who ? el('span', { class: 'small', title: 'Your Bluesky session' }, who)
+          : el('a', { class: 'small', href: '#/' }, 'Sign in')));
   }
   const viewer = store.getPersonaId();
   const unread = sel.unreadCount(store.getState(), viewer);
@@ -111,8 +115,8 @@ router.setNotFound(() => ({ main: el('div', { class: 'empty' }, el('h2', {}, 'Lo
 // ---------- render pipeline ----------
 let currentCleanup = null;
 function render() {
-  // dev bar + masthead always fresh (persona/unread may have changed)
-  devHost.replaceChildren(devBar());
+  // dev bar (memory-only scaffolding, user 2026-08-26) + masthead always fresh
+  devHost.replaceChildren(pmode.active() === 'memory' ? devBar() : '');
   mastHost.replaceChildren(masthead());
   if (currentCleanup) { currentCleanup(); currentCleanup = null; }
   let out;

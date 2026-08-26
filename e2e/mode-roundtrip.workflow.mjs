@@ -44,12 +44,15 @@ export async function run() {
   assert.equal(await p.key(), null, 'the bluesky population writes nothing');
   assert.equal(await p.page.locator('.masthead a:has-text("Popular")').count(), 0,
     'no memory chrome in the bluesky masthead');
+  assert.equal(await p.page.locator('.devbar').count(), 0,
+    'the utility bar is memory-only (user 2026-08-26)');
 
   // choose the memory sandbox at /mode — a full population swap
   await p.page.goto(`${p.origin}/#/mode`);
   await p.page.waitForSelector('[data-mode-card="memory"]');
   await p.page.locator('[data-mode-card="memory"] button').click();
   await p.page.waitForSelector('.masthead a:has-text("Popular")', { timeout: 10000 });
+  await p.page.waitForSelector('.devbar');
   await p.waitForSeed();
   assert.equal(await p.page.locator('text=The Lens').count(), 0, 'no bluesky chrome in memory');
 

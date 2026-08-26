@@ -147,6 +147,9 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
     title: text, body: text, url: external?.uri || '',
     author: post.author?.handle || '[unknown]', authorId: post.author?.did || null,
     removedReason: '',
+    // 3i: rows never duplicate the title as a preview — bluesky text posts ARE
+    // their title (300/300). Thread/comment rendering keeps using body.
+    preview: text && external?.uri ? text : '',
     ...(quoted ? { quoted } : {}),
     ...(disp?.mode === 'warn' ? { warnLabels: disp.labels } : {}),
   };
@@ -187,7 +190,29 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
       deferred: depth >= 10 ? (n.replies || []).length : 0,
     };
   }).filter(Boolean);
-  const replies = build(root.replies, 0);
+  // 3i: the poster self-thread (1/3, 2/3, 3/3 — the author replying to their
+  // own post in a chain) is the BODY of the post in forum shape, not comments.
+  // Only the unbroken same-author chain hoists; replies to hoisted parts
+  // re-root as top-level comments; an author reply to someone ELSE stays a
+  // comment.
+  const rootDid = root.post?.author?.did;
+  const selfThread = [];
+  let topLevel = root.replies || [];
+  let chain = topLevel.find((n) => n.post?.author?.did === rootDid && n.post);
+  topLevel = topLevel.filter((n) => n !== chain);
+  const reRooted = [];
+  while (chain) {
+    selfThread.push({
+      uri: chain.post.uri,
+      text: chain.post.record?.text || '',
+      facets: chain.post.record?.facets || [],
+    });
+    const kids = chain.replies || [];
+    const next = kids.find((n) => n.post?.author?.did === rootDid && n.post);
+    reRooted.push(...kids.filter((n) => n !== next));
+    chain = next;
+  }
+  const replies = build([...topLevel, ...reRooted], 0);
   const quoteNodes = (quotes || [])
     .filter((q) => !posture.blockedDids.has(q.author?.did))
     .map((q) => {
@@ -200,7 +225,7 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
     || String(a.authorId).localeCompare(String(b.authorId))
     || String(a.id).localeCompare(String(b.id)));
   return { post, perms: LENS_PERMS, sort: 'lens', locked: false, comments, total,
-    quoteCount: root.post.quoteCount ?? 0 };
+    selfThread, quoteCount: root.post.quoteCount ?? 0 };
 }
 
 // One bsky feed page -> our feed result shape.

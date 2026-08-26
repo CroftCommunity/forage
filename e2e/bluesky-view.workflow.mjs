@@ -68,7 +68,11 @@ export async function run() {
       'getFeed': { feed: [post('trendpost', 'did:plc:cc', '2026-08-25T14:00:00Z')] },
       'getPostThread': { thread: {
         post: { ...post('b1', 'did:plc:bb', '2026-08-25T11:00:00Z').post, quoteCount: 1 },
-        replies: [{ post: post('reply1', 'did:plc:aa', '2026-08-25T11:30:00Z').post, replies: [] }],
+        replies: [
+          { post: { ...post('bpart2', 'did:plc:bb', '2026-08-25T11:05:00Z').post,
+            record: { text: 'the continuation 2/2', createdAt: '2026-08-25T11:05:00Z' } }, replies: [] },
+          { post: post('reply1', 'did:plc:aa', '2026-08-25T11:30:00Z').post, replies: [] },
+        ],
       } },
       'getQuotes': { posts: [post('quote1', 'did:plc:cc', '2026-08-25T12:00:00Z').post] },
     },
@@ -114,8 +118,12 @@ export async function run() {
   assert.ok(await page.locator('.postrow:has-text("post a1") span[title="Verified on Bluesky"]').count(),
     'the verified author carries the checkmark');
 
-  // 3e segment: open b1's thread — reply and quote are ONE continuation
+  // 3e segment: open b1's thread — reply and quote are ONE continuation;
+  // 3i: the poster's own 2/2 reads as the BODY, not a comment
   await page.locator('.postrow', { hasText: 'post b1' }).locator('a[href*="/p?uri="]').first().click();
+  await page.waitForSelector('text=the continuation 2/2');
+  assert.equal(await page.locator('.comment', { hasText: 'the continuation 2/2' }).count(), 0,
+    'the self-thread part is body, never a comment');
   await page.waitForSelector('text=post reply1');
   await page.waitForSelector('[data-kind="quote"]');
   const qnode = page.locator('[data-kind="quote"]');

@@ -1195,3 +1195,24 @@ localStorage (static Pages site; same theme/skin pattern). Unit 3h:
   default again); W2/W3/W4 re-pointed at the unified routes.
 Iteration posture: LOCAL preview only (owner: "we can iterate local quicker")
 — no landing/deploy until the owner says so.
+
+### Amendment: 3i — owner iteration batch on the local preview (2026-08-26)
+Owner findings from testing (deployed build + preview), all addressed:
+- **"Fields" was over-rebranding** — the bluesky population's boards are called
+  FEEDS again ("let's just call them feeds"); memory keeps Fields (those are
+  communities, not feeds). /f/ reads naturally in both.
+- **No duplicated preview** — a bluesky text post IS its title (300/300
+  synergy, owner-noted); rows carry a `preview` only when it adds content,
+  plus #tag chips so facet doorways survive. Thread/comment `body` untouched.
+- **Poster self-threads (1/3, 2/3, 3/3)** — the unbroken same-author reply
+  chain hoists into the post BODY in forum shape; replies to hoisted parts
+  re-root as comments; an author reply to someone else stays a comment.
+- **Signed-in consistency** — the restore race no longer shows the sign-in
+  form ('Restoring your session…' state; the dial says 'still restoring', not
+  'sign in first'); the bluesky masthead shows the OAuth identity; the
+  guest-search chip renders for guests only. (The owner's probation card was
+  the memory sandbox working as designed — a new sandbox persona named after
+  their handle; population exclusivity dissolves the confusion.)
+- **The dev bar is memory-only** scaffolding now.
+W1/W3 grew the matching assertions (devbar absent in bluesky; self-thread part
+is body, never a comment). 250/250 + 4 journeys green.

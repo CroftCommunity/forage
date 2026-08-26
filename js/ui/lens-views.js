@@ -18,6 +18,15 @@ let bootStarted = false;
 
 const rerender = () => window.dispatchEvent(new HashChangeEvent('hashchange'));
 
+// 3i: the OAuth identity, for the bluesky masthead. null = signed out;
+// 'connecting' while restore is in flight (the masthead must never ask for a
+// sign-in it is about to restore).
+export function sessionIdentity() {
+  if (session) return `@${session.handle}`;
+  if (manager && manager !== 'unavailable' && manager.state && ['unknown', 'pending'].includes(manager.state())) return 'connecting';
+  return null;
+}
+
 // Exported for main.js: an OAuth callback landing must complete the exchange
 // BEFORE the router replaces the hash (the code lives in the fragment).
 export async function ensureAuthBoot() { return bootAuth(); }
@@ -110,6 +119,16 @@ function lensVote(p) {
 // 3f: facet-aware body — links live, mentions link OUT (the lens tenet),
 // #tags emphasized (they become /h/ doorways at 3g). Byte-indexed decode in
 // the substrate; this only renders segments.
+// 3i: a row's tag doorways survive even when there is no preview — the
+// facet #tags render as chips under the title.
+function tagChips(p) {
+  const tags = (p.facets || []).flatMap((f) => (f.features || [])
+    .filter((ft) => (ft.$type || '').endsWith('#tag')).map((ft) => ft.tag));
+  if (!tags.length) return null;
+  return el('div', { class: 'row wrap', style: 'gap:4px' },
+    ...tags.map((t) => el('a', { class: 'tag', 'data-tag': t, href: `#/h/${encodeURIComponent(t)}` }, `#${t}`)));
+}
+
 function facetedBody(p) {
   if (p.maskedRemoved || !p.body) return null;
   const segs = facetSegments(p.body, p.facets);
@@ -138,12 +157,14 @@ function verifiedBadge(p) {
 
 const lensRow = (p) => postRow(p, !!session, {
   onVote: lensVote(p),
-  bodyNode: p.format === 'text' ? facetedBody(p) : null,
+  // 3i: never duplicate the title — a preview renders only when it adds
+  // content; otherwise the row carries just the tag doorways.
+  bodyNode: p.preview ? facetedBody({ ...p, body: p.preview }) : tagChips(p),
   authorBadge: verifiedBadge(p),
 });
 
 function lensSidebar() {
-  const fieldsCard = el('div', { class: 'card' }, el('h2', {}, 'Lens Fields'));
+  const fieldsCard = el('div', { class: 'card' }, el('h2', {}, 'Feeds'));
   const list = el('div', { class: 'stack' });
   fieldsCard.append(list);
   if (!session) {
@@ -153,7 +174,7 @@ function lensSidebar() {
         el('span', { class: 'xs muted' }, c.kind)));
     }
     list.append(el('div', { class: 'xs muted', style: 'margin-top:6px' },
-      'Guest boards. Sign in and your saved feeds become Fields.'));
+      'Guest boards. Sign in and these become YOUR feeds.'));
   } else {
     list.append(skeleton(3));
     lens.fields().then((fields) => {
@@ -176,6 +197,9 @@ function sessionCard() {
     return el('div', { class: 'card' },
       el('div', { class: 'small' }, 'Read-only on this origin'),
       el('div', { class: 'xs muted' }, 'Sign in with Bluesky works on forage.fyi and localhost (the OAuth client is origin-bound).'));
+  }
+  if (manager.state && (manager.state() === 'unknown')) {
+    return el('div', { class: 'card' }, el('div', { class: 'xs muted' }, 'Restoring your session…'));
   }
   if (session) {
     const out = el('button', { class: 'btn sm' }, 'Sign out');
@@ -223,7 +247,10 @@ function ringDial() {
   for (const [id, label] of RINGS) {
     const b = el('button', { class: 'btn sm' + (activeRing === id ? ' primary' : '') }, label);
     b.addEventListener('click', () => {
-      if (id !== 'world' && !session) return toast('Sign in first — rings are computed from your graph.', 'err');
+      if (id !== 'world' && !session) {
+        const connecting = manager && manager !== 'unavailable' && manager.state && ['unknown', 'pending'].includes(manager.state());
+        return toast(connecting ? 'Still restoring your session — one moment.' : 'Sign in first — rings are computed from your graph.', 'err');
+      }
       activeRing = id;
       rerender();
     });
@@ -267,9 +294,9 @@ export function lensHomeView() {
     trendingRail(),
     el('div', { class: 'card' },
       el('p', { class: 'small' },
-        'Your Bluesky, shaped as a forum: Fields are feeds, threads are threads, and boosting IS liking — a boost here is a real like on Bluesky (DL-013 shipped). Signed out, the lens is read-only.'),
+        'Your Bluesky, shaped as a forum: feeds are the boards, threads are threads, and boosting IS liking — a boost here is a real like on Bluesky. Signed out, the lens is read-only.'),
       el('div', { class: 'row wrap', style: 'gap:6px' },
-        chip('guest search: needs sign-in (DL-014)', 'searchPosts is 403 unauthenticated — probe-verified'),
+        ...(session ? [] : [chip('guest search: needs sign-in (DL-014)', 'searchPosts is 403 unauthenticated — probe-verified')]),
         chip('saves: deferred (DL-015)', 'Bookmarks are not public API surface yet'))),
     el('div', { class: 'card' },
       el('h2', {}, 'Browse'),
@@ -404,6 +431,15 @@ export function lensThreadView(params, query) {
       el('div', { class: 'postmeta' },
         p.author ? el('a', { href: `https://bsky.app/profile/${p.author}`, target: '_blank', rel: 'noopener noreferrer' }, p.author) : '[muted]',
         ` · ${fmtScore(p.score)} likes · ${timeAgo(p.createdTs)} ago · ${p.commentCount} replies`),
+      // 3i: the poster's own 1/3-2/3-3/3 chain reads as the post body
+      ...(t.selfThread || []).map((part) => el('div', { class: 'small', style: 'margin-top:8px' },
+        ...facetSegments(part.text, part.facets).map((seg) => {
+          if (!seg.facet) return seg.text;
+          if (seg.facet.type === 'link') return el('a', { href: seg.facet.value, target: '_blank', rel: 'noopener noreferrer' }, seg.text);
+          if (seg.facet.type === 'mention') return el('a', { href: `https://bsky.app/profile/${seg.facet.value}`, target: '_blank', rel: 'noopener noreferrer' }, seg.text);
+          if (seg.facet.type === 'tag') return el('a', { href: `#/h/${encodeURIComponent(seg.facet.value)}`, 'data-tag': seg.facet.value }, seg.text);
+          return seg.text;
+        }))),
       p.quoted ? quotedContext(p.quoted) : null,
       t.quotesFailed ? el('div', { class: 'row', style: 'gap:6px;margin-top:6px' },
         chip(`${t.quoteCount} quote${t.quoteCount === 1 ? '' : 's'} — couldn't fetch`, 'getQuotes failed; replies still render. Reload to retry.')) : null));

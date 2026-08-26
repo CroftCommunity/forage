@@ -190,3 +190,47 @@ test('3e: thread() fetches quotes alongside; a quotes failure degrades to the ho
   assert.equal(degraded.quotesFailed, true, 'the failure is named, not silent');
   assert.equal(degraded.quoteCount, 3, 'the honest count survives for the chip');
 });
+
+// ---- 3i (2026-08-26 iteration): title/body, self-threads ----
+
+test('3i: a plain text post does NOT duplicate its text as a preview (title carries it; 300/300 synergy)', () => {
+  const p = shapeLensPost(qPost('t1', 'did:plc:a', '2026-08-26T00:00:00Z'), QSRC);
+  assert.equal(p.title, 'text t1');
+  assert.equal(p.preview, '', 'rows show no preview when the content IS the title');
+  assert.equal(p.body, 'text t1', 'body survives for thread/comment rendering');
+});
+
+test('3i: the poster self-thread (1/3, 2/3, 3/3) hoists into the post body; others stay comments', () => {
+  const threadResponse = { thread: {
+    post: qPost('root', 'did:plc:op', '2026-08-26T08:00:00Z', { record: { text: 'part one 1/3', createdAt: '2026-08-26T08:00:00Z' } }),
+    replies: [
+      { post: qPost('p2', 'did:plc:op', '2026-08-26T08:01:00Z', { record: { text: 'part two 2/3', createdAt: '2026-08-26T08:01:00Z' } }),
+        replies: [
+          { post: qPost('p3', 'did:plc:op', '2026-08-26T08:02:00Z', { record: { text: 'part three 3/3', createdAt: '2026-08-26T08:02:00Z' } }),
+            replies: [{ post: qPost('r2', 'did:plc:bb', '2026-08-26T08:05:00Z'), replies: [] }] },
+        ] },
+      { post: qPost('r1', 'did:plc:aa', '2026-08-26T08:03:00Z'), replies: [] },
+    ],
+  } };
+  const t = shapeLensThread(threadResponse, QSRC);
+  assert.deepEqual(t.selfThread.map((s) => s.text), ['part two 2/3', 'part three 3/3'],
+    'the same-author reply chain becomes the body continuation, in order');
+  const ids = t.comments.map((c) => c.id.split('/').pop());
+  assert.ok(!ids.includes('p2') && !ids.includes('p3'), 'hoisted parts are not comments');
+  assert.ok(ids.includes('r1'), 'another author replying to the root stays a comment');
+  assert.ok(ids.includes('r2'), 'a reply to a hoisted part stays a comment (re-rooted)');
+});
+
+test('3i: a same-author reply that BREAKS the chain (replies to someone else) is not hoisted', () => {
+  const threadResponse = { thread: {
+    post: qPost('root', 'did:plc:op', '2026-08-26T08:00:00Z'),
+    replies: [
+      { post: qPost('r1', 'did:plc:aa', '2026-08-26T08:01:00Z'),
+        replies: [{ post: qPost('opback', 'did:plc:op', '2026-08-26T08:02:00Z'), replies: [] }] },
+    ],
+  } };
+  const t = shapeLensThread(threadResponse, QSRC);
+  assert.deepEqual(t.selfThread, [], 'the OP replying to a commenter is a comment, not body');
+  assert.equal(t.comments.length, 1);
+  assert.equal(t.comments[0].children.length, 1);
+});
