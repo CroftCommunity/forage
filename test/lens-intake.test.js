@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createLens } from '../js/substrates/lens.js';
+import { createLens, sortFeeds, filterFeeds, platforms, likeWindow, feedLiveness, liveFeeds, searchWindow, tidTime, countRecent } from '../js/substrates/lens.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const fixture = (n) => JSON.parse(readFileSync(join(root, 'test/fixtures/atproto', `${n}.json`), 'utf8'));
@@ -374,6 +374,454 @@ test('3j: discoverFeeds lists popular generators and searches by query; guests g
   assert.ok(calls[0].includes('getPopularFeedGenerators'));
   await lens.discoverFeeds({ query: 'garden' });
   assert.ok(calls[1].includes('query=garden'), 'the query rides through');
+});
+
+// ---- 4g: adoption signals from Constellation (ADR-004) ----
+// The AppView exposes ONE popularity signal for a feed (likeCount, plus the
+// windows 4c counts). It exposes nothing about how a feed is recommended, and
+// DL-033 records why that gap is permanent. Constellation's backlink index
+// answers it — and its rows are time-windowable for free, because an atproto
+// rkey is a TID encoding a microsecond timestamp.
+
+test('4g: tidTime decodes an rkey to its creation instant', () => {
+  // cross-checked against app.bsky.feed.getLikes createdAt on the SAME record
+  // (probe 2026-08-26): the decode landed 0.15s from the server's own value.
+  assert.equal(tidTime('3mtyzi64agb2i').toISOString().slice(0, 19), '2026-08-26T19:02:27');
+  assert.equal(tidTime('3mtyxzszyhl2i').toISOString().slice(0, 19), '2026-08-26T18:36:32');
+  assert.ok(tidTime('3lgwdn7vd722r') < tidTime('3mtyzi64agb2i'), 'TIDs sort chronologically');
+});
+
+test('4g: tidTime rejects a malformed rkey rather than inventing a date', () => {
+  assert.throws(() => tidTime('not!a!tid'), /not a tid/i);
+  assert.throws(() => tidTime(''), /not a tid/i);
+});
+
+test('4g: countRecent windows backlink rows by their rkey alone — no extra fetches', () => {
+  const now = Date.parse('2026-08-26T20:00:00Z');
+  const rows = [
+    { rkey: '3mtyzi64agb2i' },   // 2026-08-26 19:02 — ~1h ago
+    { rkey: '3mtyxzszyhl2i' },   // 2026-08-26 18:36 — ~1.4h ago
+    { rkey: '3lgwdn7vd722r' },   // 2025-01-something — well outside 30d
+  ];
+  assert.deepEqual(countRecent(rows, now), { d7: 2, d30: 2, total: 3 });
+});
+
+test('4g: adoption asks for quotes and starter packs, and windows both', async () => {
+  const now = Date.parse('2026-08-26T20:00:00Z');
+  const asked = [];
+  const transport = async (url) => {
+    asked.push(url);
+    const coll = new URL(url).searchParams.get('collection');
+    return { ok: true, status: 200, json: async () => ({
+      total: coll === 'app.bsky.feed.post' ? 4287 : 965,
+      linking_records: [{ rkey: '3mtyzi64agb2i' }, { rkey: '3lgwdn7vd722r' }],
+    }) };
+  };
+  const out = await createLens({ transport })
+    .adoption('at://did:plc:a/app.bsky.feed.generator/x', { nowMs: now });
+  assert.equal(asked.length, 2);
+  assert.ok(asked.every((u) => u.includes('constellation.microcosm.blue')));
+  assert.ok(asked.some((u) => u.includes('app.bsky.feed.post')), 'quotes');
+  assert.ok(asked.some((u) => u.includes('app.bsky.graph.starterpack')), 'starter packs');
+  assert.equal(out.quotes.total, 4287);
+  assert.equal(out.quotes.d7, 1, 'the ancient row falls outside the window');
+  assert.equal(out.packs.total, 965);
+});
+
+test('4g: adoption degrades to ABSENT when the host is down — never to zero', async () => {
+  const transport = async () => ({ ok: false, status: 503, json: async () => ({}) });
+  const out = await createLens({ transport }).adoption('at://did:plc:a/app.bsky.feed.generator/x');
+  assert.equal(out, null,
+    'a signal we could not fetch must not render as "0 shares" — ADR-004 point 2');
+});
+
+test('4g: adoption sends nothing about the viewer — ADR-004 point 4', async () => {
+  const seen = [];
+  const transport = async (url, init) => {
+    seen.push({ url, headers: init?.headers || {} });
+    return { ok: true, status: 200, json: async () => ({ total: 0, linking_records: [] }) };
+  };
+  const session = { did: 'did:plc:me', handle: 'me.test', fetchHandler: async () => { throw new Error('the viewer session must never touch Constellation'); } };
+  await createLens({ session, transport }).adoption('at://did:plc:a/app.bsky.feed.generator/x');
+  assert.equal(seen.length, 2, 'it went through the plain transport, not the session');
+  for (const { url, headers } of seen) {
+    assert.ok(!url.includes('did:plc:me'), url);
+    assert.ok(!JSON.stringify(headers).includes('did:plc:me'));
+    assert.ok(!('authorization' in headers), 'no credentials leave for a third-party host');
+    assert.match(headers['user-agent'] || '', /forage/i, 'the operator asks us to identify');
+  }
+});
+
+// ---- 4f: /f/ boards deepen on a BUDGET, and say which way it ended ----
+// A generator has no window lever (getFeedSkeleton takes only limit/cursor —
+// DL-032), so the only way to widen a /f/ board's window is to page backwards.
+// Measured cost varies by 100x (plan D4): Astronomy covered 24h in 1 page,
+// Blacksky reached 3.6h in 40 pages. So the honest shape is a budget plus a
+// verdict the UI can read out.
+
+const feedPage = (rkeys, nowMs, hoursAgo, cursor) => ({
+  feed: rkeys.map((k, i) => ({ post: {
+    uri: `at://did:plc:a/app.bsky.feed.post/${k}`, cid: `c${k}`,
+    author: { did: 'did:plc:a', handle: 'a.test' },
+    record: { text: k, createdAt: new Date(nowMs - (hoursAgo + i) * 3600_000).toISOString() },
+    indexedAt: new Date(nowMs - (hoursAgo + i) * 3600_000).toISOString(),
+    likeCount: 1, replyCount: 0,
+  } })),
+  ...(cursor ? { cursor } : {}),
+});
+
+test('4f: deepen stops as soon as the window is COVERED', async () => {
+  const now = Date.parse('2026-08-26T12:00:00Z');
+  const pages = [feedPage(['a', 'b'], now, 1, 'p2'), feedPage(['c', 'd'], now, 30, 'p3')];
+  let n = 0;
+  const transport = async () => ({ ok: true, status: 200, json: async () => pages[n++] });
+  const out = await createLens({ transport })
+    .deepen({ kind: 'feed', uri: 'at://x' }, { toHours: 24, nowMs: now, maxPages: 8 });
+  assert.equal(out.outcome, 'covered');
+  assert.equal(out.pages, 2, 'it stops the moment it reaches past the window, not at the budget');
+  assert.equal(out.posts.length, 4);
+  assert.ok(out.reachedHours >= 24);
+});
+
+test('4f: deepen reports EXHAUSTED when the feed simply runs out', async () => {
+  const now = Date.parse('2026-08-26T12:00:00Z');
+  const transport = async () => ({ ok: true, status: 200, json: async () => feedPage(['a', 'b'], now, 1) });
+  const out = await createLens({ transport })
+    .deepen({ kind: 'feed', uri: 'at://x' }, { toHours: 168, nowMs: now, maxPages: 8 });
+  assert.equal(out.outcome, 'exhausted', 'the feed has no more to give — that is not a failure');
+  assert.equal(out.pages, 1);
+});
+
+test('4f: deepen reports BUDGET when the feed posts faster than we can page', async () => {
+  const now = Date.parse('2026-08-26T12:00:00Z');
+  let i = 0;
+  const transport = async () => {
+    const p = feedPage([`a${i}`, `b${i}`], now, i * 0.1, `cur${i}`);
+    i += 1;
+    return { ok: true, status: 200, json: async () => p };
+  };
+  const out = await createLens({ transport })
+    .deepen({ kind: 'feed', uri: 'at://x' }, { toHours: 168, nowMs: now, maxPages: 3 });
+  assert.equal(out.outcome, 'budget');
+  assert.equal(out.pages, 3);
+  assert.ok(out.reachedHours < 168, 'and it says how far it actually got');
+});
+
+test('4f: deepen de-duplicates posts that repeat across pages', async () => {
+  const now = Date.parse('2026-08-26T12:00:00Z');
+  const pages = [feedPage(['a', 'b'], now, 1, 'p2'), feedPage(['b', 'c'], now, 30, undefined)];
+  let n = 0;
+  const transport = async () => ({ ok: true, status: 200, json: async () => pages[n++] });
+  const out = await createLens({ transport })
+    .deepen({ kind: 'feed', uri: 'at://x' }, { toHours: 24, nowMs: now, maxPages: 8 });
+  assert.equal(out.posts.length, 3, 'a generator may repeat a post across pages; the board must not');
+});
+
+// ---- 4e: /h/ boards get a TRUE top window, not a re-sort of what loaded ----
+// searchPosts takes sort=top|latest plus since/until SERVER-SIDE (probed with a
+// session 2026-08-26, plan D3), so "Top · this week" on a hashtag board is one
+// query over the whole corpus. /f/ generator boards have no such lever — the
+// asymmetry is real and DL-032 names it.
+
+test('4e: searchWindow maps the board controls onto searchPosts params', () => {
+  const now = Date.parse('2026-08-26T12:00:00Z');
+  assert.deepEqual(searchWindow('new', 'day', now), { sort: 'latest' },
+    'newest-first needs no window — a window would hide posts, not order them');
+  assert.deepEqual(searchWindow('feed', 'all', now), { sort: 'latest' });
+  assert.deepEqual(searchWindow('top', 'all', now), { sort: 'top' },
+    'top of all time is the unbounded query');
+  assert.deepEqual(searchWindow('top', 'week', now),
+    { sort: 'top', since: '2026-08-19T12:00:00.000Z' });
+  assert.deepEqual(searchWindow('top', 'day', now),
+    { sort: 'top', since: '2026-08-25T12:00:00.000Z' });
+  assert.throws(() => searchWindow('top', 'fortnight', now), /unknown timeframe/i);
+  assert.throws(() => searchWindow('sideways', 'day', now), /unknown window sort/i);
+});
+
+test('4e: a hashtag stream sends the window to the server and says the scope is whole', async () => {
+  const now = Date.parse('2026-08-26T12:00:00Z');
+  const seen = [];
+  const fetchHandler = async (path) => {
+    seen.push(path);
+    return { ok: true, status: 200, json: async () => ({ posts: [] }) };
+  };
+  const lens = createLens({ session: { did: 'did:plc:me', handle: 'me.test', fetchHandler } });
+  const board = await lens.stream({ kind: 'hashtag', key: 'gardening', sort: 'top', timeframe: 'week', nowMs: now });
+  assert.ok(seen[0].includes('sort=top'), seen[0]);
+  assert.ok(seen[0].includes('since=2026-08-19'), seen[0]);
+  assert.ok(seen[0].includes('tag=gardening'), seen[0]);
+  assert.equal(board.wholeCorpus, true,
+    'the board must be able to tell the user this ranked everything, not just what loaded');
+});
+
+test('4e: a hashtag stream defaults to latest and sends no window', async () => {
+  const seen = [];
+  const fetchHandler = async (path) => { seen.push(path); return { ok: true, status: 200, json: async () => ({ posts: [] }) }; };
+  await createLens({ session: { did: 'did:plc:me', handle: 'me.test', fetchHandler } })
+    .stream({ kind: 'hashtag', key: 'gardening' });
+  assert.ok(seen[0].includes('sort=latest'), seen[0]);
+  assert.ok(!seen[0].includes('since='), 'no window unless one was asked for');
+});
+
+test('4e: a FEED stream carries no server window — the generator has no such lever', async () => {
+  const transport = async (url) => {
+    assert.ok(!url.includes('sort=top'), 'getFeedSkeleton takes only limit and cursor');
+    return { ok: true, status: 200, json: async () => ({ feed: [] }) };
+  };
+  const board = await createLens({ transport })
+    .stream({ kind: 'feed', key: 'at://did:plc:a/app.bsky.feed.generator/x', sort: 'top', timeframe: 'week' });
+  assert.notEqual(board.wholeCorpus, true, 'a /f/ board never claims whole-corpus scope');
+});
+
+// ---- 4d: liveness — which feeds in a search result actually still work ----
+// isOnline/isValid is NOT the signal: across 915 search-result feeds it was
+// false ZERO times (plan D6). The observable signal is what getFeed does — and
+// its refusals do not say why (D9), so a feed that will not answer is `silent`,
+// never `dead`.
+
+test('4d: feedLiveness reads the newest post — live, stale, or empty', () => {
+  const now = Date.parse('2026-08-26T12:00:00Z');
+  const at = (h) => ({ post: { indexedAt: new Date(now - h * 3600_000).toISOString() } });
+  assert.equal(feedLiveness([at(2)], now), 'live');
+  assert.equal(feedLiveness([at(167)], now), 'live', 'inside 7 days is still alive');
+  assert.equal(feedLiveness([at(169)], now), 'stale');
+  assert.equal(feedLiveness([], now), 'empty', 'it answered, and had nothing to say');
+});
+
+test('4d: liveness probes one feed each and calls a refusal SILENT, not dead', async () => {
+  const now = Date.parse('2026-08-26T12:00:00Z');
+  const fresh = new Date(now - 3600_000).toISOString();
+  const old = new Date(now - 900 * 3600_000).toISOString();
+  const transport = async (url) => {
+    const feed = new URL(url).searchParams.get('feed');
+    assert.ok(url.includes('limit=1'), 'freshness needs exactly one post, not a page');
+    if (feed.endsWith('live')) return { ok: true, status: 200, json: async () => ({ feed: [{ post: { indexedAt: fresh } }] }) };
+    if (feed.endsWith('stale')) return { ok: true, status: 200, json: async () => ({ feed: [{ post: { indexedAt: old } }] }) };
+    if (feed.endsWith('empty')) return { ok: true, status: 200, json: async () => ({ feed: [] }) };
+    return { ok: false, status: 502, json: async () => ({ error: 'InternalServerError' }) };
+  };
+  const uris = ['a/live', 'b/stale', 'c/empty', 'd/down'];
+  const out = await createLens({ transport }).liveness(uris, { nowMs: now });
+  // by key, not by iteration order — completion order is a scheduling detail
+  assert.equal(out.size, 4);
+  assert.equal(out.get('a/live'), 'live');
+  assert.equal(out.get('b/stale'), 'stale');
+  assert.equal(out.get('c/empty'), 'empty');
+  assert.equal(out.get('d/down'), 'silent');
+});
+
+test('4d: liveFeeds keeps live feeds and anything not yet probed, and counts what it dropped', () => {
+  const feeds = [{ uri: 'a' }, { uri: 'b' }, { uri: 'c' }, { uri: 'd' }, { uri: 'e' }];
+  const states = new Map([['a', 'live'], ['b', 'stale'], ['c', 'silent'], ['d', 'empty']]);
+  const { kept, stale, silent, empty } = liveFeeds(feeds, states);
+  assert.deepEqual(kept.map((f) => f.uri), ['a', 'e'],
+    'e has not been probed yet, so it is not hidden on the strength of no evidence');
+  assert.equal(stale, 1);
+  assert.equal(silent, 1);
+  assert.equal(empty, 1);
+});
+
+// ---- 4c: Rising — time-windowed like counts, one request per feed ----
+// app.bsky.feed.getLikes accepts a FEED GENERATOR uri and returns likes
+// newest-first with timestamps (probed 2026-08-26, plan D2). So the windows are
+// OURS, counted here: there is no time-bucketed aggregate anywhere in the API,
+// only the cumulative likeCount. Two measured bounds shape this:
+//   - a 24h window is nearly signal-free (9 of 117 feeds had >=2 likes), so it
+//     is not offered;
+//   - the page caps at 100, so a count that fills the page is a FLOOR, not a
+//     number, and must say so.
+
+test('4c: likeWindow counts 7d and 30d off one page, using indexedAt', () => {
+  const now = Date.parse('2026-08-26T12:00:00Z');
+  const at = (h) => ({ indexedAt: new Date(now - h * 3600_000).toISOString() });
+  const w = likeWindow([at(1), at(20), at(100), at(400), at(900)], now);
+  assert.equal(w.d7, 3, 'three inside 168h');
+  assert.equal(w.d30, 4, 'four inside 720h');
+  assert.equal(w.capped, false);
+});
+
+test('4c: a full page is a FLOOR — capped says so rather than reporting a number', () => {
+  const now = Date.parse('2026-08-26T12:00:00Z');
+  const likes = Array.from({ length: 100 }, () => ({ indexedAt: new Date(now - 3600_000).toISOString() }));
+  const w = likeWindow(likes, now);
+  assert.equal(w.d7, 100);
+  assert.equal(w.capped, true, 'the 101st like exists but this page cannot see it');
+});
+
+test('4c: an empty like list is zero, not an error', () => {
+  const w = likeWindow([], Date.parse('2026-08-26T12:00:00Z'));
+  assert.deepEqual({ ...w }, { d7: 0, d30: 0, capped: false });
+});
+
+test('4c: risingSort orders by the window and keeps unmeasured feeds last', () => {
+  const feeds = [
+    { uri: 'a', likeCount: 999 },
+    { uri: 'b', likeCount: 1 },
+    { uri: 'c', likeCount: 50 },
+  ];
+  const windows = new Map([['a', { d7: 2, d30: 9 }], ['b', { d7: 30, d30: 40 }]]);
+  assert.deepEqual(sortFeeds(feeds, 'rising7', windows).map((f) => f.uri), ['b', 'a', 'c'],
+    'c has no measurement yet, so it waits at the back rather than claiming zero');
+  assert.deepEqual(sortFeeds(feeds, 'rising30', windows).map((f) => f.uri), ['b', 'a', 'c']);
+});
+
+test('4c: likeWindows fans out one getLikes per feed and tolerates a feed that fails', async () => {
+  const calls = [];
+  const now = Date.parse('2026-08-26T12:00:00Z');
+  const transport = async (url) => {
+    const uri = new URL(url).searchParams.get('uri');
+    calls.push(uri);
+    if (uri.endsWith('boom')) return { ok: false, status: 502, json: async () => ({}) };
+    return { ok: true, status: 200, json: async () => ({ likes: [
+      { indexedAt: new Date(now - 3600_000).toISOString() },
+      { indexedAt: new Date(now - 400 * 3600_000).toISOString() },
+    ] }) };
+  };
+  const lens = createLens({ transport });
+  const seen = [];
+  const windows = await lens.likeWindows(
+    ['at://x/app.bsky.feed.generator/one', 'at://x/app.bsky.feed.generator/boom'],
+    { nowMs: now, onWindow: (uri, w) => seen.push([uri, w.d7]) },
+  );
+  assert.equal(calls.length, 2, 'one request per feed');
+  assert.ok(calls.every((u) => u.includes('app.bsky.feed.generator')));
+  assert.equal(windows.get('at://x/app.bsky.feed.generator/one').d7, 1);
+  assert.equal(windows.has('at://x/app.bsky.feed.generator/boom'), false,
+    'a feed that fails to answer is UNMEASURED, never a silent zero');
+  assert.deepEqual(seen, [['at://x/app.bsky.feed.generator/one', 1]],
+    'each measurement is announced as it lands, so the board can paint progressively');
+});
+
+// ---- 4b: sorts and filters over the browse corpus (T0 — no new requests) ----
+// The popular corpus is BOUNDED: 117 feeds in 2 requests, 0.62s, then
+// cursor:null (probed 2026-08-26, plan D1). So browse mode holds the whole
+// thing and orders it here. Search mode is the opposite — an unbounded index —
+// so it stays one page and keeps the server's relevance order.
+
+test('4b: sortFeeds orders by the T0 dimensions and refuses an unknown sort', () => {
+  const f = (title, likeCount, indexedAt) => ({ title, likeCount, indexedAt });
+  const feeds = [f('b', 10, '2024-01-01T00:00:00Z'), f('a', 30, '2023-01-01T00:00:00Z'), f('c', 20, '2025-01-01T00:00:00Z')];
+  assert.deepEqual(sortFeeds(feeds, 'popular').map((x) => x.title), ['b', 'a', 'c'],
+    'popular is the AppView\'s own order, untouched — we do not re-rank what we did not rank');
+  assert.deepEqual(sortFeeds(feeds, 'likes').map((x) => x.title), ['a', 'c', 'b']);
+  assert.deepEqual(sortFeeds(feeds, 'new').map((x) => x.title), ['c', 'b', 'a']);
+  assert.deepEqual(sortFeeds(feeds, 'old').map((x) => x.title), ['a', 'b', 'c']);
+  assert.throws(() => sortFeeds(feeds, 'rising'), /unknown feed sort/i);
+});
+
+test('4b: sortFeeds does not mutate its input', () => {
+  const feeds = [{ title: 'b', likeCount: 1 }, { title: 'a', likeCount: 9 }];
+  sortFeeds(feeds, 'likes');
+  assert.deepEqual(feeds.map((f) => f.title), ['b', 'a']);
+});
+
+test('4b: filterFeeds narrows by builder platform and by video mode', () => {
+  const feeds = [
+    { title: 'sky', platform: 'skyfeed.me', video: false },
+    { title: 'graze', platform: 'api.graze.social', video: false },
+    { title: 'vid', platform: 'skyfeed.me', video: true },
+  ];
+  assert.deepEqual(filterFeeds(feeds, { platform: 'skyfeed.me' }).map((f) => f.title), ['sky', 'vid']);
+  assert.deepEqual(filterFeeds(feeds, { video: true }).map((f) => f.title), ['vid']);
+  assert.deepEqual(filterFeeds(feeds, { platform: 'skyfeed.me', video: true }).map((f) => f.title), ['vid']);
+  assert.deepEqual(filterFeeds(feeds, {}).length, 3, 'no filter is not a filter');
+});
+
+test('4b: platforms() counts the builder platforms present, most first', () => {
+  const feeds = [{ platform: 'skyfeed.me' }, { platform: 'api.graze.social' }, { platform: 'skyfeed.me' }];
+  assert.deepEqual(platforms(feeds), [
+    { host: 'skyfeed.me', count: 2 }, { host: 'api.graze.social', count: 1 },
+  ]);
+});
+
+test('4b: browse mode pages the WHOLE corpus; a query stays one page', async () => {
+  const calls = [];
+  const page = (n, cursor) => ({ feeds: Array.from({ length: n }, (_, i) => ({
+    uri: `at://did:plc:a/app.bsky.feed.generator/f${cursor || 0}-${i}`, displayName: `f${i}`,
+    did: 'did:web:skyfeed.me', likeCount: i, indexedAt: '2025-01-01T00:00:00Z', labels: [],
+  })), ...(cursor ? { cursor } : {}) });
+  const transport = async (url) => {
+    calls.push(url);
+    const c = new URL(url).searchParams.get('cursor');
+    return { ok: true, status: 200, json: async () => (c ? page(17, undefined) : page(100, '9884')) };
+  };
+  const lens = createLens({ transport });
+  const all = await lens.discoverFeeds();
+  assert.equal(all.length, 117, 'both pages, because the corpus is bounded and small');
+  assert.equal(calls.length, 2);
+  assert.ok(calls[1].includes('cursor=9884'));
+
+  calls.length = 0;
+  const found = await lens.discoverFeeds({ query: 'cats' });
+  assert.equal(calls.length, 1, 'search is an unbounded index — one page, server order');
+  assert.equal(found.length, 100);
+});
+
+test('4b: a discovered feed carries its T0 dimensions', async () => {
+  const transport = async () => ({ ok: true, status: 200, json: async () => ({ feeds: [
+    { uri: 'at://did:plc:a/app.bsky.feed.generator/x1', displayName: 'Reels', description: 'v',
+      did: 'did:web:api.graze.social', likeCount: 7, indexedAt: '2025-03-04T05:06:07Z',
+      contentMode: 'app.bsky.feed.defs#contentModeVideo', acceptsInteractions: true,
+      creator: { did: 'did:plc:c', handle: 'maker.test' }, labels: [] },
+  ] }) });
+  const [f] = await createLens({ transport }).discoverFeeds({ query: 'x' });
+  assert.equal(f.platform, 'api.graze.social', 'the service DID is the builder platform');
+  assert.equal(f.video, true);
+  assert.equal(f.indexedAt, '2025-03-04T05:06:07Z');
+  assert.equal(f.acceptsInteractions, true);
+  assert.equal(f.creatorDid, 'did:plc:c');
+});
+
+test('4a: discovery applies the account posture to FEEDS — adult-labelled feeds do not surface for a guest', async () => {
+  const transport = async () => ({ ok: true, status: 200, json: async () => ({ feeds: [
+    { uri: 'at://did:plc:a/app.bsky.feed.generator/clean', displayName: 'Garden Talk',
+      description: 'plants', likeCount: 9, creator: { handle: 'grower.test' }, labels: [] },
+    { uri: 'at://did:plc:a/app.bsky.feed.generator/adult', displayName: 'NSFW Feed',
+      description: 'x', likeCount: 99, creator: { handle: 'x.test' }, labels: [{ val: 'porn' }] },
+    { uri: 'at://did:plc:a/app.bsky.feed.generator/gore', displayName: 'Graphic Feed',
+      description: 'y', likeCount: 5, creator: { handle: 'y.test' }, labels: [{ val: 'graphic-media' }] },
+  ] }) });
+  // A guest has no preferences to mirror, so adult content is OFF (4a).
+  const feeds = await createLens({ transport }).discoverFeeds();
+  assert.deepEqual(feeds.map((f) => f.title), ['Garden Talk', 'Graphic Feed'],
+    'the adult feed is gone; a non-adult label with no pref against it is NOT hidden');
+  // A guest carries no contentLabelPref, so only the adult master switch fires.
+  // `graphic-media` therefore passes through unveiled — Forage invents no
+  // default warn the account never asked for. (Bluesky's own logged-out view
+  // does warn on it; whether to match that is an owner decision, not a silent
+  // one — see the plan's OQ5.)
+  assert.equal(feeds[1].warnLabels, undefined);
+  assert.equal(feeds[0].warnLabels, undefined);
+});
+
+test('4a: a JOINED adult feed drops out of the Fields list too — one rule on every feed surface', async () => {
+  const ADULT = 'at://did:plc:x/app.bsky.feed.generator/afterdark';
+  const CLEAN = 'at://did:plc:g/app.bsky.feed.generator/gardentalk';
+  const fetchHandler = async (path) => {
+    const json = (d) => ({ ok: true, status: 200, json: async () => d });
+    if (path.includes('getPreferences')) return json({ preferences: [{
+      $type: 'app.bsky.actor.defs#savedFeedsPrefV2',
+      items: [{ type: 'feed', value: CLEAN, pinned: true, id: '1' },
+              { type: 'feed', value: ADULT, pinned: true, id: '2' },
+              { type: 'timeline', value: 'following', pinned: true, id: '3' }] }] });
+    if (path.includes('getFeedGenerators')) return json({ feeds: [
+      { uri: CLEAN, displayName: 'Garden Talk', labels: [] },
+      { uri: ADULT, displayName: 'After Dark', labels: [{ val: 'porn' }] }] });
+    return { ok: false, status: 404, json: async () => ({}) };
+  };
+  const fields = await createLens({ session: { did: 'did:plc:me', handle: 'me.test', fetchHandler } }).fields();
+  assert.deepEqual(fields.map((f) => f.title), ['Garden Talk', 'Following'],
+    'the adult feed is gone from the sidebar; joining it earlier does not override the account setting');
+});
+
+test('4a: feedInfo carries the label verdict so a board header can veil its own feed', async () => {
+  const URI = 'at://did:plc:a/app.bsky.feed.generator/aaa111';
+  const transport = async () => ({ ok: true, status: 200, json: async () => ({ view: {
+    uri: URI, displayName: 'Graphic Feed', description: 'y', likeCount: 1,
+    creator: { handle: 'y.test' }, labels: [{ val: 'porn' }],
+  }, isOnline: true, isValid: true }) });
+  const info = await createLens({ transport }).feedInfo(URI);
+  assert.equal(info.hidden, true, 'adult-off means the board itself is a refusal, not a render');
 });
 
 test('3j/3s: joinFeed and favoriteFeed write through putPreferences and refuse without a session', async () => {

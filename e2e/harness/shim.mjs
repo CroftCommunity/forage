@@ -8,7 +8,9 @@
 // Options objects are consumed whole by the caller (scenario.mjs) and this
 // module takes what it needs — nothing is re-listed (udm's allowlist trap).
 
-const FENCED = ['bsky.social', 'public.api.bsky.app', 'bsky.network'];
+// 4g: constellation.microcosm.blue is fenced too — an unfenced host would let a
+// workflow reach the real network and quietly stop being hermetic.
+const FENCED = ['bsky.social', 'public.api.bsky.app', 'bsky.network', 'constellation.microcosm.blue'];
 
 export function fetchShim({ responses = {} } = {}) {
   return `(() => {

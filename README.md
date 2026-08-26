@@ -29,12 +29,16 @@ from `127.0.0.1` too: the app builds a loopback OAuth client_id, so you authoriz
 against the real Bluesky auth server from your machine.
 
 Tests run on the pinned Node (`.nvmrc`, enforced by `engine-strict`; `fnm install` reads
-the pin) with zero dependencies:
+the pin). The **app itself ships zero runtime dependencies** — no build step, no
+framework, no bundler. Dev dependencies exist only for the browser tier (Playwright,
+axe, Stryker), so `npm test` and `npm run conformance` run on a bare checkout and only
+`npm run workflows` needs `npm install`:
 
 ```sh
-npm test              # unit, characterization, purity + invariant scans, scenarios
+npm test              # units, characterization, purity + invariant scans, scenarios
 npm run conformance   # replay the scenario library on two substrates, compare observables
-npm run workflows     # the journey corpus: the app in a real browser, hermetic network
+npm run workflows     # the journeys: the app in a real browser over a hermetic shim,
+                      # including an axe accessibility pass per skin
 ```
 
 CI runs all three as the gate on every PR and push to `main`.
@@ -74,10 +78,44 @@ from every seat. (In the Bluesky view, identity is a real OAuth session.)
 A skin is a **token-sheet swap** (Settings → Skin, device-local): an extra
 stylesheet that may only reassign the design tokens in `css/tokens.css` —
 `test/skins.test.js` scans every registered skin and refuses smuggled component
-rules. Shipping: **Classic BBS** (amber terminal, monospace, square corners) and
-**Usenet gray** (newsprint). Skins and modes are independent axes — the BBS skin
-in the Bluesky view is legal, just off-theme; the BBS mode merely defaults to
-its skin. New skins are cheap: one CSS file + one registry line.
+rules. That restriction is the point: a skin can restyle anything and
+restructure nothing, so it can never hide a moderation notice or a gate.
+
+**A skin carries exactly one palette.** Light and dark are not a second axis;
+they are skins (ADR-003). A skin may declare a **sibling** — its opposite-palette
+twin — and the upper-right toggle swaps to it, or reads as disabled where none
+exists. Shipping: **Forage (light)** ↔ **Forage (dark)**, **phpBB (classic
+board)** ↔ **phpBB (after hours)**, **Classic BBS** (amber terminal) and
+**Usenet gray** (newsprint). Skins and modes stay independent axes — the phpBB
+board in the Bluesky view is legal, just off-theme.
+
+New skins are cheap: one CSS file plus one registry line in `js/skins.js`.
+
+### Importing a phpBB style
+
+```
+npm run import-phpbb -- <style-dir-or-css> [--name id] [--out file] [--licence L]
+```
+
+Reads a real phpBB style and emits a Forage skin. It resolves by **selector**
+across every CSS file in the style — not by filename, because only one of the
+four styles surveyed actually has a `colours.css` (subsilver2 is monolithic,
+modern styles inline colour, some author in SCSS).
+
+An imported skin is faithful in **palette, typography and chrome — never in
+layout.** Forage keeps its own DOM, so a phpBB template targets markup that does
+not exist here. The result reads as that theme's colours on Forage's structure;
+row density is a registered frontier (DL-028), not an oversight.
+
+Every generated file states its own provenance: source, licence, and per-role
+whether each value was read from the theme (`direct`), resolved through a
+declared fallback chain (`derived`), or not found (`absent`). The tool exits
+non-zero on an unresolved role or a failed contrast gate — `--allow-contrast-
+failures` emits anyway, knowingly.
+
+Only GPL-compatible skins ship in this repo. The importer is a local tool for
+themes you have licensed. See `docs/SKINS.md` for the role vocabulary and
+`test/fixtures/phpbb-themes/PROVENANCE.md` for what is vendored and why.
 
 ## Testing
 
@@ -85,6 +123,18 @@ its skin. New skins are cheap: one CSS file + one registry line.
 · `npm run workflows` (the journey corpus: the app in a real browser over a
 hermetic network shim — `e2e/`; `LIVE=1` / `DOCKER=1` unlock the credentialed and
 spaces-PDS journeys locally).
+
+Three things the suites enforce that are easy to lose:
+
+- **Every runtime module is precached** in `sw.js`'s `SHELL`, and no two entries
+  may resolve to the same URL — a duplicate makes `Cache.addAll` reject the whole
+  install *silently*. See [docs/HOSTING.md](docs/HOSTING.md).
+- **Every asset reference is absolute**, because a relative one breaks on deep links.
+- **Every write the lens makes is counted**, so a new one cannot appear unnoticed —
+  the list is in `AGENTS.md`.
+
+Mutation testing (`npx stryker run`) is a periodic audit rather than a gate: read the
+survivors, and say which are equivalent mutants and which are real gaps.
 
 ## The dev bar
 

@@ -1,14 +1,26 @@
-/* Forage design tokens — spec §3, revised into two deliberate, WCAG-validated
-   palettes anchored to the Forage brand green, warmed toward the rook-and-wreath
-   illustration (paper, twig browns, moss) in the 2026-08 brand pass. Every
-   text/background pair below passes AA (body >= 4.5, large/UI >= 3.0);
-   re-verified for the warmed values.
+/* Forage design tokens — spec §3, anchored to the Forage brand green and warmed
+   toward the rook-and-wreath illustration (paper, twig browns, moss) in the
+   2026-08 brand pass. Every text/background pair below passes AA
+   (body >= 4.5, large/UI >= 3.0).
 
-   Two roles are split so the brand reads on both themes:
+   THIS FILE IS THE LIGHT PALETTE. Skins subsumed themes (ADR-003, plan
+   2026-08-26-1): a palette is a skin, so dark lives in skins/forage-dark.css
+   and the OS preference resolves in js/skins.js. This file used to hand-sync
+   the same values across three blocks (:root, [data-theme="dark"], and a
+   duplicated prefers-color-scheme block) — a standing drift hazard. There is
+   one now.
+
+   Two brand roles are split so the wordmark and buttons can differ, and so a
+   dark sibling can lift one without breaking the other:
      --brand-ink   brand green for TEXT (wordmark, active tab, gutter, accents)
      --brand-fill  brand green for BUTTON fills (paired with --on-brand text)
-   In light both are deep green; in dark, -ink lifts to a legible leaf green
-   while -fill stays a deep green so white button text still passes.           */
+   Here both are deep green. skins/forage-dark.css lifts -ink to a legible leaf
+   green while keeping -fill deep, so white button text still passes.
+
+   --color-scheme carries native chrome (scrollbars, form controls, caret). It
+   is a TOKEN rather than a raw property because skinScan rejects real CSS
+   properties — a raw `color-scheme` here would leave every dark skin with
+   light scrollbars. css/app.css applies it.                                  */
 
 :root {
   /* Raw brand ramp (theme-independent) */
@@ -63,6 +75,29 @@
   /* Type scale 13/14/16/20/26 */
   --t-xs: 13px; --t-sm: 14px; --t-md: 16px; --t-lg: 20px; --t-xl: 26px;
 
+  /* ---- forum chrome (Phase 2, plan 2026-08-26-1) ----
+     Named for what a FORUM has, because those names come from the selectors
+     real phpBB styles carry (.headerbar/.forumbg, .bg1/.bg2/.bg3, .navbar,
+     .panel, a:hover). Naming them this way makes importing a theme a
+     near-identity mapping instead of a translation with judgement in it.
+
+     EVERY default below is a passthrough to whatever the rule used before, so
+     the default skin renders exactly as it did and only a skin can move it. */
+  --link-hover:   var(--link);      /* today a:hover only underlines */
+  --band-fill:    var(--card);      /* masthead + category bands */
+  --band-ink:     var(--text);
+  --band-link:    var(--link);
+  --band-brand:   var(--brand);     /* the wordmark, which SITS on the band */
+  --nav-fill:     transparent;      /* the tab strip has no fill today */
+  --panel:        var(--card);      /* side/aside surfaces */
+  --row-odd:      transparent;      /* post rows are unstriped today */
+  --row-even:     transparent;
+  --row-head:     transparent;      /* section header bars */
+  --card-shadow:  none;             /* bevels ride here; flat by default */
+
+  --radius-sm:    4px;
+  --radius-media: 8px;
+  --radius-round: 50%;
   --radius-card: 6px;
   --radius-chip: 999px;
   --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -70,73 +105,6 @@
   --gutter-rule: 2px;
   --gutter-hit: 24px;
 
-  color-scheme: light;
+  --color-scheme: light;
 }
 
-/* ---------- DARK palette ----------
-   Applied when explicitly toggled (data-theme="dark") OR when the OS prefers
-   dark and the user hasn't overridden to light. Values are shared via a single
-   custom-property list; kept in sync between the two selectors below.        */
-:root[data-theme="dark"] {
-  --bg:          #262019;   /* warm umber, lifted from near-black */
-  --card:        #31291F;
-  --card-2:      #3B3226;
-  --text:        #EFE7D9;   /* warm paper */
-  --muted:       #B5A88F;
-  --border:      #4C4232;   /* twig */
-
-  --link:        #A5CD98;
-  --brand-ink:   #A5CD98;
-  --brand-fill:  #41724A;
-  --brand-fill-hover: #4A7F54;
-  --on-brand:    #FFFFFF;
-
-  --boost:       #8FC48A;
-  --bury:        #DE9A6E;
-  --tint:        #3A392A;
-
-  --gold-500:    #D4A94E;
-  --gold-strong: #E2BC64;
-
-  --danger:      #F0938A;
-  --danger-ink:  #F0938A;
-  --danger-tint: #42251F;
-
-  --clay-600:    #A24D2C;
-  --stripe:      rgba(255,255,255,.04);
-
-  color-scheme: dark;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg:          #262019;   /* warm umber, lifted from near-black */
-    --card:        #31291F;
-    --card-2:      #3B3226;
-    --text:        #EFE7D9;   /* warm paper */
-    --muted:       #B5A88F;
-    --border:      #4C4232;   /* twig */
-
-    --link:        #A5CD98;
-    --brand-ink:   #A5CD98;
-    --brand-fill:  #41724A;
-    --brand-fill-hover: #4A7F54;
-    --on-brand:    #FFFFFF;
-
-    --boost:       #8FC48A;
-    --bury:        #DE9A6E;
-    --tint:        #3A392A;
-
-    --gold-500:    #D4A94E;
-    --gold-strong: #E2BC64;
-
-    --danger:      #F0938A;
-    --danger-ink:  #F0938A;
-    --danger-tint: #42251F;
-
-    --clay-600:    #A24D2C;
-    --stripe:      rgba(255,255,255,.04);
-
-    color-scheme: dark;
-  }
-}

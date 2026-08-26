@@ -8,7 +8,9 @@
 
 import { el, timeAgo, fmtScore } from '../util.js';
 import { postRow, commentNode, voteBox, skeleton, emptyState, toast } from './components.js';
-import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow, affordanceFor, feedCardModel, threadNodeStyle, feedPath, parseFeedRoute, sessionGateMessage, canDelete } from '../substrates/lens.js';
+import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow, affordanceFor,
+  feedCardModel, threadNodeStyle, feedPath, parseFeedRoute, sessionGateMessage, canDelete,
+  sortFeeds, filterFeeds, platforms, liveFeeds } from '../substrates/lens.js';
 import { initSession, createAccountRoster } from '../auth/session.js';
 import * as mediaScale from '../media-scale.js';
 import * as lang from '../lang.js';
@@ -297,17 +299,22 @@ function applyMediaScale() {
 }
 
 // One board renderer: applies the window sort and the view mode.
-function renderBoard(card, posts) {
+function renderBoard(card, posts, { wholeCorpus = false } = {}) {
   const view = boardView();
   // 3u: the language filter runs BEFORE the window sort, so "Top" ranks what
   // you can actually read. Nothing is hidden silently — the count says so.
+  // It still applies when the server ranked (4e): language is a content
+  // filter, not an ordering, so it composes with either.
   const prefs = lang.active();
   const visible = prefs.length ? posts.filter((p) => lang.matches(p, prefs)) : posts;
   const hidden = posts.length - visible.length;
-  const ordered = sortWindow(visible, boardSort, boardTimeframe, Date.now());
+  // 4e: when the SERVER ranked the whole corpus (a /h/ board), the posts arrive
+  // already ordered — re-sorting locally would shuffle a ranking we did not
+  // compute, and the window has already been applied at the query.
+  const ordered = wholeCorpus ? visible : sortWindow(visible, boardSort, boardTimeframe, Date.now());
   // Top + a narrow timeframe can legitimately empty the board — say why
   // rather than showing a blank card (the journey caught this).
-  if (!ordered.length && visible.length) {
+  if (!wholeCorpus && !ordered.length && visible.length) {
     card.replaceChildren(el('div', { class: 'xs muted', style: 'padding:10px' },
       `Nothing in the loaded posts falls within “${boardTimeframe === 'all' ? 'all time' : boardTimeframe}”. Try a wider timeframe, or load More.`));
     return;
@@ -318,7 +325,7 @@ function renderBoard(card, posts) {
       `${hidden} post${hidden === 1 ? '' : 's'} hidden by your content languages (${prefs.join(', ')}). `,
       el('a', { href: '/me' }, 'change that ›')));
   }
-  if (boardSort !== 'feed' || (boardSort === 'top' && boardTimeframe !== 'all')) {
+  if (!wholeCorpus && (boardSort !== 'feed' || (boardSort === 'top' && boardTimeframe !== 'all'))) {
     card.append(el('div', { class: 'xs muted', style: 'padding:6px' },
       'Sorted within the loaded posts — load More to widen the window.'));
   }
@@ -575,13 +582,51 @@ function feedBoardView(entry, preInfo) {
     }
   };
   const headerHost = el('div', {});
-  if (entry.source.kind === 'feed' && entry.source.uri) {
+  // 4f: a /f/ board has no server window (DL-032), so "Top · this week" widens
+  // by paging backwards on a budget and then says which of the three ways it
+  // ended. The note is part of the answer, not decoration.
+  const deepNote = el('div', { class: 'xs muted', style: 'padding:6px', 'data-deepen': '1' });
+  let deepening = false;
+  const deepen = () => {
+    if (deepening || boardSort !== 'top' || boardTimeframe === 'all') { deepNote.replaceChildren(''); return; }
+    const hours = { day: 24, week: 168, month: 720, year: 8760 }[boardTimeframe];
+    deepening = true;
+    deepNote.replaceChildren(`Widening to the last ${boardTimeframe}…`);
+    lens.deepen(entry.source, { toHours: hours, nowMs: Date.now() })
+      .then((out) => {
+        allPosts.length = 0;
+        allPosts.push(...out.posts);
+        nextCursor = out.cursor || null;
+        repaint();
+        deepNote.replaceChildren(
+          out.outcome === 'covered'
+            ? `Ranked every post this feed served in the last ${boardTimeframe} (${out.pages} page${out.pages === 1 ? '' : 's'}).`
+            : out.outcome === 'exhausted'
+              ? `This feed only goes back ${out.reachedHours}h — that is everything it has, ranked.`
+              : `This feed posts faster than we can page: ranked the last ${out.reachedHours}h of it, not the whole ${boardTimeframe}.`);
+      })
+      .catch((e) => deepNote.replaceChildren(`Could not widen the window: ${e.message}`))
+      .finally(() => { deepening = false; });
+  };
+  // 4a: for a FEED source the card is also the moderation gate — an
+  // adult-labelled generator must not paint its board when the account (or a
+  // guest, who has no preferences to mirror) has adult content off. Both reads
+  // fly in parallel and the paint waits on the pair, so the gate costs latency
+  // = max(info, feed), never sum, and there is no flash of gated content.
+  const isFeedSource = entry.source.kind === 'feed' && !!entry.source.uri;
+  const infoReady = isFeedSource
     // 3v: a cold resolve already fetched this — do not ask twice
-    Promise.all([preInfo ? Promise.resolve(preInfo) : lens.feedInfo(entry.source.uri), ensureSavedFeeds()])
-      .then(([info]) => headerHost.replaceChildren(feedHeaderCard(info)))
-      .catch(() => {}); // the board still works without its card
-  }
-  lens.feed(entry.source, { title: entry.title }).then((f) => {
+    ? Promise.all([preInfo ? Promise.resolve(preInfo) : lens.feedInfo(entry.source.uri), ensureSavedFeeds()])
+        .then(([info]) => info)
+        .catch(() => null)   // the board still works without its card
+    : Promise.resolve(null);
+  Promise.all([infoReady, lens.feed(entry.source, { title: entry.title })]).then(([info, f]) => {
+    if (info?.hidden) {
+      main.replaceChildren(emptyState('This feed is hidden by your moderation settings',
+        'It carries an adult content label and your Bluesky account has adult content turned off. Forage mirrors that setting and adds no switch of its own — change it in your Bluesky settings if you want it back.'));
+      return;
+    }
+    if (info) headerHost.replaceChildren(feedHeaderCard(info));
     allPosts.push(...f.posts);
     nextCursor = f.cursor || null;
     main.replaceChildren(
@@ -591,8 +636,9 @@ function feedBoardView(entry, preInfo) {
           chip('likes-only scores (DL-011)'),
           chip('ranking: feed order (DL-010)'))),
       headerHost,
-      boardToolbar(repaint),
+      boardToolbar(() => { repaint(); deepen(); }),
       f.posts.length ? card : emptyState('Nothing here', 'This source returned no posts.'),
+      deepNote,
       moreHost);
     repaint();
     // thread links: lens posts route through #/p?uri=
@@ -955,13 +1001,31 @@ function feedHeaderCard(info, onChange) {
     } catch (e) { toast((want ? 'Join' : 'Leave') + ' failed: ' + e.message, 'err'); }
     finally { btn.disabled = false; btn.replaceChildren(savedNow() ? 'Leave' : 'Join'); btn.classList.toggle('primary', !savedNow()); }
   });
+  // 4g (ADR-004): adoption signals no Bluesky endpoint exposes — how many
+  // people QUOTED this feed, how many starter packs include it. Two requests
+  // to Constellation for the one feed you are looking at, never a fan-out over
+  // a corpus. It renders only if it answers: an absent signal must never read
+  // as "0 shares" (ADR-004 point 2), so this line simply does not appear.
+  const adoption = el('div', { class: 'xs muted', 'data-adoption': 'pending' });
+  lens.adoption(info.uri).then((a) => {
+    if (!a) { adoption.remove(); return; }
+    const part = (n, recent, one, many) =>
+      n ? `${fmtScore(n)} ${n === 1 ? one : many}${recent ? ` (${recent} this week)` : ''}` : null;
+    const bits = [part(a.quotes.total, a.quotes.d7, 'share', 'shares'),
+                  part(a.packs.total, a.packs.d7, 'starter pack', 'starter packs')].filter(Boolean);
+    if (!bits.length) { adoption.remove(); return; }
+    adoption.setAttribute('data-adoption', 'shown');
+    adoption.replaceChildren(bits.join(' · '));
+  }).catch(() => adoption.remove());
+
   return el('div', { class: 'card', 'data-feed-header': '1', 'data-affordance': 'curated' },
     el('div', { class: 'row spread wrap', style: 'gap:10px;align-items:center' },
       el('div', { class: 'row', style: 'gap:10px;align-items:center;min-width:0' },
         m.avatar ? el('img', { src: m.avatar, alt: '', class: 'feed-avatar', loading: 'lazy' }) : null,
         el('div', { style: 'min-width:0' },
           el('div', { class: 'small' }, el('strong', {}, m.headline)),
-          el('div', { class: 'xs muted' }, `${fmtScore(m.likeCount)} likes`))),
+          el('div', { class: 'xs muted' }, `${fmtScore(m.likeCount)} likes`),
+          adoption)),
       el('div', { class: 'row', style: 'gap:6px;align-items:center' }, star, btn)),
     el('div', { class: 'feed-blurb' + (m.blurbIsOwnWords ? '' : ' muted'), 'data-feed-blurb': m.blurbIsOwnWords ? 'feed' : 'ours' },
       m.blurb),
@@ -972,25 +1036,173 @@ function feedHeaderCard(info, onChange) {
 // each with its own Join.
 export function lensFeedsView() {
   const results = el('div', { class: 'stack' }, skeleton(4));
+  const controls = el('div', { class: 'row wrap', style: 'gap:6px;margin-top:8px', 'data-feed-controls': '1' });
+  const countLine = el('div', { class: 'xs muted', style: 'margin:6px 0' });
   const input = el('input', { type: 'text', placeholder: 'Search feeds…', 'data-feed-search': '1' });
+
+  // 4b: the loaded corpus and the view over it. Browse holds all 117 feeds, so
+  // these sorts describe the whole list; a query is a slice of an unbounded
+  // index, so sorting is disabled there and the server's relevance order shows.
+  let corpus = [];
+  let searching = false;
+  let sort = 'popular';
+  let platform = '';
+  let videoOnly = false;
+  // 4c: uri → { d7, d30, capped }. Measured lazily, ONCE per page load, the
+  // first time a Rising sort is chosen — 117 requests is not something to spend
+  // on arrival for a sort nobody may pick.
+  let windows = new Map();
+  let measuring = false;
+  // 4d: uri → live | stale | empty | silent. Defaulted ON for search, where a
+  // third of results are dead or stale (D6), and OFF for browse, where 0 of 117
+  // popular feeds were (the filter would be dead weight there).
+  let states = new Map();
+  let hideDead = false;
+  let probing = false;
+
+  const card = (f) => {
+    // 3v (from main): the shareable form carries the creator, and the source
+    // registry keeps it so every link the app draws can use that form.
+    registerSource({ slug: f.uri.split('/').pop(), humanSlug: slugifyFeedName(f.title), title: f.title,
+      kind: 'feed', creator: f.creator, source: { kind: 'feed', uri: f.uri } });
+    return el('div', { class: 'card', 'data-discover-feed': f.uri },
+      el('div', { class: 'row spread wrap', style: 'gap:8px;align-items:center' },
+        el('div', { class: 'row', style: 'gap:8px;align-items:center;min-width:0' },
+          f.avatar ? el('img', { src: f.avatar, alt: '', class: 'feed-avatar', loading: 'lazy' }) : null,
+          el('div', { style: 'min-width:0' },
+            el('a', { href: feedPath({ creator: f.creator, uri: f.uri }) || `/f/${f.uri.split('/').pop()}` }, f.title),
+            el('div', { class: 'xs muted' },
+              `by @${f.creator} · ${fmtScore(f.likeCount)} likes`,
+              risingNote(f),
+              f.platform ? ` · built on ${f.platform}` : '',
+              f.video ? ' · video' : '')))),
+      f.description ? el('div', { class: 'xs muted', style: 'margin-top:4px' }, f.description) : null);
+  };
+
+  const risingNote = (f) => {
+    const w = windows.get(f.uri);
+    if (!sort.startsWith('rising')) return '';
+    if (!w) return measuring ? ' · measuring…' : ' · not measured';
+    const n = sort === 'rising7' ? w.d7 : w.d30;
+    const span = sort === 'rising7' ? '7d' : '30d';
+    // a full page is a floor, not a number (D2)
+    return ` · ${w.capped && n >= 100 ? '100+' : n} likes in ${span}`;
+  };
+
+  const paint = () => {
+    const ranked = searching ? corpus : sortFeeds(filterFeeds(corpus, { platform, video: videoOnly }), sort, windows);
+    const live = hideDead ? liveFeeds(ranked, states) : null;
+    const shown = live ? live.kept : ranked;
+    results.replaceChildren(...(shown.length
+      ? shown.map(card)
+      : [emptyState('No feeds found', searching
+          ? 'Nothing matched that search.'
+          : 'No feed in the list matches those filters. Widen them and it comes back.')]));
+    const base = searching
+      ? `${shown.length} result${shown.length === 1 ? '' : 's'} — in the order Bluesky's search ranked them.`
+      : shown.length === corpus.length
+        ? `All ${corpus.length} feeds Bluesky lists as popular.`
+        : `${shown.length} of ${corpus.length} feeds.`;
+    // 4c: say what Rising is counting, and that joins are not countable at all
+    // 4d: never filter silently — say how many went where, and keep `silent`
+    // separate from `stale`, because one is an observation and the other is the
+    // absence of one (D9).
+    const dropped = live && (live.stale + live.silent + live.empty)
+      ? ` Hiding ${[live.stale && `${live.stale} stale`, live.empty && `${live.empty} empty`,
+          live.silent && `${live.silent} that did not answer`].filter(Boolean).join(', ')}.` +
+        (live.silent && !session ? ' Some of those may be personalized feeds that need you signed in.' : '')
+      : (hideDead && probing ? ' Checking which are still alive…' : '');
+    const note = sort.startsWith('rising')
+      ? ` Ranked by likes gained in the last ${sort === 'rising7' ? '7 days' : '30 days'}` +
+        `${measuring ? ` — measured ${windows.size} of ${corpus.length} so far…` : ''}. ` +
+        'Joining a feed is private, so likes are the only public signal there is.'
+      : '';
+    countLine.replaceChildren(base + dropped + note);
+  };
+
+  // 4b: sorting a search slice would claim to rank everything that matched, so
+  // the controls disable rather than lie. Browse gets the whole corpus.
+  const buildControls = () => {
+    const sortSel = el('select', { 'data-feed-sort': '1', disabled: searching || undefined,
+      title: searching ? 'Search results keep Bluesky\'s relevance order' : 'Orders the whole popular list' },
+      ...[['popular', 'Popular'], ['likes', 'Most liked'], ['rising7', 'Rising · 7 days'],
+          ['rising30', 'Rising · 30 days'], ['new', 'Newest'], ['old', 'Oldest']]
+        .map(([v, l]) => el('option', { value: v, selected: sort === v || false }, l)));
+    sortSel.addEventListener('change', () => { sort = sortSel.value; ensureWindows(); paint(); });
+
+    const hosts = platforms(corpus);
+    const platSel = el('select', { 'data-feed-platform': '1', disabled: searching || undefined,
+      title: 'Feeds are built on services — this narrows to one builder' },
+      el('option', { value: '', selected: platform === '' || false }, 'Any builder'),
+      ...hosts.map(({ host, count }) =>
+        el('option', { value: host, selected: platform === host || false }, `${host} (${count})`)));
+    platSel.addEventListener('change', () => { platform = platSel.value; paint(); });
+
+    const vid = el('label', { class: 'xs', style: 'display:flex;gap:4px;align-items:center' },
+      el('input', { type: 'checkbox', 'data-feed-video': '1', checked: videoOnly || undefined,
+        disabled: searching || undefined }), 'Video only');
+    vid.querySelector('input').addEventListener('change', (e) => { videoOnly = e.target.checked; paint(); });
+
+    // 4d: on search this is checked by default — a third of search results are
+    // dead or stale — and it is a real control, not a hidden behaviour.
+    const alive = el('label', { class: 'xs', style: 'display:flex;gap:4px;align-items:center' },
+      el('input', { type: 'checkbox', 'data-feed-alive': '1', checked: hideDead || undefined }),
+      'Hide inactive');
+    alive.querySelector('input').addEventListener('change', (e) => {
+      hideDead = e.target.checked;
+      ensureLiveness();
+      paint();
+    });
+
+    controls.replaceChildren(sortSel, platSel, vid, alive);
+  };
+
+  // 4c: 24h is NOT offered. Measured over the whole corpus, only 9 of 117 feeds
+  // got 2 or more likes in a day — the window is mostly ties at zero and would
+  // present noise as a ranking. 7d and 30d separate them.
+  const ensureWindows = () => {
+    if (!sort.startsWith('rising') || measuring || windows.size) return;
+    measuring = true;
+    paint();
+    lens.likeWindows(corpus.map((f) => f.uri), {
+      nowMs: Date.now(),
+      // progressive: each measurement lands in the map the view is already
+      // rendering from, so the list reorders as the counts arrive (3l's idiom)
+      onWindow: (uri, w) => { windows.set(uri, w); paint(); },
+    }).finally(() => { measuring = false; paint(); });
+  };
+
+  const ensureLiveness = () => {
+    if (!hideDead || probing || states.size) return;
+    probing = true;
+    paint();
+    lens.liveness(corpus.map((f) => f.uri), {
+      nowMs: Date.now(),
+      onState: (uri, st) => { states.set(uri, st); paint(); },
+    }).finally(() => { probing = false; paint(); });
+  };
+
   const run = (query) => {
+    searching = !!query;
     results.replaceChildren(skeleton(3));
+    countLine.replaceChildren('');
     lens.discoverFeeds({ query })
-      .then((feeds) => results.replaceChildren(...(feeds.length
-        ? feeds.map((f) => {
-            registerSource({ slug: f.uri.split('/').pop(), humanSlug: slugifyFeedName(f.title), title: f.title,
-              kind: 'feed', creator: f.creator, source: { kind: 'feed', uri: f.uri } });
-            return el('div', { class: 'card', 'data-discover-feed': f.uri },
-              el('div', { class: 'row spread wrap', style: 'gap:8px;align-items:center' },
-                el('div', { class: 'row', style: 'gap:8px;align-items:center;min-width:0' },
-                  f.avatar ? el('img', { src: f.avatar, alt: '', class: 'feed-avatar', loading: 'lazy' }) : null,
-                  el('div', { style: 'min-width:0' },
-                    el('a', { href: feedPath({ creator: f.creator, uri: f.uri }) || `/f/${f.uri.split('/').pop()}` }, f.title),
-                    el('div', { class: 'xs muted' }, `by @${f.creator} · ${fmtScore(f.likeCount)} likes`)))),
-              f.description ? el('div', { class: 'xs muted', style: 'margin-top:4px' }, f.description) : null);
-          })
-        : [emptyState('No feeds found', query ? `Nothing matched “${query}”.` : 'Discovery returned nothing.')])))
-      .catch((e) => results.replaceChildren(emptyState('Discovery failed', e.message)));
+      .then((feeds) => {
+        corpus = feeds;
+        windows = new Map();   // a new corpus invalidates the measurements
+        states = new Map();
+        hideDead = searching;  // on for search, off for the curated popular list
+        if (!searching) { platform = ''; videoOnly = false; }
+        if (searching && sort.startsWith('rising')) sort = 'popular';
+        buildControls();
+        ensureWindows();
+        ensureLiveness();
+        paint();
+      })
+      .catch((e) => {
+        controls.replaceChildren();
+        results.replaceChildren(emptyState('Discovery failed', e.message));
+      });
   };
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') run(input.value.trim() || undefined); });
   const go = el('button', { class: 'btn sm primary' }, 'Search');
@@ -1001,7 +1213,10 @@ export function lensFeedsView() {
       el('h1', {}, 'Discover feeds'),
       el('p', { class: 'small muted' },
         'Feeds are built by the community — each one decides its own content. How to get INTO a feed lives in its description; feeds publish no machine-readable rules.'),
-      el('div', { class: 'card' }, el('div', { class: 'row', style: 'gap:6px' }, input, go)),
+      el('div', { class: 'card' },
+        el('div', { class: 'row', style: 'gap:6px' }, input, go),
+        controls),
+      countLine,
       results),
     side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()),
   };
@@ -1017,15 +1232,34 @@ export function lensHashtagView(params) {
       side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()) };
   }
   const main = el('div', {}, el('h1', {}, `#${tag}`), skeleton(6));
-  lens.stream({ kind: 'hashtag', key: tag }).then((board) => {
-    const card = el('div', { class: 'card' });
-    const repaint = () => renderBoard(card, board.posts);
-    main.replaceChildren(el('h1', {}, `#${tag}`),
-      affordanceStrip({ kind: 'hashtag', key: tag }),
-      boardToolbar(repaint),
-      board.posts.length ? card : emptyState('A quiet tag', `No recent posts carry #${tag}.`));
-    repaint();
-  }).catch((e) => main.replaceChildren(el('h1', {}, `#${tag}`), emptyState('Hashtag fetch failed', e.message)));
+  const card = el('div', { class: 'card', 'data-board': 'hashtag' });
+  const note = el('div', { class: 'xs muted', style: 'padding:6px', 'data-whole-corpus': '1' });
+  // 4e: the toolbar RE-QUERIES here rather than re-sorting what loaded.
+  // searchPosts takes sort and since server-side, so a hashtag board's "Top ·
+  // this week" ranks every post that matched — the one place DL-010's
+  // limitation genuinely lifts. The loaded-window caveat must not follow it.
+  const load = (first) => {
+    if (!first) card.replaceChildren(skeleton(3));
+    lens.stream({ kind: 'hashtag', key: tag, sort: boardSort, timeframe: boardTimeframe, nowMs: Date.now() })
+      .then((board) => {
+        if (first) {
+          main.replaceChildren(el('h1', {}, `#${tag}`),
+            affordanceStrip({ kind: 'hashtag', key: tag }),
+            boardToolbar(() => load(false)),
+            board.posts.length ? card : emptyState('A quiet tag', `No recent posts carry #${tag}.`),
+            note);
+        }
+        renderBoard(card, board.posts, { wholeCorpus: board.wholeCorpus });
+        note.replaceChildren(boardSort === 'top'
+          ? `Bluesky ranked every #${tag} post${boardTimeframe === 'all' ? '' : ` from the last ${boardTimeframe}`} — not only the ones loaded here. Its “top” weighs engagement, not likes alone.`
+          : '');
+      })
+      .catch((e) => {
+        if (first) main.replaceChildren(el('h1', {}, `#${tag}`), emptyState('Hashtag fetch failed', e.message));
+        else card.replaceChildren(emptyState('Hashtag fetch failed', e.message));
+      });
+  };
+  load(true);
   return { main, side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()) };
 }
 

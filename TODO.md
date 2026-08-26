@@ -44,6 +44,15 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
   with the newly released Jetstream v2 — its own plan. Prior probes: filtered v1
   tail 676ms write→event; v2 `planSnapshot` was 401 token-gated. Context:
   `plans/2026-08-25-1-plan-backend-modes-bsky-writes.md` (NOT-doing list).
+  **NARROWED 2026-08-26** by `plans/2026-08-26-1-plan-feed-discovery-sorts.md` (D5):
+  Jetstream is NOT the instrument for ranking FEEDS. Measured — 310 like-events/sec
+  and 159 KB/s on the tail, of which likes on feed generators are ~380/day
+  network-wide (0 in a 30s tail; 2 in 7.6 replayed minutes / 68 MB). A 24h trending
+  computation costs ~1.3 GB and ~2.4h of draining for an answer
+  `app.bsky.feed.getLikes` returns per feed in ONE request. Jetstream cannot filter
+  by subject (only wantedCollections/wantedDids), so there is no cheaper slice.
+  What survives for E139: keeping POST streams fresh, where the events are the
+  310/sec Jetstream is good at.
 
 ## Ledgered (see `ledger/divergence.js`)
 

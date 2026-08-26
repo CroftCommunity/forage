@@ -1,0 +1,556 @@
+# Plan: sorting, filtering and time windows — for feed discovery and for boards
+
+date: 2026-08-26
+status: **4a–4g SHIPPED — the plan is complete.** OQ1/OQ2/OQ3/OQ4 closed; OQ5 open
+(owner), plus 4g's scope cut for the owner to accept or reverse.
+Gate green: 339 unit tests, 5/5 workflows. DL-031–DL-034 landed; ADR-004 recorded.
+Execution in worktrees/forage/feed-discovery-sorts (branch claude/feed-discovery-sorts)
+repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
+baseline: `main` @ `f08fa9d` (clean tree)
+prior plan: `plans/2026-08-25-1-plan-backend-modes-bsky-writes.md` (3j built the
+discovery page this plan extends; 3i built the board window-sort it upgrades)
+backlog: partially answers **E139** (Jetstream v2 freshness) — see § "E139: answered
+for discovery, still open for posts"
+planning workflow: `phase-plan` skill. Single plan file.
+
+## Problem Statement
+
+`/feeds` (`lensFeedsView`, `js/ui/lens-views.js:646`) makes exactly one call —
+`app.bsky.unspecced.getPopularFeedGenerators` — and renders the server's order. It
+shows `likeCount` and never sorts on it. There is a search box and nothing else: no
+sort, no filter, no time window.
+
+The owner asked (2026-08-26) whether we have options for **filtering, sorting and
+ordering** feed discovery on dimensions like most-liked and most-posts over
+24h/7d/30d, which dimensions differ by source, and what Jetstream v2 adds. And
+then: give the boards (`/f/`, `/h/`) the same time windows if we can.
+
+Two gaps sit underneath that ask:
+
+1. **Discovery is single-dimensional.** Everything the AppView already hands us —
+   builder platform, feed age, creator, labels, video mode — is dropped on the
+   floor by the mapper at `js/substrates/lens.js:624`.
+2. **Board sorts are honest but small.** `sortWindow` (`js/substrates/lens.js:288`)
+   re-orders only the *loaded* posts, and says so in the UI. "Top this week" today
+   means "top of the ~30 posts we happened to fetch." For `/h/` hashtag boards
+   that limitation turns out to be unnecessary — see D3 below.
+
+A third gap surfaced during the research and is a correctness bug, not a feature:
+
+3. **Feed labels never reach the moderation posture.** `discoverFeeds` drops
+   `f.labels` entirely, and `labelDisposition` is only ever applied inside
+   `shapeLensPost`/`shapeLensThread`/`shapeLensFeed` — i.e. to posts. 3 of the top
+   100 popular feeds carry a `porn` label and 2 carry `sexual` (measured, D1). An
+   account with `adultContentPref.enabled = false` sees them in discovery anyway.
+
+## Approach
+
+Four tiers of dimension, ordered by cost. Ship inner tiers first; each is useful
+alone.
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│ T0  the payload we already fetch          0 extra requests               │
+│     likes(all-time) · feed age · builder platform · creator · video      │
+├──────────────────────────────────────────────────────────────────────────┤
+│ T1  getLikes on the generator URI         1 req/feed  → RISING 7d/30d    │
+│ T1b getFeed                               1 req/feed  → live/stale/dead  │
+├──────────────────────────────────────────────────────────────────────────┤
+│ T2  constellation.microcosm.blue          1 req/feed  → shares · packs   │
+│     (third-party host — needs an ADR)                                    │
+├──────────────────────────────────────────────────────────────────────────┤
+│ ──  jetstream2                            REJECTED for discovery (D5)    │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+For boards, the two kinds split and must not be conflated:
+
+- **`/h/` hashtag boards** ride `searchPosts`, which takes `sort=top` plus
+  `since`/`until` **server-side**. A true top-of-the-last-7-days is one query over
+  the whole corpus (D3). This is a real upgrade out of `sortWindow`.
+- **`/f/` generator boards** have no such lever — `getFeedSkeleton` takes only
+  `limit`/`cursor`. The only path is paging backwards and sorting locally, whose
+  cost varies by two orders of magnitude between feeds (D4). The honest shape is a
+  **budgeted deepening** that reports what it actually reached.
+
+## Reasoning
+
+**Why client-side sorting is not a compromise here.** The popular-feeds corpus is
+finite and small: 117 feeds, 2 requests, 0.62s, then `cursor: null` (D1). The whole
+thing fits in memory. So for browse mode the question was never "will the server
+order this for us" — it is only "what data can we attach to 117 rows." That is why
+T0 is free and why every T1/T2 dimension is a bounded fan-out rather than an
+indexing project. (Search mode is the opposite: `query=` switches to a real search
+index over the entire generator population — `query=a` still had more after 1,500
+rows — so search results are *not* a bounded corpus and get lazy, viewport-scoped
+enrichment only.)
+
+**Why `getLikes` and not snapshots.** The obvious way to get "likes gained in 7d" is
+to snapshot `likeCount` on a schedule and diff. That needs storage, a scheduler, and
+a cold-start problem for every new visitor. It turns out not to be necessary:
+`app.bsky.feed.getLikes` accepts a **feed-generator URI** and returns the like
+records themselves, newest-first, with timestamps (D2). The window is a count over
+one page. No history to accumulate, no server, nothing to babysit.
+
+**Why liveness is `getFeed` and not `isOnline`.** The intuitive filter — hide feeds
+whose generator is down — turns out to read a field that is never false: across 915
+distinct search-result feeds, `isOnline` and `isValid` were `false` **zero** times
+(D6), including for 138 feeds with no likes at all. The signal is real but it lives
+somewhere else: `getFeedGenerator` 400s on an unresolvable service DID, and `getFeed`
+502s, returns empty, or returns months-old posts. Measured over a stratified sample,
+about a third of search-result feeds are dead or stale (D6). So the filter the owner
+asked about is worth building — just not on the field it looks like it should use.
+
+**Why no adult toggle.** Owner direction, 2026-08-26: adult content is governed by
+the moderation posture we import from the account's own settings; if it is off there
+it must not be re-surfaceable anywhere in Forage as a setting, toggle, or filter.
+This is the piggy-back principle (D10 in the prior plan) applied to a surface that
+currently ignores it. Feed rows go through the same `labelDisposition` the posts
+already do; there is no discovery-local control, because a discovery-local control
+would be a second source of truth for a decision the account already made.
+
+## Evidence (probed live 2026-08-26, unauth AppView unless noted; session probes used
+the registered test account `ngvalidation2112.bsky.social`, `.claude/TESTBED.md`)
+
+### D1 — the browse corpus is bounded, and T0 is free
+
+`getPopularFeedGenerators`: **117 feeds, 2 requests, 0.62s**, `limit` max 100 (101 →
+400). Default order is NOT `likeCount` (cursor is a bare integer score, `9884`), so
+an explicit "Most liked" sort produces a visibly different page.
+
+Per-row fields available at zero extra cost, over the top 100:
+
+| Field | Gives | Measured |
+|---|---|---|
+| `likeCount` | Most liked, all time | 52,591 → 593 |
+| `indexedAt` | Newest / oldest feed | 2023-05-19 → 2026-08-23 |
+| `did` (service host) | **Filter by builder platform** | skyfeed.me 49, api.graze.social 14, discover.bsky.app 7, blueskyfeedcreator 5, bsky.one 4, +7 |
+| `labels` | Posture input (§3 above) | `porn` ×3, `sexual` ×2 |
+| `contentMode` | Video feeds | 4 |
+| `acceptsInteractions` | Feeds that take feedback | 17 |
+| `creator.*` | Group by creator, verified-creator filter | — |
+
+### D2 — `getLikes` works on a feed-generator URI
+
+```
+getLikes?uri=at://…/app.bsky.feed.generator/for-you&limit=100
+  → 200 unauth · newest-first (verified) · {actor, createdAt, indexedAt} · cursor
+```
+
+Full-corpus run: **117 feeds × (getFeedGenerator + getLikes) = 234 requests,
+concurrency 16, 22.5s wall, zero errors.**
+
+The ranking genuinely differs from all-time:
+
+```
+                          24h   7d   30d    all-time   all-time rank
+  For You                  31  100+  100+     52,591        #1
+  Discover                  6    34  100+     39,380       #27
+  Art: What's Hot           4    17    60     11,792       #14
+  Popular With Friends      3    22    92     41,314        #2
+  Fungi Friends             2     6    12      2,012       #50   ← rank 50, top-10 rising
+```
+
+Bounds, both measured:
+
+- **A 24h window is nearly signal-free.** Only **9 of 117** feeds got ≥2 likes in
+  24h; most are tied at zero. 7d and 30d separate them. → ship 7d/30d; 24h is a
+  novelty at best.
+- **The page caps at 100** (101 → 400). Exactly **1 of 117** feeds hit the cap
+  inside 7d. Reaching 30d on that one feed took 10 pages / 6.3s. → 24h and 7d are
+  exact for essentially everything; 30d displays `100+` rather than paging.
+- `createdAt` vs `indexedAt` on likes agreed to a **median 0.0s** (p90 0.7s, max
+  4.2s), so either is safe for windowing — unlike posts, where the sample contained
+  `createdAt` values in the *future*. Use `indexedAt`.
+
+**These windows are ours, not the server's.** There is no time-bucketed aggregate
+anywhere in the API; the only server-side aggregate is the cumulative `likeCount`.
+What is indexed remotely is likes-by-subject in reverse-chronological order — which
+is precisely why one request suffices and why the count is exact only while it is
+under 100.
+
+### D3 — `searchPosts` DOES have server-side top + time windows (session)
+
+Probed with a live session against the PDS proxy:
+
+| Params | Result |
+|---|---|
+| `sort=top` | 200 — returns high-engagement posts (likes 1,600 / 4,647 / 1,783 …) |
+| `sort=latest` | 200 — minutes old |
+| `sort=top&since=<7d ago>` | 200 — top *within the window* |
+| `sort=top&since=…&until=…` | 200 |
+| `+tag=`, `+lang=` | 200, composes |
+| `sort=bogus` | 400 `InvalidRequest` |
+
+So `/h/` boards can offer a **true** "Top · this week" in one query, over the whole
+corpus rather than the loaded window. Caveat to render honestly: `sort=top` is an
+engagement-weighted *relevance* ranking, not a `likeCount` sort — the returned order
+was 152, 113, 1478, 122, 168 likes. It is "top" in Bluesky's sense, not "most liked."
+
+### D4 — `/f/` generator boards: deepening cost varies by 100×
+
+Paging `getFeed` backwards until the window is covered (budget 40 pages):
+
+```
+feed             window     result  pages  posts reached_h   sec
+Astronomy           24h         ok      1     98      29.2   2.1
+Science             24h         ok      2    200      24.0   1.6
+Gardening           24h  exhausted      2    111      24.0   2.7   ← feed has only 111 posts
+Birds!              24h         ok     26    758      24.9  39.0
+Game Dev            24h budget-hit     40   3488      15.3  56.5
+Blacksky            24h        ERR     30   3000      —     —      ← errored mid-paging
+Astronomy          168h         ok      5    487     168.5   6.5
+Science            168h         ok     13   1300     170.0  17.3
+Blacksky           168h budget-hit     40   4000       3.6  21.7
+```
+
+Three distinct outcomes, all of which the UI must be able to say: **covered**,
+**exhausted** (the feed has no more), **budget hit** (it posts faster than we page).
+Deep paging is also not reliable — two feeds errored mid-run.
+
+### D5 — Jetstream v2, measured and rejected for this purpose
+
+All five endpoints open (227–489ms). `cursor=<unix µs>` replay works, draining at
+**~10× realtime**.
+
+```
+30s live tail, wantedCollections=app.bsky.feed.like
+  9,316 events · 310/sec · 159 KB/s · likes on feed generators: 0
+
+7.6 min replayed (45s wall)
+  135,593 events · 68.3 MB · likes on feed generators: 2
+```
+
+Extrapolated: **~380 generator likes per day, network-wide, across all feeds.**
+Computing "trending feeds by 24h likes" that way means ~1.3 GB and ~2.4 hours of
+draining for a few hundred data points — to get an answer `getLikes` returns per
+feed in one request. Jetstream cannot filter by subject (only `wantedCollections`
+and `wantedDids`), so there is no cheaper slice. **Closed: Jetstream is not the
+freshness channel for feed discovery.**
+
+### D6 — liveness: `isOnline`/`isValid` is not the signal
+
+Over **915 distinct search-result feeds**: `isOnline` false **0 times**, `isValid`
+false **0 times** — including across 138 feeds with zero likes. 13 were non-200,
+and those carry the real signal: `400 InvalidRequest: could not resolve identity:
+did:web:<host>` — dead ngrok tunnels, dead railway apps, `did:web:did:web:…`
+typos.
+
+Stratified sample of 160 feeds, calling `getFeed` instead:
+
+```
+   band  live  stale>7d  empty  http-err        (http: 502 ×9, 400 ×3, transport ×3)
+      0    16        15      3         6        ← 40% live
+    1-9    22         7      6         5
+  10-99    29         8      0         3
+   100+    28        11      0         1
+```
+
+Roughly **a third of search-result feeds are dead or stale**, concentrated in the
+zero-like band. Caveat: three of the "transport" failures were client-side timeouts
+under 16-way concurrency, not proven server truth — a real implementation needs
+per-feed timeouts and must not report its own timeout as the feed being down.
+
+### D9 — the liveness probe cannot tell "personalized" from "broken" (2026-08-26, follow-up)
+
+Probing 4d's design turned up a constraint the first pass missed. `getFeed?limit=1` is
+enough for freshness (200 in 0.34s, newest post returned), but the REFUSALS are not
+self-describing. The same three personalized Bluesky feeds, probed three times each
+unauthenticated:
+
+```
+Mutuals          502 InternalServerError  ×3
+Popular With Friends  502 InternalServerError  ×3
+OnlyPosts        400 InvalidRequest       ×3
+a genuinely absent feed   400 InvalidRequest ("could not find feed")
+```
+
+The `401 AuthRequiredError` seen in the first sweep is NOT stable — the same feeds now
+answer 502 and 400, and a dead feed answers 400 too. **So an unauthenticated probe
+cannot distinguish "this feed is personalized and needs your session" from "this
+generator is down" from "this feed no longer exists."**
+
+Consequences for 4d, all of them wording rather than logic:
+- the state is **`silent`**, not `dead` — we report that a feed did not answer, never
+  why, because we do not know why;
+- silent and stale are counted SEPARATELY in the UI, since stale is a real observation
+  and silent is an absence of one;
+- the probe is materially more accurate signed in (session reads go through the PDS
+  proxy, so personalized feeds answer 200), and the UI says so rather than presenting
+  a guest's result as the truth.
+
+### D7 — Constellation: signals no Bluesky endpoint exposes
+
+`constellation.microcosm.blue` — atproto-wide backlink index (17.6B links, 575 days
+indexed). `links/all/count?target=<feed uri>` for the For You feed:
+
+```
+app.bsky.feed.like         .subject.uri            52,558   (matches likeCount)
+app.bsky.feed.post         .embed.record.uri        4,287   ← posts quoting the feed
+app.bsky.graph.starterpack .feeds[].uri               965   ← starter packs including it
+app.bsky.feed.generator    .skyfeedBuilder…feedUri       4   ← feeds built ON this feed
+computer.aetheros.settings .columns[].params…          53   ← third-party client adoption
+app.skydeck.deck / com.shadowsky.columns / net.anisota.* / co.goodfeeds.*  …
+```
+
+"Most shared" and "most starter-packed" measure curator endorsement rather than a
+one-click like, and exist nowhere in the AppView.
+
+They are time-windowable **for free**: Constellation returns `{did, collection,
+rkey}` newest-first, and atproto rkeys are TIDs encoding a microsecond timestamp.
+Verified against `getLikes`:
+
+```
+TID-decoded : 2026-08-26T19:02:27.312007+00:00
+getLikes    : 2026-08-26T19:02:27.165Z          ← 0.15s apart
+```
+
+For You: 5 quotes in 24h / 55 in 7d; 8 starter-pack adds in 24h / 44 in 7d.
+
+### D10 — `getLikes` on a generator is CONTRACTUAL, and no rate ceiling was reached (2026-08-26)
+
+Closing OQ3 and OQ4, both by evidence rather than judgement.
+
+**OQ3 — is `getLikes` on a feed generator a supported use, or incidental?** The official
+lexicon settles it. `app.bsky.feed.getLikes` is described as *"Get like records which
+reference **a subject** (by AT-URI and CID)"*, and its `uri` parameter is *"AT-URI of
+the **subject** (eg, a post record)."* A post is given as an **example**, not the
+constraint — the endpoint is defined over subjects generally. It is also not in the
+`unspecced` namespace. So 4c rests on a documented general-subject endpoint, not on a
+happy accident, and needs no silent-degradation path for "they took it away."
+
+**OQ4 — the rate ceiling.** `getLikes` returns **no `ratelimit-*` headers at all**, so
+a client cannot self-regulate reactively; the concurrency cap and per-request timeout
+are the only control, which is what 4c and 4d already use. Measured against that:
+
+```
+3 × (117 requests @ concurrency 8)   351 reqs / 32s   200×349, 0 429s, 2 client-side ERR
+1 × (600 requests @ concurrency 24)  600 reqs / 26s   200×595, 0 429s, 5 client-side ERR
+                                     ~950 reqs / ~60s, zero 429, zero server 4xx/5xx
+```
+
+No ceiling was reached at roughly 5× the burst 4c actually issues. The handful of ERRs
+were client-side timeouts under concurrency, not server refusals. And the degradation
+path is already right if a 429 ever does arrive: `get()` throws on a non-2xx, which
+leaves a feed **unmeasured** in 4c and **silent** in 4d — never a wrong number.
+
+### D8 — what does not exist
+
+- **Subscriber / "joined" counts.** Joins live in `savedFeedsPrefV2`, which is
+  private per-actor. Constellation confirms it network-wide: `app.bsky.feed.save
+  .feed` = **0 records**. `likeCount` is the only public adoption signal and it is a
+  proxy — same family of honesty as DL-025.
+- **Topics / categories.** No taxonomy exists. `getTrendingTopics` and `getTrends`
+  are about content, not feeds.
+- `app.bsky.unspecced.searchFeedGenerators`, `getTrendingFeeds`,
+  `getPopularFeedGeneratorsSkeleton` — all **501 MethodNotImplemented**.
+- `getSuggestedFeeds` (both the `unspecced` and `feed` namespaces) IS 200 unauth and
+  is a separately-curated corpus — a candidate second tab, not in scope here.
+
+## The units
+
+Each unit carries invariant 6 (a scenario per new mutation — most of these are read
+paths, so most add selectors + characterization instead) and invariant 6b (a
+workflow journey in `e2e/`, or an explicit note that the unit has no workflow
+surface).
+
+**4a — feed labels reach the posture (the bug). ✅ SHIPPED 2026-08-26.**
+Landed as: `feedDisposition` exported from the substrate (one rule, delegating to the
+same internal `labelDisposition` posts use); `adultEnabled` defaults to **false** in
+both `EMPTY_POSTURE` and `buildPosture` (lexicon-verified); posture applied in
+`discoverFeeds`, `feedInfo`, **and `fields()`** — the last one found during the
+journey: a feed JOINED before adult content was turned off was still sitting in the
+sidebar, so membership was silently overriding the account setting. Board render now
+waits on `Promise.all([feedInfo, feed])` so a gated feed cannot flash content before
+the verdict lands. 7 unit tests + a journey segment in `e2e/signin.workflow.mjs`.
+Original description follows.
+
+ `discoverFeeds` and `feedInfo`
+carry `labels` through; a shared `feedDisposition(feed, posture)` applies the same
+`ADULT_LABELS` / `labelPrefs` rules `labelDisposition` applies to posts. Hidden feeds
+do not render; warned feeds render behind the existing warn affordance. No toggle,
+no setting, no filter — per owner direction. Test: an account with
+`adultContentPref.enabled=false` cannot see a `porn`-labelled feed in discovery or
+on its `/f/` header card. **Blocks nothing else, ships first.**
+
+**4b — T0 sorts and filters. ✅ SHIPPED 2026-08-26.**
+Landed as: pure `sortFeeds` / `filterFeeds` / `platforms` in the substrate (policy out
+of components, invariant 2); `discoverFeeds` now pages the whole browse corpus and
+carries `platform`, `video`, `indexedAt`, `acceptsInteractions`, `creatorDid`; the
+discovery view gained Sort (Popular · Most liked · Newest · Oldest), an "Any builder"
+facet counted from the loaded corpus, Video only, and a count line. `contentMode`
+tokens verified against the official `app.bsky.feed.defs` lexicon rather than inferred.
+**The search asymmetry is enforced, not just documented:** browse holds all 117 feeds
+so its sorts describe everything, while a query is a slice of an unbounded index, so
+the controls DISABLE on search and the count line says the order is Bluesky's. 6 unit
+tests + a journey segment; the journey was mutation-checked (inverting the `likes`
+comparator fails it). Original description follows.
+
+ Fetch both pages up front (117 rows, 0.62s), sort
+client-side: Popular (server order, default) · Most liked · Newest · Oldest. Filters:
+builder platform (`did`), video-only (`contentMode`), creator. Reuses the
+`boardToolbar` idiom. No new network shape at all.
+
+**4c — T1 Rising. ✅ SHIPPED 2026-08-26.**
+Landed as: pure `likeWindow(likes, nowMs)` (counts d7/d30 off one page, flags `capped`);
+`sortFeeds` gained `rising7`/`rising30` taking a windows map, with **unmeasured feeds
+sorting last rather than as zero** — "we have not asked" and "nobody liked it" are
+different facts; `lens.likeWindows()` fans out one `getLikes` per feed at concurrency 8
+with an 8s per-feed timeout, announcing each measurement as it lands so the list
+reorders progressively (3l's idiom). Measurement is lazy — 117 requests is not spent on
+arrival for a sort nobody may pick. A capped count renders `100+`, never a number.
+**24h is deliberately not offered** (D2: only 9 of 117 feeds got ≥2 likes in a day),
+and the option list is asserted in the journey so it cannot quietly reappear. The count
+line says what is being counted and that joins are private. 5 unit tests + a journey
+segment whose fixture counts are INVERTED against `likeCount`, so a Rising that was
+secretly likeCount would fail it. Original description follows.
+
+ `getLikes` fan-out with a concurrency cap and a short-lived
+cache; sorts "Rising · 7 days" and "Rising · 30 days". 24h is NOT offered (D2). 30d
+counts at the cap display `100+`. Words on the control, in the `sortWindow` spirit:
+likes gained in the window; joins are private, so likes are the only public signal.
+
+**4d — T1b liveness. ✅ SHIPPED 2026-08-26.**
+Landed as: pure `feedLiveness(items, nowMs)` → live | stale | empty; `liveFeeds` keeps
+the live AND the not-yet-probed (a feed is never hidden on the strength of no
+evidence); `lens.liveness()` probes `getFeed?limit=1` per feed — freshness needs the
+newest post, not a page — at concurrency 8 with an 8s timeout. **D9 changed the
+wording throughout:** a feed that will not answer is `silent`, never `dead`, because
+its refusals are not self-describing, and the count line keeps `silent` separate from
+`stale` and tells a signed-out user that some may be personalized feeds. Defaulted ON
+for search (a third of results are dead or stale) and OFF for browse (0 of 117
+popular feeds are). 3 unit tests + a journey segment. Original description follows.
+
+ `getFeed` probe per feed → live / stale / empty / unreachable,
+with per-feed timeouts, degrading per feed rather than globally (2 of 16 popular
+feeds are `401 AuthRequiredError` unauth — personalized feeds are not broken feeds
+and must not be labelled as such). Default ON for **search** results, off for browse
+(0 of 117 popular feeds are dead). This is the answer to "filter or an option next to
+the search bar": it is a filter *on search*, defaulted on, with a visible "showing N
+of M — K stale or unreachable" line so the filtering is never silent.
+
+**4e — `/h/` true top windows. ✅ SHIPPED 2026-08-26.**
+Landed as: pure `searchWindow(sort, timeframe, nowMs)` → `{sort, since?}`; `stream()`
+takes `sort`/`timeframe`/`nowMs` and passes them to `searchPosts`; the hashtag board's
+toolbar now **re-queries** instead of re-sorting, and the stream returns
+`wholeCorpus: true` so `renderBoard` skips the local sort AND drops the "sorted within
+the loaded posts" caveat, which would be a lie there. The board says whose ranking it
+is, and that Bluesky's "top" weighs engagement rather than likes alone. The 3u language
+filter still applies — it is a content filter, not an ordering, so it composes with
+either path. 4 unit tests + a journey segment in `e2e/bluesky-view.workflow.mjs`.
+Original description follows.
+
+ `stream({kind:'hashtag'})` gains `sort`/`since`/
+`until` passthrough to `searchPosts`; the board toolbar's Top+timeframe stops being
+a window re-sort for hashtag boards and becomes a real query. The "Sorted within the
+loaded posts" line must NOT render on this path — it would now be a lie. Needs a new
+tolerance (below) because `/f/` and `/h/` boards no longer mean the same thing by
+"Top."
+
+**4f — `/f/` budgeted deepening. ✅ SHIPPED 2026-08-26.**
+Landed as: `lens.deepen(source, { toHours, maxPages = 8, timeoutMs })` pages backwards,
+de-duplicating (a generator may repeat a post across pages), and returns one of three
+verdicts the board reads out verbatim: **covered** ("ranked every post this feed served
+in the last week"), **exhausted** ("this feed only goes back 40h — that is everything
+it has"), **budget** ("this feed posts faster than we can page: ranked the last 15h of
+it, not the whole week"). A page that fails ends the walk with what it has rather than
+throwing the board away — deep paging is measurably unreliable (two feeds errored
+mid-run in D4). The /f/ board never renders the whole-corpus note; that belongs to the
+surface that earned it. 4 unit tests + a journey segment. Original description follows.
+
+ Page `getFeed` until the window is covered or a
+budget (pages + wall-clock) is hit, then sort locally and report which of the three
+outcomes happened (D4). Exhausted and budget-hit get distinct words.
+
+**4g — T2 Constellation. ✅ SHIPPED 2026-08-26, with one deliberate scope cut.**
+Landed as: `tidTime(rkey)` (pure TID→Date decoder, asserted against real rkeys whose
+`getLikes` timestamps we probed — the cross-check is a test, not a one-off);
+`countRecent(rows, nowMs)` windows backlink rows by rkey alone, so a window costs no
+extra request; `lens.adoption(uri)` fetches quotes + starter-pack inclusions through
+the **plain transport, never the session**, and returns `null` — never zeroes — when the
+host does not answer. The feed card renders "4.3k shares (5 this week) · 965 starter
+packs", or renders nothing at all. `constellation.microcosm.blue` is now FENCED in the
+workflow shim, which immediately caught an unfixtured read in a second journey.
+ADR-004 + DL-034 record the dependency. 6 unit tests + a journey segment.
+
+**THE SCOPE CUT — owner's call to reverse.** The plan said "Most shared" and "In
+starter packs" as corpus-wide *sorts*. Built as sorts, each would fire ~222 requests at
+a **volunteer-run public instance** every time someone picked one — against a host whose
+own front page asks "please do not build the torment nexus." So adoption ships **per
+feed, on the card you are already looking at** (2 requests), not as a sort over 111
+feeds. Everything needed for the sorts exists — `adoption()` is already the right shape
+to fan out — so this is one wiring change if the owner decides the citizenship trade is
+acceptable, or wants it gated behind an explicit "measure these" button.
+
+ Gated behind the ADR below. "Most shared" and "In starter
+packs", with TID-decoded windows.
+
+## Ledger entries — LANDED 2026-08-26 (DL-031, DL-032, DL-033 in `ledger/divergence.js`)
+
+- **DL-031 tolerance** — discovery ordering is Forage-local. The AppView's popular
+  order is an opaque score; every sort we offer above it is computed here.
+- **DL-032 tolerance** — "Top" means two different things by board kind after 4e:
+  a whole-corpus server ranking on `/h/`, a budgeted local sort on `/f/`. Names
+  DL-010 as the reason `/f/` cannot do better.
+- **DL-033 frontier** — feed adoption is unmeasurable: `app.bsky.feed.save` = 0
+  records network-wide, `savedFeedsPrefV2` is private, so "most joined" cannot be
+  built. Sibling of DL-025.
+- **DL-034 proposal** (only if 4g ships) — a non-Bluesky read dependency.
+
+## Open questions — owner
+
+- ~~**OQ1 — the guest adult default.**~~ **DECIDED 2026-08-26 (owner): "logged
+  out/guests should see no adult content by default."** Implemented in 4a, and it
+  turned out to be the protocol's own answer as well: the official lexicon
+  `app.bsky.actor.defs#adultContentPref` declares `enabled` with **default false**
+  (fetched live 2026-08-26). So `buildPosture`'s old `adult ? !!adult.enabled : true`
+  was wrong for signed-in accounts too — an account that never touched the setting
+  was being treated as adult-on. One change fixes both: **absent preference means
+  adult content is off**, for guests and accounts alike.
+
+- **OQ5 — non-adult label defaults for guests (new, surfaced by 4a's tests).** The
+  adult master switch is now correct, but per-label prefs only exist when the account
+  set them. A guest therefore gets no verdict on `graphic-media` and it renders
+  unveiled; bsky.app's own logged-out view warns on it. Forage currently invents no
+  default the account never asked for, which is defensible but is a *choice*. Worth
+  an explicit answer before more label-bearing surfaces land.
+- ~~**OQ2 — Constellation as a dependency.**~~ **RECORDED 2026-08-26 as
+  `docs/adr/0004-constellation-backlinks.md`**, on the owner's "tier 2 sounds
+  awesome" (2026-08-26). The ADR narrows the dependency to backlink counts on feed
+  generators — not an intake path, so ADR-002 stands for everything it actually
+  decided — and makes degrade-to-absent non-negotiable. Registry row owed in
+  `CroftC/.claude/DECISIONS.md` (meta-repo, ask-first to push).
+- ~~**OQ3 — is `getLikes`-on-a-generator contractual?**~~ **CLOSED 2026-08-26 by D10:
+  yes.** The lexicon defines it over *subjects*, naming a post only as an example, and
+  it is not `unspecced`. No degradation path needed.
+- ~~**OQ4 — rate limits, unmeasured.**~~ **CLOSED 2026-08-26 by D10.** ~950 requests
+  in ~60s, including a burst at 5× 4c's real shape, produced zero 429s and zero server
+  errors. No `ratelimit-*` headers exist on the endpoint, so the concurrency cap and
+  timeout stay the control — and a 429, if one ever arrives, already degrades to
+  *unmeasured* (4c) or *silent* (4d) rather than to a wrong number.
+
+## E139: answered for discovery, still open for posts
+
+E139 asks how forage's content streams stay fresh with Jetstream v2. D5 closes the
+feed-discovery half: Jetstream is the wrong instrument, by three orders of magnitude,
+for ranking feeds — `getLikes` already answers it per feed in one request. E139's
+real target survives untouched: keeping **post** streams (`/f/`, `/h/`, ring boards)
+fresh, where the events are the 310/sec that Jetstream is good at rather than the
+0.004/sec it is not. Recommend the E139 row be narrowed to that, citing D5.
+
+## Review Log
+
+### Pass 1: Research + plan development — 2026-08-26
+Live probes against the AppView (unauth), the PDS proxy (test-account session),
+Jetstream v2 (all five endpoints), and Constellation. Findings D1–D8 above; every
+number in this plan is measured, not inferred. Three things changed the shape of the
+plan away from where it started:
+(a) the browse corpus is 117 feeds, not an unbounded list — client-side sorting is
+    the correct architecture, not a fallback;
+(b) `getLikes` accepts generator URIs, which removed the snapshot/scheduler design
+    entirely;
+(c) `isOnline`/`isValid` is never false, so the liveness filter had to be rebuilt on
+    `getFeed`.
+Owner input incorporated during the session: both T1 items approved; T2 approved;
+adult content is posture-governed with no toggle anywhere (drove 4a, which turned
+out to be an existing bug); board time windows wanted (drove 4e/4f).

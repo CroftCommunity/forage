@@ -763,6 +763,13 @@ hashtag board signed-in. Multi-commit ≤3.
 - [ ] Dev-bar/settings skin picker; `sw.js` SHELL for skin files.
 Multi-commit ≤3.
 
+> **EXPANDED by `plans/2026-08-26-1-plan-skin-chrome-and-phpbb-import.md`**
+> (2026-08-26): forum-chrome tokens, the phpBB skin, and a phpBB style importer.
+> That plan also **supersedes 4a's** "composing WITH light/dark where the skin
+> permits" — skins now subsume themes, one skin carrying one palette with a
+> declared sibling (ADR-003). 4a's independent skins-and-modes axes are
+> unchanged.
+
 #### 4b: The classic BBS skin (+ at most one more, OQ8) — ✅ SHIPPED
 - [ ] `skins/bbs.css` — the era: terminal palette (amber/green on black), monospace
   stack, box-drawing borders, dense rows; readable, not a costume that breaks WCAG

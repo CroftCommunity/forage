@@ -28,7 +28,7 @@ const NSFW_LABELS = new Set(['porn', 'sexual', 'nudity', 'graphic-media', 'gore'
 const ADULT_LABELS = new Set(['porn', 'sexual', 'nudity', 'sexual-figurative']);
 
 export const EMPTY_POSTURE = Object.freeze({
-  mutedWords: [], labelPrefs: new Map(), adultEnabled: true,
+  mutedWords: [], labelPrefs: new Map(), adultEnabled: false,
   mutedDids: new Set(), blockedDids: new Set(), hideBadges: false,
 });
 
@@ -45,7 +45,7 @@ export function buildPosture({ preferences = [], mutes = [], blocks = [], listMu
   const verifPref = preferences.find((p) => t(p) === 'verificationPrefs');
   return {
     mutedWords, labelPrefs,
-    adultEnabled: adult ? !!adult.enabled : true,
+    adultEnabled: adult ? !!adult.enabled : false,
     mutedDids: new Set(mutes.map((u) => u.did)),
     blockedDids: new Set(blocks.map((u) => u.did)),
     hideBadges: !!verifPref?.hideBadges,
@@ -64,10 +64,12 @@ function mutedWordHits(w, post) {
   return false;
 }
 
-// Label disposition under the posture: 'hide' | 'warn' | null.
-function labelDisposition(post, posture) {
+// Label disposition under the posture: 'hide' | 'warn' | null. Takes anything
+// that carries atproto `labels` — a post view OR a feed-generator view; the
+// rules are identical by construction, which is the point (4a).
+function labelDisposition(labelled, posture) {
   let warn = null;
-  for (const l of post.labels || []) {
+  for (const l of labelled.labels || []) {
     if (ADULT_LABELS.has(l.val) && !posture.adultEnabled) return { mode: 'hide' };
     const v = posture.labelPrefs.get(l.val);
     if (v === 'hide') return { mode: 'hide' };
@@ -75,6 +77,13 @@ function labelDisposition(post, posture) {
   }
   return warn;
 }
+
+// 4a: the feed-facing name for the same rule. A feed generator publishes
+// `labels` exactly as a post does, and discovery used to drop them — so an
+// account with adult content off still saw adult-labelled feeds. There is no
+// Forage-side adult toggle: the account's imported posture decides, and for a
+// guest (EMPTY_POSTURE) the answer is off.
+export const feedDisposition = (view, posture) => labelDisposition(view, posture);
 
 // ---- 3f: facets are BYTE-indexed (UTF-8), not UTF-16 — decode via bytes ----
 // Returns [{text, facet?}] where facet = {type:'link'|'mention'|'tag', value}.
@@ -310,6 +319,11 @@ const GUEST_APPVIEW = 'https://public.api.bsky.app';
 // is a BOARD-NOISE bound, not a latency one. Beyond-cap is honest overflow.
 export const RING_CAP = 25;
 
+// 4b: a runaway guard on discovery paging, not a product cap. The corpus
+// measured 117 feeds and ended with cursor:null; this only bites if the
+// AppView's popular list grows an order of magnitude or stops terminating.
+const MAX_DISCOVERY_FEEDS = 1000;
+
 // Pure: follows ∩ followers, in follows order.
 export function computeMutuals(follows, followers) {
   const fans = new Set(followers);
@@ -343,6 +357,181 @@ export function sortWindow(posts, sort, timeframe, nowMs) {
     window = posts.filter((p) => p.createdTs >= cutoff);
   }
   return [...window].sort((a, b) => (sort === 'new' ? b.createdTs - a.createdTs : b.score - a.score));
+}
+
+// 4e: /h/ boards ride searchPosts, which takes sort=top|latest plus since/until
+// SERVER-SIDE (probe-verified with a session 2026-08-26). So a hashtag board's
+// "Top · this week" is a real query over the whole corpus, not a re-sort of the
+// page we happened to load — the one place the DL-010 limitation genuinely
+// lifts. /f/ generator boards have no equivalent: getFeedSkeleton takes only
+// limit and cursor, which is what DL-032 records.
+//
+// NOTE on honesty: Bluesky's `top` is an engagement-weighted RELEVANCE ranking,
+// not a likeCount sort — a probe returned 152, 113, 1478, 122, 168 likes in that
+// order. It is "top" in Bluesky's sense, and the UI says whose ranking it is.
+export function searchWindow(sort, timeframe, nowMs) {
+  if (!['feed', 'new', 'top'].includes(sort)) {
+    throw new Error(`unknown window sort: ${sort} (known: feed, new, top)`);
+  }
+  if (sort !== 'top') return { sort: 'latest' };
+  if (timeframe === 'all') return { sort: 'top' };
+  const span = TIMEFRAME_MS[timeframe];
+  if (!span) throw new Error(`unknown timeframe: ${timeframe} (known: day, week, month, year, all)`);
+  return { sort: 'top', since: new Date(nowMs - span).toISOString() };
+}
+
+// ---- 4g: adoption signals from Constellation (ADR-004) ----
+// The AppView counts likes on a feed and nothing else about how it is USED —
+// and DL-033 records why that gap is permanent. Constellation indexes atproto
+// backlinks, so it can answer "how many people quoted this feed" and "how many
+// starter packs include it": a recommendation in someone's own words, and a
+// curator staking their pack on it. Neither exists anywhere in app.bsky.
+//
+// ADR-004 bounds the dependency: counts on feed generators only (never an
+// intake path), degrade-to-ABSENT always, no viewer identity ever, and a
+// user-agent that says who we are because the operator asks.
+export const CONSTELLATION = 'https://constellation.microcosm.blue';
+const CONSTELLATION_UA = 'forage (forage.fyi; chase@owasp.org)';
+const BACKLINKS = [
+  { key: 'quotes', collection: 'app.bsky.feed.post', path: '.embed.record.uri' },
+  { key: 'packs', collection: 'app.bsky.graph.starterpack', path: '.feeds[].uri' },
+];
+
+// An atproto rkey is a TID: 13 base32-sortable chars, of which the top 53 bits
+// (after the leading zero) are MICROSECONDS since the epoch and the low 10 are
+// a clock id. So a backlink row carries its own timestamp and the window costs
+// no extra request. Cross-checked against getLikes createdAt on the same
+// record: 0.15s apart (probe 2026-08-26).
+const TID_ALPHABET = '234567abcdefghijklmnopqrstuvwxyz';
+export function tidTime(rkey) {
+  if (typeof rkey !== 'string' || rkey.length !== 13 || [...rkey].some((c) => !TID_ALPHABET.includes(c))) {
+    throw new Error(`not a TID: ${JSON.stringify(rkey)}`);
+  }
+  let n = 0n;
+  for (const c of rkey) n = n * 32n + BigInt(TID_ALPHABET.indexOf(c));
+  return new Date(Number(n >> 10n) / 1000);
+}
+
+// Pure: windows a page of backlink rows by rkey alone. A row whose rkey will
+// not decode is counted in the total and left out of the windows — it is a
+// real link with an unreadable clock, not a reason to fail the whole signal.
+export function countRecent(rows, nowMs) {
+  let d7 = 0; let d30 = 0;
+  for (const r of rows) {
+    let age;
+    try { age = nowMs - tidTime(r.rkey).getTime(); } catch { continue; }
+    if (age < WINDOW_MS.d7) d7 += 1;
+    if (age < WINDOW_MS.d30) d30 += 1;
+  }
+  return { d7, d30, total: rows.length };
+}
+
+// ---- 4b: sorting and filtering the discovery corpus (T0) ----
+// Every dimension here is already in the getPopularFeedGenerators payload, so
+// these cost NOTHING extra. They can be honest about the whole corpus because
+// browse mode holds all of it: 117 feeds in 2 requests (measured 2026-08-26).
+// Pure; no time input needed — indexedAt strings sort lexicographically as
+// ISO-8601, which is why they are compared as strings and never parsed.
+
+// 4c: the windows are OURS. There is no time-bucketed aggregate anywhere in
+// the API — only the cumulative likeCount — so we count a page of likes here.
+// getLikes returns newest-first with both createdAt and indexedAt; indexedAt is
+// the AppView's own clock and the two agreed to a median 0.0s in probing, while
+// post createdAt values are sometimes in the FUTURE. So: indexedAt.
+export const LIKE_PAGE = 100;
+const WINDOW_MS = { d7: 7 * 86400_000, d30: 30 * 86400_000 };
+
+const withTimeout = (promise, ms) => Promise.race([promise,
+  new Promise((_, rej) => setTimeout(() => rej(new Error(`timed out after ${ms}ms`)), ms))]);
+
+export function likeWindow(likes, nowMs) {
+  const ages = likes.map((l) => nowMs - Date.parse(l.indexedAt));
+  return {
+    d7: ages.filter((a) => a < WINDOW_MS.d7).length,
+    d30: ages.filter((a) => a < WINDOW_MS.d30).length,
+    // A full page is a FLOOR: the 101st like exists and this page cannot see
+    // it. Measured, exactly 1 of 117 popular feeds hits this inside 7 days.
+    capped: likes.length >= LIKE_PAGE,
+  };
+}
+
+// 4d: liveness. `isOnline`/`isValid` is not the signal — across 915
+// search-result feeds it was false ZERO times (probed 2026-08-26), including
+// for 138 feeds with no likes at all. What getFeed DOES is the signal:
+//   live    — its newest post is inside a week
+//   stale   — it answers, but with months-old posts
+//   empty   — it answers with nothing
+//   silent  — it will not answer, and we do NOT know why. Its refusals are not
+//             self-describing: the same personalized Bluesky feeds returned 502
+//             and 400 across repeated probes, and a deleted feed returns 400
+//             too. So this state is an absence of evidence, never a verdict of
+//             death — and it is materially rarer with a session, because
+//             personalized feeds answer 200 through the PDS proxy.
+const STALE_AFTER_MS = 7 * 86400_000;
+
+export function feedLiveness(items, nowMs) {
+  if (!items.length) return 'empty';
+  const newest = Math.min(...items.map((i) => nowMs - Date.parse(i.post?.indexedAt)));
+  return newest > STALE_AFTER_MS ? 'stale' : 'live';
+}
+
+// Keeps what is alive AND what has not been probed yet — a feed is never
+// hidden on the strength of no evidence.
+export function liveFeeds(feeds, states) {
+  const kept = feeds.filter((f) => {
+    const st = states.get(f.uri);
+    return st === undefined || st === 'live';
+  });
+  const count = (want) => feeds.filter((f) => states.get(f.uri) === want).length;
+  return { kept, stale: count('stale'), silent: count('silent'), empty: count('empty') };
+}
+
+const FEED_SORTS = {
+  // 'popular' is the AppView's own opaque score. We render it untouched rather
+  // than re-deriving it — DL-010's principle applied one level up, to the list
+  // of feeds instead of the posts inside one.
+  popular: null,
+  likes: (a, b) => (b.likeCount ?? 0) - (a.likeCount ?? 0),
+  new: (a, b) => String(b.indexedAt || '').localeCompare(String(a.indexedAt || '')),
+  old: (a, b) => String(a.indexedAt || '').localeCompare(String(b.indexedAt || '')),
+  // 4c: measured against a window. A feed with no measurement yet sorts LAST
+  // rather than as a zero — "we have not asked" and "nobody liked it" are
+  // different facts, and the progressive paint depends on the distinction.
+  rising7: null,
+  rising30: null,
+};
+const RISING_KEY = { rising7: 'd7', rising30: 'd30' };
+
+export function sortFeeds(feeds, sort, windows) {
+  if (!(sort in FEED_SORTS)) {
+    throw new Error(`unknown feed sort: ${sort} (known: ${Object.keys(FEED_SORTS).join(', ')})`);
+  }
+  const key = RISING_KEY[sort];
+  if (key) {
+    const score = (f) => windows?.get(f.uri)?.[key];
+    return [...feeds].sort((a, b) => {
+      const x = score(a); const y = score(b);
+      if (x === undefined && y === undefined) return 0;
+      if (x === undefined) return 1;
+      if (y === undefined) return -1;
+      return y - x;
+    });
+  }
+  const cmp = FEED_SORTS[sort];
+  return cmp ? [...feeds].sort(cmp) : feeds;
+}
+
+export function filterFeeds(feeds, { platform, video } = {}) {
+  return feeds.filter((f) => (!platform || f.platform === platform) && (!video || f.video));
+}
+
+// The builder-platform facet: which services host these feeds, most first.
+// Measured over the top 100: skyfeed.me 49, api.graze.social 14, then a long
+// tail — a genuinely useful narrowing, not a cosmetic one.
+export function platforms(feeds) {
+  const counts = new Map();
+  for (const f of feeds) if (f.platform) counts.set(f.platform, (counts.get(f.platform) || 0) + 1);
+  return [...counts.entries()].map(([host, count]) => ({ host, count })).sort((a, b) => b.count - a.count);
 }
 
 // 3j/3s: joining a feed = SAVING it in savedFeedsPrefV2 (the same preferences
@@ -648,11 +837,15 @@ export function createLens({ session = null, transport = fetch } = {}) {
         ? (await get('app.bsky.feed.getFeedGenerators', Object.fromEntries(feedUris.map((u, i) => [`feeds[${i}]`, u])))).feeds || []
         : [];
       const titleOf = new Map(gens.map((g) => [g.uri, g.displayName]));
+      // 4a: the SAME label rule the boards and discovery use. A feed joined
+      // before the account turned adult content off still leaves the sidebar —
+      // membership is not consent, and there is no Forage-side override.
+      const hiddenUris = new Set(gens.filter((g) => feedDisposition(g, posture)?.mode === 'hide').map((g) => g.uri));
       // 3v: the same response already names the creator — keep it, so every
       // link the sidebar draws can be the shareable form.
       const creatorOf = new Map(gens.map((g) => [g.uri, g.creator?.handle || null]));
       const taken = new Set();
-      return items.map((i) => {
+      return items.filter((i) => !hiddenUris.has(i.value)).map((i) => {
         const slug = slugForSource(i.type === 'author' ? { kind: 'author', actor: i.value } : i.type === 'timeline' ? { kind: 'timeline' } : { kind: i.type, uri: i.value });
         const title = i.type === 'timeline' ? 'Following' : titleOf.get(i.value) || i.value.split('/').pop();
         // the human alias: first feed with a name keeps it; a collision (or a
@@ -832,13 +1025,17 @@ export function createLens({ session = null, transport = fetch } = {}) {
     // 3g: content streams — one abstraction, two keys. 'feed' opens any
     // feed-generator at-uri (trending topics resolve to these, D8);
     // 'hashtag' is searchPosts tag= (session-gated, worded refusal).
-    async stream({ kind, key } = {}) {
+    async stream({ kind, key, sort = 'feed', timeframe = 'all', nowMs = Date.now() } = {}) {
       if (kind === 'feed') return this.feed({ kind: 'feed', uri: key });
       if (kind === 'hashtag') {
         if (!session) throw new Error('lens: hashtag streams need a session (search is 403 unauthenticated) — sign in first');
-        const data = await get('app.bsky.feed.searchPosts', { q: `#${key}`, tag: key, limit: 30 });
+        const win = searchWindow(sort, timeframe, nowMs);
+        const data = await get('app.bsky.feed.searchPosts', { q: `#${key}`, tag: key, limit: 30, ...win });
         const src = { fieldId: `lens:h:${key}`, fieldSlug: `h:${key}`, fieldTitle: `#${key}` };
-        return { ...shapeLensFeed({ feed: (data.posts || []).map((p) => ({ post: p })), cursor: data.cursor }, src, {}, posture), ...src };
+        // wholeCorpus: this ordering came from the server over EVERYTHING that
+        // matched, so the board must not print the "sorted within the loaded
+        // posts" caveat — it would be a lie here.
+        return { ...shapeLensFeed({ feed: (data.posts || []).map((p) => ({ post: p })), cursor: data.cursor }, src, {}, posture), ...src, wholeCorpus: true };
       }
       throw new Error(`lens: unknown stream kind: ${kind} (known: feed, hashtag)`);
     },
@@ -864,11 +1061,14 @@ export function createLens({ session = null, transport = fetch } = {}) {
     async feedInfo(uri) {
       const data = await get('app.bsky.feed.getFeedGenerator', { feed: uri });
       const v = data.view || {};
+      const disp = feedDisposition(v, posture);
       return {
         uri: v.uri, title: v.displayName || v.uri?.split('/').pop(), description: v.description || '',
         avatar: v.avatar || null, likeCount: v.likeCount ?? 0,
         creator: v.creator?.handle || '[unknown]',
         online: data.isOnline !== false, valid: data.isValid !== false,
+        ...(disp?.mode === 'hide' ? { hidden: true } : {}),
+        ...(disp?.mode === 'warn' ? { warnLabels: disp.labels } : {}),
       };
     },
 
@@ -886,12 +1086,146 @@ export function createLens({ session = null, transport = fetch } = {}) {
 
     // 3j: discovery — popular generators, optionally searched. Unauth-200
     // (probe-verified), so guests browse too.
-    async discoverFeeds({ query, limit = 30 } = {}) {
-      const data = await get('app.bsky.unspecced.getPopularFeedGenerators', { limit, query });
-      return (data.feeds || []).map((f) => ({
-        uri: f.uri, title: f.displayName || f.uri.split('/').pop(), description: f.description || '',
-        avatar: f.avatar || null, likeCount: f.likeCount ?? 0, creator: f.creator?.handle || '[unknown]',
-      }));
+    // 4a: the account's posture applies HERE, in the shape layer, exactly as it
+    // does to posts — a hidden feed never reaches a component, so there is
+    // nothing for a discovery-local toggle to re-reveal.
+    // 4b: BROWSE pages the whole corpus (bounded: 117 feeds, 2 requests, 0.62s
+    // — measured 2026-08-26) so every sort is honest about all of it. A QUERY
+    // hits a real search index over the entire generator population (`query=a`
+    // still had more after 1,500 rows), so it takes one page and keeps the
+    // server's relevance order — sorting a slice of that would present itself
+    // as a ranking of everything that matched, which it is not.
+    async discoverFeeds({ query, limit = 100 } = {}) {
+      const collected = [];
+      let cursor;
+      do {
+        const data = await get('app.bsky.unspecced.getPopularFeedGenerators', { limit, query, cursor });
+        collected.push(...(data.feeds || []));
+        cursor = query ? null : data.cursor;
+      } while (cursor && collected.length < MAX_DISCOVERY_FEEDS);
+      return collected.map((f) => {
+        const disp = feedDisposition(f, posture);
+        return {
+          uri: f.uri, title: f.displayName || f.uri.split('/').pop(), description: f.description || '',
+          avatar: f.avatar || null, likeCount: f.likeCount ?? 0, creator: f.creator?.handle || '[unknown]',
+          creatorDid: f.creator?.did || null,
+          // the service DID is the BUILDER: did:web:skyfeed.me, did:web:api.graze.social…
+          platform: String(f.did || '').startsWith('did:web:') ? f.did.slice('did:web:'.length) : null,
+          video: f.contentMode === 'app.bsky.feed.defs#contentModeVideo',
+          acceptsInteractions: !!f.acceptsInteractions,
+          indexedAt: f.indexedAt || null,
+          ...(disp?.mode === 'hide' ? { hidden: true } : {}),
+          ...(disp?.mode === 'warn' ? { warnLabels: disp.labels } : {}),
+        };
+      }).filter((f) => !f.hidden);
+    },
+
+    // 4c: one getLikes per feed, bounded concurrency, announced as each lands
+    // so the view can repaint progressively (the ring board's idiom, 3l). A
+    // feed that fails or times out stays UNMEASURED — never a silent zero.
+    async likeWindows(uris, { nowMs = Date.now(), onWindow, concurrency = 8, timeoutMs = 8000 } = {}) {
+      const out = new Map();
+      const queue = [...uris];
+      const worker = async () => {
+        for (let uri = queue.shift(); uri !== undefined; uri = queue.shift()) {
+          try {
+            const data = await withTimeout(
+              get('app.bsky.feed.getLikes', { uri, limit: LIKE_PAGE }), timeoutMs);
+            const w = likeWindow(data.likes || [], nowMs);
+            out.set(uri, w);
+            onWindow?.(uri, w);
+          } catch { /* unmeasured: the sort keeps it at the back, with words */ }
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(concurrency, uris.length) }, worker));
+      return out;
+    },
+
+    // 4f: widen a /f/ board's window by paging BACKWARDS, on a budget. A
+    // generator publishes no window lever (getFeedSkeleton takes only limit and
+    // cursor — DL-032), so this is the only way, and its cost varies by two
+    // orders of magnitude between feeds: measured, Astronomy covered 24h in ONE
+    // page while Blacksky reached 3.6h in forty. Deep paging is also not
+    // reliable — two feeds errored mid-run — so a page that fails ends the walk
+    // with what we have rather than throwing the board away.
+    //
+    // Three honest endings, and the caller renders whichever happened:
+    //   covered   — we reached past the requested window
+    //   exhausted — the feed ran out first (not a failure: it has no more)
+    //   budget    — it posts faster than we can page
+    async deepen(source, { toHours, nowMs = Date.now(), maxPages = 8, timeoutMs = 12000 } = {}) {
+      const wantMs = toHours * 3600_000;
+      const seen = new Set();
+      const posts = [];
+      let cursor;
+      let pages = 0;
+      let reachedMs = 0;
+      let outcome = 'budget';
+      const started = Date.now();
+      while (pages < maxPages) {
+        let batch;
+        try {
+          batch = await withTimeout(this.feed(source, { cursor }), timeoutMs);
+        } catch {
+          // a page that will not load ends the walk with what we already have
+          break;
+        }
+        pages += 1;
+        for (const p of batch.posts) {
+          if (seen.has(p.id)) continue;
+          seen.add(p.id);
+          posts.push(p);
+        }
+        if (posts.length) reachedMs = Math.max(...posts.map((p) => nowMs - p.createdTs));
+        cursor = batch.cursor;
+        if (!cursor || !batch.posts.length) { outcome = 'exhausted'; break; }
+        if (reachedMs >= wantMs) { outcome = 'covered'; break; }
+        if (Date.now() - started > timeoutMs) break;
+      }
+      return { posts, cursor, pages, outcome, reachedHours: Math.round(reachedMs / 3600_000) };
+    },
+
+    // 4g: the two adoption counts for one feed. Goes through the PLAIN
+    // transport, never the session — a third-party host learns nothing about
+    // who is looking (ADR-004 point 4). Returns null, never zeroes, when the
+    // host will not answer: an absent signal must not render as "0 shares".
+    async adoption(uri, { nowMs = Date.now(), timeoutMs = 6000 } = {}) {
+      try {
+        const pages = await Promise.all(BACKLINKS.map(async ({ collection, path }) => {
+          const qs = new URLSearchParams({ target: uri, collection, path, limit: String(LIKE_PAGE) });
+          const res = await withTimeout(
+            transport(`${CONSTELLATION}/links?${qs}`, { headers: { 'user-agent': CONSTELLATION_UA } }),
+            timeoutMs);
+          if (!res.ok) throw new Error(`constellation: HTTP ${res.status}`);
+          return res.json();
+        }));
+        return Object.fromEntries(BACKLINKS.map(({ key }, i) => [key, {
+          ...countRecent(pages[i].linking_records || [], nowMs),
+          total: pages[i].total ?? 0,
+        }]));
+      } catch {
+        return null;   // ADR-004 point 2: degrade to absent, with words upstairs
+      }
+    },
+
+    // 4d: one getFeed per feed, limit=1 — freshness needs the newest post, not
+    // a page. Same bounded-concurrency, announce-as-it-lands shape as 4c.
+    async liveness(uris, { nowMs = Date.now(), onState, concurrency = 8, timeoutMs = 8000 } = {}) {
+      const out = new Map();
+      const queue = [...uris];
+      const worker = async () => {
+        for (let uri = queue.shift(); uri !== undefined; uri = queue.shift()) {
+          let state = 'silent';
+          try {
+            const data = await withTimeout(get('app.bsky.feed.getFeed', { feed: uri, limit: 1 }), timeoutMs);
+            state = feedLiveness(data.feed || [], nowMs);
+          } catch { /* silent: it did not answer, and we do not know why */ }
+          out.set(uri, state);
+          onState?.(uri, state);
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(concurrency, uris.length) }, worker));
+      return out;
     },
 
     // 3j: join / leave a feed — the SECOND lens write (preferences, not
