@@ -317,6 +317,11 @@ const GUEST_APPVIEW = 'https://public.api.bsky.app';
 // is a BOARD-NOISE bound, not a latency one. Beyond-cap is honest overflow.
 export const RING_CAP = 25;
 
+// 4b: a runaway guard on discovery paging, not a product cap. The corpus
+// measured 117 feeds and ended with cursor:null; this only bites if the
+// AppView's popular list grows an order of magnitude or stops terminating.
+const MAX_DISCOVERY_FEEDS = 1000;
+
 // Pure: follows ∩ followers, in follows order.
 export function computeMutuals(follows, followers) {
   const fans = new Set(followers);
@@ -350,6 +355,44 @@ export function sortWindow(posts, sort, timeframe, nowMs) {
     window = posts.filter((p) => p.createdTs >= cutoff);
   }
   return [...window].sort((a, b) => (sort === 'new' ? b.createdTs - a.createdTs : b.score - a.score));
+}
+
+// ---- 4b: sorting and filtering the discovery corpus (T0) ----
+// Every dimension here is already in the getPopularFeedGenerators payload, so
+// these cost NOTHING extra. They can be honest about the whole corpus because
+// browse mode holds all of it: 117 feeds in 2 requests (measured 2026-08-26).
+// Pure; no time input needed — indexedAt strings sort lexicographically as
+// ISO-8601, which is why they are compared as strings and never parsed.
+
+const FEED_SORTS = {
+  // 'popular' is the AppView's own opaque score. We render it untouched rather
+  // than re-deriving it — DL-010's principle applied one level up, to the list
+  // of feeds instead of the posts inside one.
+  popular: null,
+  likes: (a, b) => (b.likeCount ?? 0) - (a.likeCount ?? 0),
+  new: (a, b) => String(b.indexedAt || '').localeCompare(String(a.indexedAt || '')),
+  old: (a, b) => String(a.indexedAt || '').localeCompare(String(b.indexedAt || '')),
+};
+
+export function sortFeeds(feeds, sort) {
+  if (!(sort in FEED_SORTS)) {
+    throw new Error(`unknown feed sort: ${sort} (known: ${Object.keys(FEED_SORTS).join(', ')})`);
+  }
+  const cmp = FEED_SORTS[sort];
+  return cmp ? [...feeds].sort(cmp) : feeds;
+}
+
+export function filterFeeds(feeds, { platform, video } = {}) {
+  return feeds.filter((f) => (!platform || f.platform === platform) && (!video || f.video));
+}
+
+// The builder-platform facet: which services host these feeds, most first.
+// Measured over the top 100: skyfeed.me 49, api.graze.social 14, then a long
+// tail — a genuinely useful narrowing, not a cosmetic one.
+export function platforms(feeds) {
+  const counts = new Map();
+  for (const f of feeds) if (f.platform) counts.set(f.platform, (counts.get(f.platform) || 0) + 1);
+  return [...counts.entries()].map(([host, count]) => ({ host, count })).sort((a, b) => b.count - a.count);
 }
 
 // 3j/3s: joining a feed = SAVING it in savedFeedsPrefV2 (the same preferences
@@ -755,13 +798,31 @@ export function createLens({ session = null, transport = fetch } = {}) {
     // 4a: the account's posture applies HERE, in the shape layer, exactly as it
     // does to posts — a hidden feed never reaches a component, so there is
     // nothing for a discovery-local toggle to re-reveal.
-    async discoverFeeds({ query, limit = 30 } = {}) {
-      const data = await get('app.bsky.unspecced.getPopularFeedGenerators', { limit, query });
-      return (data.feeds || []).map((f) => {
+    // 4b: BROWSE pages the whole corpus (bounded: 117 feeds, 2 requests, 0.62s
+    // — measured 2026-08-26) so every sort is honest about all of it. A QUERY
+    // hits a real search index over the entire generator population (`query=a`
+    // still had more after 1,500 rows), so it takes one page and keeps the
+    // server's relevance order — sorting a slice of that would present itself
+    // as a ranking of everything that matched, which it is not.
+    async discoverFeeds({ query, limit = 100 } = {}) {
+      const collected = [];
+      let cursor;
+      do {
+        const data = await get('app.bsky.unspecced.getPopularFeedGenerators', { limit, query, cursor });
+        collected.push(...(data.feeds || []));
+        cursor = query ? null : data.cursor;
+      } while (cursor && collected.length < MAX_DISCOVERY_FEEDS);
+      return collected.map((f) => {
         const disp = feedDisposition(f, posture);
         return {
           uri: f.uri, title: f.displayName || f.uri.split('/').pop(), description: f.description || '',
           avatar: f.avatar || null, likeCount: f.likeCount ?? 0, creator: f.creator?.handle || '[unknown]',
+          creatorDid: f.creator?.did || null,
+          // the service DID is the BUILDER: did:web:skyfeed.me, did:web:api.graze.social…
+          platform: String(f.did || '').startsWith('did:web:') ? f.did.slice('did:web:'.length) : null,
+          video: f.contentMode === 'app.bsky.feed.defs#contentModeVideo',
+          acceptsInteractions: !!f.acceptsInteractions,
+          indexedAt: f.indexedAt || null,
           ...(disp?.mode === 'hide' ? { hidden: true } : {}),
           ...(disp?.mode === 'warn' ? { warnLabels: disp.labels } : {}),
         };

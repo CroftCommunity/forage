@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createLens } from '../js/substrates/lens.js';
+import { createLens, sortFeeds, filterFeeds, platforms } from '../js/substrates/lens.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const fixture = (n) => JSON.parse(readFileSync(join(root, 'test/fixtures/atproto', `${n}.json`), 'utf8'));
@@ -307,6 +307,86 @@ test('3j: discoverFeeds lists popular generators and searches by query; guests g
   assert.ok(calls[0].includes('getPopularFeedGenerators'));
   await lens.discoverFeeds({ query: 'garden' });
   assert.ok(calls[1].includes('query=garden'), 'the query rides through');
+});
+
+// ---- 4b: sorts and filters over the browse corpus (T0 — no new requests) ----
+// The popular corpus is BOUNDED: 117 feeds in 2 requests, 0.62s, then
+// cursor:null (probed 2026-08-26, plan D1). So browse mode holds the whole
+// thing and orders it here. Search mode is the opposite — an unbounded index —
+// so it stays one page and keeps the server's relevance order.
+
+test('4b: sortFeeds orders by the T0 dimensions and refuses an unknown sort', () => {
+  const f = (title, likeCount, indexedAt) => ({ title, likeCount, indexedAt });
+  const feeds = [f('b', 10, '2024-01-01T00:00:00Z'), f('a', 30, '2023-01-01T00:00:00Z'), f('c', 20, '2025-01-01T00:00:00Z')];
+  assert.deepEqual(sortFeeds(feeds, 'popular').map((x) => x.title), ['b', 'a', 'c'],
+    'popular is the AppView\'s own order, untouched — we do not re-rank what we did not rank');
+  assert.deepEqual(sortFeeds(feeds, 'likes').map((x) => x.title), ['a', 'c', 'b']);
+  assert.deepEqual(sortFeeds(feeds, 'new').map((x) => x.title), ['c', 'b', 'a']);
+  assert.deepEqual(sortFeeds(feeds, 'old').map((x) => x.title), ['a', 'b', 'c']);
+  assert.throws(() => sortFeeds(feeds, 'rising'), /unknown feed sort/i);
+});
+
+test('4b: sortFeeds does not mutate its input', () => {
+  const feeds = [{ title: 'b', likeCount: 1 }, { title: 'a', likeCount: 9 }];
+  sortFeeds(feeds, 'likes');
+  assert.deepEqual(feeds.map((f) => f.title), ['b', 'a']);
+});
+
+test('4b: filterFeeds narrows by builder platform and by video mode', () => {
+  const feeds = [
+    { title: 'sky', platform: 'skyfeed.me', video: false },
+    { title: 'graze', platform: 'api.graze.social', video: false },
+    { title: 'vid', platform: 'skyfeed.me', video: true },
+  ];
+  assert.deepEqual(filterFeeds(feeds, { platform: 'skyfeed.me' }).map((f) => f.title), ['sky', 'vid']);
+  assert.deepEqual(filterFeeds(feeds, { video: true }).map((f) => f.title), ['vid']);
+  assert.deepEqual(filterFeeds(feeds, { platform: 'skyfeed.me', video: true }).map((f) => f.title), ['vid']);
+  assert.deepEqual(filterFeeds(feeds, {}).length, 3, 'no filter is not a filter');
+});
+
+test('4b: platforms() counts the builder platforms present, most first', () => {
+  const feeds = [{ platform: 'skyfeed.me' }, { platform: 'api.graze.social' }, { platform: 'skyfeed.me' }];
+  assert.deepEqual(platforms(feeds), [
+    { host: 'skyfeed.me', count: 2 }, { host: 'api.graze.social', count: 1 },
+  ]);
+});
+
+test('4b: browse mode pages the WHOLE corpus; a query stays one page', async () => {
+  const calls = [];
+  const page = (n, cursor) => ({ feeds: Array.from({ length: n }, (_, i) => ({
+    uri: `at://did:plc:a/app.bsky.feed.generator/f${cursor || 0}-${i}`, displayName: `f${i}`,
+    did: 'did:web:skyfeed.me', likeCount: i, indexedAt: '2025-01-01T00:00:00Z', labels: [],
+  })), ...(cursor ? { cursor } : {}) });
+  const transport = async (url) => {
+    calls.push(url);
+    const c = new URL(url).searchParams.get('cursor');
+    return { ok: true, status: 200, json: async () => (c ? page(17, undefined) : page(100, '9884')) };
+  };
+  const lens = createLens({ transport });
+  const all = await lens.discoverFeeds();
+  assert.equal(all.length, 117, 'both pages, because the corpus is bounded and small');
+  assert.equal(calls.length, 2);
+  assert.ok(calls[1].includes('cursor=9884'));
+
+  calls.length = 0;
+  const found = await lens.discoverFeeds({ query: 'cats' });
+  assert.equal(calls.length, 1, 'search is an unbounded index — one page, server order');
+  assert.equal(found.length, 100);
+});
+
+test('4b: a discovered feed carries its T0 dimensions', async () => {
+  const transport = async () => ({ ok: true, status: 200, json: async () => ({ feeds: [
+    { uri: 'at://did:plc:a/app.bsky.feed.generator/x1', displayName: 'Reels', description: 'v',
+      did: 'did:web:api.graze.social', likeCount: 7, indexedAt: '2025-03-04T05:06:07Z',
+      contentMode: 'app.bsky.feed.defs#contentModeVideo', acceptsInteractions: true,
+      creator: { did: 'did:plc:c', handle: 'maker.test' }, labels: [] },
+  ] }) });
+  const [f] = await createLens({ transport }).discoverFeeds({ query: 'x' });
+  assert.equal(f.platform, 'api.graze.social', 'the service DID is the builder platform');
+  assert.equal(f.video, true);
+  assert.equal(f.indexedAt, '2025-03-04T05:06:07Z');
+  assert.equal(f.acceptsInteractions, true);
+  assert.equal(f.creatorDid, 'did:plc:c');
 });
 
 test('4a: discovery applies the account posture to FEEDS — adult-labelled feeds do not surface for a guest', async () => {

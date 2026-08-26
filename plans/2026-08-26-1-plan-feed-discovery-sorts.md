@@ -1,8 +1,8 @@
 # Plan: sorting, filtering and time windows — for feed discovery and for boards
 
 date: 2026-08-26
-status: IN PROGRESS — research filed; **4a SHIPPED** (posture on every feed surface,
-guest default decided by the owner). 4b next. Gate green: 311 unit tests, 5/5 workflows.
+status: IN PROGRESS — research filed; **4a and 4b SHIPPED**. 4c (Rising) next.
+Gate green: 317 unit tests, 5/5 workflows.
 Execution in worktrees/forage/feed-discovery-sorts (branch claude/feed-discovery-sorts)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `f08fa9d` (clean tree)
@@ -317,7 +317,20 @@ no setting, no filter — per owner direction. Test: an account with
 `adultContentPref.enabled=false` cannot see a `porn`-labelled feed in discovery or
 on its `/f/` header card. **Blocks nothing else, ships first.**
 
-**4b — T0 sorts and filters.** Fetch both pages up front (117 rows, 0.62s), sort
+**4b — T0 sorts and filters. ✅ SHIPPED 2026-08-26.**
+Landed as: pure `sortFeeds` / `filterFeeds` / `platforms` in the substrate (policy out
+of components, invariant 2); `discoverFeeds` now pages the whole browse corpus and
+carries `platform`, `video`, `indexedAt`, `acceptsInteractions`, `creatorDid`; the
+discovery view gained Sort (Popular · Most liked · Newest · Oldest), an "Any builder"
+facet counted from the loaded corpus, Video only, and a count line. `contentMode`
+tokens verified against the official `app.bsky.feed.defs` lexicon rather than inferred.
+**The search asymmetry is enforced, not just documented:** browse holds all 117 feeds
+so its sorts describe everything, while a query is a slice of an unbounded index, so
+the controls DISABLE on search and the count line says the order is Bluesky's. 6 unit
+tests + a journey segment; the journey was mutation-checked (inverting the `likes`
+comparator fails it). Original description follows.
+
+ Fetch both pages up front (117 rows, 0.62s), sort
 client-side: Popular (server order, default) · Most liked · Newest · Oldest. Filters:
 builder platform (`did`), video-only (`contentMode`), creator. Reuses the
 `boardToolbar` idiom. No new network shape at all.

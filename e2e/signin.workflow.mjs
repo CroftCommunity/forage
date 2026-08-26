@@ -64,7 +64,16 @@ export async function run() {
         { uri: AFTER_DARK, displayName: 'After Dark', likeCount: 999, labels: [{ val: 'porn' }] }] },
       'getPopularFeedGenerators': { feeds: [
         { uri: 'at://did:plc:g/app.bsky.feed.generator/gardentalk', displayName: 'Garden Talk',
-          description: 'Post with #gardening to appear here.', likeCount: 12, creator: { handle: 'grower.test' } },
+          description: 'Post with #gardening to appear here.', likeCount: 12, creator: { handle: 'grower.test' },
+          did: 'did:web:skyfeed.me', indexedAt: '2024-01-01T00:00:00Z' },
+        // 4b: T0 dimensions with real variety, so the sorts and the builder
+        // filter have something to actually do.
+        { uri: 'at://did:plc:h/app.bsky.feed.generator/loudest', displayName: 'Loudest',
+          description: 'most liked', likeCount: 900, creator: { handle: 'loud.test' },
+          did: 'did:web:api.graze.social', indexedAt: '2023-01-01T00:00:00Z' },
+        { uri: 'at://did:plc:i/app.bsky.feed.generator/freshest', displayName: 'Freshest',
+          description: 'newest', likeCount: 1, creator: { handle: 'new.test' },
+          did: 'did:web:skyfeed.me', indexedAt: '2026-08-01T00:00:00Z' },
         // 4a: this account carries NO adultContentPref, which the lexicon says
         // means adult content is off. The feed must not appear in discovery
         // and its board must refuse — with no Forage-side toggle to re-reveal.
@@ -135,18 +144,40 @@ export async function run() {
   await page.waitForSelector('[data-discover-feed]');
   await page.waitForSelector('text=Garden Talk');
   await page.waitForSelector('text=Post with #gardening to appear here.');
-  await page.locator('[data-feed-search]').fill('garden');
-  await page.locator('button:has-text("Search")').click();
-  await page.waitForSelector('text=Garden Talk');
-
   // 4a: the adult-labelled generator is absent from discovery entirely — the
   // account never enabled adult content, so the posture hides it in the shape
   // layer and no component ever sees it. There is deliberately NO toggle here.
   assert.equal(await page.locator('text=After Dark').count(), 0,
     'an adult-labelled feed does not surface for an account with adult content off');
-  assert.equal(await page.locator('[data-discover-feed]').count(), 1, 'exactly the clean feed remains');
+  assert.equal(await page.locator('[data-discover-feed]').count(), 3, 'exactly the clean feeds remain');
   assert.equal(await page.locator('input[type="checkbox"]:near(:text("adult"))').count(), 0,
     'discovery offers no adult toggle of its own — the account setting is the only source of truth');
+
+  // 4b: the whole popular corpus is loaded, so the controls describe all of it
+  await page.waitForSelector('[data-feed-controls]');
+  await page.waitForSelector('text=All 3 feeds Bluesky lists as popular.');
+  const titles = async () => page.locator('[data-discover-feed] a[href^="/f/"]').allTextContents();
+  assert.deepEqual(await titles(), ['Garden Talk', 'Loudest', 'Freshest'],
+    'the default is Bluesky\'s own order, untouched');
+
+  await page.locator('[data-feed-sort]').selectOption('likes');
+  assert.deepEqual(await titles(), ['Loudest', 'Garden Talk', 'Freshest']);
+  await page.locator('[data-feed-sort]').selectOption('new');
+  assert.deepEqual(await titles(), ['Freshest', 'Garden Talk', 'Loudest']);
+
+  // the builder facet: feeds are built ON services, and that is a real filter
+  await page.locator('[data-feed-platform]').selectOption('skyfeed.me');
+  assert.deepEqual(await titles(), ['Freshest', 'Garden Talk']);
+  await page.waitForSelector('text=2 of 3 feeds.');
+  await page.locator('[data-feed-platform]').selectOption('');
+
+  // 4b: a search is a slice of an unbounded index, so the sorts refuse rather
+  // than claim to rank everything that matched
+  await page.locator('[data-feed-search]').fill('garden');
+  await page.locator('button:has-text("Search")').click();
+  await page.waitForSelector('text=in the order Bluesky\'s search ranked them.');
+  assert.equal(await page.locator('[data-feed-sort]').isDisabled(), true,
+    'sorting a search slice would misrepresent it as a ranking of the whole index');
 
   // 4a: it is gone from the sidebar too, even though the account JOINED it —
   // membership does not override the account's moderation setting.

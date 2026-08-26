@@ -8,7 +8,8 @@
 
 import { el, timeAgo, fmtScore } from '../util.js';
 import { postRow, commentNode, voteBox, skeleton, emptyState, toast } from './components.js';
-import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow, affordanceFor, feedCardModel, threadNodeStyle } from '../substrates/lens.js';
+import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow, affordanceFor, feedCardModel, threadNodeStyle,
+  sortFeeds, filterFeeds, platforms } from '../substrates/lens.js';
 import { initSession, createAccountRoster } from '../auth/session.js';
 import * as mediaScale from '../media-scale.js';
 import * as lang from '../lang.js';
@@ -769,25 +770,89 @@ function feedHeaderCard(info, onChange) {
 // each with its own Join.
 export function lensFeedsView() {
   const results = el('div', { class: 'stack' }, skeleton(4));
+  const controls = el('div', { class: 'row wrap', style: 'gap:6px;margin-top:8px', 'data-feed-controls': '1' });
+  const countLine = el('div', { class: 'xs muted', style: 'margin:6px 0' });
   const input = el('input', { type: 'text', placeholder: 'Search feeds…', 'data-feed-search': '1' });
+
+  // 4b: the loaded corpus and the view over it. Browse holds all 117 feeds, so
+  // these sorts describe the whole list; a query is a slice of an unbounded
+  // index, so sorting is disabled there and the server's relevance order shows.
+  let corpus = [];
+  let searching = false;
+  let sort = 'popular';
+  let platform = '';
+  let videoOnly = false;
+
+  const card = (f) => {
+    registerSource({ slug: f.uri.split('/').pop(), humanSlug: slugifyFeedName(f.title), title: f.title,
+      kind: 'feed', source: { kind: 'feed', uri: f.uri } });
+    return el('div', { class: 'card', 'data-discover-feed': f.uri },
+      el('div', { class: 'row spread wrap', style: 'gap:8px;align-items:center' },
+        el('div', { class: 'row', style: 'gap:8px;align-items:center;min-width:0' },
+          f.avatar ? el('img', { src: f.avatar, alt: '', class: 'feed-avatar', loading: 'lazy' }) : null,
+          el('div', { style: 'min-width:0' },
+            el('a', { href: `/f/${f.uri.split('/').pop()}` }, f.title),
+            el('div', { class: 'xs muted' },
+              `by @${f.creator} · ${fmtScore(f.likeCount)} likes`,
+              f.platform ? ` · built on ${f.platform}` : '',
+              f.video ? ' · video' : '')))),
+      f.description ? el('div', { class: 'xs muted', style: 'margin-top:4px' }, f.description) : null);
+  };
+
+  const paint = () => {
+    const shown = searching ? corpus : sortFeeds(filterFeeds(corpus, { platform, video: videoOnly }), sort);
+    results.replaceChildren(...(shown.length
+      ? shown.map(card)
+      : [emptyState('No feeds found', searching
+          ? 'Nothing matched that search.'
+          : 'No feed in the list matches those filters. Widen them and it comes back.')]));
+    countLine.replaceChildren(searching
+      ? `${shown.length} result${shown.length === 1 ? '' : 's'} — in the order Bluesky's search ranked them.`
+      : shown.length === corpus.length
+        ? `All ${corpus.length} feeds Bluesky lists as popular.`
+        : `${shown.length} of ${corpus.length} feeds.`);
+  };
+
+  // 4b: sorting a search slice would claim to rank everything that matched, so
+  // the controls disable rather than lie. Browse gets the whole corpus.
+  const buildControls = () => {
+    const sortSel = el('select', { 'data-feed-sort': '1', disabled: searching || undefined,
+      title: searching ? 'Search results keep Bluesky\'s relevance order' : 'Orders the whole popular list' },
+      ...[['popular', 'Popular'], ['likes', 'Most liked'], ['new', 'Newest'], ['old', 'Oldest']]
+        .map(([v, l]) => el('option', { value: v, selected: sort === v || false }, l)));
+    sortSel.addEventListener('change', () => { sort = sortSel.value; paint(); });
+
+    const hosts = platforms(corpus);
+    const platSel = el('select', { 'data-feed-platform': '1', disabled: searching || undefined,
+      title: 'Feeds are built on services — this narrows to one builder' },
+      el('option', { value: '', selected: platform === '' || false }, 'Any builder'),
+      ...hosts.map(({ host, count }) =>
+        el('option', { value: host, selected: platform === host || false }, `${host} (${count})`)));
+    platSel.addEventListener('change', () => { platform = platSel.value; paint(); });
+
+    const vid = el('label', { class: 'xs', style: 'display:flex;gap:4px;align-items:center' },
+      el('input', { type: 'checkbox', 'data-feed-video': '1', checked: videoOnly || undefined,
+        disabled: searching || undefined }), 'Video only');
+    vid.querySelector('input').addEventListener('change', (e) => { videoOnly = e.target.checked; paint(); });
+
+    controls.replaceChildren(sortSel, platSel, vid);
+  };
+
   const run = (query) => {
+    searching = !!query;
     results.replaceChildren(skeleton(3));
+    countLine.replaceChildren('');
     lens.discoverFeeds({ query })
-      .then((feeds) => results.replaceChildren(...(feeds.length
-        ? feeds.map((f) => {
-            registerSource({ slug: f.uri.split('/').pop(), humanSlug: slugifyFeedName(f.title), title: f.title,
-              kind: 'feed', source: { kind: 'feed', uri: f.uri } });
-            return el('div', { class: 'card', 'data-discover-feed': f.uri },
-              el('div', { class: 'row spread wrap', style: 'gap:8px;align-items:center' },
-                el('div', { class: 'row', style: 'gap:8px;align-items:center;min-width:0' },
-                  f.avatar ? el('img', { src: f.avatar, alt: '', class: 'feed-avatar', loading: 'lazy' }) : null,
-                  el('div', { style: 'min-width:0' },
-                    el('a', { href: `/f/${f.uri.split('/').pop()}` }, f.title),
-                    el('div', { class: 'xs muted' }, `by @${f.creator} · ${fmtScore(f.likeCount)} likes`)))),
-              f.description ? el('div', { class: 'xs muted', style: 'margin-top:4px' }, f.description) : null);
-          })
-        : [emptyState('No feeds found', query ? `Nothing matched “${query}”.` : 'Discovery returned nothing.')])))
-      .catch((e) => results.replaceChildren(emptyState('Discovery failed', e.message)));
+      .then((feeds) => {
+        corpus = feeds;
+        if (!searching) { platform = ''; videoOnly = false; }
+        buildControls();
+        paint();
+      })
+      .catch((e) => {
+        controls.replaceChildren();
+        results.replaceChildren(emptyState('Discovery failed', e.message));
+      });
   };
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') run(input.value.trim() || undefined); });
   const go = el('button', { class: 'btn sm primary' }, 'Search');
@@ -798,7 +863,10 @@ export function lensFeedsView() {
       el('h1', {}, 'Discover feeds'),
       el('p', { class: 'small muted' },
         'Feeds are built by the community — each one decides its own content. How to get INTO a feed lives in its description; feeds publish no machine-readable rules.'),
-      el('div', { class: 'card' }, el('div', { class: 'row', style: 'gap:6px' }, input, go)),
+      el('div', { class: 'card' },
+        el('div', { class: 'row', style: 'gap:6px' }, input, go),
+        controls),
+      countLine,
       results),
     side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()),
   };
