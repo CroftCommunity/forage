@@ -21,9 +21,32 @@
   <link rel="stylesheet" href="/css/tokens.css">
   <link rel="stylesheet" href="/css/app.css">
   <script>
-    /* Apply saved theme before first paint to avoid a flash of the wrong palette. */
-    try { var t = localStorage.getItem('forage.theme');
-      if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
+    /* Apply the saved SKIN before first paint. Skins subsumed themes (plan
+       2026-08-26-1): a palette is a skin, and a skin is a stylesheet — so
+       unlike the old data-theme attribute, which was synchronous, this has to
+       inject the <link> here. Leaving it to js/skins.js paints the light
+       palette first and flashes on every load of a non-default skin.
+
+       `default` IS Forage light and lives in tokens.css, so it needs no sheet
+       and the common case cannot flash at all.
+
+       Two things this file knows about the registry, both pinned by
+       test/skins.test.js so they cannot drift: hrefs follow skins/<id>.css,
+       and the dark fallback equals siblingOf('default'). The id matches
+       skins.js LINK_ID so apply() adopts this element rather than adding a
+       second sheet. */
+    try {
+      var id = localStorage.getItem('forage.skin');
+      if (!id) {
+        id = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          ? 'forage-dark' : 'default';
+      }
+      if (id && id !== 'default') {
+        var l = document.createElement('link');
+        l.id = 'skin-sheet'; l.rel = 'stylesheet'; l.href = '/skins/' + id + '.css';
+        document.head.appendChild(l);
+      }
+    } catch (e) {}
   </script>
 </head>
 <body>

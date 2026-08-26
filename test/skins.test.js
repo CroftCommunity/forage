@@ -341,3 +341,47 @@ test('1C: the service-worker SHELL caches every skin file, exactly once', () => 
     assert.ok(shell.includes(`/${s.file}`), `${id}: /${s.file} missing from the SW SHELL`);
   }
 });
+
+// ---------------------------------------------------------------------------
+// Phase 1D — the pre-paint boot path.
+// Under the old model the boot script set an ATTRIBUTE, which is synchronous.
+// A skin is a <link>, which is not: leaving it to js/skins.js means every
+// non-default skin paints the light palette first. The inline script must
+// inject the sheet itself — and it cannot import the registry, so what it
+// knows about skins has to be pinned here or it silently drifts.
+// ---------------------------------------------------------------------------
+
+import { LINK_ID } from '../js/skins.js';
+
+const BOOT_PAGES = ['index.html', '404.html'];
+
+test('1D: every skin file follows skins/<id>.css — what makes href-by-convention safe', () => {
+  for (const [id, s] of Object.entries(SKINS)) {
+    if (!s.file) continue;
+    assert.equal(s.file, `skins/${id}.css`,
+      `${id} breaks the convention the boot script derives hrefs from`);
+  }
+});
+
+for (const page of BOOT_PAGES) {
+  test(`1D: ${page} boots from forage.skin, not the retired forage.theme`, () => {
+    const html = readFileSync(join(root, page), 'utf8');
+    assert.match(html, /localStorage\.getItem\('forage\.skin'\)/,
+      `${page} must read the skin key`);
+    assert.doesNotMatch(html, /forage\.theme/,
+      `${page} still reads the retired theme key`);
+  });
+
+  test(`1D: ${page} injects the sheet the module will adopt, not a second one`, () => {
+    const html = readFileSync(join(root, page), 'utf8');
+    assert.ok(html.includes(`'${LINK_ID}'`) || html.includes(`"${LINK_ID}"`),
+      `${page} must use id ${LINK_ID} so apply() adopts it instead of adding a duplicate sheet`);
+  });
+
+  test(`1D: ${page}'s dark fallback matches the registry, not a stale literal`, () => {
+    const html = readFileSync(join(root, page), 'utf8');
+    const sibling = siblingOf('default');
+    assert.ok(html.includes(`'${sibling}'`),
+      `${page} hardcodes a dark default that must equal siblingOf('default') = ${sibling}`);
+  });
+}

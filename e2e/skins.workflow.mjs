@@ -48,4 +48,31 @@ export async function run() {
 
   assert.deepEqual(await s.shimMisses(), [], 'skins are pure CSS — no network');
   await s.close();
+
+  // --- 1D: the skin must be applied BEFORE first paint -------------------
+  // Under the old model the boot script set an attribute, which is synchronous.
+  // A skin is a <link>, so if js/skins.js were left to inject it, every
+  // non-default skin would paint the light palette first and flash.
+  //
+  // The decisive test: block js/main.js entirely. No module runs. If the skin
+  // still applies, only the inline <head> script can have done it — which is
+  // exactly the pre-paint guarantee. A flash is otherwise near-impossible to
+  // assert, since it lives between two paints.
+  const boot = await scenario('seeded', {
+    initScripts: ["try { localStorage.setItem('forage.skin', 'bbs'); } catch {}"],
+  });
+  try {
+    await boot.page.route('**/js/main.js', (r) => r.abort());
+    await boot.page.goto(`${boot.origin}/settings`);
+    await boot.page.waitForSelector('link#skin-sheet', { state: 'attached' });
+
+    assert.equal(await boot.page.locator('link#skin-sheet').count(), 1,
+      'exactly one skin sheet — apply() must ADOPT the boot script\'s element, not add a second');
+
+    const bootFont = await boot.page.evaluate(() => getComputedStyle(document.body).fontFamily);
+    assert.match(bootFont, /mono/i,
+      'the skin applied with js/main.js blocked, so the inline boot script injected it pre-paint');
+  } finally {
+    await boot.close();
+  }
 }

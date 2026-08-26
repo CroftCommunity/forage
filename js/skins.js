@@ -111,7 +111,9 @@ export function activeSkin() {
 const listeners = new Set();
 export function onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); }
 
-const LINK_ID = 'skin-sheet';
+// Exported: the pre-paint boot script in index.html/404.html creates the same
+// element, and apply() must ADOPT it rather than add a second sheet.
+export const LINK_ID = 'skin-sheet';
 export function apply() {
   const href = hrefFor(activeSkin());
   let link = document.getElementById(LINK_ID);
