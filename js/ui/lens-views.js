@@ -8,12 +8,13 @@
 
 import { el, timeAgo, fmtScore } from '../util.js';
 import { postRow, commentNode, voteBox, skeleton, emptyState, toast } from './components.js';
-import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow, affordanceFor, feedCardModel, threadNodeStyle, feedPath, parseFeedRoute,
+import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow, affordanceFor,
+  feedCardModel, threadNodeStyle, feedPath, parseFeedRoute, sessionGateMessage, canDelete,
   sortFeeds, filterFeeds, platforms, liveFeeds } from '../substrates/lens.js';
 import { initSession, createAccountRoster } from '../auth/session.js';
 import * as mediaScale from '../media-scale.js';
 import * as lang from '../lang.js';
-import { POST_LIMITS, graphemes, withTag } from '../compose.js';
+import { POST_LIMITS, IMAGE_LIMITS, graphemes, withTag } from '../compose.js';
 import { MEDIA_SCALE } from '../media-scale.js';
 
 let manager = null;        // null = not booted; 'unavailable' = origin has no OAuth client
@@ -62,6 +63,15 @@ export async function startDirectSignIn() {
   }
   try { await manager.signIn('https://bsky.social'); }
   catch (e) { toast('Sign-in failed: ' + e.message, 'err'); }
+}
+
+// Phase-1 live-proof finding: a click during the session-restore window used to
+// vanish — the view re-rendered underneath it and nothing was said. Every
+// session-gated control asks this, so "still restoring" and "signed out" never
+// get conflated again.
+function sessionGate(action) {
+  const authState = manager && manager !== 'unavailable' && manager.state ? manager.state() : 'signed-out';
+  return sessionGateMessage({ signedIn: !!session, authState }, action);
 }
 
 export function sessionIdentity() {
@@ -697,7 +707,8 @@ function affordanceStrip(stream, onPosted) {
     ? (() => {
         const b = el('button', { class: 'btn sm primary', 'data-compose': '1' }, a.composeLabel);
         b.addEventListener('click', () => {
-          if (!session) return toast('Sign in to post — it writes to your own Bluesky account.', 'err');
+          const gate = sessionGate('post');
+          if (gate) return toast(gate, 'err');
           if (host.querySelector('[data-composer]')) return;
           host.append(composerCard({ tag: stream.key, onDone: onPosted }));
         });
@@ -710,6 +721,45 @@ function affordanceStrip(stream, onPosted) {
       el('div', { class: 'xs muted', style: 'white-space:pre-wrap' }, a.detail)),
     compose));
   return host;
+}
+
+// Phase 2: the delete control. Deleting is irreversible and federated — the
+// record leaves your repo but copies may already be elsewhere — so it takes
+// two deliberate clicks. NOT a confirm() dialog: a modal dialog freezes the
+// whole page, and this is a small enough act that arming the button in place
+// reads better than interrupting everything.
+function deleteControl(post, onDone) {
+  if (!canDelete(post, session)) return null;
+  let armed = false;
+  const b = el('button', { class: 'btn sm', 'data-delete-post': '1',
+    title: 'Delete this post from your Bluesky account' }, 'Delete');
+  const disarm = () => {
+    armed = false;
+    b.removeAttribute('data-armed');
+    b.classList.remove('danger');
+    b.replaceChildren('Delete');
+  };
+  b.addEventListener('click', async () => {
+    if (!armed) {
+      armed = true;
+      b.setAttribute('data-armed', '1');
+      b.classList.add('danger');
+      b.replaceChildren('Really delete?');
+      setTimeout(() => { if (armed) disarm(); }, 6000); // an unanswered arm relaxes
+      return;
+    }
+    b.disabled = true;
+    try {
+      await lens.deletePost(post.id);
+      toast('Deleted — it is gone from your Bluesky account too.', 'ok');
+      onDone?.();
+    } catch (e) {
+      toast('Delete failed: ' + e.message, 'err');
+      b.disabled = false;
+      disarm();
+    }
+  });
+  return b;
 }
 
 // 3w: the composer. The pure module owns what a post IS — the two limits, the
@@ -725,11 +775,61 @@ function composerCard({ tag, replyTo, onDone }) {
     tag ? `#${tag} is added for you if you don’t write it.` : '');
   const send = el('button', { class: 'btn sm primary' }, replyTo ? 'Reply' : 'Post');
   const cancel = el('button', { class: 'btn sm' }, 'Cancel');
+  // Phase 3: images. Alt text is REQUIRED — probe-verified, the server refuses
+  // a record whose image omits it — and a blank alt would pass the server while
+  // leaving the post unreadable to anyone using a screen reader, so Post stays
+  // disabled until every attached image is described. Files are held here and
+  // uploaded on Post, not on select: an unreferenced blob is garbage-collected
+  // within minutes, so uploading early risks it expiring mid-compose.
+  const picked = [];
+  const strip = el('div', { class: 'row wrap', style: 'gap:8px;margin-top:8px' });
+  const filePicker = el('input', { type: 'file', accept: 'image/*', multiple: true, style: 'display:none' });
+  const attach = el('button', { class: 'btn sm', 'data-attach-image': '1' }, 'Add image');
+  attach.addEventListener('click', () => filePicker.click());
+
+  const drawStrip = () => {
+    strip.replaceChildren(...picked.map((p, i) => {
+      const alt = el('input', { type: 'text', 'data-image-alt': String(i),
+        placeholder: 'Describe this image (required)', value: p.alt });
+      alt.addEventListener('input', () => { p.alt = alt.value; sync(); });
+      const drop = el('button', { class: 'btn sm', title: 'Remove this image' }, '×');
+      drop.addEventListener('click', () => { picked.splice(i, 1); drawStrip(); sync(); });
+      return el('div', { class: 'card', style: 'padding:6px;min-width:180px;flex:1' },
+        el('div', { class: 'row', style: 'gap:6px;align-items:center' },
+          el('img', { src: p.url, alt: '', class: 'thumb' }), drop),
+        alt);
+    }));
+  };
+  filePicker.addEventListener('change', () => {
+    for (const f of [...filePicker.files]) {
+      if (picked.length >= IMAGE_LIMITS.count) {
+        toast(`A post holds ${IMAGE_LIMITS.count} images.`, 'err');
+        break;
+      }
+      if (f.size > IMAGE_LIMITS.bytes) {
+        toast(`${f.name} is ${Math.round(f.size / 1000)}kB and the limit is ${IMAGE_LIMITS.bytes / 1000}kB.`, 'err');
+        continue;
+      }
+      const entry = { file: f, alt: '', url: URL.createObjectURL(f), aspectRatio: null };
+      // the dimensions come free from the preview we are about to draw, and
+      // sending them stops a viewer's feed jumping as the image loads
+      const probe = new Image();
+      probe.onload = () => { entry.aspectRatio = { width: probe.naturalWidth, height: probe.naturalHeight }; };
+      probe.src = entry.url;
+      picked.push(entry);
+    }
+    filePicker.value = '';
+    drawStrip();
+    sync();
+  });
+
   const card = el('div', { class: 'card', 'data-composer': '1', style: 'margin-top:8px' },
     box,
+    strip,
+    filePicker,
     el('div', { class: 'row spread wrap', style: 'gap:8px;align-items:center;margin-top:6px' },
       el('div', { class: 'row', style: 'gap:8px;align-items:center' }, remaining, note),
-      el('div', { class: 'row', style: 'gap:6px' }, cancel, send)));
+      el('div', { class: 'row', style: 'gap:6px' }, attach, cancel, send)));
 
   const sync = () => {
     // count what will actually be SENT, board tag included — otherwise the
@@ -738,7 +838,11 @@ function composerCard({ tag, replyTo, onDone }) {
     const left = POST_LIMITS.graphemes - graphemes(willSend);
     remaining.textContent = left >= 0 ? `${left} left` : `${-left} over`;
     remaining.classList.toggle('over', left < 0);
-    send.disabled = left < 0 || !willSend.trim();
+    const undescribed = picked.some((p) => !p.alt.trim());
+    // an image is something to say, so text may be empty when one is attached
+    const hasContent = willSend.trim() || picked.length;
+    send.disabled = left < 0 || !hasContent || undescribed;
+    send.title = undescribed ? 'Every image needs alt text before this can be posted' : '';
   };
   box.addEventListener('input', sync);
   sync();
@@ -747,7 +851,18 @@ function composerCard({ tag, replyTo, onDone }) {
   send.addEventListener('click', async () => {
     send.disabled = true;
     try {
-      await lens.publish({ text: box.value, tag, replyTo, langs: lang.active().slice(0, 1) });
+      // upload NOW, adjacent to the post — an unreferenced blob expires within
+      // minutes, so uploading at file-select could leave a dead ref behind
+      const images = [];
+      for (const p of picked) {
+        send.replaceChildren(`Uploading ${images.length + 1}/${picked.length}…`);
+        images.push({ blob: await lens.uploadImage(p.file), alt: p.alt.trim(), aspectRatio: p.aspectRatio });
+      }
+      send.replaceChildren(replyTo ? 'Reply' : 'Post');
+      await lens.publish({ text: box.value, tag, replyTo, images,
+        langs: lang.active().slice(0, 1),
+        navLang: typeof navigator !== 'undefined' ? navigator.language : null });
+      for (const p of picked) URL.revokeObjectURL(p.url);
       toast('Posted — it is on your Bluesky account too.', 'ok');
       card.remove();
       onDone?.();
@@ -1246,7 +1361,8 @@ export function lensThreadView(params, query) {
     const rootRef = { uri: p.id, cid: p.cid };
     const replyHost = el('div', {});
     const openReply = (parentRef) => {
-      if (!session) return toast('Sign in to reply — it writes to your own Bluesky account.', 'err');
+      const gate = sessionGate('reply');
+      if (gate) return toast(gate, 'err');
       if (replyHost.querySelector('[data-composer]')) return;
       replyHost.replaceChildren(composerCard({
         replyTo: { root: rootRef, parent: parentRef },
@@ -1275,15 +1391,30 @@ export function lensThreadView(params, query) {
       p.quoted ? quotedContext(p.quoted) : null,
       t.quotesFailed ? el('div', { class: 'row', style: 'gap:6px;margin-top:6px' },
         chip(`${t.quoteCount} quote${t.quoteCount === 1 ? '' : 's'} — couldn't fetch`, 'getQuotes failed; replies still render. Reload to retry.')) : null,
-      (() => {
-        const b = el('button', { class: 'btn sm primary', 'data-reply-open': '1', style: 'margin-top:8px' }, 'Reply');
-        b.addEventListener('click', () => openReply(rootRef)); // replying to the post: parent IS root
-        return b;
-      })(),
+      el('div', { class: 'row', style: 'gap:6px;margin-top:8px;align-items:center' },
+        (() => {
+          const b = el('button', { class: 'btn sm primary', 'data-reply-open': '1' }, 'Reply');
+          b.addEventListener('click', () => openReply(rootRef)); // replying to the post: parent IS root
+          return b;
+        })(),
+        // phase 2: only ever rendered for a post that is genuinely yours
+        deleteControl(p, () => {
+          main.replaceChildren(emptyState('This post was deleted',
+            'It is gone from your Bluesky account. Anyone who already saw it may still have a copy — deleting removes the record, it does not un-send it.',
+            el('a', { class: 'btn', href: `/f/${src.fieldSlug}` }, 'Back to the board')));
+        })),
       replyHost));
     const ctx = { ...LENS_PERMS, locked: true, // vote/save/mod still gate; replying does not
       authorHref: (n) => `/u/${encodeURIComponent(n.author)}`, // 3k: authors reach OUR profile page (which links out)
-      nodeRenderer: (n, c) => lensNode(n, c) }; // 3r: a quote nested under a reply is still a quote
+      nodeRenderer: (n, c) => lensNode(n, c), // 3r: a quote nested under a reply is still a quote
+      // phase 2: a reply you regret is the commoner case than a post you
+      // regret, so your own replies carry the same control. Same guard, same
+      // two-click arming; the node simply removes itself when it is gone.
+      extraActions: (n) => deleteControl(n, () => {
+        const host = commentsCard.querySelector(`[data-node-id="${CSS.escape(n.id)}"]`);
+        if (host) host.replaceChildren(el('div', { class: 'xs muted', style: 'padding:6px 0' }, 'You deleted this reply.'));
+        else rerender();
+      }) };
     const commentsCard = el('div', { class: 'card' });
     const paintComments = (comments) => {
       commentsCard.replaceChildren(...comments.map((n) => lensNode(n, ctx)));

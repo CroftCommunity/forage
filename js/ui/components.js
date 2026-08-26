@@ -112,7 +112,7 @@ export function postRow(p, viewerCanVote, opts = {}) {
 const CHILD_PAGE = 20; // "load N more replies" threshold
 
 export function commentNode(node, ctx) {
-  const wrap = el('div', { class: 'comment' + (node.autoCollapsed ? ' collapsed' : '') });
+  const wrap = el('div', { class: 'comment' + (node.autoCollapsed ? ' collapsed' : ''), 'data-node-id': node.id });
 
   const gutter = el('button', { class: 'gutter', 'aria-label': 'Collapse thread', title: 'Collapse' });
   gutter.addEventListener('click', () => {
@@ -146,6 +146,11 @@ export function commentNode(node, ctx) {
     actionsRow.append(saveButton('comment', node.id, node.saved, ctx));
     if (ctx.canReport) actionsRow.append(reportButton('comment', node.id, ctx));
     if (ctx.canModerate) actionsRow.append(...modButtons('comment', node, ctx));
+    // Phase 2: the lens hangs its own controls here (delete-your-own-reply).
+    // Returns nodes or nothing; the memory tier passes no extraActions, so its
+    // rows are untouched.
+    const extra = ctx.extraActions?.(node);
+    if (extra) actionsRow.append(...[].concat(extra).filter(Boolean));
   }
 
   const bodyWrap = el('div', { class: 'comment-body' }, meta, text, actionsRow);

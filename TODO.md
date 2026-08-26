@@ -9,14 +9,26 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 
 ## Needs the owner
 
-- **Pre-Spaces review** — the owner is reviewing phases 1–4 on forage.fyi before
-  phase 5 starts. Findings from that review land here.
+- **Phase 5 — the private BBS on Spaces** (plan 2026-08-25-1): **PAUSED behind the
+  public-site queue** (owner 2026-08-26: *"we are pausing it until we have the main
+  site in better shape"*). Not declined and no longer waiting on a review — the
+  pre-Spaces review happened as an iteration (3h–3x) and the owner then named the
+  queue that comes first. The split stays drafted and approved (5a–5d:
+  space-credential module, bbs substrate, mode UI, DOCKER-gated W5); local
+  rehearsal rig `ghcr.io/bluesky-social/atproto:pds-spaces-alpha` (D5 facts in the
+  plan). Roadmap row: E138.
 
-- **Phase 5 — the private BBS on Spaces** (plan 2026-08-25-1): PAUSED by the owner
-  2026-08-25 with phases 1–4 deployed. The split is drafted and user-approved
-  (5a–5d: space-credential module, bbs substrate, mode UI, DOCKER-gated W5);
-  implementation starts on the owner's go. Local rehearsal rig:
-  `ghcr.io/bluesky-social/atproto:pds-spaces-alpha` (D5 facts in the plan).
+- **Composing follow-ons** (DL-027) — composing shipped 2026-08-26 (plan
+  2026-08-26-1: post, reply, images, delete). Still not built: video and gallery
+  embeds, external link cards, @mention facets (they need a `resolveHandle` per
+  mention, and a mention that silently renders as plain text is worse than none),
+  self-labels (content warnings), quote-posting from the composer, and editing a
+  post — `putRecord`, which the lens does not do at all, and which the network
+  itself does not really have: you delete and rewrite.
+- **Per-post language selector** — the official client keeps `postLanguage` +
+  `postLanguageHistory` in its composer (`social-app/src/state/persisted/schema.ts`);
+  Forage claims the browser's language and offers no per-post choice. Worth doing
+  if anyone posts in more than one language.
 
 - ~~Push `main` + pull the `workflow_dispatch` hatch once~~ — DONE 2026-08-25: pushed
   `9f1cff4`; push-gate run 32792641974 and dispatched run 32792652759 both green;
@@ -86,12 +98,19 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 
 - ~~mutuals+1 hangs on the skeleton~~ — FIXED 2026-08-26 (3l): the board paints
   each member's posts as they land and bounds every member with a timeout; a
-  hung member is reported, not fatal. STILL OPEN: preloading ring membership on
-  session restore, and caching it across navigations. Related: DL-016 (cap),
-  E139 (Jetstream v2 freshness).
-- **Composing** — the hashtag affordance strip carries a disabled "Post to #x"
-  button (3m). Writing posts is not built; when it is, that button is the
-  deterministic path (feeds get no equivalent — DL-025).
+  hung member is reported, not fatal. ~~Ring caching~~ — DONE 2026-08-26 (3x):
+  cached per ring for the life of the lens, warmed on sign-in; the promise is
+  cached so racing callers share one graph walk, and a rejected one is dropped
+  so a transient 502 is never remembered as an empty ring. Still open: DL-016
+  (drawing the ring beyond the cap of 25), E139 (Jetstream v2 freshness).
+- ~~Composing~~ — DONE 2026-08-26 (plan 2026-08-26-1): posting to a hashtag,
+  replying in a thread, up to four images with required alt text, and deleting
+  anything you wrote. Live-proved against the real network, not only against
+  fixtures — which is how two bugs the suite could not see were found (posts
+  declared no language; a click during session restore vanished silently).
+  Feeds still get no compose affordance and never will while their criteria are
+  unpublished (DL-025). What composing still does not do is listed under
+  **Composing follow-ons** above and in DL-027.
 - ~~hash routing vs clean paths~~ — DECIDED + SHIPPED 2026-08-26 (3n, owner):
   clean paths with the 404.html fallback; the service worker upgrades deep
   links to 200s; legacy `#/` links bridge at boot and live. Verified on

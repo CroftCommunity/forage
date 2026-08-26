@@ -335,3 +335,26 @@ test('3f wiring: loadPosture() pulls the D10 surfaces and the board masks throug
   assert.deepEqual(ids, ['p1'], 'what is left is the post that matched nothing');
   assert.ok(calls.some((c) => c.includes('getListMutes')), 'list subscriptions consulted');
 });
+
+// ---- Phase 1 live-proof finding (2026-08-26): the restore window ----
+// During the real smoke run, clicking Reply on a freshly-loaded thread did
+// nothing at all — no composer, no message. The session was still restoring,
+// the view re-rendered underneath the click, and the click was lost. The dial
+// already handles this window with words ("Still restoring your session"), and
+// every session-gated control needs the same treatment: while auth state is
+// unresolved, a control must not silently swallow a click.
+
+test('phase-1 finding: sessionGateMessage distinguishes RESTORING from signed-out', async () => {
+  const { sessionGateMessage } = await import('../js/substrates/lens.js');
+  // still restoring — the answer is "wait", not "sign in", because the user
+  // may well already be signed in and simply not know it yet
+  assert.match(sessionGateMessage({ signedIn: false, authState: 'unknown' }, 'reply'), /restor/i);
+  assert.match(sessionGateMessage({ signedIn: false, authState: 'pending' }, 'reply'), /restor/i);
+  // genuinely signed out — now "sign in" is the honest instruction, and it
+  // names what the action would write
+  const out = sessionGateMessage({ signedIn: false, authState: 'signed-out' }, 'reply');
+  assert.match(out, /sign in/i);
+  assert.match(out, /reply/i, 'the message names the action the user attempted');
+  // signed in — there is no gate
+  assert.equal(sessionGateMessage({ signedIn: true, authState: 'signed-in' }, 'reply'), null);
+});

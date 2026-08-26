@@ -8,7 +8,7 @@
 
 // Lens surfaces are read-only; the write gates all stay shut (frontier chips,
 // never dead buttons — the UI renders these as deferred, invariant 7).
-import { buildPost, withTag } from '../compose.js';
+import { buildPost, withTag, IMAGE_LIMITS } from '../compose.js';
 
 export const LENS_PERMS = Object.freeze({
   viewerId: null, loggedIn: false, admin: false, probation: false,
@@ -624,6 +624,38 @@ export function withPinnedFeed(preferences, uri, pinned) {
   });
 }
 
+// Phase 2: who may delete what. The at-uri is the authority, not the label —
+// a shape claiming to be ours while its uri points at another repo is not ours,
+// and `null === null` must never resolve into a delete. Pure, so the button and
+// the network call ask the same question.
+const POST_URI = /^at:\/\/(did:[a-z0-9]+:[^/]+)\/app\.bsky\.feed\.post\/([^/]+)$/;
+
+export function parsePostUri(uri) {
+  const m = POST_URI.exec(String(uri || ''));
+  return m ? { did: m[1], rkey: m[2] } : null;
+}
+
+export function canDelete(post, session) {
+  if (!session?.did || !post?.authorId) return false;
+  if (post.authorId !== session.did) return false;
+  const parsed = parsePostUri(post.id);
+  return !!parsed && parsed.did === session.did;
+}
+
+// Phase-1 live-proof finding (2026-08-26): during the real smoke run, clicking
+// Reply on a freshly-loaded thread did nothing — no composer, no message. The
+// session was still restoring and the view re-rendered underneath the click.
+// "Not signed in yet" and "not signed in at all" are different situations and
+// deserve different words: the first is a wait, the second is an instruction.
+// Pure so every session-gated control can share one answer.
+export function sessionGateMessage({ signedIn, authState }, action) {
+  if (signedIn) return null;
+  if (authState === 'unknown' || authState === 'pending') {
+    return `Still restoring your session — one moment, then you can ${action}.`;
+  }
+  return `Sign in to ${action} — it writes to your own Bluesky account.`;
+}
+
 // 3v: the canonical, SHAREABLE feed path. A feed's identity is
 // at://<did>/app.bsky.feed.generator/<rkey>; an rkey alone is not resolvable
 // (rkeys are not unique across creators, and no endpoint resolves one without
@@ -990,13 +1022,48 @@ export function createLens({ session = null, transport = fetch } = {}) {
     // facets, reply refs) and refuses before anything reaches the network;
     // this only carries it. Returns uri+cid so a reply can thread onto it
     // without a refetch.
-    async publish({ text, tag, langs, replyTo } = {}) {
+    // Phase 3: put the bytes in the repo and get a blob ref back. The size and
+    // type checks are HERE, before the upload, because the PDS accepts an
+    // oversized blob with a 200 and only refuses when the record references it
+    // (probe-verified 2026-08-26) — without this, a person uploads a large
+    // photo, waits for it, and then watches the post fail.
+    async uploadImage(file) {
+      if (!session) throw new Error('lens: uploading needs a session — sign in first');
+      const type = file?.type || '';
+      if (!type.startsWith('image/')) throw new Error(`that is ${type || 'not a recognised file'} — only images can go in a post`);
+      if (file.size > IMAGE_LIMITS.bytes) {
+        throw new Error(`that image is ${file.size} bytes and the limit is ${IMAGE_LIMITS.bytes} — pick a smaller one`);
+      }
+      const res = await session.fetchHandler('/xrpc/com.atproto.repo.uploadBlob', {
+        method: 'POST', headers: { 'content-type': type }, body: file,
+      });
+      if (!res.ok) throw new Error(`lens: upload failed HTTP ${res.status}`);
+      const data = await res.json();
+      if (!data.blob) throw new Error('lens: the upload returned no blob');
+      return data.blob;
+    },
+
+    async publish({ text, tag, langs, navLang, images, replyTo } = {}) {
       if (!session) throw new Error('lens: publishing needs a session — sign in first');
-      const record = buildPost({ text: tag ? withTag(text, tag) : text, langs, replyTo });
+      const record = buildPost({ text: tag ? withTag(text, tag) : text, langs, navLang, images, replyTo });
       const data = await post('com.atproto.repo.createRecord', {
         repo: session.did, collection: POST_COLLECTION, record,
       }, 'publish');
       return { uri: data.uri, cid: data.cid, record };
+    },
+
+    // Phase 2: remove MY post. Two independent gates, because a delete that can
+    // reach another repo is a different capability wearing this one's name:
+    // the uri must parse as an app.bsky.feed.post uri, AND its repo must be
+    // this session's. Neither is a UI concern — both hold when called directly.
+    async deletePost(uri) {
+      if (!session) throw new Error('lens: deleting needs a session — sign in first');
+      const parsed = parsePostUri(uri);
+      if (!parsed) throw new Error(`lens: not a post uri: ${JSON.stringify(uri)}`);
+      if (parsed.did !== session.did) throw new Error('lens: that post is not yours — Forage only deletes from your own repo');
+      return post('com.atproto.repo.deleteRecord', {
+        repo: session.did, collection: POST_COLLECTION, rkey: parsed.rkey,
+      }, 'delete post');
     },
 
     // unboost: delete MY like by its exact rkey.

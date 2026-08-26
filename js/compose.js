@@ -8,6 +8,14 @@
 
 export const POST_LIMITS = Object.freeze({ graphemes: 300, bytes: 3000 });
 
+// Phase 3.0 probed the real PDS rather than trusting the lexicon's prose, and
+// the numbers below are the ones it actually enforces. The important finding:
+// uploadBlob returns 200 for an OVERSIZED blob — the refusal arrives later, at
+// createRecord ("blob too big (maximum 2000000, got 2100928)"). So checking
+// here is not belt-and-braces; without it a person uploads a large photo,
+// waits, and only then learns it was never going to work.
+export const IMAGE_LIMITS = Object.freeze({ count: 4, bytes: 2000000 });
+
 const encoder = new TextEncoder();
 
 // What a person means by "a character". `.length` counts UTF-16 code units,
@@ -70,9 +78,58 @@ export function withTag(text, tag) {
   return body ? `${body} #${tag}` : `#${tag}`;
 }
 
-export function buildPost({ text, langs, replyTo, now = new Date() } = {}) {
+// Phase-1 live-proof finding (2026-08-26): the first real post this code ever
+// wrote carried no `langs`, because nothing passed any. Every other client
+// declares one, and language filters — including Forage's own (3u) — key off
+// it, so an undeclared post is invisible to all of them. The browser knows the
+// writer's language; use it when nothing better is available, and still say
+// nothing when even that is unknown rather than guessing English.
+const languageClaim = (langs, navLang) => {
+  if (langs?.length) return langs;
+  const base = String(navLang || '').trim().toLowerCase().split('-')[0];
+  return base ? [base] : null;
+};
+
+// Phase 3: the image list → an app.bsky.embed.images embed. Alt text is
+// REQUIRED — the server refuses a missing one outright ('Missing required key
+// "alt"'), and it would accept a BLANK one, which is an inaccessible post
+// wearing the shape of an accessible one. So blank is refused here too.
+// aspectRatio is optional and its dimensions are integers >= 1 (lexicon
+// app.bsky.embed.defs#aspectRatio). Clients use it to reserve space before the
+// image loads — without it a viewer's feed jumps as each picture arrives — so
+// it is worth sending when known, and worth dropping entirely when what we
+// have is not a usable ratio. Never guessed.
+const ratio = (r) => {
+  const w = r?.width; const h = r?.height;
+  return Number.isInteger(w) && Number.isInteger(h) && w >= 1 && h >= 1 ? { width: w, height: h } : null;
+};
+
+function imagesEmbed(images) {
+  if (images.length > IMAGE_LIMITS.count) {
+    throw new Error(`a post holds ${IMAGE_LIMITS.count} images, and this one has ${images.length}`);
+  }
+  return {
+    $type: 'app.bsky.embed.images',
+    images: images.map((img, i) => {
+      const alt = String(img.alt ?? '').trim();
+      if (!alt) throw new Error(`image ${i + 1} needs alt text — a description for people who cannot see it`);
+      const mime = img.blob?.mimeType || '';
+      if (!mime.startsWith('image/')) throw new Error(`image ${i + 1} is ${mime || 'of unknown type'}, and only images can go here`);
+      const size = img.blob?.size ?? 0;
+      if (size > IMAGE_LIMITS.bytes) {
+        throw new Error(`image ${i + 1} is ${size} bytes, and the limit is ${IMAGE_LIMITS.bytes} — the upload would succeed and the post would fail`);
+      }
+      return { image: img.blob, alt, ...(ratio(img.aspectRatio) ? { aspectRatio: ratio(img.aspectRatio) } : {}) };
+    }),
+  };
+}
+
+export function buildPost({ text, langs, navLang, images, replyTo, now = new Date() } = {}) {
   const body = String(text ?? '').trim();
-  if (!body) throw new Error('a post cannot be empty — there is nothing to say yet');
+  const pics = images || [];
+  // Phase 3.0 finding D: the network accepts an image post with empty text, so
+  // a picture is a thing to say. Without one, empty is still nothing.
+  if (!body && !pics.length) throw new Error('a post cannot be empty — there is nothing to say yet');
 
   const g = graphemes(body);
   if (g > POST_LIMITS.graphemes) {
@@ -89,7 +146,9 @@ export function buildPost({ text, langs, replyTo, now = new Date() } = {}) {
     createdAt: now.toISOString(),
     facets: detectFacets(body),
   };
-  if (langs?.length) record.langs = langs;
+  const claim = languageClaim(langs, navLang);
+  if (claim) record.langs = claim;
+  if (pics.length) record.embed = imagesEmbed(pics);
   if (replyTo) {
     const { root, parent } = replyTo;
     // Both refs need a cid; a ref without one produces a reply the network

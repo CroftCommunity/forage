@@ -24,7 +24,17 @@ export function fetchShim({ responses = {} } = {}) {
       if (!FENCED.some((h) => url.includes(h))) return real(input, init);
       for (const [needle, payload] of Object.entries(RESPONSES)) {
         if (url.includes(needle)) {
-          window.__shimHits.push({ url, method: (init && init.method) || 'GET', body: init && init.body ? String(init.body) : null });
+          // Phase 3: uploadBlob sends raw bytes, not JSON. String(aBlob) is
+          // "[object Blob]" — useless and quietly misleading — so a binary
+          // body is recorded as its type and size instead, and the body field
+          // stays a string only when it genuinely is one.
+          const raw = init && init.body;
+          const isBinary = raw && typeof raw !== 'string';
+          window.__shimHits.push({
+            url, method: (init && init.method) || 'GET',
+            body: isBinary ? null : (raw ? String(raw) : null),
+            binary: isBinary ? { type: raw.type || null, size: raw.size ?? (raw.byteLength ?? null) } : null,
+          });
           return Promise.resolve(new Response(JSON.stringify(payload), {
             status: 200, headers: { 'content-type': 'application/json' },
           }));

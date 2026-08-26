@@ -220,6 +220,10 @@ kbd { background: var(--green-100); border: 1px solid var(--border); border-radi
 .comment.collapsed > .comment-body > .comment-actions,
 .comment.collapsed > .children { display: none; }
 .collapse-note { font-size: var(--t-xs); color: var(--muted); }
+/* Phase 2: an armed delete. The colour change IS the second thought — the
+   button you are about to press is visibly not the one you pressed. */
+.btn.danger { color: var(--danger, #b4432b); border-color: var(--danger, #b4432b); font-weight: 600; }
+
 /* 3w: the composer. The counter turns when the post would be refused. */
 [data-composer] textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: var(--t-sm); padding: 8px; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--card); color: var(--ink); resize: vertical; }
 [data-remaining].over { color: var(--danger, #b4432b); font-weight: 600; }
