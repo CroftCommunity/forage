@@ -8,7 +8,7 @@
 
 // Lens surfaces are read-only; the write gates all stay shut (frontier chips,
 // never dead buttons — the UI renders these as deferred, invariant 7).
-import { buildPost, withTag } from '../compose.js';
+import { buildPost, withTag, IMAGE_LIMITS } from '../compose.js';
 
 export const LENS_PERMS = Object.freeze({
   viewerId: null, loggedIn: false, admin: false, probation: false,
@@ -777,9 +777,30 @@ export function createLens({ session = null, transport = fetch } = {}) {
     // facets, reply refs) and refuses before anything reaches the network;
     // this only carries it. Returns uri+cid so a reply can thread onto it
     // without a refetch.
-    async publish({ text, tag, langs, navLang, replyTo } = {}) {
+    // Phase 3: put the bytes in the repo and get a blob ref back. The size and
+    // type checks are HERE, before the upload, because the PDS accepts an
+    // oversized blob with a 200 and only refuses when the record references it
+    // (probe-verified 2026-08-26) — without this, a person uploads a large
+    // photo, waits for it, and then watches the post fail.
+    async uploadImage(file) {
+      if (!session) throw new Error('lens: uploading needs a session — sign in first');
+      const type = file?.type || '';
+      if (!type.startsWith('image/')) throw new Error(`that is ${type || 'not a recognised file'} — only images can go in a post`);
+      if (file.size > IMAGE_LIMITS.bytes) {
+        throw new Error(`that image is ${file.size} bytes and the limit is ${IMAGE_LIMITS.bytes} — pick a smaller one`);
+      }
+      const res = await session.fetchHandler('/xrpc/com.atproto.repo.uploadBlob', {
+        method: 'POST', headers: { 'content-type': type }, body: file,
+      });
+      if (!res.ok) throw new Error(`lens: upload failed HTTP ${res.status}`);
+      const data = await res.json();
+      if (!data.blob) throw new Error('lens: the upload returned no blob');
+      return data.blob;
+    },
+
+    async publish({ text, tag, langs, navLang, images, replyTo } = {}) {
       if (!session) throw new Error('lens: publishing needs a session — sign in first');
-      const record = buildPost({ text: tag ? withTag(text, tag) : text, langs, navLang, replyTo });
+      const record = buildPost({ text: tag ? withTag(text, tag) : text, langs, navLang, images, replyTo });
       const data = await post('com.atproto.repo.createRecord', {
         repo: session.did, collection: POST_COLLECTION, record,
       }, 'publish');

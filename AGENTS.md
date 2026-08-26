@@ -105,6 +105,7 @@ adding another means arguing for it there first:
 | `deleteRecord` → `app.bsky.feed.like` | unboost | DL-013 |
 | `createRecord` → `app.bsky.feed.post` | publish a post or reply | 3w |
 | `deleteRecord` → `app.bsky.feed.post` | delete your OWN post or reply | phase 2 |
+| `uploadBlob` | image bytes into your repo, referenced by the post | phase 3 |
 | `putPreferences` (savedFeedsPrefV2) | join / leave a feed | 3j |
 | `putPreferences` (savedFeedsPrefV2) | favorite / unfavorite (pin) | 3s |
 

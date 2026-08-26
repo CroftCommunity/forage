@@ -199,3 +199,59 @@ test('phase 2: deletePost refuses without a session, and refuses a malformed uri
     await assert.rejects(() => lens.deletePost(bad), /uri|post/i, `${JSON.stringify(bad)} is not a post uri`);
   }
 });
+
+// ---- Phase 3.2: the upload path ----
+
+test('3.2: uploadImage sends the bytes and returns the blob ref', async () => {
+  const calls = [];
+  const fetchHandler = async (path, init = {}) => {
+    calls.push({ path, ctype: init.headers?.['content-type'], body: init.body });
+    return { ok: true, status: 200, json: async () => ({ blob: {
+      $type: 'blob', ref: { $link: 'bafkreiabc' }, mimeType: 'image/png', size: 268 } }) };
+  };
+  const lens = createLens({ session: { did: 'did:plc:me', handle: 'me.test', fetchHandler } });
+  const file = new File([new Uint8Array(268)], 'x.png', { type: 'image/png' });
+  const b = await lens.uploadImage(file);
+
+  assert.deepEqual(b, { $type: 'blob', ref: { $link: 'bafkreiabc' }, mimeType: 'image/png', size: 268 });
+  const up = calls.find((c) => c.path.includes('uploadBlob'));
+  assert.ok(up, 'uploadBlob called');
+  assert.equal(up.ctype, 'image/png', 'the file’s own type is sent — the PDS sniffs anyway, but lying is pointless');
+  assert.ok(up.body instanceof Blob || up.body instanceof ArrayBuffer || ArrayBuffer.isView(up.body),
+    'the raw bytes go up, not JSON');
+});
+
+test('3.2: uploadImage refuses an oversized file BEFORE spending the upload', async () => {
+  const calls = [];
+  const fetchHandler = async (path) => { calls.push(path); return { ok: true, status: 200, json: async () => ({}) }; };
+  const lens = createLens({ session: { did: 'did:plc:me', handle: 'me.test', fetchHandler } });
+  // finding C: the PDS accepts this upload with a 200 and only fails at
+  // createRecord, so the check has to be here or the user waits for nothing
+  const big = new File([new Uint8Array(2100928)], 'big.png', { type: 'image/png' });
+  await assert.rejects(() => lens.uploadImage(big), /2100928|too (big|large)/i);
+  assert.equal(calls.length, 0, 'nothing was uploaded — that is the point');
+
+  const notAnImage = new File([new Uint8Array(10)], 'x.pdf', { type: 'application/pdf' });
+  await assert.rejects(() => lens.uploadImage(notAnImage), /image/i);
+  assert.equal(calls.length, 0);
+});
+
+test('3.2: uploadImage refuses without a session', async () => {
+  const file = new File([new Uint8Array(4)], 'x.png', { type: 'image/png' });
+  await assert.rejects(() => createLens({}).uploadImage(file), /session|sign/i);
+});
+
+test('3.2: publish carries images through to the record', async () => {
+  const calls = [];
+  const fetchHandler = async (path, init = {}) => {
+    calls.push({ path, body: init.body && typeof init.body === 'string' ? JSON.parse(init.body) : null });
+    return { ok: true, status: 200, json: async () => ({ uri: 'at://x/y/z', cid: 'c' }) };
+  };
+  const lens = createLens({ session: { did: 'did:plc:me', handle: 'me.test', fetchHandler } });
+  const b = { $type: 'blob', ref: { $link: 'bafkreiabc' }, mimeType: 'image/png', size: 268 };
+  await lens.publish({ text: 'look', images: [{ blob: b, alt: 'a description' }], navLang: 'en' });
+  const rec = calls.find((c) => c.path.includes('createRecord')).body.record;
+  assert.equal(rec.embed.$type, 'app.bsky.embed.images');
+  assert.deepEqual(rec.embed.images[0].image, b);
+  assert.equal(rec.embed.images[0].alt, 'a description');
+});

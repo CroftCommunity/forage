@@ -1,6 +1,6 @@
 # Composing, proved and completed: live proof → delete → images
 
-**Status:** Phases 1–3 planned; **phases 1–2 EXECUTED 2026-08-26**. Phase 3 (images) pending.
+**Status:** ✅ **COMPLETE — phases 1, 2 and 3 all executed 2026-08-26**, each live-proved against the real network. Not yet landed on main.
 **Repo:** `forage` (CroftCommunity/forage) · worktree `worktrees/forage/modes-bbs`
 **Predecessor:** `plans/2026-08-25-1-plan-backend-modes-bsky-writes.md` (3w shipped composing)
 
@@ -680,3 +680,74 @@ assertion that actually matters — *every* write in the lens addresses
 inside Forage, the thread says so rather than silently navigating, and no
 control appears on anyone else's post. 329 unit / 88 conformance / 5 journeys
 green, journeys run 3× consecutively.
+
+### Phase 3 executed — 2026-08-26 — ✅ images
+
+**3.0 discovery probed the real PDS instead of trusting the lexicon's prose,
+and it was worth doing — five findings, three of which changed the build:**
+
+| # | Probe | Result |
+|---|---|---|
+| A | `uploadBlob` a small PNG | 200 → `{$type:'blob', ref:{$link}, mimeType:'image/png', size:268}` |
+| B | Same bytes, `Content-Type: application/octet-stream` | 200, and the blob came back **`mimeType: image/png`** — the PDS **sniffs**, so an accurate header is not load-bearing (we send the real type anyway; lying gains nothing) |
+| C | A 2,100,928-byte PNG | **`uploadBlob` returned 200.** The refusal came later, from `createRecord`: `blob too big (maximum 2000000, got 2100928) at $.record.embed.images[0].image` |
+| D | A post with an image and **empty text** | **Accepted.** So "empty is not a post" had to relax when an image carries it |
+| E | An image with `alt` **omitted** | **Refused:** `Missing required key "alt" at $.record.embed.images[0]` |
+
+**Finding C is the one that mattered most.** The plan already guessed a
+client-side size check was worth having; the probe proved it is the *only*
+thing standing between a person and an upload that succeeds and then fails.
+Without it you pick a large photo, watch it upload, and only then learn it was
+never going to post. The gate now lives before the upload, and
+`test/invariants.test.js` asserts it stays there.
+
+**Finding E turned a design preference into a requirement.** The plan argued
+alt text should be required on accessibility grounds; the server settles it —
+a missing alt is refused outright. And a *blank* alt would be accepted, which
+is an inaccessible post wearing the shape of an accessible one, so blank is
+refused here too. Post stays disabled, with a stated reason, until every
+attached image is described.
+
+**Live-proved, same standard as phase 1.** A real image post written through
+the composer on the local preview against the real PDS:
+
+```
+CREATED   200  at://did:plc:xyfhc…/app.bsky.feed.post/3mtz5gvdu772c
+               validationStatus "valid"
+STORED    text  'An image, written from Forage. Ignore me. #forage-smoke-20260826'
+          langs ['en']                       ← the phase-1 fix, working live
+          embed app.bsky.embed.images, 1 image
+          alt   'a small blue and white test square'
+          blob  {$link: bafkreih7bc7ayuo6hhkn7jfrrvulkmonao3zk2rkt4ocvgjweiwoac4nam,
+                 mimeType: image/png, size: 96}
+APPVIEW   app.bsky.embed.images#view — thumb ✓ fullsize ✓ alt survived ✓
+```
+
+The appview generated its own CDN renditions, which is the independent
+confirmation that it is a real image post and not merely a record that parses.
+
+**One gap the proof exposed, fixed before landing.** The appview returned
+`aspectRatio: null`, because we sent none — and clients use it to reserve space
+before an image loads, so without it a viewer's feed jumps as each picture
+arrives. We already load the file to preview it, so the dimensions were free.
+Now sent, validated as integers ≥ 1 per the lexicon, and dropped entirely
+rather than guessed when what we have is not a usable ratio.
+
+**Harness change:** `e2e/harness/shim.mjs` is shared by all five journeys and
+had to learn about binary bodies — `String(aBlob)` is `"[object Blob]"`, which
+is useless and quietly misleading. A binary body is now recorded as its type
+and size, and `body` stays a string only when it genuinely is one. All five
+journeys run green, three times consecutively.
+
+**Two ordering bugs of my own, both the same shape.** The image block
+referenced `strip`/`filePicker` from inside the `card` literal that was
+declared above them — a TDZ ReferenceError that killed the composer silently.
+Identical to the `openReply` mistake in 3w. In this file, a helper used by an
+`el(...)` literal must be declared *above* it; the pattern is worth watching
+for.
+
+**Done-when, met:** up to four images with alt text, posted and rendered by an
+appview we did not write; blocked with a stated reason when alt is missing, a
+file is too large, or a fifth image is attached. 340 unit / 88 conformance / 5
+journeys green. Test account cleaned: 0 posts remaining. `sw.js` at
+`forage-v26`.

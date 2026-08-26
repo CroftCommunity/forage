@@ -91,8 +91,16 @@ test('the lens exception holds: writes are records-none, likes-one-pair, prefere
   assert.match(src, /parsed\.did !== session\.did/, 'deletePost refuses a uri outside the session repo');
   // the record itself is built by the PURE composer, never assembled inline —
   // that is where the lexicon limits and byte-indexed facets are enforced
-  assert.match(src, /import \{ buildPost, withTag \} from '\.\.\/compose\.js'/,
+  assert.match(src, /import \{ buildPost, withTag, IMAGE_LIMITS \} from '\.\.\/compose\.js'/,
     'publish delegates the record shape to the pure composer');
+  // Phase 3: uploadBlob is a write too — bytes into your repo. It is bounded
+  // the same way: one caller, and the size/type gate lives BEFORE it, because
+  // the PDS accepts an oversized blob with a 200 and only refuses at reference
+  // time (probe-verified). A second uploadBlob caller means arguing here first.
+  assert.equal((src.match(/uploadBlob/g) || []).length, 1, 'exactly one uploadBlob caller');
+  const upAt = src.indexOf('uploadBlob');
+  assert.match(src.slice(Math.max(0, upAt - 700), upAt), /IMAGE_LIMITS\.bytes/,
+    'the size gate precedes the upload, not the record');
 });
 
 // 3n: clean paths mean relative asset URLs resolve against the ROUTE, so

@@ -12,7 +12,7 @@ import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortW
 import { initSession, createAccountRoster } from '../auth/session.js';
 import * as mediaScale from '../media-scale.js';
 import * as lang from '../lang.js';
-import { POST_LIMITS, graphemes, withTag } from '../compose.js';
+import { POST_LIMITS, IMAGE_LIMITS, graphemes, withTag } from '../compose.js';
 import { MEDIA_SCALE } from '../media-scale.js';
 
 let manager = null;        // null = not booted; 'unavailable' = origin has no OAuth client
@@ -729,11 +729,61 @@ function composerCard({ tag, replyTo, onDone }) {
     tag ? `#${tag} is added for you if you don’t write it.` : '');
   const send = el('button', { class: 'btn sm primary' }, replyTo ? 'Reply' : 'Post');
   const cancel = el('button', { class: 'btn sm' }, 'Cancel');
+  // Phase 3: images. Alt text is REQUIRED — probe-verified, the server refuses
+  // a record whose image omits it — and a blank alt would pass the server while
+  // leaving the post unreadable to anyone using a screen reader, so Post stays
+  // disabled until every attached image is described. Files are held here and
+  // uploaded on Post, not on select: an unreferenced blob is garbage-collected
+  // within minutes, so uploading early risks it expiring mid-compose.
+  const picked = [];
+  const strip = el('div', { class: 'row wrap', style: 'gap:8px;margin-top:8px' });
+  const filePicker = el('input', { type: 'file', accept: 'image/*', multiple: true, style: 'display:none' });
+  const attach = el('button', { class: 'btn sm', 'data-attach-image': '1' }, 'Add image');
+  attach.addEventListener('click', () => filePicker.click());
+
+  const drawStrip = () => {
+    strip.replaceChildren(...picked.map((p, i) => {
+      const alt = el('input', { type: 'text', 'data-image-alt': String(i),
+        placeholder: 'Describe this image (required)', value: p.alt });
+      alt.addEventListener('input', () => { p.alt = alt.value; sync(); });
+      const drop = el('button', { class: 'btn sm', title: 'Remove this image' }, '×');
+      drop.addEventListener('click', () => { picked.splice(i, 1); drawStrip(); sync(); });
+      return el('div', { class: 'card', style: 'padding:6px;min-width:180px;flex:1' },
+        el('div', { class: 'row', style: 'gap:6px;align-items:center' },
+          el('img', { src: p.url, alt: '', class: 'thumb' }), drop),
+        alt);
+    }));
+  };
+  filePicker.addEventListener('change', () => {
+    for (const f of [...filePicker.files]) {
+      if (picked.length >= IMAGE_LIMITS.count) {
+        toast(`A post holds ${IMAGE_LIMITS.count} images.`, 'err');
+        break;
+      }
+      if (f.size > IMAGE_LIMITS.bytes) {
+        toast(`${f.name} is ${Math.round(f.size / 1000)}kB and the limit is ${IMAGE_LIMITS.bytes / 1000}kB.`, 'err');
+        continue;
+      }
+      const entry = { file: f, alt: '', url: URL.createObjectURL(f), aspectRatio: null };
+      // the dimensions come free from the preview we are about to draw, and
+      // sending them stops a viewer's feed jumping as the image loads
+      const probe = new Image();
+      probe.onload = () => { entry.aspectRatio = { width: probe.naturalWidth, height: probe.naturalHeight }; };
+      probe.src = entry.url;
+      picked.push(entry);
+    }
+    filePicker.value = '';
+    drawStrip();
+    sync();
+  });
+
   const card = el('div', { class: 'card', 'data-composer': '1', style: 'margin-top:8px' },
     box,
+    strip,
+    filePicker,
     el('div', { class: 'row spread wrap', style: 'gap:8px;align-items:center;margin-top:6px' },
       el('div', { class: 'row', style: 'gap:8px;align-items:center' }, remaining, note),
-      el('div', { class: 'row', style: 'gap:6px' }, cancel, send)));
+      el('div', { class: 'row', style: 'gap:6px' }, attach, cancel, send)));
 
   const sync = () => {
     // count what will actually be SENT, board tag included — otherwise the
@@ -742,7 +792,11 @@ function composerCard({ tag, replyTo, onDone }) {
     const left = POST_LIMITS.graphemes - graphemes(willSend);
     remaining.textContent = left >= 0 ? `${left} left` : `${-left} over`;
     remaining.classList.toggle('over', left < 0);
-    send.disabled = left < 0 || !willSend.trim();
+    const undescribed = picked.some((p) => !p.alt.trim());
+    // an image is something to say, so text may be empty when one is attached
+    const hasContent = willSend.trim() || picked.length;
+    send.disabled = left < 0 || !hasContent || undescribed;
+    send.title = undescribed ? 'Every image needs alt text before this can be posted' : '';
   };
   box.addEventListener('input', sync);
   sync();
@@ -751,9 +805,18 @@ function composerCard({ tag, replyTo, onDone }) {
   send.addEventListener('click', async () => {
     send.disabled = true;
     try {
-      await lens.publish({ text: box.value, tag, replyTo,
+      // upload NOW, adjacent to the post — an unreferenced blob expires within
+      // minutes, so uploading at file-select could leave a dead ref behind
+      const images = [];
+      for (const p of picked) {
+        send.replaceChildren(`Uploading ${images.length + 1}/${picked.length}…`);
+        images.push({ blob: await lens.uploadImage(p.file), alt: p.alt.trim(), aspectRatio: p.aspectRatio });
+      }
+      send.replaceChildren(replyTo ? 'Reply' : 'Post');
+      await lens.publish({ text: box.value, tag, replyTo, images,
         langs: lang.active().slice(0, 1),
         navLang: typeof navigator !== 'undefined' ? navigator.language : null });
+      for (const p of picked) URL.revokeObjectURL(p.url);
       toast('Posted — it is on your Bluesky account too.', 'ok');
       card.remove();
       onDone?.();
