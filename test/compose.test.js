@@ -110,3 +110,25 @@ test('3w: a reply carries root and parent, both with cid — the lexicon require
   // a parent without a cid is unusable — refuse rather than write a broken ref
   assert.throws(() => buildPost({ text: 'x', replyTo: { root, parent: { uri: parent.uri } }, now: new Date() }), /cid/i);
 });
+
+// ---- Phase 1 live-proof findings (2026-08-26) ----
+// The smoke run against the real network wrote a post whose record carried NO
+// `langs`. That is what this code does when no Forage content-language is set,
+// and it is wrong in a way the tests could not see: every other client declares
+// a language, language filters everywhere key off it, and a post declaring
+// nothing is invisible to all of them — including our own 3u filter. The
+// browser already knows what language the writer is working in; not passing it
+// was an omission, not a decision.
+
+test('phase-1 finding: a post declares a language — the browser’s, when nothing else is set', () => {
+  const rec = buildPost({ text: 'planting garlic', navLang: 'en-US', now: new Date() });
+  assert.deepEqual(rec.langs, ['en'], 'the region is dropped — the language is the claim, not the locale');
+
+  // an explicit Forage content-language wins over the browser
+  const pref = buildPost({ text: 'x', langs: ['ja'], navLang: 'en-US', now: new Date() });
+  assert.deepEqual(pref.langs, ['ja']);
+
+  // and when we genuinely know nothing, we say nothing rather than guessing
+  const unknown = buildPost({ text: 'x', now: new Date() });
+  assert.equal(unknown.langs, undefined, 'no source of truth means no claim');
+});

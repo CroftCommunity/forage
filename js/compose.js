@@ -70,7 +70,19 @@ export function withTag(text, tag) {
   return body ? `${body} #${tag}` : `#${tag}`;
 }
 
-export function buildPost({ text, langs, replyTo, now = new Date() } = {}) {
+// Phase-1 live-proof finding (2026-08-26): the first real post this code ever
+// wrote carried no `langs`, because nothing passed any. Every other client
+// declares one, and language filters — including Forage's own (3u) — key off
+// it, so an undeclared post is invisible to all of them. The browser knows the
+// writer's language; use it when nothing better is available, and still say
+// nothing when even that is unknown rather than guessing English.
+const languageClaim = (langs, navLang) => {
+  if (langs?.length) return langs;
+  const base = String(navLang || '').trim().toLowerCase().split('-')[0];
+  return base ? [base] : null;
+};
+
+export function buildPost({ text, langs, navLang, replyTo, now = new Date() } = {}) {
   const body = String(text ?? '').trim();
   if (!body) throw new Error('a post cannot be empty — there is nothing to say yet');
 
@@ -89,7 +101,8 @@ export function buildPost({ text, langs, replyTo, now = new Date() } = {}) {
     createdAt: now.toISOString(),
     facets: detectFacets(body),
   };
-  if (langs?.length) record.langs = langs;
+  const claim = languageClaim(langs, navLang);
+  if (claim) record.langs = claim;
   if (replyTo) {
     const { root, parent } = replyTo;
     // Both refs need a cid; a ref without one produces a reply the network

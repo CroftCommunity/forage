@@ -130,3 +130,14 @@ test('3w: a reply names its root and parent, so it threads where it was written'
   await lens.publish({ text: 'agreed', replyTo: { root, parent } });
   assert.deepEqual(calls[0].record.reply, { root, parent });
 });
+
+test('phase-1 finding: publish passes the browser language through to the record', async () => {
+  const calls = [];
+  const fetchHandler = async (path, init = {}) => {
+    calls.push(init.body ? JSON.parse(init.body) : null);
+    return { ok: true, status: 200, json: async () => ({ uri: 'at://x/y/z', cid: 'c' }) };
+  };
+  const lens = createLens({ session: { did: 'did:plc:me', handle: 'me.test', fetchHandler } });
+  await lens.publish({ text: 'hello', navLang: 'pt-BR' });
+  assert.deepEqual(calls[0].record.langs, ['pt'], 'the post says what language it is in');
+});

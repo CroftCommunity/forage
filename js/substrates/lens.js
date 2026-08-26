@@ -383,6 +383,20 @@ export function withPinnedFeed(preferences, uri, pinned) {
   });
 }
 
+// Phase-1 live-proof finding (2026-08-26): during the real smoke run, clicking
+// Reply on a freshly-loaded thread did nothing — no composer, no message. The
+// session was still restoring and the view re-rendered underneath the click.
+// "Not signed in yet" and "not signed in at all" are different situations and
+// deserve different words: the first is a wait, the second is an instruction.
+// Pure so every session-gated control can share one answer.
+export function sessionGateMessage({ signedIn, authState }, action) {
+  if (signedIn) return null;
+  if (authState === 'unknown' || authState === 'pending') {
+    return `Still restoring your session — one moment, then you can ${action}.`;
+  }
+  return `Sign in to ${action} — it writes to your own Bluesky account.`;
+}
+
 // 3v: the canonical, SHAREABLE feed path. A feed's identity is
 // at://<did>/app.bsky.feed.generator/<rkey>; an rkey alone is not resolvable
 // (rkeys are not unique across creators, and no endpoint resolves one without
@@ -745,9 +759,9 @@ export function createLens({ session = null, transport = fetch } = {}) {
     // facets, reply refs) and refuses before anything reaches the network;
     // this only carries it. Returns uri+cid so a reply can thread onto it
     // without a refetch.
-    async publish({ text, tag, langs, replyTo } = {}) {
+    async publish({ text, tag, langs, navLang, replyTo } = {}) {
       if (!session) throw new Error('lens: publishing needs a session — sign in first');
-      const record = buildPost({ text: tag ? withTag(text, tag) : text, langs, replyTo });
+      const record = buildPost({ text: tag ? withTag(text, tag) : text, langs, navLang, replyTo });
       const data = await post('com.atproto.repo.createRecord', {
         repo: session.did, collection: POST_COLLECTION, record,
       }, 'publish');

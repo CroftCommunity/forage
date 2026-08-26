@@ -1,6 +1,6 @@
 # Composing, proved and completed: live proof → delete → images
 
-**Status:** Pass 1 drafted 2026-08-26. Not yet executed.
+**Status:** Phases 1–3 planned; **phase 1 EXECUTED 2026-08-26** (composing live-proved; two findings fixed). Phases 2–3 pending.
 **Repo:** `forage` (CroftCommunity/forage) · worktree `worktrees/forage/modes-bbs`
 **Predecessor:** `plans/2026-08-25-1-plan-backend-modes-bsky-writes.md` (3w shipped composing)
 
@@ -563,3 +563,75 @@ accepted.
   the real reason (near-total write-set overlap), not a mechanism.
 - **Gate confirmed:** open questions are all PHASE-GATED or ADVISORY; none
   BLOCKING, so execution can start at phase 1.
+
+### Phase 1 executed — 2026-08-26 — ✅ composing is PROVED, and it found two things
+
+Ran against the real network: local preview on `127.0.0.1:8741`, loopback OAuth
+through `bsky.social`'s real authorize screen, real token, real PDS, test
+account `did:plc:xyfhcaweaeyew3zrgk6jaln7`.
+
+**What was written and what came back.**
+
+A post, composed through Forage's own composer on `/h/forage-smoke-20260826`:
+
+```
+SENT     {"$type":"app.bsky.feed.post",
+          "text":"Checking that Forage can write a post. Ignore me. #forage-smoke-20260826",
+          "createdAt":"2026-08-26T19:49:21.251Z",
+          "facets":[{"index":{"byteStart":50,"byteEnd":72},
+                     "features":[{"$type":"app.bsky.richtext.facet#tag",
+                                  "tag":"forage-smoke-20260826"}]}]}
+
+RETURNED 200 {"uri":"at://did:plc:xyfhc…/app.bsky.feed.post/3mtz43zvmqn2w",
+              "cid":"bafyreidxbqrcs4h3gsvztw4r2f5mxxd6hgy4nkhuiovlk4eemecj7rkwe4",
+              "validationStatus":"valid"}
+```
+
+`validationStatus: "valid"` is the PDS validating the record against the
+lexicon — an authority that is not us.
+
+Fetched back independently via `com.atproto.repo.getRecord`, the stored record
+matched byte for byte, and — the check that mattered — the facet indices sliced
+out of the **fetched** text (not ours) yield exactly `'#forage-smoke-20260826'`.
+The byte-index handling is correct against the real thing.
+
+A reply, composed in the thread:
+
+```
+SENT     reply:{"root":  {"uri":"…/3mtz43zvmqn2w","cid":"bafyreidxbqrc…"},
+                "parent":{"uri":"…/3mtz43zvmqn2w","cid":"bafyreidxbqrc…"}}
+RETURNED 200 uri …/3mtz4d3pvxl2w, validationStatus "valid"
+```
+
+`getPostThread` on the root then returned it **nested as a reply**, with its
+refs pointing back at the root. Threading works against the real appview.
+
+All three records (the post and two replies — two smoke runs each posted once)
+were deleted afterwards; `listRecords` reports **0 posts** in the test repo.
+
+**Finding 1 — posts declared no language.** The first record ever written
+carried no `langs`. That is what the code did when no Forage content-language
+was set, and tests could not see it because no test asserted a field's absence
+mattered. It does: every other client declares a language, language filters key
+off it — *including Forage's own 3u filter* — so an undeclared post is
+invisible to all of them. Fixed test-first: `buildPost` now takes `navLang` and
+claims the browser's language when nothing better is set, drops the region
+(`pt-BR` → `pt`), lets an explicit Forage preference win, and still says nothing
+when even the browser is unknown rather than guessing English.
+
+**Finding 2 — a click during session restore vanished.** Clicking Reply on a
+freshly-loaded thread did nothing at all: no composer, no message. The session
+was still restoring and the view re-rendered underneath the click. "Not signed
+in *yet*" and "not signed in *at all*" are different situations, and the code
+was treating them as one. Fixed test-first with a pure `sessionGateMessage` —
+restoring says *wait*, signed-out says *sign in* and names the action attempted
+— now shared by both compose surfaces, with a journey assertion so the two can
+never be conflated again. The ring dial already handled this window correctly
+(3b); the compose surfaces did not inherit it.
+
+**Neither finding was visible to the test suite before the live run**, which is
+the phase's whole justification.
+
+**Done-when, met:** post and reply written through the composer, rendered and
+threaded correctly by an appview we did not write, then removed. 326 unit / 88
+conformance / 5 journeys green with both fixes pinned.

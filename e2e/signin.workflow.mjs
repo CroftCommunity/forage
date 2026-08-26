@@ -132,6 +132,22 @@ export async function run() {
   await page.locator('button:has-text("Search")').click();
   await page.waitForSelector('text=Garden Talk');
 
+  // Phase-1 live-proof finding: a session-gated control must never swallow a
+  // click. Signed OUT it says sign in and names the action; while the session
+  // is still RESTORING it says wait — the two are different situations, and
+  // conflating them is what made a real Reply click vanish silently.
+  const gateWords = await page.evaluate(async () => {
+    const m = await import('/js/substrates/lens.js');
+    return {
+      restoring: m.sessionGateMessage({ signedIn: false, authState: 'unknown' }, 'reply'),
+      out: m.sessionGateMessage({ signedIn: false, authState: 'signed-out' }, 'reply'),
+      inSession: m.sessionGateMessage({ signedIn: true, authState: 'signed-in' }, 'reply'),
+    };
+  });
+  assert.match(gateWords.restoring, /restor/i, 'a restoring session says wait, not "sign in"');
+  assert.match(gateWords.out, /sign in.*reply/i, 'signed out names the action');
+  assert.equal(gateWords.inSession, null);
+
   // 3j: a feed board carries its header card, and Join writes preferences
   await page.goto(`${s.origin}/f/whats-hot`);
   await page.waitForSelector('[data-feed-header]');

@@ -8,7 +8,7 @@
 
 import { el, timeAgo, fmtScore } from '../util.js';
 import { postRow, commentNode, voteBox, skeleton, emptyState, toast } from './components.js';
-import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow, affordanceFor, feedCardModel, threadNodeStyle, feedPath, parseFeedRoute } from '../substrates/lens.js';
+import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow, affordanceFor, feedCardModel, threadNodeStyle, feedPath, parseFeedRoute, sessionGateMessage } from '../substrates/lens.js';
 import { initSession, createAccountRoster } from '../auth/session.js';
 import * as mediaScale from '../media-scale.js';
 import * as lang from '../lang.js';
@@ -61,6 +61,15 @@ export async function startDirectSignIn() {
   }
   try { await manager.signIn('https://bsky.social'); }
   catch (e) { toast('Sign-in failed: ' + e.message, 'err'); }
+}
+
+// Phase-1 live-proof finding: a click during the session-restore window used to
+// vanish — the view re-rendered underneath it and nothing was said. Every
+// session-gated control asks this, so "still restoring" and "signed out" never
+// get conflated again.
+function sessionGate(action) {
+  const authState = manager && manager !== 'unavailable' && manager.state ? manager.state() : 'signed-out';
+  return sessionGateMessage({ signedIn: !!session, authState }, action);
 }
 
 export function sessionIdentity() {
@@ -652,7 +661,8 @@ function affordanceStrip(stream, onPosted) {
     ? (() => {
         const b = el('button', { class: 'btn sm primary', 'data-compose': '1' }, a.composeLabel);
         b.addEventListener('click', () => {
-          if (!session) return toast('Sign in to post — it writes to your own Bluesky account.', 'err');
+          const gate = sessionGate('post');
+          if (gate) return toast(gate, 'err');
           if (host.querySelector('[data-composer]')) return;
           host.append(composerCard({ tag: stream.key, onDone: onPosted }));
         });
@@ -702,7 +712,9 @@ function composerCard({ tag, replyTo, onDone }) {
   send.addEventListener('click', async () => {
     send.disabled = true;
     try {
-      await lens.publish({ text: box.value, tag, replyTo, langs: lang.active().slice(0, 1) });
+      await lens.publish({ text: box.value, tag, replyTo,
+        langs: lang.active().slice(0, 1),
+        navLang: typeof navigator !== 'undefined' ? navigator.language : null });
       toast('Posted — it is on your Bluesky account too.', 'ok');
       card.remove();
       onDone?.();
@@ -1013,7 +1025,8 @@ export function lensThreadView(params, query) {
     const rootRef = { uri: p.id, cid: p.cid };
     const replyHost = el('div', {});
     const openReply = (parentRef) => {
-      if (!session) return toast('Sign in to reply — it writes to your own Bluesky account.', 'err');
+      const gate = sessionGate('reply');
+      if (gate) return toast(gate, 'err');
       if (replyHost.querySelector('[data-composer]')) return;
       replyHost.replaceChildren(composerCard({
         replyTo: { root: rootRef, parent: parentRef },
