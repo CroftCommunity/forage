@@ -490,6 +490,19 @@ export function createFieldView() {
   return { main: el('div', {}, el('h1', {}, 'Create a Field'), host), side: null };
 }
 
+// 3g: the memory-mode /h/ tag stream — same route scheme as the Bluesky view.
+export function tagStreamView(params) {
+  const s = store.getState();
+  const r = sel.tagStream(s, store.getPersonaId(), params.tag, store.nowSec());
+  const card = el('div', { class: 'card' });
+  for (const p of r.posts) card.append(postRow(p, r.perms.canVote));
+  const main = el('div', {},
+    el('h1', {}, `#${r.tag}`),
+    el('div', { class: 'xs muted', style: 'margin-bottom:8px' }, 'Tagged posts across every Field.'),
+    r.posts.length ? card : emptyState('No tagged posts', `Nothing carries #${r.tag} yet.`));
+  return { main, side: null };
+}
+
 // ---------- field settings (owner) ----------
 export function fieldSettingsView(params) {
   const f = sel.field(S(), V(), params.slug, NOW());

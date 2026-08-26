@@ -117,7 +117,7 @@ function facetedBody(p) {
     if (!seg.facet) return seg.text;
     if (seg.facet.type === 'link') return el('a', { href: seg.facet.value, target: '_blank', rel: 'noopener noreferrer' }, seg.text);
     if (seg.facet.type === 'mention') return el('a', { href: `https://bsky.app/profile/${seg.facet.value}`, target: '_blank', rel: 'noopener noreferrer', title: 'Profiles live on bsky.app — Forage is a lens' }, seg.text);
-    if (seg.facet.type === 'tag') return el('em', { 'data-tag': seg.facet.value, title: 'Hashtag' }, seg.text);
+    if (seg.facet.type === 'tag') return el('a', { href: `#/lens/h/${encodeURIComponent(seg.facet.value)}`, 'data-tag': seg.facet.value, title: 'Open this hashtag as a board' }, seg.text);
     return seg.text;
   });
   const bodyEl = el('div', { class: 'clamp' }, ...nodes);
@@ -264,6 +264,7 @@ export function lensHomeView() {
   const main = el('div', {},
     el('h1', {}, 'The Lens'),
     ringDial(),
+    trendingRail(),
     el('div', { class: 'card' },
       el('p', { class: 'small' },
         'Your Bluesky, shaped as a forum: Fields are feeds, threads are threads, and boosting IS liking — a boost here is a real like on Bluesky (DL-013 shipped). Signed out, the lens is read-only.'),
@@ -326,6 +327,49 @@ function quotedContext(quoted) {
       el('a', { href: `https://bsky.app/profile/${quoted.author}`, target: '_blank', rel: 'noopener noreferrer' }, quoted.author)),
     el('div', { class: 'small' }, quoted.excerpt),
     el('div', { class: 'xs' }, el('a', { href: `#/lens/p?uri=${encodeURIComponent(quoted.uri)}` }, 'open the original ↳')));
+}
+
+// 3g: the hashtag board — /h/ in the Bluesky view. Session-gated (search is
+// 403 unauthenticated, probe-verified) — guests get words + the way in.
+export function lensHashtagView(params) {
+  const tag = decodeURIComponent(params.tag);
+  if (!session) {
+    return { main: emptyState(`#${tag} needs a session`,
+      'Hashtag boards ride search, which Bluesky gates behind sign-in (DL-021). Sign in and this becomes a live board.'),
+      side: el('div', { class: 'side' }, sessionCard(), moderationPanel(), lensSidebar()) };
+  }
+  const main = el('div', {}, el('h1', {}, `#${tag}`), skeleton(6));
+  lens.stream({ kind: 'hashtag', key: tag }).then((board) => {
+    const card = el('div', { class: 'card' });
+    for (const p of board.posts) card.append(lensRow(p));
+    for (const a of card.querySelectorAll('a[href*="/p/at:"]')) {
+      const mm = a.getAttribute('href').match(/\/p\/(at:.+)$/);
+      if (mm) a.setAttribute('href', `#/lens/p?uri=${encodeURIComponent(mm[1])}`);
+    }
+    main.replaceChildren(el('h1', {}, `#${tag}`),
+      board.posts.length ? card : emptyState('A quiet tag', `No recent posts carry #${tag}.`));
+  }).catch((e) => main.replaceChildren(el('h1', {}, `#${tag}`), emptyState('Hashtag fetch failed', e.message)));
+  return { main, side: el('div', { class: 'side' }, sessionCard(), moderationPanel(), lensSidebar()) };
+}
+
+// 3g: the trending rail — unspecced API; absent WITH WORDS when it breaks,
+// never a blank hole. Each topic with a feed link opens as a feed stream.
+function trendingRail() {
+  const card = el('div', { class: 'card', 'data-trending': '1' }, el('h2', {}, 'Trending'), skeleton(3));
+  lens.trending().then((topics) => {
+    const rows = topics.map((t) => {
+      if (!t.feedUri) return el('div', { class: 'xs muted' }, t.displayName);
+      const slug = `trend-${t.feedUri.split('/').pop()}`;
+      sources.set(slug, { slug, title: t.displayName, kind: 'feed', source: { kind: 'feed', uri: t.feedUri } });
+      return el('div', {}, el('a', { href: `#/lens/f/${slug}` }, t.displayName),
+        t.description ? el('div', { class: 'xs muted' }, t.description) : null);
+    });
+    card.replaceChildren(el('h2', {}, 'Trending'),
+      rows.length ? el('div', { class: 'stack' }, ...rows)
+        : el('div', { class: 'xs muted' }, 'Nothing trending right now.'));
+  }).catch(() => card.replaceChildren(el('h2', {}, 'Trending'),
+    el('div', { class: 'xs muted' }, 'Trending is unavailable (it rides an unstable API — DL-020). The rest of the lens is unaffected.')));
+  return card;
 }
 
 export function lensThreadView(params, query) {

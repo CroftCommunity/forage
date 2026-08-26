@@ -69,6 +69,8 @@ router.route('/submit', views.submitView);
 router.route('/create-field', views.createFieldView);
 router.route('/settings', views.settingsView);
 router.route('/frontiers', views.frontiersView);
+router.route('/h/:tag', views.tagStreamView);
+router.route('/lens/h/:tag', lensViews.lensHashtagView);
 router.route('/lens', lensViews.lensHomeView);
 router.route('/lens/f/:slug', lensViews.lensFieldView);
 router.route('/lens/p', lensViews.lensThreadView);

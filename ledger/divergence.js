@@ -74,6 +74,22 @@ export const LEDGER = [
     tolerance: 'masking outcomes only; the authority source is not compared',
     date: '2026-08-25', status: 'active' },
 
+  { id: 'DL-020', kind: 'proposal', capability: 'feeds', tier: 'wide',
+    description: 'The trending rail rides app.bsky.unspecced.getTrendingTopics — an API Bluesky may break without notice (D8). The rail degrades to absent-with-words; each topic resolves to a feed generator (a /f/-kind stream, not a third kind).',
+    reason: 'Invariant 8 — wide-only behavior, registered. Watch for the endpoint stabilizing or vanishing.',
+    date: '2026-08-25', status: 'open' },
+  { id: 'DL-021', kind: 'tolerance', capability: 'search', tier: 'wide',
+    description: '/h/ hashtag boards are session-gated at the wide tier (searchPosts is 403 unauthenticated, probe-verified) while memory-mode /h/ is open to all seats (a local selector).',
+    reason: 'The network gates search; the sandbox has no reason to.',
+    tolerance: 'access gating only; board shapes match',
+    date: '2026-08-25', status: 'active' },
+  { id: 'DL-022', kind: 'frontier', capability: 'feeds', tier: 'wide', label: 'List-backed Fields',
+    description: 'A Bluesky list (app.bsky.graph.list) is a member-curated board — philosophically a hand-curated ring. Deferred: needs its own probe (getListFeed shapes) and a unit.',
+    date: '2026-08-25', status: 'open' },
+  { id: 'DL-023', kind: 'frontier', capability: 'feeds', tier: 'wide', label: 'Starter packs',
+    description: 'Bundles of feeds + people — a Field collection. Deferred until list-backed Fields exist.',
+    date: '2026-08-25', status: 'open' },
+
   // ---- the ring dial (plan 2026-08-25-1, 3b) ----
   { id: 'DL-016', kind: 'frontier', capability: 'feeds', tier: 'wide', label: 'Ring beyond the cap',
     description: 'mutuals+1 draws the first 25 members (D6-measured cap; latency is not the bound — board noise is). The chip reports the TRUE member count; drawing the full ring (sampling, rotation, or paging members) is this frontier.',
