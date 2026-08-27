@@ -166,8 +166,7 @@ multiplicative-rework criterion.
   and states intent — it does not unlock anything otherwise unreachable.
   **Disposition honoured:** throwaway. Nothing from the probe was kept.
 
-- [ ] ~~**D1: Does `signIn(host, { prompt: 'create' })` through our vendored client actually
-      land on a create screen?**~~
+- [x] ~~D1 (original wording; resolved above)~~
   - **Probe:** Temporarily thread the options argument, call
     `signIn('https://bsky.social', { prompt: 'create' })` from a local build, and record
     what bsky.social renders — a create/registration screen, or the ordinary sign-in
@@ -204,13 +203,14 @@ the closest targets on every screen, and four of the five are under the 44px flo
 
 **Changes:**
 - [x] ~~`.masthead { position: sticky }`~~ — landed upstream, `2c4b28d`.
-- [ ] `e2e/mobile-fit.workflow.mjs` — **extend the tap-target selector to chrome-region
-      anchors.** Its selector is
+- [x] DONE `2776537` — `e2e/mobile-fit.workflow.mjs`, tap-target selector extended to chrome-region
+      anchors. Its selector is
       `'button, select, input[…], .tab, a.btn, .themetoggle'`, which matches no plain
       `<a>`, while its own comment says masthead nav links measured 38×21 and that the
       prose exemption "does not reach the masthead, which is a chrome region, not prose".
       The prose and the selector disagree; the prose is right. RED first.
-- [ ] `css/app.css` — bring the masthead controls to the floor at touch widths.
+- [x] DONE `2776537` — `css/app.css`, masthead controls at the floor, plus the tighter gap and the
+      removal of the duplicate lens nav link that together took 320px from 107px to 61px.
 - [ ] `css/app.css` — `scroll-margin-top` on heading targets (grep confirms none exists),
       so in-page anchors and deep links do not land under the now-sticky bar.
 - [ ] `plans/2026-08-26-2-plan-public-site-polish.md` § Phase 2 → pointer here.
