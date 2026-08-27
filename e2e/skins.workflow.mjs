@@ -17,7 +17,7 @@ export async function run() {
   assert.equal(await linkCount(), 0, 'default = no skin sheet');
 
   // pick the BBS skin — the terminal takes over
-  await page.locator('.feed-row:has-text("Skin") select').selectOption('bbs');
+  await page.locator('.field-row:has-text("Skin") select').selectOption('bbs');
   await page.waitForFunction(() => document.getElementById('skin-sheet'));
   await page.waitForFunction((prev) => getComputedStyle(document.body).fontFamily !== prev, before);
   assert.match(await fontOf(), /mono/i, 'the BBS skin is monospace');
@@ -35,7 +35,7 @@ export async function run() {
   // back to default: the look is exactly today's (no sheet at all)
   await page.goto(`${s.origin}/settings`);
   await page.waitForSelector('text=Skin');
-  await page.locator('.feed-row:has-text("Skin") select').selectOption('default');
+  await page.locator('.field-row:has-text("Skin") select').selectOption('default');
   await page.waitForFunction(() => !document.getElementById('skin-sheet'));
   assert.equal(await fontOf(), before, 'default restores the exact original font stack');
 
@@ -63,7 +63,7 @@ export async function run() {
     await chrome.page.waitForSelector('text=Skin');
     assert.match(await schemeOf(), /light/, 'the light default declares light native chrome');
 
-    await chrome.page.locator('.feed-row:has-text("Skin") select').selectOption('forage-dark');
+    await chrome.page.locator('.field-row:has-text("Skin") select').selectOption('forage-dark');
     await chrome.page.waitForFunction(() =>
       getComputedStyle(document.documentElement).colorScheme.includes('dark'));
     assert.match(await schemeOf(), /dark/, 'forage-dark drives native chrome dark, not just tokens');
@@ -171,7 +171,7 @@ export async function run() {
     // a single-palette skin has nowhere to toggle to, and shows it
     await page.goto(`${tog.origin}/settings`);
     await page.waitForSelector('text=Skin');
-    await page.locator('.feed-row:has-text("Skin") select').selectOption('bbs');
+    await page.locator('.field-row:has-text("Skin") select').selectOption('bbs');
     await page.waitForFunction(() => document.getElementById('skin-sheet'));
     assert.equal(await toggle().isDisabled(), true,
       'bbs ships one palette — the toggle must read as unavailable, not merely inert');
@@ -250,7 +250,7 @@ export async function run() {
     const { page } = board;
     await page.goto(`${board.origin}/settings`);
     await page.waitForSelector('text=Skin');
-    await page.locator('.feed-row:has-text("Skin") select').selectOption('phpbb');
+    await page.locator('.field-row:has-text("Skin") select').selectOption('phpbb');
     await page.waitForFunction(() =>
       document.getElementById('skin-sheet')?.getAttribute('href')?.includes('phpbb'));
 

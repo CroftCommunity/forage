@@ -530,6 +530,12 @@ export function feedSettingsView(params) {
     el('p', { class: 'muted small' }, `Steward management and the rules editor are owner tools; stewards: ${f.stewards.join(', ')}`), host), side: null };
 }
 
+// NOTE FOR ANY FUTURE field->feed RENAME: `field-row` here is a FORM FIELD,
+// not a Feed. The 2026-08-26 rename spared fieldRow(), fieldset and
+// subjectField by name but swept this class LITERAL to 'feed-row', while
+// css/app.css kept styling `.field-row` — so every form row in the app lost its
+// styling and nothing failed. test/css-classes.test.js now catches that.
+//
 // A <label> that merely sits NEXT TO an input names nothing. A screen reader
 // announces "edit text, blank", and clicking the label does not focus the
 // feed. Both are fixed by one association: label[for] -> control[id].
@@ -538,12 +544,12 @@ export function feedSettingsView(params) {
 // them were unlabelled — this is not a thing to remember per form. Rows that
 // hold a LINK or a readout rather than a control (Mode, Accounts, Version) are
 // not form feeds; they keep their plain label and are left alone.
-let feedSeq = 0;
+let fieldSeq = 0;
 export function fieldRow(labelText, control, ...extra) {
   const isControl = /^(INPUT|SELECT|TEXTAREA)$/.test(control?.tagName ?? '');
-  if (!isControl) return el('div', { class: 'feed-row' }, el('label', {}, labelText), control, ...extra);
-  if (!control.id) control.id = `fr-${++feedSeq}`;
-  return el('div', { class: 'feed-row' }, el('label', { for: control.id }, labelText), control, ...extra);
+  if (!isControl) return el('div', { class: 'field-row' }, el('label', {}, labelText), control, ...extra);
+  if (!control.id) control.id = `fr-${++fieldSeq}`;
+  return el('div', { class: 'field-row' }, el('label', { for: control.id }, labelText), control, ...extra);
 }
 
 // ---------- settings / prefs ----------
@@ -580,11 +586,11 @@ export function settingsView() {
   skinSel.addEventListener('change', () => skins.setSkin(skinSel.value));
   const themeCard = el('div', { class: 'card' },
     fieldRow('Skin', skinSel),
-    el('div', { class: 'feed-row' }, el('label', {}, 'Mode'),
+    el('div', { class: 'field-row' }, el('label', {}, 'Mode'),
       el('a', { href: '/mode' }, 'Bluesky view ↔ Memory sandbox — choose at /mode')),
-    el('div', { class: 'feed-row' }, el('label', {}, 'Accounts'),
+    el('div', { class: 'field-row' }, el('label', {}, 'Accounts'),
       el('a', { href: '/me' }, 'Switch account, add another, or sign out')),
-    el('div', { class: 'feed-row' }, el('label', {}, 'Version'), versionOut),
+    el('div', { class: 'field-row' }, el('label', {}, 'Version'), versionOut),
     el('div', { class: 'xs muted' }, 'Skin and mode are this device only.'));
 
   if (!V()) {

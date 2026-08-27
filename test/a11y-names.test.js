@@ -31,11 +31,11 @@ test('the composer image-alt input carries an accessible name, not just a placeh
 test('form controls in views.js are named through fieldRow, not bare labels', () => {
   // The regression guard for the 14 unnamed controls: a <label> sitting NEXT TO
   // an input names nothing. fieldRow() wires label[for] -> control[id]; the
-  // only feed-rows allowed to keep a bare label are the ones holding a link or
+  // only field-rows allowed to keep a bare label are the ones holding a link or
   // a readout rather than a control (Mode, Accounts, Version).
   const views = src('js/ui/views.js');
-  const bare = [...views.matchAll(/class: 'feed-row' \}, el\('label', \{\}, '([^']+)'/g)]
+  const bare = [...views.matchAll(/class: 'field-row' \}, el\('label', \{\}, '([^']+)'/g)]
     .map((m) => m[1]);
   assert.deepEqual(bare.sort(), ['Accounts', 'Mode', 'Version'],
-    `feed-rows with a bare label must be the non-control rows only; found: ${bare.join(', ')}`);
+    `field-rows with a bare label must be the non-control rows only; found: ${bare.join(', ')}`);
 });

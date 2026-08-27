@@ -34,7 +34,7 @@ async function takeSeat(page, origin, persona = 'u_fern') {
 // Every labelled control on the page must actually be named by its label.
 // Clicking the label is the observable form of that association.
 async function assertLabelsName(page, where) {
-  const rows = await page.locator('#main .feed-row').all();
+  const rows = await page.locator('#main .field-row').all();
   const unnamed = [];
   for (const row of rows) {
     const control = row.locator('input:visible, select:visible, textarea:visible').first();
@@ -71,26 +71,26 @@ export async function run() {
 
     // ---- the submit wizard, step by step -------------------------------
     await page.goto(`${s.origin}/submit`);
-    await page.waitForSelector('.feed-row');
+    await page.waitForSelector('.field-row');
 
     problems.push(...await assertLabelsName(page, 'submit step 1'));
     problems.push(...await axeOn(page, 'submit step 1'));
 
-    await main.locator('.feed-row select').selectOption('gardening');
+    await main.locator('.field-row select').selectOption('gardening');
     await main.locator('button:has-text("Next")').click();
     await page.waitForSelector('.format-tabs');
     problems.push(...await axeOn(page, 'submit step 2'));
 
     await main.locator('button:has-text("Next")').click();
-    await page.waitForSelector('.feed-row input');
+    await page.waitForSelector('.field-row input');
 
     problems.push(...await assertLabelsName(page, 'submit step 3'));
     problems.push(...await axeOn(page, 'submit step 3'));
 
     // ---- and it actually publishes --------------------------------------
     const TITLE = 'A holistic workflow test post';
-    await main.locator('.feed-row input[type="text"]').first().fill(TITLE);
-    await main.locator('.feed-row textarea').first().fill('Written by e2e/forms.workflow.mjs.');
+    await main.locator('.field-row input[type="text"]').first().fill(TITLE);
+    await main.locator('.field-row textarea').first().fill('Written by e2e/forms.workflow.mjs.');
     // Step 3 -> the review step, which is its own surface worth scanning:
     // it renders the post as it will appear, including any automod notice.
     await main.locator('button:has-text("Review")').click();
@@ -110,7 +110,7 @@ export async function run() {
 
     // ---- create a Feed --------------------------------------------------
     await page.goto(`${s.origin}/create-feed`);
-    await page.waitForSelector('.feed-row');
+    await page.waitForSelector('.field-row');
     problems.push(...await assertLabelsName(page, 'create-feed'));
     problems.push(...await axeOn(page, 'create-feed'));
 
@@ -120,7 +120,7 @@ export async function run() {
     // is both the realistic path and the only way to reach these controls.
     await takeSeat(page, s.origin, 'u_sage');
     await page.goto(`${s.origin}/f/gardening/settings`);
-    await page.waitForSelector('#main .feed-row');
+    await page.waitForSelector('#main .field-row');
     problems.push(...await assertLabelsName(page, 'feed settings'));
     problems.push(...await axeOn(page, 'feed settings'));
 
@@ -131,7 +131,7 @@ export async function run() {
     await page.waitForSelector('.devbar');
     await page.locator('.devbar select[title="Active persona"]').selectOption('');
     await page.goto(`${s.origin}/signup`);
-    await page.waitForSelector('#main .feed-row');
+    await page.waitForSelector('#main .field-row');
     problems.push(...await assertLabelsName(page, 'signup'));
     problems.push(...await axeOn(page, 'signup'));
 

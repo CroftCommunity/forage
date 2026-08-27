@@ -449,7 +449,7 @@ function sessionCard() {
     el('h2', {}, 'Sign in with Bluesky'),
     el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
       'The official OAuth flow — you authorize on your own server; no credentials touch Forage. Unlocks your saved feeds as Feeds, Following, and search.'),
-    el('div', { class: 'feed-row' }, el('label', {}, 'Handle'), id),
+    el('div', { class: 'field-row' }, el('label', {}, 'Handle'), id),
     btn);
 }
 
