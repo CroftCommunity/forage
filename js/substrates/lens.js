@@ -215,7 +215,14 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
     : mediaEmb?.$type === 'app.bsky.embed.video#view'
       ? { kind: 'video', thumb: mediaEmb.thumbnail || null }
       : mediaEmb?.$type === 'app.bsky.embed.external#view' && mediaEmb.external?.thumb
-        ? { kind: 'external', thumb: mediaEmb.external.thumb, uri: mediaEmb.external.uri }
+        // 4i: `title` rides along because it is the external card's only human
+        // name, and the view needs one — an <a> around a decorative thumbnail
+        // is otherwise an unnamed link (SERIOUS, live 2026-08-26). Explicitly
+        // null when absent, never the uri: distinguishing "no title" from a
+        // title that looks like a url is what lets the view name the link
+        // honestly instead of inventing one.
+        ? { kind: 'external', thumb: mediaEmb.external.thumb, uri: mediaEmb.external.uri,
+            title: mediaEmb.external.title || null }
         : undefined;
   // an image/video-only post titles from its alt text, never renders blank
   const displayTitle = text

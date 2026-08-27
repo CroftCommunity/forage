@@ -6,7 +6,7 @@
 // official client; the library owns persistence (IndexedDB) and refresh, so
 // sign-in survives reloads. The lens consumes { did, handle, fetchHandler }.
 
-import { el, timeAgo, fmtScore } from '../util.js';
+import { el, timeAgo, fmtScore, domainOf } from '../util.js';
 import { postRow, commentNode, voteBox, skeleton, emptyState, toast } from './components.js';
 import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow, affordanceFor,
   feedCardModel, threadNodeStyle, feedPath, parseFeedRoute, sessionGateMessage, canDelete, sourceLabel,
@@ -257,8 +257,15 @@ function mediaNode(p) {
   if (!p.media) return null;
   if (p.media.kind === 'images') {
     return el('div', { class: 'media-strip' },
-      ...p.media.items.map((i) => el('a', { href: i.full, target: '_blank', rel: 'noopener noreferrer' },
-        el('img', { src: i.thumb, alt: i.alt, loading: 'lazy' }))));
+      // 4i: an author who wrote alt text has named this link already — the img's
+      // alt IS the link's accessible name. Where they did not, we name what the
+      // link DOES and stop there. We do NOT invent a description of a picture
+      // nobody has described: a fabricated alt makes a screen reader worse while
+      // turning this gate green, which is the worst of both.
+      ...p.media.items.map((i) => el('a', {
+        href: i.full, target: '_blank', rel: 'noopener noreferrer',
+        ...(i.alt ? {} : { 'aria-label': 'Image, opens full size' }),
+      }, el('img', { src: i.thumb, alt: i.alt, loading: 'lazy' }))));
   }
   if (p.media.kind === 'video') {
     const link = `https://bsky.app/profile/${p.author}/post/${p.id.split('/').pop()}`;
@@ -267,8 +274,16 @@ function mediaNode(p) {
         p.media.thumb ? el('img', { src: p.media.thumb, alt: '[video]', loading: 'lazy' }) : el('span', { class: 'tag' }, '▶ video')));
   }
   if (p.media.kind === 'external') {
+    // 4i: the thumbnail is DECORATIVE — alt='' is correct and stays. What the
+    // link means is its destination, so the ANCHOR is the thing that needs a
+    // name, and the card's own title is that name (carried through the shaper
+    // for exactly this). With no title, the host is the honest fallback: it
+    // says where you are going, which is more than "link" and less than a
+    // guess. Live SERIOUS violation until 2026-08-26.
+    const name = p.media.title || domainOf(p.media.uri) || 'external link';
     return el('div', { class: 'media-strip' },
-      el('a', { href: p.media.uri, target: '_blank', rel: 'noopener noreferrer' },
+      el('a', { href: p.media.uri, target: '_blank', rel: 'noopener noreferrer',
+        'aria-label': `${name} — opens in a new tab` },
         el('img', { src: p.media.thumb, alt: '', loading: 'lazy' })));
   }
   return null;
