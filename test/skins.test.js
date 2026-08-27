@@ -528,3 +528,50 @@ test('a skin declares exactly ONE :root block, so its palette is unambiguous', (
     assert.equal(blocks, 1, `${id} declares ${blocks} :root blocks; a skin carries one palette`);
   }
 });
+
+// Blend two hexes — the CSS `color-mix(in srgb, A t%, B)` the stylesheet uses.
+function mixOf(a, b, t) {
+  const rgb = (h) => {
+    const s = String(h).trim().replace(/^#/, '');
+    const full = s.length === 3 ? [...s].map((c) => c + c).join('') : s;
+    return [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16));
+  };
+  const A = rgb(a), B = rgb(b);
+  return '#' + A.map((c, i) => Math.round(c * t + B[i] * (1 - t)).toString(16).padStart(2, '0')).join('');
+}
+
+// The last declaration of a token wins, which is how a skin overrides a default.
+function tokenValue(css, name) {
+  const all = [...css.matchAll(new RegExp(`${name}\\s*:\\s*([^;]+);`, 'g'))].map((m) => m[1].trim());
+  return all.length ? all[all.length - 1] : null;
+}
+
+test('the tag chip clears AA in every skin — the floor applies to the ROLE, not the page', () => {
+  // `.tag` (css/app.css) paints --gold-strong on color-mix(--gold-500 18%, --card).
+  // A COMPUTED background is still a background: no per-skin contrast note
+  // records it, and no axe run sees it unless a surface happens to render a
+  // tagged post — which the hermetic fixtures never do. So it is checked here,
+  // where the arithmetic lives, rather than hoped for in a browser.
+  //
+  // Found by a peer's live audit (14 violations on /u/:handle) and confirmed by
+  // computing it: default was 4.33 and usenet 4.02.
+  const base = readFileSync(join(root, 'css/tokens.css'), 'utf8');
+  const subjects = [['default', base]];
+  for (const [id, s] of Object.entries(SKINS)) {
+    if (!s.file) continue;
+    subjects.push([id, base + '\n' + readFileSync(join(root, s.file), 'utf8')]);
+  }
+
+  const failures = [];
+  for (const [id, css] of subjects) {
+    const ink = tokenValue(css, '--gold-strong');
+    const gold = tokenValue(css, '--gold-500');
+    const card = tokenValue(css, '--card');
+    if (![ink, gold, card].every((v) => v && v.startsWith('#'))) continue;
+    const bg = mixOf(gold, card, 0.18);
+    const ratio = contrastOf(ink, bg);
+    if (ratio < 4.5) failures.push(`${id}: ${ink} on ${bg} = ${ratio.toFixed(2)}`);
+  }
+  assert.deepEqual(failures, [],
+    `.tag fails AA in ${failures.length} skin(s):\n  ${failures.join('\n  ')}`);
+});

@@ -137,6 +137,40 @@ kbd { background: var(--green-100); border: 1px solid var(--border); border-radi
 .small { font-size: var(--t-sm); }
 .xs { font-size: var(--t-xs); }
 
+/* ---- Touch floor -------------------------------------------------------
+   44x44 CSS px, WCAG 2.5.5, held as the workspace bar (croft-pwa
+   docs/MOBILE-FIRST.md, settled 2026-08-26). The fix is PADDING, not a bigger
+   glyph: labels and icons stay the size they were and the target grows around
+   them. Links inline in prose carry the criterion's own exemption and are
+   deliberately untouched — a sentence cannot be padded to 44px without
+   breaking the text flow it lives in.
+
+   SCOPED TO TOUCH WIDTHS, and that is a judgement worth stating rather than
+   hiding. It is a TOUCH floor: at 320-480px a thumb is the pointer, and the
+   gate measures exactly those widths. At desktop widths the pointer is a mouse,
+   where the criterion's own AA sibling (2.5.8) sets 24px. Applying 44 to the
+   vote arrows at every width would make the vote column 88px tall and undo the
+   compact density this app ships as a feature — a real cost paid where nobody
+   is using a thumb. e2e/mobile-fit.workflow.mjs asserts the padded box at
+   320/360/390, so what is enforced and what is implemented are the same set. */
+@media (max-width: 480px) {
+  /* .devbar is excluded for the same reason the gate excludes it: it is
+     scaffolding that would not ship, and inflating it to the touch floor costs
+     a third of a phone screen for controls no user taps. The CSS and the gate
+     have to agree about this or one of them is lying. */
+  .devbar button, .devbar select { min-height: 0; min-width: 0; }
+  button:not(.gutter):not(.devbar *), .btn, .btn.sm, .tab,
+  select:not(.devbar *), .format-tabs .ft {
+    min-height: 44px; min-width: 44px;
+  }
+  .btn, .btn.sm, .tab { display: inline-flex; align-items: center; justify-content: center; }
+  .themetoggle { width: 44px; height: 44px; }
+  /* Icon-only, and the smallest things on the page — padding, not a bigger
+     glyph, so the arrows look the same and the thumb has somewhere to land. */
+  .vote, .cvote { min-width: 44px; min-height: 44px; }
+  .votebox { gap: 0; }
+}
+
 /* ---- Buttons ---- */
 .btn {
   display: inline-flex; align-items: center; gap: 6px;
