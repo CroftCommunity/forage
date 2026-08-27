@@ -52,7 +52,13 @@
   --tint:        #EAEFDF;   /* moss tint: joined chip, active-tab bg */
 
   --gold-500:    #C99A3C;   /* gold for fills/borders (pins, steward, tags) */
-  --gold-strong: #8A6A1E;   /* gold as readable TEXT */
+  /* Darkened from #8A6A1E 2026-08-26. `.tag` paints this on
+     color-mix(--gold-500 18%, --card), and that computed background put it at
+     4.33 here and 4.02 on the usenet card — under AA, in a role no per-skin
+     contrast note covered because the background is arithmetic rather than a
+     token. Same value the phpBB skins already use, so the palettes converge
+     rather than gaining a variant. test/skins.test.js computes the pair. */
+  --gold-strong: #7A6110;   /* gold as readable TEXT */
 
   --danger:      #9E2F26;   /* removals, ban, destructive */
   --danger-ink:  #8F2A22;   /* danger text on danger tint */

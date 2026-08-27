@@ -33,7 +33,30 @@ const AxeBuilder = axePkg.default ?? axePkg;
 // Surfaces chosen for DENSITY of distinct component/background pairings rather
 // than for importance: the feed is where rows, chips, meta, tabs and the band
 // all meet, which is where combinations go wrong.
+// Two passes, because surface violations and skin violations are different
+// animals. A markup defect (an unnamed link, a missing label) lives on ONE
+// surface and shows in every skin; a palette defect shows on every surface in
+// ONE skin. Scanning the cross product is 7 x 16 axe runs for no extra signal.
+//
+// So: EVERY surface on the default skin, and every skin on a representative
+// few. The gap this closes was found by a peer's live audit — the tier scanned
+// three surfaces while croft-pwa/docs/ACCESSIBILITY.md says every page, and two
+// SERIOUS violations sat on /u/:handle, gate-blocking under this workflow's own
+// filter and green only because the surface was never loaded. Which is the
+// failure this whole suite exists to prevent, committed by the suite itself.
 const SURFACES = ['/popular', '/settings'];
+
+// Every route reachable without credentials, in the population that owns it.
+// Probed 2026-08-26: all of these render under the hermetic harness.
+const MEMORY_SWEEP = [
+  '/popular', '/home', '/all', '/settings', '/frontiers', '/about',
+  '/f/gardening', '/h/harvest', '/u/sage', '/search?q=compost',
+  '/saved', '/notifications',
+];
+const LENS_SWEEP = ['/', '/feeds', '/me', '/mode', '/u/sage.bsky.social', '/h/harvest'];
+
+// A seat, for the surfaces that only exist for someone logged in.
+const SWEEP_PERSONA = 'u_fern';
 
 // The memory surfaces above are NOT what a first-time visitor sees. Production
 // defaults to the Bluesky lens view at `/`, and scanning only the memory
@@ -95,6 +118,36 @@ export async function run() {
       await s.close();
     }
   }
+
+  // ---- the surface sweep: every page, one skin ------------------------
+  const sweep = async (label, state, opts, paths, persona) => {
+    const s = await scenario(state, opts);
+    try {
+      if (persona) {
+        await s.page.goto(`${s.origin}/popular`);
+        await s.page.waitForSelector('.devbar');
+        await s.page.locator('.devbar select[title="Active persona"]').selectOption(persona);
+        await s.page.waitForFunction(() => !!document.querySelector('.masthead .who a[href^="/u/"]'));
+      }
+      for (const path of paths) {
+        await s.page.goto(`${s.origin}${path}`);
+        await s.page.waitForSelector('.masthead');
+        const res = await new AxeBuilder({ page: s.page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+        for (const v of res.violations) {
+          if (EXCLUDED_RULES.includes(v.id)) continue;
+          for (const node of v.nodes) {
+            failures.push(`${label} ${path}  ${v.id}  ${node.target.join(' ')}\n      ` +
+              (node.any?.[0]?.message ?? v.help).replace(/\s+/g, ' ').slice(0, 150));
+          }
+        }
+      }
+    } finally {
+      await s.close();
+    }
+  };
+
+  await sweep('sweep(memory)', 'seeded', {}, MEMORY_SWEEP, SWEEP_PERSONA);
+  await sweep('sweep(lens)', 'first-visit', { mode: 'bluesky' }, LENS_SWEEP);
 
   assert.deepEqual(failures, [],
     `axe found ${failures.length} accessibility violation(s):\n  ${failures.join('\n  ')}`);
