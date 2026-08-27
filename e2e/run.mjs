@@ -4,6 +4,7 @@
 // and runs only under DOCKER=1. Gated-off workflows SKIP-REPORT loudly —
 // never silently absent. Exit non-zero if any RUN workflow fails.
 import { readdir } from 'node:fs/promises';
+import { diagnoseLive } from './harness/scenario.mjs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -22,6 +23,13 @@ for (const f of files) {
   } catch (e) {
     failed++;
     console.error(`FAILED   ${f}\n${e?.stack || e}`);
+    // Any scenario still open when the workflow threw still knows what it was
+    // waiting on. Ask it before it is garbage — a stack alone has cost this
+    // suite two undiagnosed failures already.
+    try {
+      const d = await diagnoseLive();
+      if (d) console.error(d);
+    } catch (de) { console.error(`  (diagnostics unavailable: ${de?.message})`); }
   }
 }
 console.log(`\nworkflows: ${files.length} found, ${failed} failed`);
