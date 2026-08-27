@@ -435,4 +435,20 @@ test('3i: video and recordWithMedia surface their media; external thumbs ride al
   assert.equal(ext.media.kind, 'external');
   assert.equal(ext.media.thumb, 'https://cdn/et.jpg');
   assert.equal(ext.format, 'link');
+  // 4i: the card's TITLE is the only human name an external embed has, and the
+  // view needs it — an <a> wrapping a decorative thumbnail has no accessible
+  // name without it (link-name, SERIOUS, live on forage.fyi 2026-08-26). The
+  // lexicon's app.bsky.embed.external#viewExternal carries uri/title/
+  // description/thumb; the shaper was dropping title one layer before the view
+  // asked for it, so the fix was reachable only by inventing a name.
+  assert.equal(ext.media.title, 'X', 'the external card carries its title through');
+
+  // A card with no title is legal on the wire. The shaper must say so plainly
+  // rather than substituting the uri — naming the link is the VIEW's job, and
+  // it needs to know the difference between "no title" and a title that
+  // happens to look like a url.
+  const untitled = shapeLensPost(qPost('e2', 'did:plc:a', '2026-08-26T00:00:00Z', {
+    embed: { $type: 'app.bsky.embed.external#view', external: { uri: 'https://x.test/b', thumb: 'https://cdn/e2.jpg' } } }), QSRC);
+  assert.equal(untitled.media.kind, 'external');
+  assert.equal(untitled.media.title, null, 'absent title is null, never the uri');
 });

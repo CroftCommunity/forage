@@ -55,6 +55,52 @@ const MEMORY_SWEEP = [
 ];
 const LENS_SWEEP = ['/', '/feeds', '/me', '/mode', '/u/sage.bsky.social', '/h/harvest'];
 
+// 4i: THE FIXTURE IS THE COVERAGE. Expanding the sweep from 3 surfaces to 16
+// found nothing new, and that was not luck — a probe for `a > img` with no text
+// across every surface returned zero, because the hermetic fixtures render no
+// media at all. Scanning more routes cannot see a code path no fixture
+// exercises, and `mediaNode` was that code path: it shipped an unnamed link
+// (link-name, SERIOUS) that was live on forage.fyi/u/bsky.app while every
+// route in this file was green.
+//
+// So the lens sweep carries media now. Both shapes that can produce an unnamed
+// link are here on purpose:
+//   - an EXTERNAL card, whose thumbnail is decorative (alt='') and whose link
+//     is named from the card's title
+//   - an IMAGE the author never described (alt=''), where the honest name
+//     describes what the link DOES, because inventing a description of a
+//     picture nobody has described makes a screen reader worse while turning
+//     this gate green
+const mediaPost = (rkey, embed) => ({ post: {
+  uri: `at://did:plc:sage/app.bsky.feed.post/${rkey}`, cid: `cid-${rkey}`,
+  author: { did: 'did:plc:sage', handle: 'sage.bsky.social', displayName: 'Sage' },
+  record: { text: `post ${rkey}`, createdAt: '2026-08-26T00:00:00Z' },
+  indexedAt: '2026-08-26T00:00:00Z', replyCount: 0, repostCount: 0, likeCount: 1,
+  embed,
+} });
+
+const MEDIA_FEED = { feed: [
+  mediaPost('ext', { $type: 'app.bsky.embed.external#view',
+    external: { uri: 'https://example.test/article', title: 'A foraging guide',
+      description: 'seasonal', thumb: 'data:image/gif;base64,R0lGODlhAQABAAAAACw=' } }),
+  // An external card with NO title — legal on the wire, and the branch that
+  // names the link by its host instead. Without this row that fallback is
+  // unexecuted code wearing a passing suite.
+  mediaPost('bare', { $type: 'app.bsky.embed.external#view',
+    external: { uri: 'https://untitled.test/thing',
+      thumb: 'data:image/gif;base64,R0lGODlhAQABAAAAACw=' } }),
+  mediaPost('img', { $type: 'app.bsky.embed.images#view',
+    images: [{ thumb: 'data:image/gif;base64,R0lGODlhAQABAAAAACw=',
+      fullsize: 'data:image/gif;base64,R0lGODlhAQABAAAAACw=', alt: '' }] }),
+] };
+
+const LENS_MEDIA = { responses: {
+  'getAuthorFeed': MEDIA_FEED,
+  'getFeed': MEDIA_FEED,
+  'getProfile': { did: 'did:plc:sage', handle: 'sage.bsky.social', displayName: 'Sage' },
+  'getTrendingTopics': { topics: [] },
+} };
+
 // A seat, for the surfaces that only exist for someone logged in.
 const SWEEP_PERSONA = 'u_fern';
 
@@ -147,7 +193,7 @@ export async function run() {
   };
 
   await sweep('sweep(memory)', 'seeded', {}, MEMORY_SWEEP, SWEEP_PERSONA);
-  await sweep('sweep(lens)', 'first-visit', { mode: 'bluesky' }, LENS_SWEEP);
+  await sweep('sweep(lens)', 'first-visit', { mode: 'bluesky', ...LENS_MEDIA }, LENS_SWEEP);
 
   assert.deepEqual(failures, [],
     `axe found ${failures.length} accessibility violation(s):\n  ${failures.join('\n  ')}`);

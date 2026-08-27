@@ -6,10 +6,10 @@
 // official client; the library owns persistence (IndexedDB) and refresh, so
 // sign-in survives reloads. The lens consumes { did, handle, fetchHandler }.
 
-import { el, timeAgo, fmtScore } from '../util.js';
+import { el, timeAgo, fmtScore, domainOf } from '../util.js';
 import { postRow, commentNode, voteBox, skeleton, emptyState, toast } from './components.js';
 import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow, affordanceFor,
-  feedCardModel, threadNodeStyle, feedPath, parseFeedRoute, sessionGateMessage, canDelete,
+  feedCardModel, threadNodeStyle, feedPath, parseFeedRoute, sessionGateMessage, canDelete, sourceLabel,
   sortFeeds, filterFeeds, platforms, liveFeeds } from '../substrates/lens.js';
 import { initSession, createAccountRoster } from '../auth/session.js';
 import * as mediaScale from '../media-scale.js';
@@ -21,7 +21,7 @@ import { MEDIA_SCALE } from '../media-scale.js';
 let manager = null;        // null = not booted; 'unavailable' = origin has no OAuth client
 let session = null;        // the lens session shape, set after restore
 let lens = createLens({});
-let bootStarted = false;
+let bootPromise = null;   // the in-flight boot, SHARED — see bootAuth()
 // which feeds the account has saved (join state). Fetched ONCE per session
 // and shared — the header card and the sidebar both need it, and a race
 // between them showed the wrong Join/Leave label.
@@ -85,21 +85,41 @@ export function sessionIdentity() {
 // BEFORE the router replaces the hash (the code lives in the fragment).
 export async function ensureAuthBoot() { return bootAuth(); }
 
-async function bootAuth() {
-  if (bootStarted) return;
-  bootStarted = true;
-  try {
-    const m = await initSession();
-    if (!m) { manager = 'unavailable'; rerender(); return; }
-    manager = m;
-    m.onChange(() => rerender());
-    const s = await m.restore(); // restores a saved session OR completes a callback
-    if (s) await adoptSession(s);
-  } catch (e) {
-    manager = 'unavailable';
-    toast(e.message, 'err'); // vendor drift / metadata failures speak, never blank
-  }
-  rerender();
+// Boot once, and make every caller WAIT for that one boot. The distinction is
+// the whole point: a boolean `bootStarted` flag also boots once, but the second
+// caller returns immediately while the first is still in flight, so `await
+// ensureAuthBoot()` resolves before the session exists.
+//
+// That cost a production sign-in outage (2026-08-26). main.js deliberately
+// awaits this before dropping the OAuth params from the URL — "must complete
+// the exchange BEFORE the hash changes" — and the early return made that await
+// a no-op, so replaceState wiped the fragment while the vendored client was
+// still loading. The exchange then read an empty URL, client.init() returned
+// undefined, and restore() correctly reported signed-out. Every layer behaved
+// as written; the guard was the lie.
+//
+// Same fix, same reason, as the ring cache (3x): cache the PROMISE, so racing
+// callers share one piece of work instead of one of them racing past it.
+// Unlike the ring cache we never drop a rejected promise — the body catches
+// everything itself, so failure is already a settled 'unavailable' state, and
+// re-running boot on every repaint after a metadata failure would hammer it.
+function bootAuth() {
+  if (bootPromise) return bootPromise;
+  bootPromise = (async () => {
+    try {
+      const m = await initSession();
+      if (!m) { manager = 'unavailable'; rerender(); return; }
+      manager = m;
+      m.onChange(() => rerender());
+      const s = await m.restore(); // restores a saved session OR completes a callback
+      if (s) await adoptSession(s);
+    } catch (e) {
+      manager = 'unavailable';
+      toast(e.message, 'err'); // vendor drift / metadata failures speak, never blank
+    }
+    rerender();
+  })();
+  return bootPromise;
 }
 
 async function adoptSession(s) {
@@ -154,9 +174,16 @@ function moderationPanel() {
 // Guest boards: the probe-verified unauth-200 surface (feed-URI and author
 // sources). Signed in, the list is replaced by the account's saved feeds.
 const CURATED = [
-  { slug: 'whats-hot', title: "What's Hot", kind: 'feed',
+  // 4h: the FALLBACK name, not the name. Probed 2026-08-26: the network
+  // reports displayName "Discover" for this rkey. Kept as a fallback for the
+  // offline/failed-resolve case, and checked against the network by
+  // e2e/curated-names-live.workflow.mjs (LIVE=1) so drift is reported, not shipped.
+  { slug: 'whats-hot', title: 'Discover', kind: 'feed',
     source: { kind: 'feed', uri: 'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot' } },
-  { slug: 'bsky.app', title: 'Bluesky Team', kind: 'author', source: { kind: 'author', actor: 'bsky.app' } },
+  // 4h: the FALLBACK name again — probed 2026-08-26, this account reports
+  // displayName "Bluesky". It had been shipping as "Bluesky Team", which the
+  // account has never called itself.
+  { slug: 'bsky.app', title: 'Bluesky', kind: 'author', source: { kind: 'author', actor: 'bsky.app' } },
 ];
 const sources = new Map(CURATED.map((c) => [c.slug, c]));
 // Register a source under its canonical slug AND its human alias (3i: route
@@ -230,8 +257,15 @@ function mediaNode(p) {
   if (!p.media) return null;
   if (p.media.kind === 'images') {
     return el('div', { class: 'media-strip' },
-      ...p.media.items.map((i) => el('a', { href: i.full, target: '_blank', rel: 'noopener noreferrer' },
-        el('img', { src: i.thumb, alt: i.alt, loading: 'lazy' }))));
+      // 4i: an author who wrote alt text has named this link already — the img's
+      // alt IS the link's accessible name. Where they did not, we name what the
+      // link DOES and stop there. We do NOT invent a description of a picture
+      // nobody has described: a fabricated alt makes a screen reader worse while
+      // turning this gate green, which is the worst of both.
+      ...p.media.items.map((i) => el('a', {
+        href: i.full, target: '_blank', rel: 'noopener noreferrer',
+        ...(i.alt ? {} : { 'aria-label': 'Image, opens full size' }),
+      }, el('img', { src: i.thumb, alt: i.alt, loading: 'lazy' }))));
   }
   if (p.media.kind === 'video') {
     const link = `https://bsky.app/profile/${p.author}/post/${p.id.split('/').pop()}`;
@@ -240,8 +274,16 @@ function mediaNode(p) {
         p.media.thumb ? el('img', { src: p.media.thumb, alt: '[video]', loading: 'lazy' }) : el('span', { class: 'tag' }, '▶ video')));
   }
   if (p.media.kind === 'external') {
+    // 4i: the thumbnail is DECORATIVE — alt='' is correct and stays. What the
+    // link means is its destination, so the ANCHOR is the thing that needs a
+    // name, and the card's own title is that name (carried through the shaper
+    // for exactly this). With no title, the host is the honest fallback: it
+    // says where you are going, which is more than "link" and less than a
+    // guess. Live SERIOUS violation until 2026-08-26.
+    const name = p.media.title || domainOf(p.media.uri) || 'external link';
     return el('div', { class: 'media-strip' },
-      el('a', { href: p.media.uri, target: '_blank', rel: 'noopener noreferrer' },
+      el('a', { href: p.media.uri, target: '_blank', rel: 'noopener noreferrer',
+        'aria-label': `${name} — opens in a new tab` },
         el('img', { src: p.media.thumb, alt: '', loading: 'lazy' })));
   }
   return null;
@@ -371,13 +413,13 @@ function lensSidebar() {
   const feedsCard = el('div', { class: 'card' },
     el('div', { class: 'row spread' },
       el('h2', { style: 'margin:0' }, el('a', { href: '/feeds' }, 'Feeds')),
-      el('a', { href: '/feeds', class: 'xs' }, 'discover ›')));
+      el('a', { href: '/feeds', class: 'xs' }, 'browse ›')));
   const list = el('div', { class: 'stack' });
   feedsCard.append(list);
   if (!session) {
     for (const c of CURATED) {
       list.append(el('div', { class: 'row spread' },
-        el('a', { href: `/f/${c.slug}` }, `f/${c.slug}`),
+        el('a', { href: `/f/${c.slug}` }, `f/${sourceLabel(c)}`),
         el('span', { class: 'xs muted' }, c.kind)));
     }
     list.append(el('div', { class: 'xs muted', style: 'margin-top:6px' },
@@ -394,7 +436,7 @@ function lensSidebar() {
         // still routes when typed
         return el('div', { class: 'row spread' },
           el('a', { href: feedPath({ creator: f.creator, rkey: f.slug }) || `/f/${f.slug}`,
-            title: f.creator ? `Shareable: /f/@${f.creator}/${f.slug}` : `/f/${f.slug}` }, `f/${f.title}`),
+            title: f.creator ? `Shareable: /f/@${f.creator}/${f.slug}` : `/f/${f.slug}` }, `f/${sourceLabel(f)}`),
           el('span', { class: 'xs muted' }, `${f.kind}${f.pinned ? ' · pinned' : ''}`));
       }));
     }).catch((e) => list.replaceChildren(el('div', { class: 'xs muted' }, 'Feeds failed: ' + e.message)));
@@ -527,7 +569,7 @@ export function lensHomeView() {
     el('div', { class: 'card' },
       el('h2', {}, 'Browse'),
       el('div', { class: 'stack' },
-        ...CURATED.map((c) => el('div', {}, el('a', { href: `/f/${c.slug}` }, `f/${c.slug}`), el('span', { class: 'xs muted' }, ` — ${c.title}`))))));
+        ...CURATED.map((c) => el('div', {}, el('a', { href: `/f/${c.slug}` }, `f/${sourceLabel(c)}`), el('span', { class: 'xs muted' }, ` — ${c.kind}`))))));
   return { main, side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()) };
 }
 
@@ -543,7 +585,7 @@ export function lensFeedView(params) {
     if (!entry) {
       return { main: emptyState('Unknown feed',
         'This link is missing the feed’s creator, so it only works while browsing. Open Discover and find it by name — the link from there can be shared.',
-        el('a', { class: 'btn primary', href: '/feeds' }, 'Discover feeds')), side: null };
+        el('a', { class: 'btn primary', href: '/feeds' }, 'Browse feeds')), side: null };
     }
     return feedBoardView(entry);
   }
@@ -558,7 +600,7 @@ export function lensFeedView(params) {
       host.replaceChildren(feedBoardView(entry, info).main);
     })
     .catch((e) => host.replaceChildren(emptyState('Could not open that feed',
-      `@${route.handle} / ${route.rkey} — ${e.message}`, el('a', { class: 'btn', href: '/feeds' }, 'Discover feeds'))));
+      `@${route.handle} / ${route.rkey} — ${e.message}`, el('a', { class: 'btn', href: '/feeds' }, 'Browse feeds'))));
   return { main: host, side };
 }
 
@@ -635,7 +677,9 @@ function feedBoardView(entry, preInfo) {
     nextCursor = f.cursor || null;
     main.replaceChildren(
       el('div', { class: 'row spread wrap' },
-        el('h1', {}, entry.title),
+        // 4h: `info` is the network's answer and is already resolved here —
+        // reaching past it for the registry string is how a retired name shipped.
+        el('h1', {}, info?.title || entry.title),
         el('div', { class: 'row', style: 'gap:6px' },
           chip('likes-only scores (DL-011)'),
           chip('ranking: feed order (DL-010)'))),
@@ -1220,7 +1264,7 @@ export function lensFeedsView() {
   run();
   return {
     main: el('div', {},
-      el('h1', {}, 'Discover feeds'),
+      el('h1', {}, 'Browse feeds'),
       el('p', { class: 'small muted' },
         'Feeds are built by the community — each one decides its own content. How to get INTO a feed lives in its description; feeds publish no machine-readable rules.'),
       el('div', { class: 'card' },
