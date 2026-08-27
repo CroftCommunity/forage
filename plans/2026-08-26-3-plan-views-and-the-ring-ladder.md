@@ -208,14 +208,16 @@ page always."* Identical signed in or out, which is what makes it the default la
 
 Each of these is an **open question**, so under `CroftC/.claude/TRACKING.md` § "Two
 piles" (owner, 2026-08-26 — readiness, not scope) none of them belongs in `TODO.md`.
-They are backlog rows; this plan cites them and does not restate them.
+They are backlog rows — **E143, E144, E146** filed 2026-08-26 (discovery `7be3cfa`) —
+and this plan cites them rather than restating them. **E145** (does the axe gate adopt
+best-practice rules) came from the same survey and is filed alongside them.
 
-- Editing the composition; views beyond the first two; removable tabs; *"set this view as
-  default"*; per-source ring exemptions.
-- Merging `/settings` into `/me` behind the avatar. (`/me` already carries
+- **E143** — editing the composition; views beyond the first two; removable tabs; *"set
+  this view as default"*; per-source ring exemptions.
+- **E144** — merging `/settings` into `/me` behind the avatar. (`/me` already carries
   `accountMenu`, `languagePanel` and `moderationPanel` — a "what do I see" control of
   exactly this kind already lives there, which is what makes the merge natural.)
-- Rungs beyond one hop — *"mutuals+followers and mutuals+2"*. **Measure before
+- **E146** — rungs beyond one hop, *"mutuals+followers and mutuals+2"*. **Measure before
   designing:** mutuals+followers is nearly free (`computeRing` already fetches both
   lists), where a second hop is a different order of magnitude over a walk already capped
   at `RING_CAP = 25` with honest overflow (DL-016).
