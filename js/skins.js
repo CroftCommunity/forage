@@ -8,6 +8,11 @@
 // Phase 1A (plan 2026-08-26-1) — SKINS SUBSUME THEMES. A skin carries exactly
 // ONE palette; light/dark is no longer a second axis. Two consequences:
 //   - Each entry declares `palette: 'light' | 'dark'`.
+//   - A skin may PREFER a board density (`prefersDensity`, DL-028). It is a
+//     SUGGESTION: a reader's explicit choice from the dial on the board always
+//     wins, in both directions. A skin picks from the densities the app already
+//     ships — it is never handed layout properties — so it cannot express
+//     anything the reader cannot reach from that same dial.
 //   - A skin may declare a SIBLING (`pairedWith`) — its opposite-palette twin.
 //     The upper-right toggle swaps to the sibling, and is DISABLED where none
 //     exists. That disabled state is deliberate and must stay visible: a user
@@ -28,8 +33,8 @@ export const SKINS = Object.freeze({
   'usenet-dark': { label: 'Usenet gray (after dark)', file: 'skins/usenet-dark.css', palette: 'dark', pairedWith: 'usenet' },
   // The classic phpBB board. Registered as always-available (owner, 2026-08-26):
   // a first-class entry, not tied to any mode.
-  phpbb: { label: 'phpBB (classic board)', file: 'skins/phpbb.css', palette: 'light', pairedWith: 'phpbb-dark' },
-  'phpbb-dark': { label: 'phpBB (after hours)', file: 'skins/phpbb-dark.css', palette: 'dark', pairedWith: 'phpbb' },
+  phpbb: { label: 'phpBB (classic board)', file: 'skins/phpbb.css', palette: 'light', pairedWith: 'phpbb-dark', prefersDensity: 'compact' },
+  'phpbb-dark': { label: 'phpBB (after hours)', file: 'skins/phpbb-dark.css', palette: 'dark', pairedWith: 'phpbb', prefersDensity: 'compact' },
 });
 
 // The sibling of a skin, or null when it ships only one palette. Null is a

@@ -12,12 +12,26 @@
 //
 // Device-local, like skin and mode; never forage.state.
 
+import { SKINS, activeSkin } from './skins.js';
+
 export const DENSITY_KEY = 'forage.boardview';
 export const DENSITIES = Object.freeze([['card', 'Card'], ['compact', 'Compact']]);
 
+// Resolution order: the reader's explicit choice, then the active skin's
+// preference, then card.
+//
+// A skin PREFERRING a density (DL-028) is a suggestion and nothing more. The
+// dial sits on the same board, and the moment a reader touches it their choice
+// is stored and wins for good — which is what keeps this from being a skin
+// seizing layout. A skin also only ever picks from the densities the app
+// already ships, so it cannot express anything the reader cannot undo.
 export function density() {
-  try { return localStorage.getItem(DENSITY_KEY) === 'compact' ? 'compact' : 'card'; }
-  catch { return 'card'; }
+  try {
+    const stored = localStorage.getItem(DENSITY_KEY);
+    if (stored === 'compact' || stored === 'card') return stored;
+  } catch { /* no storage: fall through to the skin, then the default */ }
+  const preferred = SKINS[activeSkin()]?.prefersDensity;
+  return preferred === 'compact' || preferred === 'card' ? preferred : 'card';
 }
 
 export function isCompact() { return density() === 'compact'; }

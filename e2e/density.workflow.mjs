@@ -67,4 +67,51 @@ export async function run() {
   } finally {
     await mem.close();
   }
+
+  // ---- DL-028: a skin may PREFER a density, and never more than prefer -----
+  // The classic board should READ as a board on first sight, without the reader
+  // having to find the dial. But the moment they do use it, their choice has to
+  // win — otherwise a skin is not suggesting a density, it is taking one.
+  const pref = await scenario('seeded');
+  try {
+    const { page } = pref;
+    await page.goto(`${pref.origin}/settings`);
+    await page.waitForSelector('text=Skin');
+    // No density has ever been chosen in this scenario — that is the point.
+    assert.equal(await page.evaluate(() => localStorage.getItem('forage.boardview')), null,
+      'starting from a reader who has never touched the dial');
+
+    await page.locator('.field-row:has-text("Skin") select').selectOption('phpbb');
+    await page.waitForFunction(() =>
+      document.getElementById('skin-sheet')?.getAttribute('href')?.includes('phpbb'));
+
+    await page.goto(`${pref.origin}/popular`);
+    await page.waitForSelector('.postrow');
+    assert.ok(await rowsAreCompact(page),
+      'the classic board arrives dense, because the skin prefers compact');
+    assert.equal(await page.evaluate(() => localStorage.getItem('forage.boardview')), null,
+      'and it did so WITHOUT writing a choice on the reader\'s behalf');
+
+    // The reader disagrees. That has to stick.
+    await page.locator('#main select[data-density]').selectOption('card');
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll('.postrow')].some((r) => !r.classList.contains('compact')));
+    assert.equal(await rowsAreCompact(page), false, 'the reader overrode the skin');
+
+    await page.reload();
+    await page.waitForSelector('.postrow');
+    assert.equal(await rowsAreCompact(page), false,
+      'and the override survives a reload on a compact-preferring skin');
+
+    // …including across a skin change, since it is the READER's choice now.
+    await page.goto(`${pref.origin}/settings`);
+    await page.waitForSelector('text=Skin');
+    await page.locator('.field-row:has-text("Skin") select').selectOption('phpbb-dark');
+    await page.goto(`${pref.origin}/popular`);
+    await page.waitForSelector('.postrow');
+    assert.equal(await rowsAreCompact(page), false,
+      'the other half of the pair also prefers compact, and still loses to the reader');
+  } finally {
+    await pref.close();
+  }
 }
