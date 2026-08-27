@@ -1,6 +1,8 @@
 # Plan: the signed-out front door — sticky masthead, auth sheet, emblem hero
 
-**Status:** Pass 1 complete (2026-08-26). Pass 2 not yet run.
+**Status:** Passes 1 and 2 complete. **Phase 0 D1 RESOLVED** (2026-08-27) — Phases C and D
+are unblocked. **Phase A's tap-target half DONE**; its BLOCKING layout question is resolved.
+Phase A's `scroll-margin-top` item and Phases B–E remain open.
 **Supersedes** `2026-08-26-2-plan-public-site-polish.md` § Phase 2, which becomes a pointer.
 **Worktree:** `worktrees/forage/polish` on `claude/polish`. Claim: `CroftC/.coordination/claims/forage--polish.md`.
 
@@ -144,8 +146,28 @@ Not worth splitting the SHELL edit to buy parallelism on a two-phase pair.
 Included because one assumption is unverified and **two later phases depend on it** — the
 multiplicative-rework criterion.
 
-- [ ] **D1: Does `signIn(host, { prompt: 'create' })` through our vendored client actually
-      land on a create screen?**
+- [x] **D1 — RESOLVED 2026-08-27. YES, and the screens are not subtly different.**
+  Probed by driving the vendored client directly against the real network from a loopback
+  build — no production code modified, no credentials, no sign-in completed.
+
+  ```
+  bsky.social,  no prompt  ->  "Authenticate | Welcome | Please authenticate to continue
+                                | Create a new account | Sign in | Cancel"
+  bsky.social,  create     ->  "Sign up | We're so excited to have you join us!
+                                | Step 1 of 3 | Choose a username"
+  blacksky.app, no prompt  ->  "Blacksky Algorithms | Welcome | ... | Create a new account"
+  blacksky.app, create     ->  "Blacksky Algorithms | Sign up | ... | Step 1 of 3
+                                | .myatproto.social"
+  ```
+
+  `prompt=create` lands directly in the registration wizard on BOTH open-signup hosts, and
+  Blacksky's even names its handle domain. The Create / Sign in split in Phase C is honest.
+  Note also that the plain screen already offers both paths, so `prompt=create` saves a step
+  and states intent — it does not unlock anything otherwise unreachable.
+  **Disposition honoured:** throwaway. Nothing from the probe was kept.
+
+- [ ] ~~**D1: Does `signIn(host, { prompt: 'create' })` through our vendored client actually
+      land on a create screen?**~~
   - **Probe:** Temporarily thread the options argument, call
     `signIn('https://bsky.social', { prompt: 'create' })` from a local build, and record
     what bsky.social renders — a create/registration screen, or the ordinary sign-in
@@ -417,8 +439,25 @@ someday-SVG.
   written. *Rationale: the create/sign-in split is the spine of the sheet's design.*
 
 **Added Pass 2:**
-- `[RECOMMENDED: BLOCKING for Phase A]` At 320px the sticky masthead is already 107px
-  (two rows), and raising its controls to the 44px floor will grow it further. Options:
+- ~~`[RECOMMENDED: BLOCKING for Phase A]` At 320px the sticky masthead is already 107px…~~
+  **RESOLVED 2026-08-27 by measuring the candidates rather than arguing them.** The
+  conflict was real but had a third answer: the lens masthead's `nav` held ONE link —
+  "Home", `href='/'` — which is the wordmark's href beside it. Removing the duplicate,
+  applying the floor, and tightening the gap at touch widths gives **61px at 320, down
+  from 107px today, with every control at 44px**. Better than the status quo on both
+  axes rather than a trade. Measured at 320px:
+
+  ```
+  today (4 controls under floor)            107px   14% of fold
+  floor + keep wrap                         121px   16%   compliant but WORSE
+  floor + nowrap, nav scrolls                61px    8%   "Home" scrolled OFF-SCREEN
+  floor + drop duplicate + tighter gap       61px    9%   <- shipped
+  ```
+
+  Two things only looking caught: the nowrap candidate passed every number while
+  clipping "Home" to "H" and wrapping "Settings" to "Settin gs"; and the first applied
+  fix measured 121px — compliant, and worse than the bar it replaced, which no gate
+  can distinguish. ~~Options:~~
   let it wrap and pay the height; drop `flex-wrap` and let items shrink or scroll; or
   collapse the nav behind a single 44×44 control at touch widths. *Rationale: this is a
   layout decision with a visible cost either way, and it gates the phase — there is no
@@ -492,3 +531,29 @@ the survey's summary; its account of the scanned surfaces and the tag filter is 
   in Phase B remains unstarted.
 - The Documentation Impact inventory still holds; nothing upstream changed `README.md:363`.
 - Phase 0's D1 remains BLOCKING and unaddressed. Nothing in this pass touched it.
+
+### Execution: D1 and the masthead question — 2026-08-27
+**D1 resolved:** `prompt=create` verified end to end against both open-signup hosts by
+driving the vendored client directly. Phases C and D unblocked. Evidence in Phase 0.
+
+**Phase A, tap-target half, shipped:**
+- The gate's selector now reaches `.masthead a` — the chrome region its own comment
+  already named while matching no plain `<a>`. RED produced exactly four failures, all
+  masthead, **nothing else across either population's swept surfaces** — which answers
+  the Pass 2 blast-radius risk: it does not cascade.
+- The lens masthead's redundant `nav` link removed (`js/main.js`). The memory
+  masthead's nav is NOT redundant — Home/Popular/All are three real destinations — and
+  keeps them; it passes the widened gate unchanged.
+- Touch floor + tighter gap at ≤480px (`css/app.css`), with `white-space: nowrap` and
+  `flex: none` load-bearing against label collapse, and wrap deliberately left ON as a
+  safety valve.
+
+**A process note worth keeping.** Two runs appeared to hang and I killed both, then went
+looking for leaked browsers. Neither was hung: the machine slept for ~9 hours mid-run.
+The evidence was in the output all along — `mode-roundtrip` reported 32,272,247ms, which
+is 8.96 hours, and `ERR_INTERNET_DISCONNECTED` is what a sleeping machine's network looks
+like. A wall-clock reading that absurd is a fact about the HOST, not a flake, and it was
+faster to check `uptime` than to hunt a cause. Nothing was wrong with the change.
+
+**Still open in Phase A:** `scroll-margin-top` (grep still confirms none exists), and the
+pointer edit to `2026-08-26-2-plan-public-site-polish.md` § Phase 2.
