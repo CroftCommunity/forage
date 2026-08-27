@@ -1,7 +1,21 @@
 # Plan: public-site polish — the queue behind "the main site in better shape"
 
-**Status:** IN FLIGHT (2026-08-26). **Phase 0 DONE** (sign-in fixed, gate green).
-**Phase 4 DONE** (curated names, `/feeds` renamed, LIVE drift check). Phases 1–3 open.
+**Status:** IN FLIGHT. Updated 2026-08-27, LANDED on `main` at `7113d87`.
+- **Phase 0 DONE** — sign-in fixed; live on forage.fyi at `forage-v40`.
+- **Phase 4 DONE** — curated names, `/feeds` → Browse feeds, LIVE drift check.
+- **Phase 2 SUPERSEDED** — not open here. It moved to
+  `2026-08-26-3-plan-signed-out-front-door.md`, whose Phase A has itself landed. Read
+  that plan's Status for the front-door work; nothing in Phase 2 below is actionable.
+- **Phase 1 OPEN** — the family-shaped skin picker. Design decisions settled with the
+  owner 2026-08-26 and recorded below; no code written.
+- **Phase 3 OPEN** — gated controls read as gated. Verified still true on `main`
+  2026-08-27: `ringDial` renders four identical `.btn sm` buttons and refuses with an
+  error toast on click.
+
+*Why this line is this specific:* a peer session read "Phases 1–3 open" from outside and
+could not tell whether Phase 2 was pending work or already superseded, nor whether the
+claim covering this plan still stood. The Status line is the only thing anyone queued
+behind a plan can read.
 **Serves:** the owner's 2026-08-26 pause of E138 (private BBS on Spaces) — *"we are
 pausing it until we have the main site in better shape."* `TODO.md` § Needs the owner
 carries that pause; this plan is what "better shape" was pointed at.

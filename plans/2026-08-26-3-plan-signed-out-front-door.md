@@ -1,6 +1,6 @@
 # Plan: the signed-out front door — sticky masthead, auth sheet, emblem hero
 
-**Status:** Passes 1 and 2 complete. **Phase 0 D1 RESOLVED** (2026-08-27) — Phases C and D
+**Status:** Passes 1, 2 and 3 complete. **Phase 0 D1 RESOLVED** (2026-08-27) — Phases C and D
 are unblocked. **Phase A's tap-target half DONE**; its BLOCKING layout question is resolved.
 Phase A's `scroll-margin-top` item and Phases B–E remain open.
 **Supersedes** `2026-08-26-2-plan-public-site-polish.md` § Phase 2, which becomes a pointer.
@@ -139,6 +139,41 @@ Sequential spine: Phase 0 → A → B → C → D → E
 vs `assets/*`), but both write `sw.js` SHELL, so they stay sequential under the hard rule.
 Not worth splitting the SHELL edit to buy parallelism on a two-phase pair.
 
+## Observability (Pass 3, cross-cutting)
+
+The plan had nothing here, which is conspicuous given what produced it: **the defect this
+plan grew out of was SILENT.** Sign-in redirected, came back, and reported nothing.
+`client.init()` returned `undefined`, `restore()` correctly set `signed-out`, and every
+layer behaved as written. No log, no toast, no state — the only instrument that existed
+was a human noticing they were still logged out.
+
+Phases B and C add *more* ways for sign-in to fail — a wrong entryway, a host gone dark,
+an OAuth error from someone else's server — so shipping them without closing this makes
+the same class of failure more likely, not less.
+
+**The requirement, and it is testable:** a boot that ARRIVED as an OAuth callback and
+ends signed-out is not the same state as an ordinary signed-out boot, and must not render
+as one. `isOAuthCallback()` already distinguishes them at boot; nothing downstream keeps
+that fact. Phase B carries the fix because it owns the session seam.
+
+Two related defects to fold in rather than discover twice:
+- `bootAuth`'s `catch` does `toast(e.message, 'err')`. An error with an empty message
+  renders an **empty red toast** — `.toast.err` is `#9E2F26`, fixed bottom-right, 10px/14px
+  padding, so an empty one is a small red block with no words. That matches the
+  "weird red opaque bar" the owner reported on a signed-out page and which never
+  reproduced hermetically. Not proven to be the same thing; named so the next person
+  checks it rather than re-hunting it.
+- Toast is the app's only diagnostic channel and it is *transient*. Anything worth
+  debugging after the fact needs somewhere that survives a repaint.
+
+**Debugging readiness.** The harness already has the right instrument and no phase
+references it: `diagnoseLive()` in `e2e/harness/scenario.mjs` reports outstanding requests
+and service-worker state when a workflow dies, and it was built after two undiagnosed
+hangs. Every phase adding a workflow states that a failure there is read WITH the
+diagnostic, not from the stack alone. *(Used in earnest this session: it is what showed
+the service worker mid-install and the ERR_INTERNET_DISCONNECTED that turned out to be a
+sleeping machine.)*
+
 ## Phases
 
 ### Phase 0: Discovery
@@ -178,8 +213,23 @@ multiplicative-rework criterion.
     row design and Phase D's button copy both change. Record in the Review Log and
     restructure before proceeding — this is the one phase allowed to do that.
 
-- [ ] **D2: Does a native `<dialog>` + `showModal()` work under the workflow harness, and
-      can `@axe-core/playwright` scan an open one?**
+- [x] **D2 — RESOLVED 2026-08-27. Yes to both, and focus behaviour comes free.**
+  Probed by opening a Phase-C-shaped dialog in the harness **with a deliberate defect
+  planted in it** (an unnamed close button) — a clean scan would have proved nothing.
+
+  ```
+  showModal open        : true   focus -> #x      (focus enters the dialog)
+  axe saw INSIDE dialog : button-name #x          (axe is NOT blind to it)
+  Esc closed it         : true   focus -> #trig   (focus returns to the trigger)
+  total violations      : 1                       (only the planted one)
+  ```
+
+  So `<dialog>` supplies focus-entry, Esc, and focus-return without code, and the W5
+  tier can scan the open sheet per skin as Phase C assumes. No restructuring needed.
+  **Disposition honoured:** throwaway.
+
+- [ ] ~~**D2: Does a native `<dialog>` + `showModal()` work under the workflow harness, and
+      can `@axe-core/playwright` scan an open one?**~~
   - **Probe:** minimal page in the harness; open a `<dialog>`, assert `Esc` closes it and
     focus returns; run an axe scan with it open.
   - **Success criteria:** both observed. If axe cannot see into the dialog, the W5
@@ -267,13 +317,31 @@ populations and both skins, since a z-index error is invisible to assertions.
 - [ ] `test/auth-session.test.js`, `test/hosts.test.js` (NEW) — RED first.
 - [ ] `e2e/hosts-live.workflow.mjs` (NEW, `live = true`) — drift check.
 - [ ] `sw.js` — add `js/auth/hosts.js` to SHELL; bump `CACHE`.
+- [ ] **Observability (Pass 3):** a callback boot that ends signed-out says so. See
+      § Observability. RED: boot with `code`+`state` present and a failing exchange,
+      assert the UI distinguishes it from an ordinary signed-out boot.
+- [ ] **Observability (Pass 3):** `toast()` refuses an empty message rather than
+      rendering a wordless red block.
 **Call chain:** Phase C's sheet → `hosts.list()` → a row's action →
 `lensViews` handler → `manager.signIn(entryway, { prompt })` → `client.signIn` → redirect.
 In THIS phase the chain ends at `manager.signIn`; Phase C supplies the caller. That is why
 B's wiring test asserts the seam, not a UI.
-**Wiring test:** `test/auth-session.test.js` — a fake client records its arguments;
-`manager.signIn('https://bsky.social', { prompt: 'create' })` must reach `client.signIn`
-with the options intact. RED today: the argument is dropped at `js/auth/session.js:125`.
+**Wiring test:** *(Pass 3 rewrote this — the original was a unit test on an isolated
+seam, which is the exact plan defect Pass 3 names: a component that passes its own tests
+while nothing calls it.)* `e2e/signin.workflow.mjs` — from a real click in the running app
+on the temporary Phase-C-precursor trigger, assert the fake manager recorded
+`signIn(<entryway>, { prompt })`. The unit test below stays as well; it is the fast one,
+not the wiring one.
+
+**Named behaviours, with edges** *(Pass 3: the original spec was a single happy-path
+assertion that would survive a one-line mutation)*:
+- options forwarded intact — `{ prompt: 'create' }` arrives as `{ prompt: 'create' }`
+- **no options at all** — `signIn(host)` must still work, and must NOT send `prompt`
+- an unknown/unregistered host id fails loudly by name (`hrefFor` precedent)
+- an open-signup host exposes a create action; an invite-only host exposes the WORDS
+  and no create action — both directions asserted, not just the open one
+- a rejected `client.signIn` leaves state `signed-out`, not `pending` (the existing
+  catch does this; nothing pins it)
 **Depends on:** Phase 0 D1 (if `prompt=create` does not work, the registry's posture field
 and the whole create/sign-in split change shape).
 **Read-set:** `js/auth/session.js`, `vendor/atproto-oauth-client-browser.js`, `sw.js`,
@@ -332,8 +400,10 @@ real click, not a direct call to the opener.
 `css/app.css`, `e2e/harness/*`.
 **Write-set:** `js/ui/lens-views.js`, `css/app.css`, `e2e/auth-sheet.workflow.mjs`,
 `e2e/a11y-skins.workflow.mjs`, `README.md`, `AGENTS.md`, `sw.js`.
-**Shared-state contract:** No shared mutable state beyond the write-set and `CACHE`. The
-workflow is shim-backed and hermetic; no real network.
+**Shared-state contract:** *(Pass 3: rewritten as invariants, not mechanisms.)* Writes
+only under the file write-set plus `sw.js`'s `CACHE`. Does not invoke `git checkout`,
+`git stash`, or `git rebase` in the parent worktree. Binds no ports. Reaches no host
+outside the shim's fenced list — asserted, not assumed, by `s.shimMisses()` being empty.
 **Risks:**
 - A11y is load-bearing here and it is the class of thing token tests cannot see. Needs
   `aria-labelledby`, focus return to the trigger, an accessible name on the close control,
@@ -557,3 +627,52 @@ faster to check `uptime` than to hunt a cause. Nothing was wrong with the change
 
 **Still open in Phase A:** `scroll-margin-top` (grep still confirms none exists), and the
 pointer edit to `2026-08-26-2-plan-public-site-polish.md` § Phase 2.
+
+### Pass 3: Quality Gates — 2026-08-27 (inline)
+**Resolved during the pass, not deferred:** D2. Pass 3 requires that a discovery task
+answerable during planning be answered then, and D2 was a twenty-minute probe sitting in
+Phase 0. Native `<dialog>` supplies focus-entry, Esc and focus-return without code, and
+axe scans an OPEN one — proved by planting an unnamed button inside it, because a clean
+scan would have proved nothing. Phase C's a11y tier stands unchanged.
+
+**Gate 1 — TDD ordering. Two defects, both fixed in the plan:**
+- **Phase B had no wiring test.** Its verification was a unit test on the `signIn` seam,
+  and the plan said so out loud: "the chain ends at `manager.signIn`; Phase C supplies
+  the caller." That is precisely the defect Pass 3 names — a component that passes its
+  own tests while nothing calls it. Rewritten to assert from a real click in the running
+  app, with the unit test kept as the fast one rather than the wiring one.
+- **Single-point assertions on branching code.** The spec was "options arrive intact",
+  which survives a one-line mutation by construction. Replaced with named edges: no
+  options at all (and no `prompt` sent), unknown host fails by name, open vs invite-only
+  asserted in BOTH directions, a rejected `signIn` leaving `signed-out` not `pending`.
+
+**Gate 2 — observability. The plan had nothing, and that was conspicuous:** the defect
+this plan grew out of was SILENT. Sign-in redirected, returned, and reported nothing;
+every layer behaved as written. Phases B and C add more ways for sign-in to fail, so
+shipping them without closing this makes the class more likely, not less. Added as a
+cross-cutting section with a testable requirement — a callback boot that ends signed-out
+is not an ordinary signed-out boot and must not render as one — plus the empty-`toast()`
+defect, which is the best candidate for the owner's unreproduced "red bar" and is named
+so the next person checks it instead of re-hunting it.
+
+**Gate 3 — debugging readiness.** Zero references to `diagnoseLive()`, the harness's own
+instrument, built after two undiagnosed hangs. Now required reading for any workflow
+failure in this plan. Earned its place this session: it is what showed the
+service-worker-mid-install and ERR_INTERNET_DISCONNECTED that turned out to be a
+sleeping machine, not a flake.
+
+**Gate 5b — concurrency honesty.** Phase C's shared-state contract was a mechanism
+("shim-backed and hermetic"). Rewritten as invariants: writes only within the write-set,
+invokes no `git checkout`/`stash`/`rebase` in the parent worktree, binds no ports,
+reaches no unfenced host — the last one *asserted* by `s.shimMisses()` being empty rather
+than assumed.
+
+**Gate 4 — flagged, NOT resolved: three open questions carry severities I set and the
+owner has never confirmed** (hero prominence, host list membership, masthead-opens-sheet).
+Pass 3 says an agent-set severity the user has not reviewed is a defect. They are listed
+for confirmation and this plan should not execute Phases C or D until they are.
+
+**Confirmed:** every phase declares a validation strategy and they are calibrated to
+scope (Phase B "Broad" for four third-party hosts; Phase E "Narrow-to-moderate"). The
+Concurrency Map accounts for every phase. Both Phase 0 dispositions are declared and
+both were honoured — nothing from either probe was kept.
