@@ -284,12 +284,30 @@ export async function run() {
       && document.querySelectorAll('.card > [data-delete-post]').length === 0;
   }, null, { timeout: 20000 });
 
-  assert.equal(await page.locator('.card > [data-delete-post]').count(), 0,
-    'no delete control on a post that is not yours');
-  assert.equal(await page.locator('.comment[data-node-id$="/myreply"] [data-delete-post]').count(), 1,
-    'your own reply can be deleted');
-  assert.equal(await page.locator('.comment[data-node-id$="/reply1"] [data-delete-post]').count(), 0,
-    'someone else’s reply cannot');
+  // Read the shape ONCE. The waitForFunction above is atomic inside the page,
+  // but three separate .count() calls are three round-trips, and this thread
+  // keeps repainting: the shape can hold when the wait resolves and change
+  // again between assertion one and assertion two. Observed exactly that way —
+  // the head-post assert passed, then `your own reply can be deleted` read 0
+  // (croftc-e2, captured under concurrent suite load, with harness diagnostics
+  // showing zero outstanding requests and readyState complete, i.e. an
+  // app-driven repaint rather than anything still loading).
+  //
+  // Waiting harder cannot fix this and neither can a better wait. One snapshot,
+  // three assertions against it.
+  const deleteShape = await page.evaluate(() => {
+    const q = (sel) => document.querySelector(sel);
+    const mine = q('.comment[data-node-id$="/myreply"]');
+    const theirs = q('.comment[data-node-id$="/reply1"]');
+    return {
+      head: document.querySelectorAll('.card > [data-delete-post]').length,
+      mine: mine ? mine.querySelectorAll('[data-delete-post]').length : -1,
+      theirs: theirs ? theirs.querySelectorAll('[data-delete-post]').length : -1,
+    };
+  });
+  assert.equal(deleteShape.head, 0, 'no delete control on a post that is not yours');
+  assert.equal(deleteShape.mine, 1, 'your own reply can be deleted');
+  assert.equal(deleteShape.theirs, 0, 'someone else’s reply cannot');
   await page.locator('.comment[data-node-id$="/myreply"] [data-delete-post]').click();
   await page.locator('.comment[data-node-id$="/myreply"] [data-delete-post][data-armed="1"]').click();
   await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('deleteRecord')
