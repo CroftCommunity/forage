@@ -6,7 +6,14 @@ import * as actions from '../actions.js';
 // ---------- toasts ----------
 export function toast(msg, kind = '') {
   const host = document.getElementById('toasts');
-  const t = el('div', { class: `toast ${kind}` }, msg);
+  // 4k: an empty message renders a wordless coloured block — `.toast.err` is a
+  // red rectangle with 10px/14px of padding and nothing in it. That is not a
+  // degraded message, it is an alarming one that says nothing, and it comes
+  // straight from `toast(e.message, 'err')` where the error carries no message.
+  // Say the least-wrong true thing instead of showing a blank.
+  const text = String(msg ?? '').trim()
+    || (kind === 'err' ? 'Something went wrong, and it gave no reason.' : 'Done.');
+  const t = el('div', { class: `toast ${kind}` }, text);
   host.append(t);
   setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3200);
 }

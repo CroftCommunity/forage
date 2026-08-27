@@ -1,6 +1,9 @@
 # Plan: the signed-out front door — sticky masthead, auth sheet, emblem hero
 
-**Status:** Passes 1, 2 and 3 complete. **Phase 0 D1 RESOLVED** (2026-08-27) — Phases C and D
+**Status:** Passes 1, 2 and 3 complete. **Phase 0 DONE** · **Phase A DONE** (its
+`scroll-margin-top` item DROPPED with reasons, see the phase) · **Phase B DONE**
+2026-08-27 · **Phases C and D BLOCKED on three owner confirmations** (see Open
+Questions) · **Phase E** follows D. **Phase 0 D1 RESOLVED** (2026-08-27) — Phases C and D
 are unblocked. **Phase A's tap-target half DONE**; its BLOCKING layout question is resolved.
 Phase A's `scroll-margin-top` item and Phases B–E remain open.
 **Supersedes** `2026-08-26-2-plan-public-site-polish.md` § Phase 2, which becomes a pointer.
@@ -261,8 +264,17 @@ the closest targets on every screen, and four of the five are under the 44px flo
       The prose and the selector disagree; the prose is right. RED first.
 - [x] DONE `2776537` — `css/app.css`, masthead controls at the floor, plus the tighter gap and the
       removal of the duplicate lens nav link that together took 320px from 107px to 61px.
-- [ ] `css/app.css` — `scroll-margin-top` on heading targets (grep confirms none exists),
-      so in-page anchors and deep links do not land under the now-sticky bar.
+- [~] **DROPPED at execution, 2026-08-27 — the rationale was false.** The item said
+      "in-page anchors and deep links land under the sticky bar". Forage has **no in-page
+      anchors at all** (grepped `href="#`, `href: '#`, `location.hash =` — nothing), and
+      ordinary navigation is unaffected because a sticky bar occupies flow space at scroll
+      position 0; it only overlays once you scroll. So the stated case does not exist.
+      The only programmatic scroll in the app is `scrollIntoView({ block: 'nearest' })` at
+      `js/ui/views.js:264-265`, which IS occludable — but it is the memory population's
+      **moderation queue**, a view no workflow in the corpus reaches. Shipping
+      `scroll-margin-top` for it would be untested production code for an unexercised
+      path, which is the thing this repo does not do. **Re-open when the mod queue gets
+      workflow coverage**, and fix it with a RED test then.
 - [ ] `plans/2026-08-26-2-plan-public-site-polish.md` § Phase 2 → pointer here.
 **Call chain:** `masthead()` (`js/main.js`) → `.masthead` element → the `.who` sign-in
 link. No new JS; the element already renders on every surface via `render()`.
@@ -312,16 +324,19 @@ populations and both skins, since a z-index error is invisible to assertions.
 
 **Goal:** The app can start sign-in at any host, in either intent.
 **Changes:**
-- [ ] `js/auth/session.js` — `signIn(handle, options)` forwards options to `client.signIn`.
-- [ ] `js/auth/hosts.js` (NEW) — pure registry: entryway URL, display name, signup posture.
-- [ ] `test/auth-session.test.js`, `test/hosts.test.js` (NEW) — RED first.
-- [ ] `e2e/hosts-live.workflow.mjs` (NEW, `live = true`) — drift check.
-- [ ] `sw.js` — add `js/auth/hosts.js` to SHELL; bump `CACHE`.
-- [ ] **Observability (Pass 3):** a callback boot that ends signed-out says so. See
-      § Observability. RED: boot with `code`+`state` present and a failing exchange,
-      assert the UI distinguishes it from an ordinary signed-out boot.
-- [ ] **Observability (Pass 3):** `toast()` refuses an empty message rather than
-      rendering a wordless red block.
+- [x] DONE — `js/auth/session.js`, `signIn(handle, options)` forwards options verbatim.
+- [x] DONE — `js/auth/hosts.js`, pure registry + `validateHosts` + `canCreateAccount`.
+- [x] DONE — RED first in both. Of the three seam tests, ONE was red (options dropped); the
+      other two pinned behaviour that already held but nothing asserted.
+- [x] DONE — `e2e/hosts-live.workflow.mjs`. Passes against all four hosts. Reports an
+      unreachable host SEPARATELY from a changed one: a dark third-party server is not our
+      regression and must not read as one.
+- [x] DONE — SHELL entry added, `CACHE` → `forage-v41`.
+- [x] DONE — `bootAuth` reads whether the boot ARRIVED as a callback (before anything
+      clears it, which the Phase 0 fix is what makes possible) and says so when the
+      exchange yields no session. RED in `e2e/signin.workflow.mjs`.
+- [x] DONE — `toast()` substitutes a true fallback rather than rendering a wordless
+      coloured block. It still SHOWS: refusing outright would swallow the signal.
 **Call chain:** Phase C's sheet → `hosts.list()` → a row's action →
 `lensViews` handler → `manager.signIn(entryway, { prompt })` → `client.signIn` → redirect.
 In THIS phase the chain ends at `manager.signIn`; Phase C supplies the caller. That is why
@@ -676,3 +691,26 @@ for confirmation and this plan should not execute Phases C or D until they are.
 scope (Phase B "Broad" for four third-party hosts; Phase E "Narrow-to-moderate"). The
 Concurrency Map accounts for every phase. Both Phase 0 dispositions are declared and
 both were honoured — nothing from either probe was kept.
+
+### Execution: Phase A remainder and Phase B — 2026-08-27
+**Phase A closed.** Its `scroll-margin-top` item was DROPPED, not done: the rationale was
+false. Forage has no in-page anchors at all, and a sticky bar does not occlude at scroll
+position 0 because it occupies flow space. The only programmatic scroll is the memory
+population's moderation queue, which no workflow reaches — so shipping the CSS would have
+been untested production code for an unexercised path. Re-open with the mod queue's
+coverage.
+
+**Phase B shipped**, and the seam is LIVE rather than waiting for Phase C: the masthead's
+"Sign in" now resolves its entryway through `hostById('bsky')`, so `js/auth/hosts.js` is
+reachable from the entry point today. That was Pass 3's wiring-test finding applied at
+execution — a registry no running code imports is exactly the dead component the field
+exists to prevent.
+
+**Honest note on the RED steps:** of the three seam tests written, only ONE failed. The
+other two — an options-less `signIn` not inventing a prompt, and a rejected `signIn`
+leaving `signed-out` rather than `pending` — described behaviour that already held with
+nothing pinning it. Written as RED, discovered green. Worth keeping and worth saying
+plainly rather than presenting three passing tests as three fixes.
+
+**Gate:** 470 unit / 88 conformance / 11 workflows, 0 failures. Both live-only checks
+skip-reported.
