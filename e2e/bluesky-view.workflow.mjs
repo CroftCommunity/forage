@@ -275,39 +275,39 @@ export async function run() {
   // swapped out before .count() runs, which is exactly how this failed in CI
   // (0 !== 1) after passing locally many times. So wait for the whole SHAPE we
   // are about to assert, and let the asserts be confirmations that cannot race.
-  await page.waitForFunction(() => {
+  // Wait and read in ONE operation. This race has now been narrowed twice and
+  // closed neither time: first the wait was made atomic but three .count()
+  // round-trips followed it; then those became one evaluate, and the node
+  // itself vanished between the wait resolving and the evaluate running
+  // (-1 !== 1, the null sentinel). Any gap at all between observing and
+  // asserting is the race, however small.
+  //
+  // So waitForFunction RETURNS the shape, and the assertions run on that
+  // returned value. The snapshot asserted is by construction the snapshot that
+  // satisfied the condition — there is no interval left for a repaint to fit
+  // into. The thread genuinely keeps repainting (the reply refetches, the quote
+  // cascade repaints again when it lands); a test cannot out-wait that, it can
+  // only stop leaving a seam.
+  const shapeHandle = await page.waitForFunction(() => {
     const mine = document.querySelector('.comment[data-node-id$="/myreply"]');
     const theirs = document.querySelector('.comment[data-node-id$="/reply1"]');
-    if (!mine || !theirs) return false;
-    return mine.querySelectorAll('[data-delete-post]').length === 1
-      && theirs.querySelectorAll('[data-delete-post]').length === 0
-      && document.querySelectorAll('.card > [data-delete-post]').length === 0;
-  }, null, { timeout: 20000 });
-
-  // Read the shape ONCE. The waitForFunction above is atomic inside the page,
-  // but three separate .count() calls are three round-trips, and this thread
-  // keeps repainting: the shape can hold when the wait resolves and change
-  // again between assertion one and assertion two. Observed exactly that way —
-  // the head-post assert passed, then `your own reply can be deleted` read 0
-  // (croftc-e2, captured under concurrent suite load, with harness diagnostics
-  // showing zero outstanding requests and readyState complete, i.e. an
-  // app-driven repaint rather than anything still loading).
-  //
-  // Waiting harder cannot fix this and neither can a better wait. One snapshot,
-  // three assertions against it.
-  const deleteShape = await page.evaluate(() => {
-    const q = (sel) => document.querySelector(sel);
-    const mine = q('.comment[data-node-id$="/myreply"]');
-    const theirs = q('.comment[data-node-id$="/reply1"]');
-    return {
+    if (!mine || !theirs) return null;
+    const shape = {
       head: document.querySelectorAll('.card > [data-delete-post]').length,
-      mine: mine ? mine.querySelectorAll('[data-delete-post]').length : -1,
-      theirs: theirs ? theirs.querySelectorAll('[data-delete-post]').length : -1,
+      mine: mine.querySelectorAll('[data-delete-post]').length,
+      theirs: theirs.querySelectorAll('[data-delete-post]').length,
     };
+    // Return the shape only once it is the settled one; returning early would
+    // reintroduce exactly the seam this closes.
+    return (shape.head === 0 && shape.mine === 1 && shape.theirs === 0) ? shape : null;
+  }, null, { timeout: 20000 }).catch((e) => {
+    throw new Error(`delete controls never settled to (head 0, mine 1, theirs 0): ${e.message}`);
   });
+  const deleteShape = await shapeHandle.jsonValue();
+
   assert.equal(deleteShape.head, 0, 'no delete control on a post that is not yours');
   assert.equal(deleteShape.mine, 1, 'your own reply can be deleted');
-  assert.equal(deleteShape.theirs, 0, 'someone else’s reply cannot');
+  assert.equal(deleteShape.theirs, 0, 'someone else\u2019s reply cannot');
   await page.locator('.comment[data-node-id$="/myreply"] [data-delete-post]').click();
   await page.locator('.comment[data-node-id$="/myreply"] [data-delete-post][data-armed="1"]').click();
   await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('deleteRecord')
