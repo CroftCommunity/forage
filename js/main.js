@@ -60,8 +60,16 @@ function masthead() {
     return el('header', { class: 'masthead' },
       el('a', { class: 'wordmark', href: '/' },
         el('img', { class: 'wordmark-glyph', src: '/icons/icon-192.png', alt: '' }), 'Forage'),
-      el('nav', { class: 'row', style: 'gap:12px' },
-        el('a', { href: '/', class: 'small' }, 'Home')),
+      // 4j: no nav here. It held ONE link — "Home", href '/' — which is the
+      // wordmark's href immediately to its left: the same destination twice,
+      // one of them redundant. That cost nothing until the masthead went
+      // sticky and had to meet the 44px touch floor, at which point the extra
+      // item is what pushed the bar to a second row: measured at 320px,
+      // 113px with it and 61px without. Removing a duplicate beats hiding it
+      // behind a media query, and beats making the nav horizontally
+      // scrollable — which was measured too, and put "Home" off-screen.
+      // The memory masthead's nav is NOT this: Home/Popular/All are three
+      // real destinations and it keeps them.
       el('div', { class: 'who' }, themeBtn0,
         el('a', { href: '/settings', class: 'small' }, 'Settings'),
         who === 'connecting' ? el('span', { class: 'small muted' }, '…')

@@ -215,7 +215,14 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
     : mediaEmb?.$type === 'app.bsky.embed.video#view'
       ? { kind: 'video', thumb: mediaEmb.thumbnail || null }
       : mediaEmb?.$type === 'app.bsky.embed.external#view' && mediaEmb.external?.thumb
-        ? { kind: 'external', thumb: mediaEmb.external.thumb, uri: mediaEmb.external.uri }
+        // 4i: `title` rides along because it is the external card's only human
+        // name, and the view needs one — an <a> around a decorative thumbnail
+        // is otherwise an unnamed link (SERIOUS, live 2026-08-26). Explicitly
+        // null when absent, never the uri: distinguishing "no title" from a
+        // title that looks like a url is what lets the view name the link
+        // honestly instead of inventing one.
+        ? { kind: 'external', thumb: mediaEmb.external.thumb, uri: mediaEmb.external.uri,
+            title: mediaEmb.external.title || null }
         : undefined;
   // an image/video-only post titles from its alt text, never renders blank
   const displayTitle = text
@@ -686,6 +693,30 @@ export function parseFeedRoute(params = {}) {
 // feed is a program whose criteria are unpublished (DL-025), so we promise
 // nothing and render its description verbatim, since that prose is the only
 // inclusion instruction that exists anywhere.
+// 4h: what a compact `f/…` link calls a registered source — the NAME, falling
+// back to the slug. It ended up showing a record key (owner, 2026-08-26)
+// because the sidebar reached for `slug` while every other surface used
+// `title`.
+//
+// A name here is a FALLBACK held in the registry, not the truth: the network
+// owns these names and changes them. Both hardcoded entries were already wrong
+// when this was written — the generator at rkey `whats-hot` reports
+// "Discover", and the account at `bsky.app` reports "Bluesky", not the
+// "What's Hot" and "Bluesky Team" this repo had been shipping. The rkey and
+// the handle stay the route, the href and the title attribute; they are
+// identifiers, not labels. e2e/curated-names-live.workflow.mjs (LIVE=1) is what
+// notices when a fallback drifts again.
+//
+// Authors were briefly special-cased to their handle, on the grounds that
+// handles are unique and stable where display names are neither. The owner
+// overruled it: that argument is about identifiers, and a sidebar is for
+// reading. The identifier is still one hover away.
+export function sourceLabel(entry) {
+  const label = entry && (entry.title || entry.slug);
+  if (!label) throw new Error(`sourceLabel needs a source entry with a title or a slug (got ${JSON.stringify(entry)})`);
+  return label;
+}
+
 export function affordanceFor(stream) {
   if (stream.kind === 'hashtag') {
     return {

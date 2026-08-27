@@ -165,6 +165,24 @@ kbd { background: var(--green-100); border: 1px solid var(--border); border-radi
   }
   .btn, .btn.sm, .tab { display: inline-flex; align-items: center; justify-content: center; }
   .themetoggle { width: 44px; height: 44px; }
+  /* 4j: the masthead is a CHROME region, not prose, so the touch floor reaches
+     its links — which the gate's own comment already said and its selector did
+     not do. Measured before this rule at 320px: wordmark 107x30, Home 38x21,
+     Settings 53x21, Sign in 44x21. `white-space: nowrap` and `flex: none` are
+     load-bearing, not tidiness: without them the flex row shrinks the items to
+     satisfy min-width and the LABELS break instead — a measured pass showing
+     "Settin gs" wrapped over two lines and "Home" clipped to "H". */
+  /* The floor alone is not the goal — a COMPLIANT two-row bar is worse than
+     the one-row bar we started with, and the gate cannot tell the difference
+     (121px passes exactly as well as 61px). Tightening the gap at touch widths
+     is what actually fits the four items on one row: measured at 320px,
+     121px -> 61px, which is 17% of the fold back down to 9%. Wrap is left ON
+     as a safety valve: if a future item does not fit, a second row is a far
+     better failure than a clipped label. */
+  .masthead { gap: var(--s2); }
+  .masthead a { min-height: 44px; display: inline-flex; align-items: center;
+                white-space: nowrap; flex: none; }
+  .masthead nav a, .masthead .who a { min-width: 44px; justify-content: center; }
   /* Icon-only, and the smallest things on the page — padding, not a bigger
      glyph, so the arrows look the same and the thumb has somewhere to land. */
   .vote, .cvote { min-width: 44px; min-height: 44px; }

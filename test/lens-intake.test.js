@@ -934,3 +934,34 @@ test('3p: a feed with no description still gets one box, and the blurb is ours �
   assert.match(m.blurb, /does not say/i);
   assert.equal(m.avatar, null);
 });
+
+// --- 4h: what a compact `f/…` link calls a source ---------------------------
+// Reported by the owner 2026-08-26: the guest sidebar showed `f/whats-hot` — a
+// record key — where every other surface shows a display name.
+//
+// The rule is the same for every kind of source: show the NAME, fall back to
+// the slug. An earlier draft special-cased author boards to their handle on
+// the grounds that handles are unique and stable where display names are
+// neither. The owner overruled it (2026-08-26): a person reading a sidebar
+// wants the name, and the handle is still the route, the href and the title
+// attribute. The argument was about identifiers; the sidebar is about reading.
+test('4h: a FEED source is named by its display name, not its record key', async () => {
+  const { sourceLabel } = await import('../js/substrates/lens.js');
+  assert.equal(sourceLabel({ slug: 'whats-hot', title: 'Discover', kind: 'feed' }), 'Discover');
+});
+
+test('4h: an AUTHOR source is named the same way — by its display name, not its handle', async () => {
+  const { sourceLabel } = await import('../js/substrates/lens.js');
+  assert.equal(sourceLabel({ slug: 'bsky.app', title: 'Bluesky', kind: 'author' }), 'Bluesky');
+});
+
+test('4h: no name of any kind falls back to the slug — the same fallback the network paths use', async () => {
+  const { sourceLabel } = await import('../js/substrates/lens.js');
+  assert.equal(sourceLabel({ slug: 'afterdark', title: '', kind: 'feed' }), 'afterdark');
+  assert.equal(sourceLabel({ slug: 'nobody.test', kind: 'author' }), 'nobody.test');
+});
+
+test('4h: an entry with neither a name nor a slug fails loudly, showing what it got', async () => {
+  const { sourceLabel } = await import('../js/substrates/lens.js');
+  assert.throws(() => sourceLabel({ kind: 'feed' }), /sourceLabel/);
+});

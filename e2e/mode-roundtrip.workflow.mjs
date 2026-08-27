@@ -41,7 +41,7 @@ export async function run() {
   const cp = await scenario('first-visit', { responses: { 'getTrendingTopics': { topics: [] } } });
   // a deep link loads the app directly — no hash, no redirect hop
   await cp.page.goto(`${cp.origin}/feeds`);
-  await cp.page.waitForSelector('h1:has-text("Discover feeds")');
+  await cp.page.waitForSelector('h1:has-text("Browse feeds")');
   assert.equal(new URL(cp.page.url()).pathname, '/feeds', 'the URL stays clean');
   assert.equal(new URL(cp.page.url()).hash, '', 'no hash fragment anywhere');
 
@@ -57,7 +57,7 @@ export async function run() {
 
   // the OLD shared hash links still land in the right place
   await cp.page.goto(`${cp.origin}/#/feeds`);
-  await cp.page.waitForSelector('h1:has-text("Discover feeds")');
+  await cp.page.waitForSelector('h1:has-text("Browse feeds")');
   assert.equal(new URL(cp.page.url()).pathname, '/feeds', 'a legacy #/ link is rewritten to its clean path');
   await cp.close();
 

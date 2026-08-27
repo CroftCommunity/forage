@@ -30,7 +30,14 @@ async function assertTapTargets(page, label) {
   const small = await page.evaluate((floor) => {
     // Interactive things a thumb is meant to hit. Anchors inside a paragraph or
     // a clamp are prose links and carry the documented exemption.
-    const sel = 'button, select, input[type="checkbox"], input[type="radio"], .tab, a.btn, .themetoggle';
+    // `.masthead a` is here because the comment above this function already
+    // said it should be: the prose exemption "does not reach the masthead,
+    // which is a chrome region, not prose". It said so while the selector
+    // matched no plain <a> at all, so the four masthead failures it names as
+    // motivation were invisible to it — the gate documented coverage it did
+    // not have. Widened to the region it names, and no further: extending the
+    // floor to every non-prose anchor app-wide is a policy call, not a bug fix.
+    const sel = 'button, select, input[type="checkbox"], input[type="radio"], .tab, a.btn, .themetoggle, .masthead a';
     const inProse = (el) => !!el.closest('p, .clamp, .comment-text, .postmeta');
     // The dev bar is scaffolding, not product chrome — /about says so in as many
     // words, and it would not ship in a production build. Holding it to the
