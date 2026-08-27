@@ -1,9 +1,15 @@
 # Plan: sorting, filtering and time windows — for feed discovery and for boards
 
 date: 2026-08-26
-status: **4a–4g SHIPPED — the plan is complete.** OQ1/OQ2/OQ3/OQ4 closed; OQ5 open
-(owner), plus 4g's scope cut for the owner to accept or reverse.
-Gate green: 339 unit tests, 5/5 workflows. DL-031–DL-034 landed; ADR-004 recorded.
+status: **CLOSED — 4a–4g SHIPPED and DEPLOYED** (forage.fyi, 2026-08-26).
+All five open questions answered: OQ1/OQ3/OQ4 by measurement, OQ2 by ADR-004, OQ5 by
+the owner (logged out = the strictest floor). Follow-on moderation work landed after
+the deploy: the guest label floor (DL-035) and muted-content-is-absent (DL-036).
+Gate at close: 440 unit tests, 88 conformance observables, 7/7 workflows.
+Ledger: DL-031–DL-036. ADR-004 recorded and registered as forage/0004.
+LEFT FOR THE OWNER, neither blocking: 4g's per-feed scope (a corpus-wide "Most shared"
+sort would fan ~222 requests at a volunteer host — one wiring change to reverse), and
+the absent 24h Rising window (only 9 of 117 feeds cleared 2 likes in a day).
 Execution in worktrees/forage/feed-discovery-sorts (branch claude/feed-discovery-sorts)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `f08fa9d` (clean tree)
