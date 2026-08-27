@@ -115,9 +115,11 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
   clean paths with the 404.html fallback; the service worker upgrades deep
   links to 200s; legacy `#/` links bridge at boot and live. Verified on
   forage.fyi at forage-v22.
-- **Crawler caveat (from 3n):** a bot's FIRST hit on a deep link gets Pages'
-  404 status (the body is correct). Only real fix is a host with rewrites, or
-  prerendering. Decide if/when discoverability matters.
+- ~~Crawler caveat (from 3n)~~ — **PARKED far-out, owner 2026-08-26.** A bot's
+  first hit on a deep link gets Pages' 404 status; the body is correct and
+  shareable links verifiably work, so this is a discoverability question, not a
+  defect. Options and the retire-by condition live on **roadmap E140**; do not
+  re-derive them here.
 - **Naming note:** bsky.app uses the `#` glyph for FEEDS in its nav even though
   hashtags exist. Our split is the honest one (DL-025): `/f/` feeds are not
   targetable, `/h/` hashtags are.
