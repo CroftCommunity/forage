@@ -126,24 +126,3 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 - **Naming note:** bsky.app uses the `#` glyph for FEEDS in its nav even though
   hashtags exist. Our split is the honest one (DL-025): `/f/` feeds are not
   targetable, `/h/` hashtags are.
-
-## What the a11y sweep left behind (2026-08-26)
-
-> `2c4b28d` closed the two gate gaps a live audit of the deployed site found (surface
-> coverage, and the missing touch floor). Two items survive it, both with the work
-> already known. Origin: a Playwright + axe survey of forage.fyi at `forage-v38`,
-> service worker blocked so the scan saw the first-hit DOM, 8 routes × {390, 1280}.
-
-- **`link-name` on media links (SERIOUS, wcag2a) — diagnosed, not fixed.** `mediaNode`
-  in `js/ui/lens-views.js` wraps `el('img', { alt: '' })` in an `<a>` for the external
-  card, so the link has no accessible name; the images branch has the same hole whenever
-  a post carries no alt text. A screen reader announces "link" and nothing else.
-  Measured ×5 on `/u/:handle` against live data. **Held by another session's claim**
-  (`CroftC/.coordination/claims/forage--polish.md`) — `2c4b28d` handed the diagnosis over
-  rather than editing under it.
-- **The hermetic fixtures render no media card, so no axe tier can see the above.**
-  `2c4b28d` states this as its own honest limit: the sweep reaches every route and still
-  cannot reproduce the finding. Closing it means a fixture with an external card and an
-  alt-less image, which is what makes the surface sweep able to fail on this class at
-  all. Same shape as the mobile-fit fixtures, which are *built* to provoke the defect
-  they check for.
