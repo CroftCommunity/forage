@@ -686,6 +686,30 @@ export function parseFeedRoute(params = {}) {
 // feed is a program whose criteria are unpublished (DL-025), so we promise
 // nothing and render its description verbatim, since that prose is the only
 // inclusion instruction that exists anywhere.
+// 4h: what a compact `f/…` link calls a registered source — the NAME, falling
+// back to the slug. It ended up showing a record key (owner, 2026-08-26)
+// because the sidebar reached for `slug` while every other surface used
+// `title`.
+//
+// A name here is a FALLBACK held in the registry, not the truth: the network
+// owns these names and changes them. Both hardcoded entries were already wrong
+// when this was written — the generator at rkey `whats-hot` reports
+// "Discover", and the account at `bsky.app` reports "Bluesky", not the
+// "What's Hot" and "Bluesky Team" this repo had been shipping. The rkey and
+// the handle stay the route, the href and the title attribute; they are
+// identifiers, not labels. e2e/curated-names-live.workflow.mjs (LIVE=1) is what
+// notices when a fallback drifts again.
+//
+// Authors were briefly special-cased to their handle, on the grounds that
+// handles are unique and stable where display names are neither. The owner
+// overruled it: that argument is about identifiers, and a sidebar is for
+// reading. The identifier is still one hover away.
+export function sourceLabel(entry) {
+  const label = entry && (entry.title || entry.slug);
+  if (!label) throw new Error(`sourceLabel needs a source entry with a title or a slug (got ${JSON.stringify(entry)})`);
+  return label;
+}
+
 export function affordanceFor(stream) {
   if (stream.kind === 'hashtag') {
     return {

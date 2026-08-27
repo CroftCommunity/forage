@@ -74,7 +74,7 @@ export async function run() {
                 { type: 'feed', value: AFTER_DARK, pinned: true, id: '3' },
                 { type: 'timeline', value: 'following', pinned: true, id: '2' }] }] },
       'getFeedGenerators': { feeds: [
-        { uri: WHATS_HOT, displayName: "What's Hot", likeCount: 1, labels: [] },
+        { uri: WHATS_HOT, displayName: 'Discover', likeCount: 1, labels: [] },
         { uri: AFTER_DARK, displayName: 'After Dark', likeCount: 999, labels: [{ val: 'porn' }] }] },
       'getPopularFeedGenerators': { feeds: [
         { uri: GARDEN, displayName: 'Garden Talk',
@@ -106,7 +106,7 @@ export async function run() {
       'getFeedGenerator?feed=at%3A%2F%2Fdid%3Aplc%3Ax': { view: { uri: 'at://did:plc:x/app.bsky.feed.generator/afterdark',
         displayName: 'After Dark', description: 'adult stuff', likeCount: 999,
         creator: { handle: 'x.test' }, labels: [{ val: 'porn' }] }, isOnline: true, isValid: true },
-      'getFeedGenerator?': { view: { uri: WHATS_HOT, displayName: "What's Hot", description: 'the hot stuff',
+      'getFeedGenerator?': { view: { uri: WHATS_HOT, displayName: 'Discover', description: 'the hot stuff',
         likeCount: 99, creator: { handle: 'bsky.app' } }, isOnline: true, isValid: true },
       // 4c: Rising rides one getLikes per feed. The counts are deliberately
       // INVERTED against likeCount so the journey proves Rising is a different
@@ -397,4 +397,79 @@ export async function run() {
 
   assert.deepEqual(await s.shimMisses(), [], 'every network read had a fixture');
   await s.close();
+
+  // --- P0: the OAuth callback must survive boot ---------------------------
+  // Reported live on forage.fyi 2026-08-26: the authorize round-trip completes
+  // at bsky.social and returns you SIGNED OUT.
+  //
+  // The exchange is not something Forage performs — the vendored client's
+  // init() performs it, by reading the callback params off location. So the
+  // only thing Forage can get wrong is letting something else clear location
+  // first, and that is exactly what it did: main.js awaits ensureAuthBoot()
+  // before dropping the params, but bootAuth() guarded re-entry with a boolean
+  // and returned WITHOUT awaiting the boot already in flight. The await
+  // resolved instantly and replaceState wiped the fragment mid-exchange.
+  //
+  // This asserts the property that actually matters, which is not "boot is
+  // called once" but "the params are still there when the exchange reads
+  // them". restore() below records what it saw, standing in for init().
+  const cb = await scenario('first-visit', {
+    initScripts: [`(() => {
+      let release;
+      window.__release = () => release && release();
+      window.__restoreSawHash = null;
+      const listeners = new Set();
+      let state = 'unknown';
+      let session = null;
+      window.__forageFakeSessionManager = {
+        state: () => state,
+        currentSession: () => session,
+        onChange: (fn) => { listeners.add(fn); return () => listeners.delete(fn); },
+        async restore() {
+          // Production reaches client.init() only after a vendor import AND a
+          // /client-metadata.json fetch. Blocking here stands in for that
+          // window, under the test's control instead of the network's.
+          await new Promise((r) => { release = r; });
+          window.__restoreSawHash = window.location.hash;
+          session = { did: 'did:plc:cbtest', signOut: async () => {},
+            fetchHandler: (p, i) => window.fetch('https://bsky.social' + p, i) };
+          state = 'signed-in';
+          for (const fn of listeners) fn(state);
+          return session;
+        },
+        async signIn() {}, async signOut() {},
+        fetch(p, i) { return session.fetchHandler(p, i); },
+      };
+    })();`],
+    responses: {
+      'describeRepo': { handle: 'callback.test' },
+      'getPreferences': { preferences: [] },
+      'getTrendingTopics': { topics: [] },
+    },
+  });
+  try {
+    // Exactly the shape bsky.social redirects back with: atproto browser
+    // clients default to response_mode=fragment (live-observed at 2c).
+    await cb.page.goto(`${cb.origin}/#state=st-1&iss=https%3A%2F%2Fbsky.social&code=cod-abc`);
+    await cb.page.waitForSelector('.masthead');
+    // Boot has settled as far as it can: restore() is still blocked, so the
+    // exchange has NOT happened yet. The params must still be on the URL.
+    await cb.page.waitForFunction(() => window.__forageFakeSessionManager.state() === 'unknown');
+    const midFlight = await cb.page.evaluate(() => location.hash);
+    assert.match(midFlight, /code=cod-abc/,
+      `the callback params must survive until the exchange reads them — saw ${JSON.stringify(midFlight)}`);
+
+    await cb.page.evaluate(() => window.__release());
+    await cb.page.waitForSelector('.masthead a[title="Your Forage profile"]', { timeout: 10000 });
+    const sawHash = await cb.page.evaluate(() => window.__restoreSawHash);
+    assert.match(sawHash, /code=cod-abc/,
+      `the exchange must READ the code, not an emptied URL — saw ${JSON.stringify(sawHash)}`);
+
+    // …and only then is the bar cleaned, so a reload cannot replay a spent code.
+    await cb.page.waitForFunction(() => !location.hash.includes('code='));
+    assert.equal(await cb.page.evaluate(() => location.pathname), '/',
+      'a completed callback lands on the lens root');
+  } finally {
+    await cb.close();
+  }
 }
