@@ -11,6 +11,7 @@ import { go } from '../router.js';
 import { frontiers } from '../../ledger/divergence.js';
 import { humanWait } from '../engines/limits.js';
 import { postRow, commentNode, voteBox, emptyState, gate, errorState, toast } from './components.js';
+import { densityDial, isCompact } from '../board-density.js';
 
 // A board scope for one feed. Derived, not spelled: the old literal was the
 // length of 'field:' and the rename silently cut a character off every slug.
@@ -74,8 +75,10 @@ export function boardView(scope, title, query) {
       ? el('a', { class: 'btn primary sm', href: `/submit?f=${scope.slice(FEED_SCOPE.length)}` }, '+ New post') : null));
 
   const base = scope.startsWith('feed:') ? `/f/${scope.slice(FEED_SCOPE.length)}` : `/${scope}`;
-  main.append(el('div', { class: 'tabs' }, ...SORTS.map((s) =>
-    el('a', { class: 'tab' + (s === sort ? ' active' : ''), href: `${base}?sort=${s}` }, s[0].toUpperCase() + s.slice(1)))));
+  main.append(el('div', { class: 'row spread wrap' },
+    el('div', { class: 'tabs' }, ...SORTS.map((s) =>
+      el('a', { class: 'tab' + (s === sort ? ' active' : ''), href: `${base}?sort=${s}` }, s[0].toUpperCase() + s.slice(1)))),
+    densityDial(el)));
 
   if (!data.posts.length) {
     main.append(emptyState('Nothing growing here yet',
@@ -84,7 +87,7 @@ export function boardView(scope, title, query) {
         scope === 'home' ? 'Discover feeds' : 'Create a feed')));
   } else {
     const card = el('div', { class: 'card' });
-    for (const p of data.posts) card.append(postRow(p, data.perms.canVote));
+    for (const p of data.posts) card.append(postRow(p, data.perms.canVote, { compact: isCompact() }));
     main.append(card);
   }
   return { main, side: el('div', { class: 'side' }, limitsSidebar(), feedsSidebar()) };

@@ -330,6 +330,13 @@ hr.rule { border: none; border-top: 1px solid var(--border); margin: var(--s4) 0
 .postrow.compact { padding: 4px 8px; }
 .postrow.compact .posttitle { font-size: 0.95em; }
 .postrow.compact .postmeta { font-size: 0.75em; }
+/* The vote column, not the padding, is what sets a row's floor: three stacked
+   elements ignore however tight the row gets. Shrinking the text alone left
+   "compact" only ~17% denser than card, which is not a second density so much
+   as a slightly smaller one. */
+.postrow.compact .votebox { gap: 0; }
+.postrow.compact .vote { font-size: 12px; padding: 0 2px; }
+.postrow.compact .score { font-size: var(--t-xs); line-height: 1.1; }
 .media-strip { display: flex; gap: 6px; margin: 6px 0; flex-wrap: wrap; }
 /* 3t: --media-max is the slider's one output; 220px is what shipped, so an
    untouched board looks exactly as it did. */

@@ -94,8 +94,12 @@ export function postRow(p, viewerCanVote, opts = {}) {
     p.edited ? el('span', { class: 'muted' }, 'edited') : null,
     opts.metaExtra || null, // 3u: the lens hangs a language chip here
   );
+  // Compact drops the body preview. The lens already did this by passing
+  // bodyNode: null explicitly; doing it HERE means compact means the same thing
+  // in both populations instead of being a smaller font in one of them. An
+  // explicit bodyNode still wins, so callers keep the final say.
   const body = opts.bodyNode !== undefined ? opts.bodyNode
-    : (p.format === 'text' && p.body && !p.maskedRemoved
+    : (!opts.compact && p.format === 'text' && p.body && !p.maskedRemoved
       ? el('div', { class: 'clamp' }, p.body) : null);
 
   const right = el('div', {},

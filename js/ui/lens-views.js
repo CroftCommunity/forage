@@ -14,6 +14,7 @@ import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortW
 import { initSession, createAccountRoster } from '../auth/session.js';
 import * as mediaScale from '../media-scale.js';
 import * as lang from '../lang.js';
+import { density, setDensity, DENSITIES } from '../board-density.js';
 import { POST_LIMITS, IMAGE_LIMITS, graphemes, withTag } from '../compose.js';
 import { MEDIA_SCALE } from '../media-scale.js';
 
@@ -247,8 +248,10 @@ function mediaNode(p) {
 }
 
 // The board view preference (card | compact) — device-local, like theme/skin.
-const VIEW_KEY = 'forage.boardview';
-const boardView = () => { try { return localStorage.getItem(VIEW_KEY) === 'compact' ? 'compact' : 'card'; } catch { return 'card'; } };
+// The density preference now lives in js/board-density.js so BOTH populations
+// read one key through one module. `boardView` is kept as a local alias only
+// because this file reads it in a dozen places.
+const boardView = density;
 
 // Per-page-load sort state (a view concern, like the ring).
 let boardSort = 'feed';
@@ -268,8 +271,9 @@ function boardToolbar(onChange) {
   if (boardSort !== 'top') tfSel.style.display = 'none';
   sortSel.addEventListener('change', () => { boardSort = sortSel.value; tfSel.style.display = boardSort === 'top' ? '' : 'none'; onChange(); });
   tfSel.addEventListener('change', () => { boardTimeframe = tfSel.value; onChange(); });
-  const viewSel = el('select', { title: 'Card shows previews and media; Compact is dense rows' },
-    ...[['card', 'Card'], ['compact', 'Compact']].map(([v, l]) =>
+  const viewSel = el('select', { 'data-density': '1', 'aria-label': 'Board density',
+    title: 'Card shows previews and media; Compact is dense rows' },
+    ...DENSITIES.map(([v, l]) =>
       el('option', { value: v, selected: boardView() === v || false }, l)));
 
   // 3t: how big previews should be is a per-screen judgement, so it is a
@@ -284,7 +288,7 @@ function boardToolbar(onChange) {
   slider.addEventListener('input', () => { mediaScale.set(slider.value); applyMediaScale(); });
 
   viewSel.addEventListener('change', () => {
-    try { localStorage.setItem(VIEW_KEY, viewSel.value); } catch {}
+    setDensity(viewSel.value);
     syncSlider();
     onChange();
   });

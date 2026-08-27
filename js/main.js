@@ -7,6 +7,7 @@ import * as actions from './actions.js';
 import { el } from './util.js';
 import { devBar } from './devbar.js';
 import * as skins from './skins.js';
+import * as density from './board-density.js';
 import { toast } from './ui/components.js';
 import { setToaster } from './actions.js';
 import * as views from './ui/views.js';
@@ -193,6 +194,9 @@ window.addEventListener('hashchange', () => {
 // applies a palette any more — there is no separate theme module to call.
 skins.apply();
 skins.onChange(render);
+// Density is a display preference like the skin: changing it repaints, and
+// the sandbox board reads it at render time.
+density.onChange(render);
 
 // ---------- boot ----------
 const hadState = store.hydrate();
