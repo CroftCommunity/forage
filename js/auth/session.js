@@ -119,10 +119,21 @@ export function createSessionManager({ client }) {
     },
 
     // Begin the interactive sign-in redirect. Resolves only on failure/abort.
-    async signIn(handle) {
+    //
+    // `options` is forwarded verbatim, and the reason is `prompt`: the OIDC
+    // Initiating-User-Registration extension. Every registered host advertises
+    // `prompt=create`, and Phase 0 D1 OBSERVED bsky.social and blacksky.app
+    // landing in the registration wizard ("Step 1 of 3 | Choose a username")
+    // rather than the authenticate screen. That is what makes "Create account"
+    // a different destination from "Sign in" instead of two buttons pointing at
+    // one place — and this function used to drop it on the floor.
+    //
+    // Forwarded, never synthesised: an options-less signIn must not invent a
+    // prompt, or every ordinary sign-in becomes a registration attempt.
+    async signIn(handle, options) {
       setState('pending');
       try {
-        await client.signIn(handle);
+        await client.signIn(handle, options);
       } catch (e) {
         setState(session ? 'signed-in' : 'signed-out');
         throw e;

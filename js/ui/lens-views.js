@@ -11,7 +11,8 @@ import { postRow, commentNode, voteBox, skeleton, emptyState, toast } from './co
 import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow, affordanceFor,
   feedCardModel, threadNodeStyle, feedPath, parseFeedRoute, sessionGateMessage, canDelete, sourceLabel,
   sortFeeds, filterFeeds, platforms, liveFeeds } from '../substrates/lens.js';
-import { initSession, createAccountRoster } from '../auth/session.js';
+import { initSession, createAccountRoster, isOAuthCallback } from '../auth/session.js';
+import { hostById } from '../auth/hosts.js';
 import * as mediaScale from '../media-scale.js';
 import * as lang from '../lang.js';
 import { density, setDensity, DENSITIES } from '../board-density.js';
@@ -62,7 +63,10 @@ export async function startDirectSignIn() {
   if (!manager || manager === 'unavailable') {
     return toast('Sign-in is origin-bound — works on forage.fyi and localhost.', 'err');
   }
-  try { await manager.signIn('https://bsky.social'); }
+  // 4k: through the REGISTRY, not a hardcoded string — this is the call chain
+  // that makes js/auth/hosts.js live rather than a module the sheet will one
+  // day import. Phase C replaces this default with the host the reader chose.
+  try { await manager.signIn(hostById('bsky').entryway); }
   catch (e) { toast('Sign-in failed: ' + e.message, 'err'); }
 }
 
@@ -111,8 +115,20 @@ function bootAuth() {
       if (!m) { manager = 'unavailable'; rerender(); return; }
       manager = m;
       m.onChange(() => rerender());
+      // Whether this boot ARRIVED as an OAuth callback, read before anything
+      // clears it — main.js drops the params only after awaiting this function,
+      // which is the whole point of the Phase 0 fix.
+      const fromCallback = isOAuthCallback(location.search) || isOAuthCallback(location.hash);
       const s = await m.restore(); // restores a saved session OR completes a callback
       if (s) await adoptSession(s);
+      else if (fromCallback) {
+        // 4k: the state that used to be SILENT. An authorization came back and
+        // produced no session — which is NOT the same as an ordinary
+        // signed-out boot, and must not render as one. Every layer behaved as
+        // written when this last happened, and the only instrument was a human
+        // noticing they were still logged out.
+        toast('Sign-in did not complete — the authorization came back but no session was created. Try again.', 'err');
+      }
     } catch (e) {
       manager = 'unavailable';
       toast(e.message, 'err'); // vendor drift / metadata failures speak, never blank
