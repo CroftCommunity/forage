@@ -24,8 +24,8 @@ export const LEDGER = [
     description: 'Build spec §11 out-of-scope list. Requires the scaled side.' },
   { id: 'DL-007', kind: 'frontier', capability: 'moderation', label: 'ML spam filtering',
     description: 'Build spec §11 out-of-scope list. Requires the scaled side.' },
-  { id: 'DL-028', kind: 'frontier', capability: 'skins', label: 'Structural skinning (row density)',
-    description: 'A skin can change palette, typography and chrome, but never LAYOUT: post rows keep Forage\'s roomy card shape, so an imported phpBB theme reads as that board\'s colours on Forage\'s structure, not as a dense board table. Deferred by the owner 2026-08-26 (plan 2026-08-26-1, OQ3) rather than built: letting a skin move layout widens what a skin can do to the page, and needs its own decision about what a skin must never be able to hide.' },
+  { id: 'DL-028', kind: 'frontier', capability: 'skins', label: 'Structural skinning (row density)', status: 'resolved',
+    description: 'RESOLVED 2026-08-26 without granting skins layout power. A skin now declares prefersDensity and picks from the two densities the app already ships (card | compact), so it cannot express anything a reader cannot reach from the dial on the same board, and an explicit reader choice always wins. The original deferral asked what a skin must never be able to hide; this route never has to answer it, because the skin chooses from a menu the app controls. Structural rows with real columns remain unbuilt and unasked-for.' },
 
   // ---- proposals ----
   { id: 'DL-009', kind: 'proposal', capability: 'posting',
