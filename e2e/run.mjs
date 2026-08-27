@@ -1,4 +1,13 @@
 // Workflow-corpus runner (1d). Runs every e2e/*.workflow.mjs sequentially.
+//
+// IT GLOBS THIS DIRECTORY, so it will happily grade your scratch work. If you
+// are hunting an intermittent failure by running the suite in a loop, a RED
+// work-in-progress workflow left in e2e/ produces failures that look exactly
+// like the signal you are hunting. That happened twice in one session on
+// 2026-08-26: three of four "hits" in a flake hunt were the hunter's own
+// unfinished file, and the one real catch was nearly lost in them. Commit or
+// move your WIP out before you start a hunt, and read WHICH workflow failed
+// before concluding anything.
 // Fitness rule: a workflow needing real Bluesky exports `live = true` and runs
 // only under LIVE=1; one needing the Docker spaces PDS exports `docker = true`
 // and runs only under DOCKER=1. Gated-off workflows SKIP-REPORT loudly —
