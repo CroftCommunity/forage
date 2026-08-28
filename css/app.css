@@ -565,3 +565,15 @@ dialog.authsheet::backdrop { background: var(--scrim); }
     background: rgba(0,0,0,.34); border: 0; width: 100%; }
   .navscrim[hidden] { display: none; }
 }
+
+/* E144: the account stand-in. Round, initials, and 44px of hit area at every
+   width — it is the only account control now, so it cannot be the small one. */
+/* `.masthead .who a` sets the link colour and out-specifies a bare class, so
+   the white-on-brand pairing lost to it and axe caught the result at 1.15:1.
+   Scoped to the same depth rather than fought with !important. */
+.masthead .who a.accountbtn { color: var(--on-brand); }
+.accountbtn { display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; border-radius: var(--radius-round);
+  background: var(--brand-fill); color: var(--on-brand); font-size: var(--t-xs);
+  font-weight: 600; text-decoration: none; letter-spacing: .02em; flex: none; }
+.accountbtn:hover { background: var(--brand-fill-hover); text-decoration: none; }

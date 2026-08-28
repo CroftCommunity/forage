@@ -22,6 +22,7 @@ import * as lang from '../lang.js';
 import { density, setDensity, DENSITIES } from '../board-density.js';
 import { POST_LIMITS, IMAGE_LIMITS, graphemes, withTag } from '../compose.js';
 import { MEDIA_SCALE } from '../media-scale.js';
+import { settingsView } from './views.js';
 
 let manager = null;        // null = not booted; 'unavailable' = origin has no OAuth client
 let session = null;        // the lens session shape, set after restore
@@ -1591,18 +1592,25 @@ function languagePanel(onChange) {
 }
 
 export function lensProfileView() {
+  // E144: this page absorbed Preferences. It already carried the account
+  // switcher, content languages and the moderation mirror — three "what do I
+  // see" controls — so appearance joining them is the merge the owner asked
+  // for rather than a new idea. It is embedded by CALLING settingsView rather
+  // than by copying its markup: two copies of a skin picker is exactly how the
+  // density dial drifted before (js/board-density.js says so in its header).
+  const prefs = () => el('div', { 'data-prefs': '1' }, settingsView().main);
   if (!session) {
-    return { main: el('div', {}, el('h1', {}, 'Your profile'),
+    return { main: el('div', {}, el('h1', {}, 'Your account'),
       el('p', { class: 'muted small' }, 'Sign in and this page carries your session and your moderation mirror.'),
-      sessionCard()), side: null };
+      sessionCard(), prefs()), side: null };
   }
   // capture the handle NOW: an in-flight profile fetch must not read a
   // session that sign-out has since cleared (the journey caught this).
   const handle = session.handle;
-  const main = el('div', {}, skeleton(3), accountMenu(), languagePanel(), moderationPanel());
+  const main = el('div', {}, skeleton(3), accountMenu(), languagePanel(), moderationPanel(), prefs());
   lens.profile(handle)
-    .then((p) => { if (session) main.replaceChildren(profileHeader(p), accountMenu(), languagePanel(), moderationPanel()); })
-    .catch(() => { if (session) main.replaceChildren(el('h1', {}, `@${handle}`), accountMenu(), languagePanel(), moderationPanel()); });
+    .then((p) => { if (session) main.replaceChildren(profileHeader(p), accountMenu(), languagePanel(), moderationPanel(), prefs()); })
+    .catch(() => { if (session) main.replaceChildren(el('h1', {}, `@${handle}`), accountMenu(), languagePanel(), moderationPanel(), prefs()); });
   return { main, side: null };
 }
 

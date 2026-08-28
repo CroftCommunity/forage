@@ -80,17 +80,36 @@ function masthead() {
       // scrollable — which was measured too, and put "Home" off-screen.
       // The memory masthead's nav is NOT this: Home/Popular/All are three
       // real destinations and it keeps them.
+      // E144: ONE account control, not three. This bar fits a single row at
+      // 320px only because a duplicate link was removed to save 52px (2776537,
+      // 113px -> 61px), and V4's hamburger spent that back. A handle plus a
+      // caret plus a "Settings" link is ~215px; an avatar is 30. That is the
+      // whole reason this is a dependency of the nav rather than a tidy-up.
+      //
+      // It is a STAND-IN, not a fetched avatar: drawing initials costs no
+      // request, cannot flash in late, and cannot fail. The owner's ask
+      // allowed for it — "their little avatar or like a stand-in".
+      //
+      // Signed out it is still here, because Preferences live behind it now
+      // and a guest can legitimately use them. That is the guest-surface rule
+      // read correctly: hide what a reader CANNOT use, keep what they can.
+      // The direct-OAuth "Sign in" (3i) stays beside it rather than being
+      // folded in — collapsing it would put an extra press between a newcomer
+      // and the authorize screen.
       el('div', { class: 'who' }, themeBtn0,
-        el('a', { href: '/settings', class: 'small' }, 'Settings'),
-        who === 'connecting' ? el('span', { class: 'small muted' }, '…')
-          : who ? el('span', { class: 'row', style: 'gap:4px;align-items:center' },
-              el('a', { class: 'small', href: '/me', title: 'Your Forage profile' }, who),
-              (() => {
-                // 3k: the account switcher — multiple separate accounts from
-                // one page (the menu itself lives on /me, which this opens).
-                const caret = el('a', { class: 'small', href: '/me', title: 'Switch account, add another, sign out' }, '▾');
-                return caret;
-              })())
+        (() => {
+          const name = who && who !== 'connecting' ? String(who).replace(/^@/, '') : null;
+          const initials = name
+            ? name.split('.')[0].slice(0, 2).toLowerCase()
+            : '\u00b7\u00b7';
+          return el('a', {
+            class: 'accountbtn', href: '/me', 'data-account': '1',
+            'aria-label': name ? `${name} — your account and preferences` : 'Your account and preferences',
+            title: name ? `${name} — account and preferences` : 'Account and preferences',
+          }, initials);
+        })(),
+        who === 'connecting' ? el('span', { class: 'small muted' }, '\u2026')
+          : who ? null
           : (() => {
               // 3i (owner): launch OAuth DIRECTLY — the entryway collects the
               // handle; no local form between you and the authorize screen.
@@ -176,7 +195,14 @@ router.route('/saved', memoryOnly((p, q) => views.profileView({ handle: store.ge
 router.route('/search', memoryOnly(views.searchView));
 router.route('/submit', memoryOnly(views.submitView));
 router.route('/create-feed', memoryOnly(views.createFeedView));
-router.route('/settings', views.settingsView);
+// E144: one page, not two that can drift. In the lens, Preferences live on
+// /me — the page the avatar opens, which already carried accounts, languages
+// and the moderation mirror. /settings stays a working address and redirects,
+// because links to it exist. The MEMORY population keeps its own /settings.
+router.route('/settings', byMode(() => {
+  history.replaceState({}, '', '/me');
+  return router.dispatch('/me');
+}, views.settingsView));
 router.route('/frontiers', views.frontiersView);
 router.route('/h/:tag', byMode(lensViews.lensHashtagView, views.tagStreamView));
 router.route('/p', blueskyOnly(lensViews.lensThreadView));

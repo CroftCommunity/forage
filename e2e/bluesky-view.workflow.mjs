@@ -139,7 +139,9 @@ export async function run() {
   // V4: the dial became the left nav, so the gesture is a nav row rather than a
   // dial button. The property under test is the BOARD, not the control.
   await page.goto(`${s.origin}/`);
-  await page.waitForSelector('text=@me.test');
+  // E144: the masthead shows a named account control instead of the handle
+  // as text. Same signal — 'this session is signed in' — new surface.
+  await page.waitForSelector('[data-account="1"][aria-label*="me.test"]');
   await page.waitForSelector('.nav [data-nav-item="mut"]');
   await page.locator('.nav [data-nav-item="mut"]').first().click();
   await page.waitForSelector('text=post b1');
