@@ -445,10 +445,52 @@ signed out. Then a fifth control added later cannot quietly ship as neither.
 
 ---
 
-### Phase 3 — template fields (Pass 1)
+### Phase 3 — REVISED 2026-08-27: HIDE, not gate
 
-**Goal:** A guest can tell, before clicking, which controls are theirs and which need an
-account — and the words match the population they are in.
+**The approach reversed after the owner heard it described.** Pass 1 and every earlier
+draft specified *gate* — render the control, disabled, with words. Presented with the
+follow-on question (does a gated control open the sign-in sheet, or just say its piece?),
+the owner rejected the whole shape:
+
+> *"a thousand things that pop up a login seems pretty obnoxious to me… I actually think
+> bury or hide is the better option then for logged out, and we'll need to come up with a
+> way to sort of indicate what's possible if you want to log in. But I think putting a
+> bunch of pop up landmines, even if it's our own pop up, is a bad plan."*
+
+That is right, and it kills the version I was about to build. Six controls scattered
+across every surface whose behaviour is "summon a modal you did not ask for" is a
+minefield even when the modal is ours. **Signed out, the six controls are ABSENT.**
+
+**Three consequences that are not "remove the button", and are the actual work:**
+
+1. **The ring dial stops being a dial.** Hiding Following / Mutuals / Mutuals +1 leaves one
+   setting — World — and a one-option dial reads as broken, not clean. Signed out it is
+   not a control at all: it is a sentence saying what rings are, where the dial will be.
+2. **Hiding the control must NOT hide the information.** The boost arrow and the score
+   share a box. The arrow is an action you cannot take; **the score is a fact**, and it is
+   how you tell a busy thread from a quiet one. Arrow goes, number stays. Read literally,
+   "hide the vote control" would take the score with it and make every post look identical.
+3. **The feed header just gets quieter** — name, creator, likes, description. It needs
+   nothing added; it reads as a thing you are looking at rather than one you are managing.
+
+**Saying what an account adds, without landmines:** words where the controls would be,
+never controls that talk. Text cannot be tapped by accident and does not look
+interactive. Exactly two places, because six muted "needs an account" lines is its own
+quieter nagging:
+- where the ring dial would be — one sentence on what rings are;
+- the card that already says *"Signed out, the lens is read-only"* names what you would
+  GAIN. It currently states a limitation without naming a single thing you would get.
+
+**Deferred, owner's idea 2026-08-27:** *"having a button that's like, you know, show me
+what creating an account adds"* — a single deliberate affordance instead of scattered
+hints. Explicitly NOT built now: *"we gotta start somewhere and then let's work from
+there and I can kind of see what we're working with."* Revisit once the plain version is
+live and judgeable.
+
+### Phase 3 — template fields (Pass 1, revised)
+
+**Goal:** A guest is never shown a control they cannot use, and still learns what an
+account would add.
 
 **Pass 1 changed this phase's shape.** The draft named the ring dial. The measured
 inventory (see Verified Assumptions) is FIVE controls across three surfaces, and one of
@@ -461,17 +503,21 @@ every post row — telling guests to do something that does not exist.
 its click handler → `sessionGate()`/`!session` → today a `toast`. After: the control
 renders gated and the handler is unreachable for guests.
 **Wiring test:** a workflow journey, signed out, asserting on the RENDERED page rather
-than on the click: every control in the inventory is either absent or visibly gated with
-words. Then signed in, the same controls are live. RED today — all five render enabled.
+than on the click: none of the six controls exists in the DOM, the score still renders,
+and the ring explanation is present. Then signed in, all six are back. RED today — all
+six render enabled.
 **Named behaviours, with edges:**
-- signed OUT: gated controls carry a visible line of words, not only a `title` — a
-  `title` does not exist on touch and disabled controls are skipped by some AT
-- signed IN: none of them are gated (the other direction, or "always gated" would pass)
+- signed OUT: none of the six is in the DOM — asserted as ABSENT, not as disabled
+- signed OUT: **the score still renders** — the arrow is an action, the number is a fact
+- signed IN: all six are present and live (the other direction, or "always hidden" passes)
+- the vote control's rule is `canVote`, which BOTH populations already compute, so the
+  memory sandbox signed-out gets the same treatment from one rule rather than two
 - **RESTORING is not signed-out** — `sessionGateMessage()` distinguishes them
   (`js/substrates/lens.js:651`, pinned by `test/lens-posture.test.js:347`) and that
   distinction was a phase-1 live-proof finding. Flattening it would re-buy a paid bug.
-- the boost arrow's guest message names Bluesky, never "log in"
-- a control the owner chooses to HIDE is absent, not merely disabled — asserted as absent
+- the ring card signed out contains prose and NO buttons — a one-option dial is the
+  failure this phase exists to avoid
+- no "needs an account" line appears more than twice on any page (the anti-nagging rule)
 **Depends on:** nothing in this plan. Independent of Phase 1.
 **Read-set:** `js/ui/lens-views.js`, `js/ui/components.js`, `js/substrates/lens.js`,
 `css/app.css`, `test/lens-posture.test.js`.

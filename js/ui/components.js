@@ -39,6 +39,24 @@ export function gate(msg) {
 // its like/unlike here so policy stays out of this component (invariant 2).
 export function voteBox(subjectType, id, data, canVote, orientation = 'col', onVote = null) {
   const scoreEl = el('div', { class: 'score' }, fmtScore(data.score));
+  // Owner, 2026-08-27: a reader who cannot vote is not shown vote controls —
+  // absent, not disabled, and never a control that summons a login. But the
+  // SCORE stays: the arrow is an action you cannot take, the number is a fact,
+  // and it is how you tell a busy thread from a quiet one. Read literally,
+  // "hide the vote control" would take the score with it and make every post
+  // look identical. One rule, both populations — `canVote` is already what each
+  // of them computes.
+  if (!canVote) {
+    // The number needs its own name now. Signed in it is legible because the
+    // Boost button sits against it; strip that away and a screen reader
+    // announces a bare "12" with nothing saying what twelve of. role="img" +
+    // aria-label is the supported way to give a glyph-or-number its meaning
+    // without adding visible chrome a reader did not ask for.
+    const n = data.score;
+    scoreEl.setAttribute('role', 'img');
+    scoreEl.setAttribute('aria-label', `${n} ${n === 1 ? 'boost' : 'boosts'}`);
+    return el('div', { class: 'votebox', 'data-readonly': '1' }, scoreEl);
+  }
   const boost = el('button', { class: 'vote boost' + (data.myVote === 1 ? ' on' : ''), title: 'Boost', 'aria-label': 'Boost' }, '▲');
   const bury = el('button', { class: 'vote bury' + (data.myVote === -1 ? ' on' : ''), title: 'Bury', 'aria-label': 'Bury' }, '▼');
   let myVote = data.myVote, score = data.score;
