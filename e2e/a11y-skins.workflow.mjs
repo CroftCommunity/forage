@@ -162,7 +162,13 @@ export async function run() {
   // exercises exactly the same path a returning visitor takes.
   const populations = [
     { name: 'memory', state: 'seeded', mode: undefined, paths: SURFACES },
-    { name: 'lens', state: 'first-visit', mode: 'bluesky', paths: LENS_SURFACES },
+    // W12: the host sheet is a MODAL, which is a foreground/background pairing
+    // that exists on no other surface and therefore on no other skin's scan.
+    // Its ground is --card over a --scrim, and both are new. A palette that
+    // reads on a card in the flow of a page is not thereby proven to read on a
+    // card floating over a dimmed one, so the sheet is scanned OPEN on every
+    // skin, not once on the default.
+    { name: 'lens', state: 'first-visit', mode: 'bluesky', paths: LENS_SURFACES, sheet: true },
   ];
 
   for (const pop of populations) {
@@ -178,16 +184,27 @@ export async function run() {
           // unskinned page and reports a pass belonging to another palette.
           if (SKINS[id].file) await s.page.waitForSelector('link#skin-sheet', { state: 'attached' });
 
-          const res = await new AxeBuilder({ page: s.page })
-            .withTags(['wcag2a', 'wcag2aa'])
-            .analyze();
-
-          for (const v of res.violations) {
-            if (EXCLUDED_RULES.includes(v.id)) continue;
-            for (const node of v.nodes) {
-              failures.push(`${id} (${pop.name}) ${path}  ${v.id}  ${node.target.join(' ')}\n      ` +
-                (node.any?.[0]?.message ?? v.help).replace(/\s+/g, ' ').slice(0, 150));
+          const scan = async (label) => {
+            const res = await new AxeBuilder({ page: s.page })
+              .withTags(['wcag2a', 'wcag2aa'])
+              .analyze();
+            for (const v of res.violations) {
+              if (EXCLUDED_RULES.includes(v.id)) continue;
+              for (const node of v.nodes) {
+                failures.push(`${id} (${pop.name}) ${label}  ${v.id}  ${node.target.join(' ')}\n      ` +
+                  (node.any?.[0]?.message ?? v.help).replace(/\s+/g, ' ').slice(0, 150));
+              }
             }
+          };
+
+          await scan(path);
+
+          if (pop.sheet) {
+            await s.page.waitForSelector('[data-open-auth-sheet]');
+            await s.page.click('[data-open-auth-sheet]');
+            await s.page.waitForSelector('dialog[data-auth-sheet][open]');
+            await scan(`${path} (sheet open)`);
+            await s.page.evaluate(() => document.querySelector('dialog[data-auth-sheet]')?.close());
           }
         }
       }

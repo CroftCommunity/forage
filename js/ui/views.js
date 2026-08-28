@@ -1,7 +1,7 @@
 // Page views. Each returns { main, side } DOM. Policy comes from selectors; these
 // only render. Every screen has skeleton/empty/error/gated states available.
 
-import { el, esc, mdLite, timeAgo, domainOf, fmtScore } from '../util.js';
+import { el, esc, mdLite, timeAgo, domainOf, fmtScore, plural } from '../util.js';
 import * as store from '../store.js';
 import * as sel from '../selectors.js';
 import * as actions from '../actions.js';
@@ -43,17 +43,18 @@ function feedsSidebar() {
 function limitsSidebar() {
   const v = V(); if (!v) return null;
   const lim = sel.limits(S(), v, NOW(), store.getEvents());
-  if (lim.canPost && lim.canComment && !lim.probation && !lim.coolOff) return null;
+  if (lim.canPost && lim.canComment && !lim.probation) return null;
   const notes = [];
   if (lim.probation) notes.push('On probation: cooldowns are doubled and report weight is reduced.');
   if (!lim.canPost) notes.push(`Next post available in ${humanWait(lim.postWaitSec)}.`);
   if (!lim.canComment) notes.push(`Next comment available in ${humanWait(lim.commentWaitSec)}.`);
-  if (lim.coolOff) notes.push('Cooling-off active after rapid burying.');
   return el('div', { class: 'notice limit' }, el('strong', {}, 'Rate limits'), ...notes.map((n) => el('div', { class: 'xs' }, n)));
 }
 
 // ---------- feeds ----------
-const SORTS = ['hot', 'new', 'top', 'controversial', 'rising'];
+// Controversial is gone with downvotes (plan 2026-08-27-1) — it was the only
+// sort DEFINED by the up/down split, so it has no one-sided form.
+const SORTS = ['hot', 'new', 'top', 'rising'];
 export function boardView(scope, title, query) {
   const sort = query.sort || (S().users[V()]?.prefs?.defaultSort ?? 'hot');
   const data = sel.board(S(), V(), scope, sort, 'all', NOW());
@@ -155,7 +156,7 @@ export function threadView(params, query) {
         el('div', { class: 'postmeta' },
           p.author ? el('a', { href: `/u/${p.author}` }, p.author) : el('span', { class: 'muted' }, '[removed]'),
           el('span', {}, timeAgo(p.createdTs) + ' ago'),
-          el('span', {}, `${p.commentCount} comments`),
+          el('span', {}, plural(p.commentCount, 'comment')),
           t.perms.canReport ? linkAction('report', () => doReport('post', p.id, p.feedId)) : null,
           saveInline('post', p.id, p.saved),
           ...(t.perms.canModerate ? modInline('post', p) : [])))));
@@ -171,11 +172,15 @@ export function threadView(params, query) {
   // comments
   const ctx = { canVote: t.perms.canVote, canComment: t.perms.canComment, canReport: t.perms.canReport,
     canModerate: t.perms.canModerate, locked: t.locked, feedId: p.feedId, feedSlug: p.feedSlug };
+  // A SECOND sort list, for comments inside a thread. The plan's phase list
+  // named only the board's `SORTS`; this one was found by grepping rather than
+  // by reading the plan, and it is the kind of duplicate a phase list assembled
+  // from a description reliably misses.
   const sortRow = tabs([['Best', `/f/${p.feedSlug}/p/${p.id}?sort=best`], ['Top', `/f/${p.feedSlug}/p/${p.id}?sort=top`],
-    ['New', `/f/${p.feedSlug}/p/${p.id}?sort=new`], ['Controversial', `/f/${p.feedSlug}/p/${p.id}?sort=controversial`]],
+    ['New', `/f/${p.feedSlug}/p/${p.id}?sort=new`]],
     (query.sort || 'best'));
   main.append(el('div', { class: 'card' },
-    el('div', { class: 'row spread' }, el('h2', {}, `${t.total} comments`), null), sortRow,
+    el('div', { class: 'row spread' }, el('h2', {}, plural(t.total, 'comment')), null), sortRow,
     ...(t.comments.length ? t.comments.map((c) => commentNode(c, ctx)) : [el('div', { class: 'muted small' }, 'No comments yet.')])));
 
   return { main, side: el('div', { class: 'side' }, feedsSidebar()) };
@@ -330,7 +335,7 @@ export function profileView(params, query) {
 function profileComment(c) {
   return el('div', { class: 'postrow' }, el('div', {}),
     el('div', {}, el('div', { class: 'small', html: c.maskedRemoved ? '[removed]' : mdLite(c.body) }),
-      el('div', { class: 'postmeta' }, el('span', {}, `${fmtScore(c.score)} pts`), c.postTitle ? el('a', { href: `/f/x/p/${c.postId}` }, `on “${esc(c.postTitle).slice(0, 48)}”`) : null, el('span', {}, timeAgo(c.createdTs) + ' ago'))));
+      el('div', { class: 'postmeta' }, el('span', {}, plural(c.likes, 'like')), c.postTitle ? el('a', { href: `/f/x/p/${c.postId}` }, `on “${esc(c.postTitle).slice(0, 48)}”`) : null, el('span', {}, timeAgo(c.createdTs) + ' ago'))));
 }
 
 // ---------- notifications ----------
@@ -574,18 +579,36 @@ export function settingsView() {
   });
   // 4a: the skin picker — skins and modes are independent axes; any skin in
   // any mode. Device-local, like theme and front door.
-  // Grouped by palette so siblings read as a pair: with light and dark now in
-  // one flat list, "Forage (light)" and "Forage (dark)" sitting apart would
-  // look like two unrelated themes rather than two sides of one choice.
-  const optsFor = (want) => Object.entries(skins.SKINS)
-    .filter(([, s]) => s.palette === want)
-    .map(([id, s]) => el('option', { value: id, selected: skins.activeSkin() === id || false }, s.label));
+  //
+  // FAMILY-SHAPED (plan 2026-08-26-2 Phase 1, owner-decided). One row per style,
+  // not one per skin: four rows instead of seven. Grouping the flat list into
+  // Light and Dark optgroups was the previous attempt at the same problem and
+  // it made the wrong thing the choice — "Forage (light)" and "Forage (dark)"
+  // read as two unrelated themes in two separate lists, so picking a style
+  // meant knowing which half of the list you were allowed to look in. Here the
+  // row IS the style and the ☾/☀ toggle is the side.
+  //
+  // The MODEL did not change: `forage.skin` still stores one concrete skin id.
+  // This select's value is a FAMILY id, which is resolved to a skin on change
+  // — and the two namespaces overlap on bbs/usenet/phpbb, so nothing may read
+  // this value as a skin id.
+  const curFamily = skins.SKINS[skins.activeSkin()]?.family ?? null;
   const skinSel = el('select', { class: 'form', id: 'pref-skin' },
-    el('optgroup', { label: 'Light' }, ...optsFor('light')),
-    el('optgroup', { label: 'Dark' }, ...optsFor('dark')));
-  skinSel.addEventListener('change', () => skins.setSkin(skinSel.value));
+    ...skins.families().map((f) => el('option',
+      { value: f.id, 'data-family': f.id, selected: f.id === curFamily || false },
+      f.sole ? `${f.label} — ${f.dark ? 'dark' : 'light'} only` : f.label)));
+  skinSel.addEventListener('change', () => {
+    // The palette is read HERE rather than captured at render time: setSkin
+    // re-renders, and a captured value would be one change stale.
+    const palette = skins.SKINS[skins.activeSkin()]?.palette ?? 'light';
+    skins.setSkin(skins.resolveInFamily(skinSel.value, palette));
+  });
   const themeCard = el('div', { class: 'card' },
     fieldRow('Skin', skinSel),
+    // Say where the other half of the choice lives. Without this the picker
+    // silently lost four rows and nothing tells you the toggle gained them.
+    el('div', { class: 'xs muted', style: 'margin:-4px 0 8px' },
+      'Light or dark is the ☾ toggle in the top bar. A style that ships one palette says so.'),
     el('div', { class: 'field-row' }, el('label', {}, 'Mode'),
       el('a', { href: '/mode' }, 'Bluesky view ↔ Memory sandbox — choose at /mode')),
     el('div', { class: 'field-row' }, el('label', {}, 'Accounts'),
@@ -598,14 +621,11 @@ export function settingsView() {
       el('p', { class: 'muted small', style: 'margin-top:12px' }, 'Log in to set comment and feed preferences.')), side: null };
   }
   const prefs = S().users[V()].prefs;
-  const thr = el('input', { type: 'number', id: 'pref-threshold', value: prefs.commentThreshold });
-  thr.addEventListener('change', async () => { await actions.updatePrefs({ commentThreshold: parseInt(thr.value, 10) || 0 }); });
   const sort = el('select', { class: 'form', id: 'pref-sort' }, ...['hot', 'new', 'top', 'best'].map((s) => el('option', { value: s, selected: prefs.defaultSort === s || false }, s)));
   sort.addEventListener('change', async () => { await actions.updatePrefs({ defaultSort: sort.value }); });
   return { main: el('div', {}, el('h1', {}, 'Preferences'),
     themeCard,
     el('div', { class: 'card', style: 'margin-top:12px' },
-      fieldRow('Auto-collapse comments below score', thr),
       fieldRow('Default feed sort', sort))), side: null };
 }
 

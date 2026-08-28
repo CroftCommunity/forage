@@ -139,7 +139,7 @@ test('search with a session returns lens-shaped posts', async () => {
   const lens = createLens({ session: oauthSession([]), transport: makeTransport([]) });
   const res = await lens.search('gardening');
   assert.equal(res.posts.length, 3);
-  assert.equal(res.posts[0].downs, 0);
+  assert.equal('downs' in res.posts[0], false); // DL-011 retired: no always-zero field
 });
 
 test('2c scan: no app-password path survives anywhere in the lens', () => {
@@ -191,10 +191,10 @@ test('3g: trending maps unspecced topics to FEED-stream descriptors (link → at
 
 // ---- 3i: window sorts (reddit-style bars, honest about scope) ----
 
-test('3i: sortWindow — feed keeps the generator order; new is by time; top is by score within the timeframe', async () => {
+test('3i: sortWindow — feed keeps the generator order; new is by time; top is by likes within the timeframe', async () => {
   const { sortWindow } = await import('../js/substrates/lens.js');
   const NOW = Date.parse('2026-08-26T12:00:00Z');
-  const mk = (id, hoursAgo, score) => ({ id, createdTs: NOW - hoursAgo * 3600_000, score });
+  const mk = (id, hoursAgo, likes) => ({ id, createdTs: NOW - hoursAgo * 3600_000, likes });
   const posts = [mk('a', 30, 5), mk('b', 1, 2), mk('c', 200, 90), mk('d', 4, 40)];
 
   assert.deepEqual(sortWindow(posts, 'feed', 'all', NOW).map((p) => p.id), ['a', 'b', 'c', 'd'], 'feed order untouched');

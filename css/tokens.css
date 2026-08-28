@@ -48,7 +48,12 @@
   --on-brand:    #FFFFFF;   /* text on brand-fill */
 
   --boost:       #41724A;   /* boost-active */
-  --bury:        #A24D2C;   /* bury-active, controversial, limits */
+  /* Was "bury-active, controversial, limits". Downvotes are gone (plan
+     2026-08-27-1) and Controversial goes with them, so the only role left is
+     the rate-limit notice. The TOKEN keeps its name for now because six skins
+     declare it; renaming it is a six-file sweep for a word, and the comment is
+     what stops the next reader looking for a downvote to match it. */
+  --bury:        #A24D2C;   /* limits (the rate-limit notice) */
   --tint:        #EAEFDF;   /* moss tint: joined chip, active-tab bg */
 
   --gold-500:    #C99A3C;   /* gold for fills/borders (pins, steward, tags) */
@@ -100,12 +105,25 @@
   --row-even:     transparent;
   --row-head:     transparent;      /* section header bars */
   --card-shadow:  none;             /* bevels ride here; flat by default */
+  /* The modal scrim. A `<dialog>`'s ::backdrop defaults to a UA colour that no
+     skin can reach, so a skinned app gets one unskinnable surface — which is
+     exactly the class of gap --band-brand exists to close. It DIMS content
+     rather than being a surface of its own, so the default is dark on every
+     skin (a light scrim over a dark skin does not read as "behind"); a skin
+     that wants a different veil now has somewhere to say so. */
+  --scrim:        rgba(0, 0, 0, .55);
 
   --radius-sm:    4px;
   --radius-media: 8px;
   --radius-round: 50%;
   --radius-card: 6px;
   --radius-chip: 999px;
+  /* The bottom sheet's top corners. Larger than a card's on purpose — it is the
+     one surface that slides up from the edge, and the corner is what says so.
+     A token rather than a literal because a skin that squares the UI
+     (--radius-card:0) must be able to square this too; test/skins.test.js is
+     the teeth on that. */
+  --radius-sheet: 16px;
   --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-display: ui-serif, Georgia, "Times New Roman", serif;
   --gutter-rule: 2px;

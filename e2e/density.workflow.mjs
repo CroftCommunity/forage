@@ -103,14 +103,23 @@ export async function run() {
     assert.equal(await rowsAreCompact(page), false,
       'and the override survives a reload on a compact-preferring skin');
 
-    // …including across a skin change, since it is the READER's choice now.
-    await page.goto(`${pref.origin}/settings`);
-    await page.waitForSelector('text=Skin');
-    await page.locator('.field-row:has-text("Skin") select').selectOption('phpbb-dark');
+    // …including across a PALETTE change within the same family. Reached
+    // through the toggle, because `phpbb-dark` is a skin id and the picker
+    // carries family ids now (plan 2026-08-26-2 Phase 1).
+    //
+    // This assertion changed meaning with that phase and is worth stating: the
+    // preference used to sit on each SKIN, so the two phpBB entries carried
+    // `compact` independently and could have disagreed — which would have meant
+    // this toggle silently re-laying-out the board. It lives on the FAMILY now,
+    // so both sides are necessarily the same value and the only thing that can
+    // move density is the reader.
+    await page.locator('.themetoggle').first().click();
+    await page.waitForFunction(() =>
+      document.getElementById('skin-sheet')?.getAttribute('href')?.includes('phpbb-dark'));
     await page.goto(`${pref.origin}/popular`);
     await page.waitForSelector('.postrow');
     assert.equal(await rowsAreCompact(page), false,
-      'the other half of the pair also prefers compact, and still loses to the reader');
+      'the other side of the family prefers compact too, and still loses to the reader');
   } finally {
     await pref.close();
   }

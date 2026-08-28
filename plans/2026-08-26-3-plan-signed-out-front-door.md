@@ -1,8 +1,24 @@
 # Plan: the signed-out front door — sticky masthead, auth sheet, emblem hero
 
-**Status:** Passes 1, 2 and 3 complete. **Phase 0 D1 RESOLVED** (2026-08-27) — Phases C and D
-are unblocked. **Phase A's tap-target half DONE**; its BLOCKING layout question is resolved.
-Phase A's `scroll-margin-top` item and Phases B–E remain open.
+**Status** (rewritten 2026-08-27 — the previous line had accumulated appended updates
+until it said C/D were both blocked and unblocked, and called Phase B open after it
+landed; a Status line that contradicts itself is worse than none):
+
+| Phase | State |
+|---|---|
+| 0 Discovery | **DONE** — D1 and D2 both answered with observed evidence |
+| A Masthead | **DONE and DEPLOYED** — sticky, at the 44px floor, shorter at 320px. One item DROPPED with reasons (`scroll-margin-top`) |
+| B The seam | **DONE and DEPLOYED** — `signIn` options, host registry, LIVE drift check, end of silent callbacks |
+| C The sheet | **DONE** — `<dialog>`, three hosts, any-server handle field, reachable from the sidebar card on every signed-out surface |
+| D The hero | **DONE** — stacked on a phone, side-by-side above 560px, dismissal permanent and device-local |
+| E Emblem asset | **DONE** — 400/800/1200w sources, byte ceilings asserted, selected-source pinned. The transparency experiment RAN and is RETIRED |
+
+**The plan is COMPLETE.** All six phases are done or deliberately dropped with reasons, all
+four open questions are RESOLVED, and Phase E's experiment has been run and retired. What
+this plan set out to fix — a front door that led with a locked control and hid the key — is
+shipped: sign-in follows you, it is hittable with a thumb, it names more than one server,
+and the emblem greets you at 18.8 KB. Remaining follow-ons live in `TODO.md`, not here.
+
 **Supersedes** `2026-08-26-2-plan-public-site-polish.md` § Phase 2, which becomes a pointer.
 **Worktree:** `worktrees/forage/polish` on `claude/polish`. Claim: `CroftC/.coordination/claims/forage--polish.md`.
 
@@ -261,8 +277,17 @@ the closest targets on every screen, and four of the five are under the 44px flo
       The prose and the selector disagree; the prose is right. RED first.
 - [x] DONE `2776537` — `css/app.css`, masthead controls at the floor, plus the tighter gap and the
       removal of the duplicate lens nav link that together took 320px from 107px to 61px.
-- [ ] `css/app.css` — `scroll-margin-top` on heading targets (grep confirms none exists),
-      so in-page anchors and deep links do not land under the now-sticky bar.
+- [~] **DROPPED at execution, 2026-08-27 — the rationale was false.** The item said
+      "in-page anchors and deep links land under the sticky bar". Forage has **no in-page
+      anchors at all** (grepped `href="#`, `href: '#`, `location.hash =` — nothing), and
+      ordinary navigation is unaffected because a sticky bar occupies flow space at scroll
+      position 0; it only overlays once you scroll. So the stated case does not exist.
+      The only programmatic scroll in the app is `scrollIntoView({ block: 'nearest' })` at
+      `js/ui/views.js:264-265`, which IS occludable — but it is the memory population's
+      **moderation queue**, a view no workflow in the corpus reaches. Shipping
+      `scroll-margin-top` for it would be untested production code for an unexercised
+      path, which is the thing this repo does not do. **Re-open when the mod queue gets
+      workflow coverage**, and fix it with a RED test then.
 - [ ] `plans/2026-08-26-2-plan-public-site-polish.md` § Phase 2 → pointer here.
 **Call chain:** `masthead()` (`js/main.js`) → `.masthead` element → the `.who` sign-in
 link. No new JS; the element already renders on every surface via `render()`.
@@ -312,16 +337,19 @@ populations and both skins, since a z-index error is invisible to assertions.
 
 **Goal:** The app can start sign-in at any host, in either intent.
 **Changes:**
-- [ ] `js/auth/session.js` — `signIn(handle, options)` forwards options to `client.signIn`.
-- [ ] `js/auth/hosts.js` (NEW) — pure registry: entryway URL, display name, signup posture.
-- [ ] `test/auth-session.test.js`, `test/hosts.test.js` (NEW) — RED first.
-- [ ] `e2e/hosts-live.workflow.mjs` (NEW, `live = true`) — drift check.
-- [ ] `sw.js` — add `js/auth/hosts.js` to SHELL; bump `CACHE`.
-- [ ] **Observability (Pass 3):** a callback boot that ends signed-out says so. See
-      § Observability. RED: boot with `code`+`state` present and a failing exchange,
-      assert the UI distinguishes it from an ordinary signed-out boot.
-- [ ] **Observability (Pass 3):** `toast()` refuses an empty message rather than
-      rendering a wordless red block.
+- [x] DONE — `js/auth/session.js`, `signIn(handle, options)` forwards options verbatim.
+- [x] DONE — `js/auth/hosts.js`, pure registry + `validateHosts` + `canCreateAccount`.
+- [x] DONE — RED first in both. Of the three seam tests, ONE was red (options dropped); the
+      other two pinned behaviour that already held but nothing asserted.
+- [x] DONE — `e2e/hosts-live.workflow.mjs`. Passes against all four hosts. Reports an
+      unreachable host SEPARATELY from a changed one: a dark third-party server is not our
+      regression and must not read as one.
+- [x] DONE — SHELL entry added, `CACHE` → `forage-v41`.
+- [x] DONE — `bootAuth` reads whether the boot ARRIVED as a callback (before anything
+      clears it, which the Phase 0 fix is what makes possible) and says so when the
+      exchange yields no session. RED in `e2e/signin.workflow.mjs`.
+- [x] DONE — `toast()` substitutes a true fallback rather than rendering a wordless
+      coloured block. It still SHOWS: refusing outright would swallow the signal.
 **Call chain:** Phase C's sheet → `hosts.list()` → a row's action →
 `lensViews` handler → `manager.signIn(entryway, { prompt })` → `client.signIn` → redirect.
 In THIS phase the chain ends at `manager.signIn`; Phase C supplies the caller. That is why
@@ -373,16 +401,21 @@ Tests plus the live check plus reading the actual authorize URL produced.
 ---
 
 ### Phase C: The sheet
+**Design CONFIRMED against rendered previews 2026-08-27.** Three hosts. The invite-only
+row's words sit in the CREATE slot so the column stays aligned and the italic explains the
+missing button — confirmed to read correctly at 390px and at desktop width. Decision 4's
+"Use another server →" sits inside the sidebar sign-in card, which renders on every
+signed-out surface.
 
 **Goal:** A visitor can choose a server and an intent, and understands why they are being
 asked.
 **Changes:**
-- [ ] `js/ui/lens-views.js` — the `<dialog>`, its rows, and the trigger seam.
-- [ ] `css/app.css` — sheet styling; bottom sheet under ~700px, centred dialog above.
-- [ ] `e2e/auth-sheet.workflow.mjs` (NEW) — the journey.
-- [ ] `e2e/a11y-skins.workflow.mjs` — scan with the sheet OPEN.
-- [ ] `README.md:363`, `AGENTS.md` § Identity + § Surfaces — multi-host wording.
-- [ ] `sw.js` — bump `CACHE`.
+- [x] DONE — `js/ui/lens-views.js`: the `<dialog>`, its rows, `beginSignIn` as the single door, and the trigger inside `sessionCard()`.
+- [x] DONE — `css/app.css` + two new tokens (`--scrim`, `--radius-sheet`): bottom sheet under 700px, centred dialog above, ONE element in both.
+- [x] DONE — `e2e/auth-sheet.workflow.mjs`. RED first (no trigger existed).
+- [x] DONE — `e2e/a11y-skins.workflow.mjs` scans the sheet OPEN on every skin.
+- [x] DONE — `README.md`, `AGENTS.md` § Identity + § Surfaces.
+- [x] DONE — `sw.js` `CACHE` -> `forage-v42`. No SHELL change: the sheet adds no file.
 **Settled with the owner (2026-08-26):** open-signup hosts get `[Create account] [Sign in]`;
 invite-only hosts get the words *invite only* **in the create slot** with Sign in beside
 them, so the column stays aligned and the words explain the missing button; the list is
@@ -424,14 +457,18 @@ breakpoints, plus one real redirect against a throwaway account — never the ow
 ---
 
 ### Phase D: The hero
+**Design CONFIRMED against rendered previews 2026-08-27** (owner picked from built
+alternatives, not from description): stacked on mobile — emblem full width above the
+copy — ~289px. Close control is a ✕ that must RESERVE its corner: the side-by-side
+variant showed it overlapping the headline when space is tight.
 
 **Goal:** The emblem is seen, and the sheet has a front door.
 **Changes:**
-- [ ] `js/ui/lens-views.js` — hero on the signed-out lens **home only**.
-- [ ] `js/hero.js` (NEW) — pure dismissal state, device-local.
-- [ ] `test/hero.test.js` (NEW), `e2e/feed-naming.workflow.mjs` or a new journey.
-- [ ] `css/app.css` — hero layout; stacks under ~560px.
-- [ ] `sw.js` — SHELL + `CACHE`.
+- [x] DONE — `js/ui/lens-views.js`, `heroCard()` on the signed-out lens home only.
+- [x] DONE — `js/hero.js`: persistence only. Removing the node is the VIEW's job, so a reader in private mode gets a ✕ that does something rather than one that silently no-ops.
+- [x] DONE — `test/hero.test.js` (7 tests, RED first) and `e2e/hero.workflow.mjs` (new journey, RED first).
+- [x] DONE — `css/app.css`, stacks under 560px. Every rule SCOPED under `.hero-lens` — see below.
+- [x] DONE — `sw.js`: `/js/hero.js` in SHELL, `CACHE` -> `forage-v43`.
 **Owner decisions:** expanded by default; **dismissal never expires**; **on desktop too**
 (branding, not only funnel); close is a ✕ in the corner, not a button competing with the
 primary action; home only.
@@ -467,9 +504,9 @@ is the lens. No other shared mutable state beyond the write-set and `CACHE`.
 
 **Goal:** The front door does not cost 216 KB above the fold.
 **Changes:**
-- [ ] `assets/` — correctly-sized sources; `<picture>`/`srcset` in the hero.
-- [ ] a byte-ceiling assertion.
-- [ ] `sw.js` — SHELL + `CACHE`.
+- [x] DONE — `assets/logo-wordmark-{400,800,1200}.jpg`; `srcset` + `sizes` on the hero `<img>`. No `<picture>` and no second format: one format is one URL per width, and every one has to be named in SHELL.
+- [x] DONE — `test/hero.test.js`: smallest source <= 30 KB, no source above 140 KB, `src` must BE the small source, `sizes` breakpoint must match the CSS, and every source must be in SHELL.
+- [x] DONE — `sw.js`: three emblem SHELL entries, `CACHE` -> `forage-v44`.
 **Call chain:** `heroCard()` → `<picture>` → the sized source the viewport selects.
 **Wiring test:** a workflow assertion that at 390px the *selected* source is the small one
 — not merely that a small file exists on disk. Testing the file's existence would pass
@@ -494,15 +531,58 @@ someday-SVG.
 
 ## Open Questions
 
-- `[RECOMMENDED: PHASE-GATED — Phase D]` The hero occupies ~44% of a 390px first screen at
+- ~~`[RECOMMENDED: PHASE-GATED — Phase D]` hero prominence~~ **RESOLVED 2026-08-27 (owner), then CORRECTED by preview.**
+  First answer was "cap the emblem near 200px". Building it showed **the cap is inert on
+  a phone**: the emblem is 1600×576, so at full card width its natural height is 129px —
+  already under any 200px cap. The cap only ever constrains desktop, which was not the
+  problem. The 44%→42% improvement measured after capping came almost entirely from a
+  flex bug in the preview (`flex: 1 1 180px` becomes a HEIGHT once the container is a
+  column, inflating the copy block), not from the cap.
+
+  **FINAL, confirmed against rendered previews: the STACKED hero, ~289px, ~42% of a 390px
+  first screen.** The side-by-side alternative was built and measured — 198px, 32% of
+  fold — and rejected on sight: at 44% width the emblem becomes a thumbnail, the rook and
+  wreath stop reading, and the headline wraps into the close control. It is not a smaller
+  version of what was asked for, it is a different thing, and "getting it seen" does not
+  survive it.
+
+  A prominent emblem on a 390px screen costs about 40% of the fold and no layout avoids
+  that; the only reductions available come from making the art too small to work. The
+  mitigations already chosen carry it: dismissal never expires, so the cost is once per
+  person, and the sticky masthead keeps sign-in on every screen for anyone who dismisses.
+  If it ever needs to shrink, **cut a line of copy, not the art.**
+  ~~Original: CAP the emblem around 200px tall.** The reason the hero was to be prominent
+  was getting sign-in seen; the sticky masthead now does that on every screen, always
+  visible and at a proper tap size. What remains is branding, which 200px does nearly as
+  well — and the 44% the full-size version cost was the visitor's first impression of
+  what Forage HAS on it, which is the other half of why anyone stays. Phase D's layout
+  item is now: emblem capped, first board row reachable on a 390px first screen, asserted.
+  ~~Original: The hero occupies ~44% of a 390px first screen at
   the mocked size. Ship at that prominence, or cap the emblem around 200px tall?
   *Rationale: the owner explicitly asked for prominence, so this is not a defect — but the
   measurement was taken after that decision, and it should be re-confirmed with the sticky
   masthead in place, which changes how much the hero has to carry.*
-- `[RECOMMENDED: PHASE-GATED — Phase C]` Which hosts, and how many, in the capped list?
+- ~~`[RECOMMENDED: PHASE-GATED — Phase C]` which hosts~~ **RESOLVED 2026-08-27 (owner):
+  three — `bsky.social` and `blacksky.app` (both open signups) and `northsky.social`
+  (invite only), chosen for reputation rather than for count.** `zio.blue` is out: real
+  and OAuth-speaking, but three names is a small reviewable editorial commitment and four
+  was not better. **`mu.social` was proposed by the owner and rejected on FACT, not
+  taste** — it is a Mastodon server (403 on every atproto endpoint, Mastodon's own page
+  markup), so it is ActivityPub and this client cannot speak to it at all. `muni.town` is
+  not a PDS either. Both recorded in `js/auth/hosts.js` so neither is re-proposed.
+  Registry updated and re-verified against the network the same day.
+  ~~Original: Which hosts, and how many, in the capped list?
   Currently four (2 open, 2 invite-only). *Rationale: more is more welcoming and more
   scrolling; the cap is settled, the membership is not.*
-- `[RECOMMENDED: ADVISORY]` Should the masthead also open the sheet, or keep going to the
+- ~~`[RECOMMENDED: ADVISORY]` masthead and the sheet~~ **RESOLVED 2026-08-27 (owner):
+  LEAVE the masthead going straight to bsky.social**, preserving the 3i decision
+  (*"launch OAuth DIRECTLY — no local form between you and the authorize screen"*), and
+  give the SIDEBAR sign-in card a quiet "use another server" route into the sheet. The
+  card already renders on every signed-out surface, so a non-Bluesky visitor stops
+  depending on a hero that exists on one page and can be dismissed forever. Fast path
+  stays one tap; the plural path stops being reachable only from home. Reversing an
+  explicit earlier owner decision six phases later needs a stronger reason than this had.
+  ~~Original: Should the masthead also open the sheet, or keep going to the
   sidebar card? *Rationale: once the masthead is sticky it is the primary path, so it
   arguably deserves the richer affordance — but that is a Phase C+ refinement.*
 - `[RECOMMENDED: BLOCKING]` Phase 0 D1 must pass before Phases C and D are executed as
@@ -676,3 +756,140 @@ for confirmation and this plan should not execute Phases C or D until they are.
 scope (Phase B "Broad" for four third-party hosts; Phase E "Narrow-to-moderate"). The
 Concurrency Map accounts for every phase. Both Phase 0 dispositions are declared and
 both were honoured — nothing from either probe was kept.
+
+### Execution: Phase A remainder and Phase B — 2026-08-27
+**Phase A closed.** Its `scroll-margin-top` item was DROPPED, not done: the rationale was
+false. Forage has no in-page anchors at all, and a sticky bar does not occlude at scroll
+position 0 because it occupies flow space. The only programmatic scroll is the memory
+population's moderation queue, which no workflow reaches — so shipping the CSS would have
+been untested production code for an unexercised path. Re-open with the mod queue's
+coverage.
+
+**Phase B shipped**, and the seam is LIVE rather than waiting for Phase C: the masthead's
+"Sign in" now resolves its entryway through `hostById('bsky')`, so `js/auth/hosts.js` is
+reachable from the entry point today. That was Pass 3's wiring-test finding applied at
+execution — a registry no running code imports is exactly the dead component the field
+exists to prevent.
+
+**Honest note on the RED steps:** of the three seam tests written, only ONE failed. The
+other two — an options-less `signIn` not inventing a prompt, and a rejected `signIn`
+leaving `signed-out` rather than `pending` — described behaviour that already held with
+nothing pinning it. Written as RED, discovered green. Worth keeping and worth saying
+plainly rather than presenting three passing tests as three fixes.
+
+**Gate:** 470 unit / 88 conformance / 11 workflows, 0 failures. Both live-only checks
+skip-reported.
+
+### Execution: Phase C — 2026-08-27
+**Shipped.** The sheet is a native `<dialog>` built fresh per open and removed on close,
+opened from **the sidebar sign-in card**, which renders on every signed-out surface. The
+plan called for a *temporary* trigger on the home so the sheet would not ship unreachable;
+Decision 4's permanent trigger was already specified and lands on more surfaces than the
+temporary one would have, so it was built directly and no temporary control existed at any
+point.
+
+**Two defects the tests could not see, both caught by looking at a screenshot:**
+- The sheet rendered **see-through**. `dialog.authsheet` (0,1,1) set `background:
+  transparent` and `.authsheet` (0,1,0) painted `--card` — the same element by two
+  selectors, more specific one wins. Every assertion passed: the dialog was open, the rows
+  were right, axe found nothing, because a transparent modal has no contrast problem. Now
+  one selector for one element.
+- **`[hidden]` does not hide a `.btn`.** The UA styles `[hidden]` at element specificity
+  and the touch-floor block sets `display: inline-flex` on `.btn`, so "Another server"
+  stayed on screen above the field it had just revealed. Fixed with the normalize-style
+  `[hidden] { display: none !important }` rather than per-component, because the next
+  `hidden` toggle in this codebase would hit the identical rule. This one got a RED
+  assertion first and is now pinned — "the field appeared" was true in both worlds.
+
+**One existing invariant earned its keep.** `test/skins.test.js` "2: the hardcoded radii
+are tokenised" failed on the sheet's `border-radius: 16px` — a literal that would have left
+one surface un-squarable by a skin that squares everything else. `--radius-sheet` exists
+because of it. `--scrim` was added for the same reason a level up: `::backdrop` otherwise
+renders a UA colour no skin can reach.
+
+**Gate:** 470 unit / 88 conformance / 13 workflows, 0 failures. Looked at on default,
+forage-dark, usenet and phpbb at 390 and 1280, plus the any-server field expanded.
+
+### Execution: Phase D — 2026-08-27
+**Shipped.** ~41% of a 390px fold, measured, with a 55% ceiling asserted so a later change
+cannot quietly take the rest. "The Lens" and the first board card both still clear the fold.
+
+**Three defects, and only one of them had a test that could have caught it:**
+- **`[hidden]` again, in a new costume** — no; this one was new. A stray `}` left by a
+  scripted splice of `css/app.css` silently swallowed the entire `.hero-lens` rule. The
+  hero still rendered, still stacked, still passed its shape assertions, and the ✕ landed
+  *under the sticky masthead* because its absolutely-positioned box fell back to the
+  viewport. The symptom was a Playwright click timing out with "Sign in intercepts pointer
+  events", which reads like a test problem and was a product one: on a phone the dismiss
+  control was genuinely untappable. A CSS parse error has no error channel — worth knowing
+  that this repo's only detector for one is a workflow that touches the thing.
+- **A CLASS COLLISION ACROSS POPULATIONS.** `.hero-copy` and `.hero-art` already belong to
+  the MEMORY population's hero (`boardView()`, `.hero-gate`). Unscoped,
+  `.hero-copy { padding-right: 36px }` reached across and broke `/popular` at 320px — a
+  surface this phase never touched, in a population it never touched. **W6 caught it**;
+  nothing about the lens did. Every hero rule is now scoped under `.hero-lens`. Two heroes
+  in one class vocabulary is the standing hazard, and the scoping is what contains it.
+- The ✕ needed its corner RESERVED rather than floated, exactly as the rejected
+  side-by-side preview predicted. `padding-right` on the copy, dropped at the stacked
+  breakpoint where there is no headline beside it.
+
+**On the a11y bite test for Phase C's new coverage** (run here because it belongs with the
+sheet): planting an unnamed close button produced **7 violations, one per skin, each
+labelled `(sheet open)`** — the scan genuinely reaches inside the dialog on every skin.
+Worth recording what did NOT bite: removing only the `aria-label` and leaving the `✕`
+glyph passes, because axe accepts visible text as an accessible name. The label is a
+quality choice ("Hide this" vs "multiplication x"), and no gate in this repo enforces it.
+
+**Gate:** 477 unit / 88 conformance / 14 workflows, 0 failures. Looked at on default,
+forage-dark, usenet and phpbb at 390 and 1280.
+
+### Execution: Phase E — 2026-08-27
+**Shipped.** The emblem renders at ~340 CSS px and used to cost 216 KB. It now costs
+**18.8 KB** on a 1x phone, with 800w and 1200w above it. The assertion is on
+`img.currentSrc`, not on a small file existing — the second would have passed while the
+phone still pulled the original, which is the entire failure this replaces.
+
+**`height: auto` was load-bearing, and Phase D's fold ceiling is what caught it.** Adding
+`width`/`height` attributes — so the browser reserves the box before the bytes arrive —
+maps them to presentational width/height, and the stacked hero rendered **576px tall, 103%
+of a 390px fold**. That ceiling was written as a guard against future scope creep and
+caught a defect in the phase after it instead.
+
+### The transparency experiment: RAN, and RETIRED — keep the paper plaque
+The retire-by was "better than the plaque on at least three of the four skins, or close the
+question". Rendered against every skin's real `--card`:
+
+```
+default     #FFFFFF   transparent BETTER      — the plaque reads as a pasted rectangle
+usenet      #F5F5F1   transparent better      — marginal; the plaque's warmth is subtle
+phpbb       #FFFFFF   transparent BETTER      — same as default
+forage-dark #31291F   transparent MUCH WORSE  — the wordmark is ILLEGIBLE
+```
+
+**Three of four, and the answer is still no.** The count-based criterion assumed the losses
+would be cosmetic. They are not: the wordmark's letters are dark green, so on the dark skin
+the transparent variant does not look worse — it stops being readable. A wordmark you
+cannot read on one skin in four is not offset by three wins, and no threshold expressed as
+a count can say so. Recording the criterion's limit rather than quietly reinterpreting it,
+because the next retire-by written this way will have the same blind spot.
+
+Two further reasons, either sufficient alone:
+- **Bytes.** A transparent variant must be PNG: 400w PNG is **124 KB against 18.8 KB** for
+  the JPEG — 6.6x, straight through the byte ceiling this phase exists to enforce. The
+  experiment fails the phase's own goal.
+- **The extraction is not clean.** Flood-filling a JPEG's paper ground leaves speckle
+  around the letters. That one is an artifact of MY extraction rather than of a transparent
+  emblem in principle — said plainly so it is not counted as evidence it is not.
+
+**The cause was predicted by this plan's own Reasoning** ("the wordmark letters are dark
+green; making them follow the skin means SVG text taking `currentColor` — a redraw"). The
+experiment confirmed the prediction rather than overturning it. **Question closed, no
+lingering someday-SVG.** If the emblem is ever redrawn as vector art this becomes possible,
+and the reason it was not is written down here.
+
+**Left undone deliberately:** three callers still point at the 216 KB original — the memory
+population's hero, `/signup`, and `README.md`. All three are outside this phase's declared
+write-set, so they are filed in `TODO.md` rather than swept in. Production defaults to the
+lens; the sandbox hero is the only one of the three that costs a visitor real bytes.
+
+**Gate:** 481 unit / 88 conformance / 14 workflows, 0 failures.

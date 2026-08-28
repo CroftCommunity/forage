@@ -17,7 +17,11 @@ export function emptyState() {
   };
 }
 
-const DEFAULT_PREFS = { theme: 'auto', commentThreshold: -4, defaultSort: 'hot', defaultFeed: 'home' };
+// `commentThreshold` is gone (2026-08-27). Score-threshold auto-collapse was a
+// downvote feature; with downvotes removed a score starts at 0 and only rises,
+// so no threshold is reachable. See js/selectors.js where the collapse used to
+// be computed.
+const DEFAULT_PREFS = { theme: 'auto', defaultSort: 'hot', defaultFeed: 'home' };
 
 export function reduce(state, ev) {
   const s = state; // mutate the working copy; store rebuilds from scratch each fold
@@ -96,7 +100,14 @@ export function reduce(state, ev) {
     case 'vote.set': {
       const key = `${p.subjectType}:${p.subjectId}`;
       if (!s.votes[key]) s.votes[key] = {};
-      if (p.value === 0) delete s.votes[key][actor];
+      // A NAMED rule, not the else branch: a stored -1 from before downvotes
+      // were removed (plan 2026-08-27-1) folds to NO VOTE. hydrate() does not
+      // re-validate, so an existing sandbox still loads — and this is what
+      // stops it carrying a vote that nothing can produce and no UI can undo.
+      // Refusing the log outright (the legacyLog precedent) would brick a
+      // sandbox over a value we can safely drop; this log is stale, not
+      // unfoldable.
+      if (p.value === 0 || p.value === -1) delete s.votes[key][actor];
       else s.votes[key][actor] = p.value;
       break;
     }
@@ -213,11 +224,21 @@ function pushNotification(s, userId, n) {
 }
 
 // ---- Derived helpers used by selectors ----
+// ONE number: how many people liked it. Nothing is derived any more.
+//
+// This used to return `{ ups, downs, score }` where `score = ups - downs` — a
+// net figure that could differ from both inputs and could go negative. With
+// downvotes gone (2026-08-27) `ups` and `score` were the same number under two
+// names, and `score` was the worse of the two: it SOUNDS computed, so the next
+// reader looks for the arithmetic. There is none. It is a count of likes.
+//
+// A like here is a PROMOTION, not an affection — it pushes something up, which
+// is why the control is an upward arrow and never a heart (owner, 2026-08-27).
 export function tally(state, type, id) {
   const v = state.votes[`${type}:${id}`] || {};
-  let ups = 0, downs = 0;
-  for (const val of Object.values(v)) { if (val === 1) ups++; else if (val === -1) downs++; }
-  return { ups, downs, score: ups - downs };
+  let likes = 0;
+  for (const val of Object.values(v)) if (val === 1) likes++;
+  return { likes };
 }
 
 export function myVote(state, viewerId, type, id) {
@@ -229,8 +250,8 @@ export function myVote(state, viewerId, type, id) {
 export function reputation(state, userId) {
   let post = 0, comment = 0;
   for (const pst of Object.values(state.posts))
-    if (pst.authorId === userId && !pst.removed) post += tally(state, 'post', pst.id).score;
+    if (pst.authorId === userId && !pst.removed) post += tally(state, 'post', pst.id).likes;
   for (const c of Object.values(state.comments))
-    if (c.authorId === userId && !c.removed) comment += tally(state, 'comment', c.id).score;
+    if (c.authorId === userId && !c.removed) comment += tally(state, 'comment', c.id).likes;
   return { post, comment, total: post + comment };
 }

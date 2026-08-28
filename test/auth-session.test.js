@@ -155,3 +155,47 @@ test('3k: switchTo restores a remembered account through the client; unknown DID
   await noRestore.restore();
   await assert.rejects(() => noRestore.switchTo('did:plc:x'), /switch|restore/i);
 });
+
+// --- Phase B: signIn stops dropping its options -----------------------------
+// `prompt=create` is the OIDC Initiating-User-Registration extension. All four
+// registered hosts advertise it, and Phase 0 D1 observed bsky.social and
+// blacksky.app landing in the registration wizard rather than the authenticate
+// screen. That is what makes "Create account" a different destination from
+// "Sign in" rather than two buttons pointing at one place — and it only works
+// if the options survive the trip through this manager, which they did not.
+test('4k: signIn forwards its options to the client, intact', async () => {
+  const seen = [];
+  const mgr = createSessionManager({ client: {
+    init: async () => undefined,
+    signIn: async (...args) => { seen.push(args); },
+  } });
+  await mgr.signIn('https://bsky.social', { prompt: 'create' });
+  assert.deepEqual(seen, [['https://bsky.social', { prompt: 'create' }]],
+    'the options argument was dropped between the manager and the client');
+});
+
+// The edge, not just the happy path: an ordinary sign-in must NOT smuggle a
+// prompt. A test that only checks the create case would pass against an
+// implementation that hardcoded prompt=create for everyone.
+test('4k: signIn with no options sends no options — an ordinary sign-in is not a create', async () => {
+  const seen = [];
+  const mgr = createSessionManager({ client: {
+    init: async () => undefined,
+    signIn: async (...args) => { seen.push(args); },
+  } });
+  await mgr.signIn('https://bsky.social');
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0][0], 'https://bsky.social');
+  assert.ok(seen[0][1] === undefined || seen[0][1].prompt === undefined,
+    `an options-less signIn must not invent a prompt (got ${JSON.stringify(seen[0][1])})`);
+});
+
+test('4k: a rejected signIn leaves the manager signed-out, not stuck pending', async () => {
+  const mgr = createSessionManager({ client: {
+    init: async () => undefined,
+    signIn: async () => { throw new Error('entryway unreachable'); },
+  } });
+  await mgr.restore();
+  await assert.rejects(() => mgr.signIn('https://gone.test'), /entryway unreachable/);
+  assert.equal(mgr.state(), 'signed-out', 'a failed redirect must not strand the UI in pending');
+});

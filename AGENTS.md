@@ -5,7 +5,10 @@
 **Scope:** The social forum (forage.fyi, /f/ convention, behavior-scale build; events per `docs/adr/`).
 **Not this repo:** generic atproto auth (workspace prior art — DECISIONS.md). Forage
 runs the vendored official `@atproto/oauth-client-browser`; loopback OAuth against the
-real auth server is live-verified.
+real auth server is live-verified. Identity is MULTI-HOST and the front door says so:
+`js/auth/hosts.js` is the registry (posture probed, not inferred), the sheet routes to a
+server in a chosen intent (`prompt=create` verified end to end), and any other atproto
+host is reachable by handle. Forage has no accounts of its own.
 **Provides:** the forage site. **Consumes:** AppView pulls (ADR 0002).
 Card + altitudes: `CroftC/.claude/ARCHITECTURE.md`.
 
@@ -114,7 +117,9 @@ resolved by the active presentation mode (`js/mode.js`):
 same board in-session · `/h/:tag` hashtag board · `/p?uri=` thread ·
 `/u/:handle` profile · `/me` your session + accounts + moderation mirror ·
 `/feeds` discovery · `/mode` · `/settings` · `/frontiers` (the divergence ledger,
-rendered). Cross-population routes gate with words. A feed link must carry its
+rendered). Cross-population routes gate with words. One MODAL surface rides the
+signed-out lens: the host sheet (`<dialog>`, opened from the sidebar sign-in card), which
+is absent — not hidden — signed in. A feed link must carry its
 CREATOR to survive being pasted: an rkey has no DID, and nothing resolves one
 without a repo (3v). Human aliases still route.
 

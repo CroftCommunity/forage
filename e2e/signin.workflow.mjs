@@ -472,4 +472,48 @@ export async function run() {
   } finally {
     await cb.close();
   }
+
+  // --- Phase B: a callback that produces nothing must SAY so ---------------
+  // The defect this whole plan grew out of was SILENT: sign-in redirected,
+  // came back, and reported nothing. client.init() returned undefined,
+  // restore() correctly said signed-out, every layer behaved as written, and
+  // the only instrument was a human noticing they were still logged out.
+  //
+  // Phase 0 fixed the CAUSE. This fixes the CLASS: a boot that arrived as an
+  // OAuth callback and ends with no session is not an ordinary signed-out
+  // boot, and must not render as one. Phases C and D add more ways for the
+  // exchange to fail — a wrong entryway, a host gone dark, someone else's
+  // server erroring — so shipping them without this makes silence likelier.
+  const silent = await scenario('first-visit', {
+    initScripts: [`(() => {
+      const listeners = new Set();
+      let state = 'unknown';
+      window.__forageFakeSessionManager = {
+        state: () => state,
+        currentSession: () => null,
+        onChange: (fn) => { listeners.add(fn); return () => listeners.delete(fn); },
+        // the exchange runs and yields nothing — exactly what client.init()
+        // returning undefined looks like from here
+        async restore() { state = 'signed-out'; for (const f of listeners) f(state); return null; },
+        async signIn() {}, async signOut() {},
+        fetch() { return Promise.reject(new Error('signed out')); },
+      };
+    })();`],
+    responses: { 'getTrendingTopics': { topics: [] } },
+  });
+  try {
+    await silent.page.goto(`${silent.origin}/#state=st-9&iss=https%3A%2F%2Fbsky.social&code=cod-dead`);
+    await silent.page.waitForSelector('.masthead');
+    await silent.page.waitForFunction(
+      () => /did not complete|could not complete|sign-in failed/i.test(document.body.innerText),
+      null, { timeout: 8000 });
+    const said = await silent.page.evaluate(() =>
+      [...document.querySelectorAll('#toasts .toast, .errstate, [data-auth-note]')]
+        .map((n) => n.textContent.trim()).filter(Boolean));
+    assert.ok(said.length, 'a failed callback must leave words on screen, not just a signed-out page');
+    assert.ok(said.some((t) => t.length > 12),
+      `and the words must SAY something — a wordless red block is the bug, not the fix: ${JSON.stringify(said)}`);
+  } finally {
+    await silent.close();
+  }
 }

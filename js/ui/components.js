@@ -1,12 +1,19 @@
 // Shared UI components. DOM built imperatively (no build step, no framework).
 
-import { el, esc, mdLite, timeAgo, domainOf, fmtScore } from '../util.js';
+import { el, esc, mdLite, timeAgo, domainOf, fmtScore, plural } from '../util.js';
 import * as actions from '../actions.js';
 
 // ---------- toasts ----------
 export function toast(msg, kind = '') {
   const host = document.getElementById('toasts');
-  const t = el('div', { class: `toast ${kind}` }, msg);
+  // 4k: an empty message renders a wordless coloured block — `.toast.err` is a
+  // red rectangle with 10px/14px of padding and nothing in it. That is not a
+  // degraded message, it is an alarming one that says nothing, and it comes
+  // straight from `toast(e.message, 'err')` where the error carries no message.
+  // Say the least-wrong true thing instead of showing a blank.
+  const text = String(msg ?? '').trim()
+    || (kind === 'err' ? 'Something went wrong, and it gave no reason.' : 'Done.');
+  const t = el('div', { class: `toast ${kind}` }, text);
   host.append(t);
   setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3200);
 }
@@ -31,10 +38,42 @@ export function gate(msg) {
 // onVote (optional) replaces the memory-tier write path — the lens injects
 // its like/unlike here so policy stays out of this component (invariant 2).
 export function voteBox(subjectType, id, data, canVote, orientation = 'col', onVote = null) {
-  const scoreEl = el('div', { class: 'score' }, fmtScore(data.score));
-  const boost = el('button', { class: 'vote boost' + (data.myVote === 1 ? ' on' : ''), title: 'Boost', 'aria-label': 'Boost' }, '▲');
-  const bury = el('button', { class: 'vote bury' + (data.myVote === -1 ? ' on' : ''), title: 'Bury', 'aria-label': 'Bury' }, '▼');
-  let myVote = data.myVote, score = data.score;
+  const countEl = el('div', { class: 'score' }, fmtScore(data.likes));
+  // Owner, 2026-08-27: a reader who cannot vote is not shown vote controls —
+  // absent, not disabled, and never a control that summons a login. But the
+  // SCORE stays: the arrow is an action you cannot take, the number is a fact,
+  // and it is how you tell a busy thread from a quiet one. Read literally,
+  // "hide the vote control" would take the score with it and make every post
+  // look identical. One rule, both populations — `canVote` is already what each
+  // of them computes.
+  if (!canVote) {
+    // The number needs its own name now. Signed in it is legible because the
+    // Boost button sits against it; strip that away and a screen reader
+    // announces a bare "12" with nothing saying what twelve of. role="img" +
+    // aria-label is the supported way to give a glyph-or-number its meaning
+    // without adding visible chrome a reader did not ask for.
+    countEl.setAttribute('role', 'img');
+    countEl.setAttribute('aria-label', plural(data.likes, 'like'));
+    return el('div', { class: 'votebox', 'data-readonly': '1' }, countEl);
+  }
+  // Owner, 2026-08-27: there is no downvote. It could never work on the lens
+  // (Bluesky has likes and no dislikes — DL-011) and the owner judged it not
+  // worth its surface area in the sandbox. Removing it makes the two
+  // populations AGREE, which is what lets DL-011 retire instead of being
+  // carried forever.
+  //
+  // `apply` still takes a target and still computes `next` by toggling, rather
+  // than being collapsed to a boolean. That is deliberate: the score
+  // arithmetic (`prevScore - prevVote + next`) is what makes un-boosting
+  // correct, and rewriting it around a single value is a change to working
+  // code that this removal does not need.
+  // The glyph is an ARROW and never a heart (owner, 2026-08-27): a like here is
+  // a PROMOTION — it pushes the thing up a ranking — not an affection. The word
+  // and the shape have to agree about that, and a heart says the other thing.
+  // The `.vote.boost` class stays: it is internal, six skins style it, and
+  // renaming it would churn them for no reader's benefit.
+  const boost = el('button', { class: 'vote boost' + (data.myVote === 1 ? ' on' : ''), title: 'Like', 'aria-label': 'Like' }, '▲');
+  let myVote = data.myVote, score = data.likes;
 
   const apply = async (target) => {
     if (!canVote) { toast('Log in to vote.', 'err'); return; }
@@ -43,8 +82,7 @@ export function voteBox(subjectType, id, data, canVote, orientation = 'col', onV
     // optimistic paint
     myVote = next; score = prevScore - prevVote + next;
     boost.classList.toggle('on', next === 1);
-    bury.classList.toggle('on', next === -1);
-    scoreEl.textContent = fmtScore(score);
+    countEl.textContent = fmtScore(score);
     try {
       if (onVote) await onVote(next, prevVote);
       else await actions.setVote(subjectType, id, next);
@@ -53,14 +91,12 @@ export function voteBox(subjectType, id, data, canVote, orientation = 'col', onV
       // revert (the "fills green then reverts" path with Fail Next armed)
       myVote = prevVote; score = prevScore;
       boost.classList.toggle('on', prevVote === 1);
-      bury.classList.toggle('on', prevVote === -1);
-      scoreEl.textContent = fmtScore(prevScore);
+      countEl.textContent = fmtScore(prevScore);
       if (e.message !== 'gated' && e.message !== 'banned') toast('Vote failed — reverted.', 'err');
     }
   };
   boost.addEventListener('click', () => apply(1));
-  bury.addEventListener('click', () => apply(-1));
-  return el('div', { class: 'votebox' }, boost, scoreEl, bury);
+  return el('div', { class: 'votebox' }, boost, countEl);
 }
 
 // ---------- badges ----------
@@ -90,7 +126,7 @@ export function postRow(p, viewerCanVote, opts = {}) {
     p.author ? el('span', {}, `by ${p.author}`, opts.authorBadge || '') : el('span', { class: 'muted' }, 'by [removed]'),
     el('span', {}, timeAgo(p.createdTs) + ' ago'),
     p.format === 'link' && p.url ? el('span', { class: 'domain' }, domainOf(p.url)) : null,
-    el('a', { href: link }, `${p.commentCount} comments`),
+    el('a', { href: link }, plural(p.commentCount, 'comment')),
     p.edited ? el('span', { class: 'muted' }, 'edited') : null,
     opts.metaExtra || null, // 3u: the lens hangs a language chip here
   );
@@ -116,7 +152,10 @@ export function postRow(p, viewerCanVote, opts = {}) {
 const CHILD_PAGE = 20; // "load N more replies" threshold
 
 export function commentNode(node, ctx) {
-  const wrap = el('div', { class: 'comment' + (node.autoCollapsed ? ' collapsed' : ''), 'data-node-id': node.id });
+  // No auto-collapse. The score-threshold fold was a downvote feature and is
+  // retired (2026-08-27); the MANUAL gutter below is what remains, and it is
+  // the one people actually use.
+  const wrap = el('div', { class: 'comment', 'data-node-id': node.id });
 
   const gutter = el('button', { class: 'gutter', 'aria-label': 'Collapse thread', title: 'Collapse' });
   gutter.addEventListener('click', () => {
@@ -133,7 +172,7 @@ export function commentNode(node, ctx) {
   const note = el('span', { class: 'collapse-note' });
   const meta = el('div', { class: 'comment-meta' },
     author,
-    el('span', {}, `${fmtScore(node.score)} pts`),
+    el('span', {}, plural(node.likes, 'like')),
     el('span', {}, timeAgo(node.createdTs) + ' ago'),
     node.edited ? el('span', { class: 'muted' }, 'edited') : null,
     node.removed && ctx.canModerate ? el('span', { class: 'chip badge-nsfw' }, 'removed') : null,
@@ -145,7 +184,7 @@ export function commentNode(node, ctx) {
   const actionsRow = el('div', { class: 'comment-actions' });
   if (!node.maskedRemoved && !node.deleted) {
     const vb = miniVote('comment', node.id, node, ctx.canVote);
-    actionsRow.append(vb.up, vb.score, vb.down);
+    actionsRow.append(vb.up, vb.score);
     if (ctx.canComment && !ctx.locked) actionsRow.append(replyButton(node, ctx));
     actionsRow.append(saveButton('comment', node.id, node.saved, ctx));
     if (ctx.canReport) actionsRow.append(reportButton('comment', node.id, ctx));
@@ -165,7 +204,6 @@ export function commentNode(node, ctx) {
   // render children with paging + continuation stubs
   renderChildren(childrenWrap, node, ctx);
 
-  if (node.autoCollapsed) note.textContent = ` [+] ${countDesc(node)} hidden`;
   return wrap;
 }
 
@@ -183,7 +221,7 @@ function renderChildren(container, node, ctx) {
     more.remove();
     if (shown < kids.length) container.append(more);
   };
-  const more = el('button', { class: 'loadmore btn sm' }, `load ${Math.min(CHILD_PAGE, kids.length)} more replies`);
+  const more = el('button', { class: 'loadmore btn sm' }, `load ${plural(Math.min(CHILD_PAGE, kids.length), 'more reply', 'more replies')}`);
   more.addEventListener('click', showBatch);
 
   if (kids.length) showBatch();
@@ -203,22 +241,23 @@ function countDesc(node) {
 }
 
 function miniVote(type, id, data, canVote) {
-  const score = el('span', {}, `${fmtScore(data.score)}`);
-  let my = data.myVote, sc = data.score;
-  const up = el('button', { class: 'cvote boost' + (my === 1 ? ' on' : '') }, '▲');
-  const down = el('button', { class: 'cvote bury' + (my === -1 ? ' on' : '') }, '▼');
+  // The SECOND vote control (voteBox is the first). Two implementations of one
+  // idea is why the plan named "fix one and ship" as the likely mistake here,
+  // and why e2e/no-downvote.workflow.mjs visits a comment as well as a row.
+  const score = el('span', {}, `${fmtScore(data.likes)}`);
+  let my = data.myVote, sc = data.likes;
+  const up = el('button', { class: 'cvote boost' + (my === 1 ? ' on' : ''), title: 'Like', 'aria-label': 'Like' }, '▲');
   const apply = async (t) => {
     if (!canVote) { toast('Log in to vote.', 'err'); return; }
     const pv = my, ps = sc, next = my === t ? 0 : t;
     my = next; sc = ps - pv + next;
-    up.classList.toggle('on', next === 1); down.classList.toggle('on', next === -1); score.textContent = fmtScore(sc);
+    up.classList.toggle('on', next === 1); score.textContent = fmtScore(sc);
     try { await actions.setVote(type, id, next); }
-    catch (e) { my = pv; sc = ps; up.classList.toggle('on', pv === 1); down.classList.toggle('on', pv === -1); score.textContent = fmtScore(ps);
+    catch (e) { my = pv; sc = ps; up.classList.toggle('on', pv === 1); score.textContent = fmtScore(ps);
       if (e.message !== 'gated' && e.message !== 'banned') toast('Vote failed — reverted.', 'err'); }
   };
   up.addEventListener('click', () => apply(1));
-  down.addEventListener('click', () => apply(-1));
-  return { up, down, score };
+  return { up, score };
 }
 
 function replyButton(node, ctx) {

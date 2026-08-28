@@ -6,12 +6,14 @@
 // official client; the library owns persistence (IndexedDB) and refresh, so
 // sign-in survives reloads. The lens consumes { did, handle, fetchHandler }.
 
-import { el, timeAgo, fmtScore, domainOf } from '../util.js';
+import { el, timeAgo, fmtScore, domainOf, plural } from '../util.js';
 import { postRow, commentNode, voteBox, skeleton, emptyState, toast } from './components.js';
 import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow, affordanceFor,
   feedCardModel, threadNodeStyle, feedPath, parseFeedRoute, sessionGateMessage, canDelete, sourceLabel,
   sortFeeds, filterFeeds, platforms, liveFeeds } from '../substrates/lens.js';
-import { initSession, createAccountRoster } from '../auth/session.js';
+import { initSession, createAccountRoster, isOAuthCallback } from '../auth/session.js';
+import { hostById, featuredHosts, canCreateAccount } from '../auth/hosts.js';
+import { heroDismissed, dismissHero, EMBLEM } from '../hero.js';
 import * as mediaScale from '../media-scale.js';
 import * as lang from '../lang.js';
 import { density, setDensity, DENSITIES } from '../board-density.js';
@@ -58,12 +60,149 @@ const rerender = () => window.dispatchEvent(new PopStateEvent('popstate'));
 // authorize redirect via the ENTRYWAY — bsky.social collects the handle; no
 // local form. The sidebar card keeps the handle-first path.
 export async function startDirectSignIn() {
+  // 4k: through the REGISTRY, not a hardcoded string. The masthead keeps the
+  // one-tap Bluesky path on purpose (owner, 2026-08-27) — the plural path is
+  // the sheet, reachable from the sidebar card on every signed-out surface.
+  return beginSignIn(hostById('bsky').entryway);
+}
+
+// The single door every sign-in goes through: the masthead's direct path, each
+// row of the host sheet, and the any-server handle field. `options` is
+// FORWARDED, never synthesised — an options-less sign-in must not invent a
+// prompt, which is why this branches instead of passing `options` through as
+// undefined and trusting every layer below to keep treating that as absent.
+async function beginSignIn(handle, options) {
   await ensureAuthBoot();
   if (!manager || manager === 'unavailable') {
     return toast('Sign-in is origin-bound — works on forage.fyi and localhost.', 'err');
   }
-  try { await manager.signIn('https://bsky.social'); }
+  try { await (options ? manager.signIn(handle, options) : manager.signIn(handle)); }
   catch (e) { toast('Sign-in failed: ' + e.message, 'err'); }
+}
+
+// ---- the host sheet (plan 2026-08-26-3, Phase C) -------------------------
+// Forage has no accounts of its own, so the front door's job is to route you to
+// a server rather than register you. A single "Sign in with Bluesky" button
+// teaches a newcomer that atproto is one company's product; a stacked list with
+// visibly different rules teaches the truth by showing it.
+//
+// Native <dialog> + showModal(), NOT a hand-rolled div. Probed under the
+// harness (Phase 0 D2) rather than assumed: it supplies focus entry, Esc, focus
+// return to the trigger, and background inertness with no code, and axe can see
+// inside an open one — proved by planting an unnamed button in the probe,
+// because a clean scan would have proved nothing. Modals are precisely where
+// hand-rolling fails, and every one of those behaviours is a thing a keyboard
+// visitor needs and a sighted mouse user never notices missing.
+//
+// Built FRESH per open and removed on close: the rows are static, but the
+// "Another server" field is not, and a lingering singleton would carry a
+// half-typed handle from one visit into the next.
+function authSheet() {
+  const titleId = 'authsheet-title';
+  const dialog = el('dialog', { class: 'authsheet', 'data-auth-sheet': '1', 'aria-labelledby': titleId });
+  const close = el('button', { type: 'button', class: 'sheet-x', 'aria-label': 'Close' }, '✕');
+  close.addEventListener('click', () => dialog.close());
+
+  const list = el('div', { class: 'sheet-list' });
+  for (const h of featuredHosts()) {
+    const actions = el('div', { class: 'sheet-actions' });
+    if (canCreateAccount(h)) {
+      const create = el('button', { type: 'button', class: 'btn primary sm', 'data-host-create': '1' }, 'Create account');
+      // prompt=create is not decoration: driven end to end against both open
+      // hosts (Phase 0 D1), it lands in the registration wizard rather than the
+      // sign-in screen. Without that evidence this button and the one beside it
+      // would be two routes to the same page wearing different words.
+      create.addEventListener('click', () => beginSignIn(h.entryway, { prompt: 'create' }));
+      actions.append(create);
+    } else {
+      // The words sit in the CREATE slot rather than after the row, so the
+      // column stays aligned and the italic explains the button that is
+      // missing. An invite-only host still ADVERTISES create; offering it
+      // would send someone to a screen that then demands a code.
+      actions.append(el('span', { class: 'sheet-invite' }, 'invite only'));
+    }
+    const go = el('button', { type: 'button', class: 'btn sm', 'data-host-signin': '1' }, 'Sign in');
+    go.addEventListener('click', () => beginSignIn(h.entryway));
+    actions.append(go);
+    list.append(el('div', { class: 'sheet-row', 'data-host-row': h.id },
+      el('span', { class: 'sheet-host' }, h.label), actions));
+  }
+
+  // Everything not on the short list reaches the same seam. The list is an
+  // editorial convenience, not a boundary — this is what keeps it from being
+  // one.
+  const handle = el('input', { type: 'text', id: 'sheet-other-handle', 'data-host-other-handle': '1',
+    placeholder: 'you.example.com', autocapitalize: 'none', autocorrect: 'off', spellcheck: 'false' });
+  const form = el('form', { class: 'sheet-other', hidden: true },
+    el('label', { for: 'sheet-other-handle', class: 'xs muted' }, 'Your handle on any atproto server'),
+    el('div', { class: 'row', style: 'gap:6px;margin-top:4px' }, handle,
+      el('button', { type: 'submit', class: 'btn primary sm', 'data-host-other-go': '1' }, 'Continue')));
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const v = handle.value.trim().replace(/^@+/, '');
+    if (!v) return toast('Enter your handle — for example you.example.com.', 'err');
+    beginSignIn(v);
+  });
+  const other = el('button', { type: 'button', class: 'btn sm sheet-more', 'data-host-other': '1' }, 'Another server');
+  other.addEventListener('click', () => { other.hidden = true; form.hidden = false; handle.focus(); });
+
+  dialog.append(
+    el('div', { class: 'row spread' },
+      el('h2', { id: titleId, style: 'margin:0' }, 'Choose your server'), close),
+    el('p', { class: 'xs muted' },
+      'Forage has no accounts of its own. You sign in with an account on an atproto server — Bluesky is one of many, and each sets its own rules.'),
+    list, other, form);
+  return dialog;
+}
+
+// ---- the emblem hero (plan 2026-08-26-3, Phase D) ------------------------
+// The lens had no front door. The rook-and-wreath emblem with its sign-in call
+// has existed since the first build — in boardView(), in the MEMORY population
+// — while production defaults to the lens, so the one surface a first-time
+// visitor actually lands on was the one surface without it.
+//
+// STACKED on a phone, emblem full width above the copy. The side-by-side
+// variant was built, measured (198px, 32% of the fold against 289px, 42%) and
+// rejected on sight by the owner: at 46% width the rook and the wreath stop
+// reading and the headline wraps into the close control. It is not a smaller
+// version of what was asked for. If this ever has to shrink, cut a line of
+// copy, not the art.
+//
+// Home only, signed out only, dismissible forever.
+function heroCard() {
+  const card = el('div', { class: 'card hero-lens', 'data-hero': '1' });
+  const x = el('button', { type: 'button', class: 'hero-x', 'data-hero-dismiss': '1',
+    'aria-label': 'Hide this' }, '✕');
+  x.addEventListener('click', () => {
+    // The view removes the node; js/hero.js only persists. So a reader in
+    // private mode still gets a ✕ that does something — it hides it for this
+    // visit and forgets — rather than one that silently no-ops.
+    dismissHero();
+    card.remove();
+  });
+  const cta = el('button', { type: 'button', class: 'btn primary', 'data-hero-cta': '1' },
+    'Sign in or create an account');
+  cta.addEventListener('click', () => openAuthSheet());
+  card.append(x,
+    el('img', { class: 'hero-emblem', src: EMBLEM.src, srcset: EMBLEM.srcset,
+      sizes: EMBLEM.sizes, alt: EMBLEM.alt,
+      width: '1600', height: '576', decoding: 'async' }),
+    el('div', { class: 'hero-copy' },
+      el('strong', { class: 'hero-head' }, 'Forage the open web.'),
+      el('p', { class: 'small' },
+        'Your Bluesky as a forum — feeds are boards, threads are threads. Forage has no accounts of its own: you bring one from Bluesky or any other atproto server.'),
+      cta));
+  return card;
+}
+
+export function openAuthSheet() {
+  // Never rendered signed in. Checked here as well as at the trigger, because
+  // the trigger is markup and this is the door.
+  if (session) return;
+  const dialog = authSheet();
+  dialog.addEventListener('close', () => dialog.remove());
+  document.body.append(dialog);
+  dialog.showModal();
 }
 
 // Phase-1 live-proof finding: a click during the session-restore window used to
@@ -111,8 +250,20 @@ function bootAuth() {
       if (!m) { manager = 'unavailable'; rerender(); return; }
       manager = m;
       m.onChange(() => rerender());
+      // Whether this boot ARRIVED as an OAuth callback, read before anything
+      // clears it — main.js drops the params only after awaiting this function,
+      // which is the whole point of the Phase 0 fix.
+      const fromCallback = isOAuthCallback(location.search) || isOAuthCallback(location.hash);
       const s = await m.restore(); // restores a saved session OR completes a callback
       if (s) await adoptSession(s);
+      else if (fromCallback) {
+        // 4k: the state that used to be SILENT. An authorization came back and
+        // produced no session — which is NOT the same as an ordinary
+        // signed-out boot, and must not render as one. Every layer behaved as
+        // written when this last happened, and the only instrument was a human
+        // noticing they were still logged out.
+        toast('Sign-in did not complete — the authorization came back but no session was created. Try again.', 'err');
+      }
     } catch (e) {
       manager = 'unavailable';
       toast(e.message, 'err'); // vendor drift / metadata failures speak, never blank
@@ -201,7 +352,9 @@ const chip = (label, title) => el('span', { class: 'frontier-chip', title }, lab
 // then the 'gated' signal so voteBox reverts silently.
 function lensVote(p) {
   return async (next) => {
-    if (next === -1) { toast('Bury has no Bluesky analogue — boosts ride likes (DL-011).', 'err'); throw new Error('gated'); }
+    // The `next === -1` branch and its DL-011 toast are gone with the control
+    // that produced them (plan 2026-08-27-1). Nothing in the app can send -1
+    // now; js/schema.js is what stops anything else from doing so (Phase 5).
     if (next === 1) {
       const { likeUri } = await lens.like(p.id, p.cid);
       p.likeUri = likeUri; // so an immediate unboost knows its rkey
@@ -487,12 +640,21 @@ function sessionCard() {
   };
   btn.addEventListener('click', go);
   id.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+  // 4l (owner, 2026-08-27): the sheet's entry point lives HERE rather than on
+  // the masthead. The masthead keeps the one-tap Bluesky path settled back in
+  // 3i ("launch OAuth DIRECTLY"), and reversing that six phases later needed a
+  // better reason than symmetry. This card renders on every signed-out surface,
+  // so a visitor whose server is not Bluesky stops depending on a hero that
+  // exists on one page and can be dismissed forever.
+  const more = el('button', { type: 'button', class: 'btn sm sheet-open', 'data-open-auth-sheet': '1' },
+    'Use another server →');
+  more.addEventListener('click', () => openAuthSheet());
   return el('div', { class: 'card' },
     el('h2', {}, 'Sign in with Bluesky'),
     el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
       'The official OAuth flow — you authorize on your own server; no credentials touch Forage. Unlocks your saved feeds as Feeds, Following, and search.'),
     el('div', { class: 'field-row' }, el('label', {}, 'Handle'), id),
-    btn);
+    el('div', { class: 'row wrap', style: 'gap:6px' }, btn, more));
 }
 
 // 3b: the ring dial — how far out does your ring go? Session-gated rings
@@ -500,6 +662,18 @@ function sessionCard() {
 let activeRing = 'world';
 
 function ringDial() {
+  // Signed out, this is NOT a dial. Three of its four settings need your
+  // follow graph, and hiding them would leave a control with one option —
+  // which reads as broken, not clean. So a guest gets the explanation the dial
+  // would have carried, and no buttons at all. Words cannot be tapped by
+  // accident and do not pretend to be interactive.
+  if (!session) {
+    return el('div', { class: 'card' }, el('h2', {}, 'Your ring'),
+      el('div', { class: 'small' },
+        'A ring is how far out you read: everyone, the people you follow, the ones who follow you back, or one step past them.'),
+      el('div', { class: 'xs muted', style: 'margin-top:4px' },
+        'Rings are computed from your own follow graph, so they need an account. Signed out you are reading the whole world.'));
+  }
   const RINGS = [['world', 'World'], ['following', 'Following'], ['mutuals', 'Mutuals'], ['mutuals+1', 'Mutuals +1']];
   const row = el('div', { class: 'row wrap', style: 'gap:6px', 'data-ring-dial': '1' });
   for (const [id, label] of RINGS) {
@@ -557,12 +731,22 @@ export function lensHomeView() {
       side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()) };
   }
   const main = el('div', {},
+    // The hero comes FIRST and outside the <h1>: it is the front door, and a
+    // door behind the sign is not a door. Home only (owner) — a hero on every
+    // board would be an ad rather than a welcome.
+    !session && !heroDismissed() ? heroCard() : null,
     el('h1', {}, 'The Lens'),
     ringDial(),
     trendingRail(),
     el('div', { class: 'card' },
       el('p', { class: 'small' },
-        'Your Bluesky, shaped as a forum: feeds are the boards, threads are threads, and boosting IS liking — a boost here is a real like on Bluesky. Signed out, the lens is read-only.'),
+        'Your Bluesky, shaped as a forum: feeds are the boards, threads are threads, and a like here is a real like on Bluesky — the arrow promotes a post rather than reacting to it. Signed out, the lens is read-only.'),
+      // It stated a limitation without naming one thing you would gain. The
+      // controls a guest cannot use are ABSENT rather than dangled, so this is
+      // where the answer to "what would an account get me" actually lives —
+      // once, in prose, instead of six muted nags across every surface.
+      ...(session ? [] : [el('p', { class: 'small', 'data-account-adds': '1' },
+        'With an account you get your own ring — following, mutuals, and one step past them — plus joining and favouriting feeds, liking posts, and posting and replying. Forage has no accounts of its own; you bring one from Bluesky or any other atproto server.')]),
       el('div', { class: 'row wrap', style: 'gap:6px' },
         ...(session ? [] : [chip('guest search: needs sign-in (DL-014)', 'searchPosts is 403 unauthenticated — probe-verified')]),
         chip('saves: deferred (DL-015)', 'Bookmarks are not public API surface yet'))),
@@ -712,7 +896,7 @@ function quoteNode(node, ctx) {
       el('span', { title: 'A quote-response: this author quoted the post above' }, '❝ '),
       node.author ? el('a', { href: `/u/${encodeURIComponent(node.author)}` }, node.author) : '[muted]',
       el('span', { class: 'muted' },
-        ` quoted ${node.depth ? 'that' : 'this'} · ${timeAgo(node.createdTs)} ago · ${fmtScore(node.score)} likes`)),
+        ` quoted ${node.depth ? 'that' : 'this'} · ${timeAgo(node.createdTs)} ago · ${plural(node.likes, 'like')}`)),
     el('div', { class: 'quote-body' }, node.maskedRemoved ? el('span', { class: 'muted' }, node.title || '[muted]') : node.body),
     el('div', { class: 'xs quote-open' },
       el('a', { href: `/p?uri=${encodeURIComponent(node.quoteUri)}` }, 'open its thread ↳')),
@@ -1080,7 +1264,9 @@ function feedHeaderCard(info, onChange) {
           el('div', { class: 'small' }, el('strong', {}, m.headline)),
           el('div', { class: 'xs muted' }, `${fmtScore(m.likeCount)} likes`),
           adoption)),
-      el('div', { class: 'row', style: 'gap:6px;align-items:center' }, star, btn)),
+      // A guest manages nothing here — the header reads as a thing you are
+      // looking at rather than one you own. Absent, not disabled (owner).
+      el('div', { class: 'row', style: 'gap:6px;align-items:center' }, ...(session ? [star, btn] : []))),
     el('div', { class: 'feed-blurb' + (m.blurbIsOwnWords ? '' : ' muted'), 'data-feed-blurb': m.blurbIsOwnWords ? 'feed' : 'ours' },
       m.blurb),
     m.degraded ? el('div', { class: 'xs muted' }, 'This feed’s server is not responding right now.') : null);
@@ -1432,7 +1618,7 @@ export function lensThreadView(params, query) {
       el('h1', {}, p.title.slice(0, 300)),
       el('div', { class: 'postmeta' },
         p.author ? el('a', { href: `/u/${encodeURIComponent(p.author)}` }, p.author) : '[muted]',
-        ` · ${fmtScore(p.score)} likes · ${timeAgo(p.createdTs)} ago · ${p.commentCount} replies`),
+        ` · ${plural(p.likes, 'like')} · ${timeAgo(p.createdTs)} ago · ${plural(p.commentCount, 'reply', 'replies')}`),
       // 3i: the poster's own 1/3-2/3-3/3 chain reads as the post body
       ...(t.selfThread || []).map((part) => el('div', { class: 'small', style: 'margin-top:8px' },
         ...facetSegments(part.text, part.facets).map((seg) => {

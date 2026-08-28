@@ -60,7 +60,10 @@ export async function run() {
       'getFollowers': { followers: [{ did: 'did:plc:aa' }, { did: 'did:plc:bb' }] },
       'getAuthorFeed?actor=did%3Aplc%3Aaa': { feed: [post('a1', 'did:plc:aa', '2026-08-25T10:00:00Z')] },
       'getAuthorFeed?actor=did%3Aplc%3Abb': { feed: [
-        { post: { ...post('b1', 'did:plc:bb', '2026-08-25T11:00:00Z').post,
+        // replyCount 1 against likeCount 2 is deliberate: it puts a SINGULAR and
+        // a PLURAL count on the same row, which is what makes the assertion
+        // below able to fail in both directions.
+        { post: { ...post('b1', 'did:plc:bb', '2026-08-25T11:00:00Z').post, replyCount: 1,
           record: { text: 'post b1 #camp', createdAt: '2026-08-25T11:00:00Z',
             facets: [{ index: { byteStart: 8, byteEnd: 13 },
               features: [{ $type: 'app.bsky.richtext.facet#tag', tag: 'camp' }] }] } } },
@@ -159,8 +162,22 @@ export async function run() {
   assert.equal(await graphCalls(), afterFirstDial,
     'dialing back re-used the remembered ring — no new graph reads');
 
-  // 3c segment: boost the top post — a REAL like write, optimistically painted
+  // Counts read as English. "1 comments" shipped and stayed because five call
+  // sites each interpolated a number beside a hardcoded plural noun and no
+  // assertion looked at a rendered one. js/util.js `plural` is the single home
+  // now; this is the check that it is actually REACHED, which a unit test on
+  // the helper cannot tell you. Asserted before the boost, because boosting
+  // moves the like count.
   const row = page.locator('.postrow', { hasText: 'post b1' });
+  const rowText = (await row.innerText()).replace(/\s+/g, ' ');
+  assert.match(rowText, /\b1 comment\b(?!s)/, `one reply is "1 comment": ${rowText}`);
+  // ZERO is the other direction, and the one a naive `n > 1` check gets wrong.
+  // (Likes are not asserted here: on a ROW the count is the votebox number, not
+  // a worded string — the worded form lives on the lens meta lines.)
+  const zeroRow = (await page.locator('.postrow', { hasText: 'post a1' }).innerText()).replace(/\s+/g, ' ');
+  assert.match(zeroRow, /\b0 comments\b/, `no replies is "0 comments", never "0 comment": ${zeroRow}`);
+
+  // 3c segment: boost the top post — a REAL like write, optimistically painted
   const scoreBefore = await row.locator('.score').innerText();
   await row.locator('button.boost').click();
   await page.waitForFunction((prev) => {
@@ -224,6 +241,20 @@ export async function run() {
     .evaluate((n) => ({ wall: parseFloat(getComputedStyle(n).borderLeftWidth), gutters: n.querySelectorAll(':scope > .gutter').length }));
   assert.equal(replyBox.wall, 0, 'a reply is NOT walled');
   assert.ok(replyBox.gutters >= 1, 'a reply keeps its collapse gutter');
+
+  // …and the gutter actually COLLAPSES. This was asserted nowhere until
+  // 2026-08-27, and it mattered from that day: score-threshold auto-collapse
+  // was retired (downvotes are gone, so no score can fall below a threshold),
+  // and it was the only collapse with behavioural coverage. Removing a feature
+  // must not leave the surviving one with LESS coverage than the pair had.
+  const foldTarget = page.locator('.card > .comment:not([data-kind="quote"])').first();
+  const bodyShown = () => foldTarget.locator(':scope > .comment-body > .comment-text').first().isVisible();
+  assert.equal(await bodyShown(), true, 'a reply starts open — nothing folds on its own now');
+  await foldTarget.locator(':scope > .gutter').first().click();
+  assert.equal(await bodyShown(), false, 'clicking the rail folds the subtree');
+  assert.match(await foldTarget.innerText(), /\[\+\]/, 'and says how much it hid');
+  await foldTarget.locator(':scope > .gutter').first().click();
+  assert.equal(await bodyShown(), true, 'clicking it again unfolds — a one-way collapse is a trap');
   // and the body is styled at all — .cmeta/.cbody had no rules, so the node
   // used to render as default body text (2026-08-26)
   const qFont = await qnode.locator(':scope > .quote-body').evaluate((n) => parseFloat(getComputedStyle(n).fontSize));

@@ -78,7 +78,7 @@ function shapePost(state, viewerId, post, perms) {
     createdTs: post.createdTs, createdSec: Math.floor(post.createdTs / 1000),
     locked: post.locked, pinned: post.pinned, edited: post.edited,
     removed: post.removed, deleted: post.deleted, held: post.held,
-    ups: t.ups, downs: t.downs, score: t.score,
+    likes: t.likes,
     myVote: myVote(state, viewerId, 'post', post.id),
     saved: isSaved(state, viewerId, 'post', post.id),
     commentCount: countComments(state, post.id),
@@ -98,7 +98,7 @@ function shapeComment(state, viewerId, c, perms) {
     id: c.id, postId: c.postId, parentId: c.parentId, createdTs: c.createdTs,
     createdSec: Math.floor(c.createdTs / 1000), edited: c.edited,
     removed: c.removed, deleted: c.deleted,
-    ups: t.ups, downs: t.downs, score: t.score,
+    likes: t.likes,
     myVote: myVote(state, viewerId, 'comment', c.id),
     saved: isSaved(state, viewerId, 'comment', c.id),
   };
@@ -144,12 +144,16 @@ export function board(state, viewerId, scope, sort = 'hot', timeframe = 'all', n
     return true;
   });
 
-  if (timeframe !== 'all' && (sort === 'top' || sort === 'controversial')) {
+  // `top` alone now — the timeframe window applied to the two score-ranked
+  // sorts, and controversial is gone (plan 2026-08-27-1). Not in that plan's
+  // declared write-set for this phase, but a dead sort name left in a live
+  // condition is precisely the residue the change exists to remove.
+  if (timeframe !== 'all' && sort === 'top') {
     const cutoff = now * 1000 - timeframeMs(timeframe);
     posts = posts.filter((p) => p.createdTs >= cutoff);
   }
 
-  const items = posts.map((p) => ({ ...p, ups: tally(state, 'post', p.id).ups, downs: tally(state, 'post', p.id).downs, createdSec: Math.floor(p.createdTs / 1000) }));
+  const items = posts.map((p) => ({ ...p, likes: tally(state, 'post', p.id).likes, createdSec: Math.floor(p.createdTs / 1000) }));
   const sorted = sortItems(items, sort, now);
   // pinned to the top within a single feed view
   if (scope.startsWith('feed:')) {
@@ -173,18 +177,16 @@ export function thread(state, viewerId, postId, sort = 'best', now) {
   const childrenOf = {};
   for (const c of all) { const k = c.parentId || 'root'; (childrenOf[k] = childrenOf[k] || []).push(c); }
 
-  const threshold = state.users[viewerId]?.prefs?.commentThreshold ?? -4;
 
   function build(parentKey, depth) {
     const kids = (childrenOf[parentKey] || []).map((c) => ({
-      c, ups: tally(state, 'comment', c.id).ups, downs: tally(state, 'comment', c.id).downs,
+      c, likes: tally(state, 'comment', c.id).likes,
       createdSec: Math.floor(c.createdTs / 1000),
     }));
     const sorted = sortItems(kids, sort, now);
     return sorted.map(({ c }) => {
       const shaped = shapeComment(state, viewerId, c, perms);
       const node = { ...shaped, depth,
-        autoCollapsed: shaped.score < threshold && !shaped.maskedRemoved,
         children: depth >= 10 ? [] : build(c.id, depth + 1),
         deferred: depth >= 10 ? (childrenOf[c.id] || []).length : 0, // "continue this thread"
       };

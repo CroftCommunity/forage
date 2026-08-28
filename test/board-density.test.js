@@ -95,7 +95,7 @@ test('the sandbox board actually passes compact through to the row', () => {
 // choice always wins" is tested in both directions rather than assumed.
 // ---------------------------------------------------------------------------
 
-import { SKINS } from '../js/skins.js';
+import { SKINS, FAMILIES, prefersDensityFor } from '../js/skins.js';
 
 const withStorage = (initial, fn) => {
   const store = { ...initial };
@@ -134,14 +134,24 @@ test('DL-028: an explicit choice beats the skin preference, in BOTH directions',
 
 test('DL-028: every declared preference is one of the densities that exist', () => {
   const valid = DENSITIES.map(([v]) => v);
+  for (const [id, f] of Object.entries(FAMILIES)) {
+    if (f.prefersDensity === undefined) continue;
+    assert.ok(valid.includes(f.prefersDensity),
+      `family ${id} prefers "${f.prefersDensity}", which is not a density (${valid.join('|')})`);
+  }
+  // The preference moved from the skin to the family (plan 2026-08-26-2
+  // Phase 1). Assert the old home is EMPTY too, or a stray copy left on a skin
+  // would be dead data that reads like the live setting.
   for (const [id, s] of Object.entries(SKINS)) {
-    if (s.prefersDensity === undefined) continue;
-    assert.ok(valid.includes(s.prefersDensity),
-      `${id} prefers "${s.prefersDensity}", which is not a density (${valid.join('|')})`);
+    assert.equal(s.prefersDensity, undefined, `skin ${id} still declares prefersDensity`);
   }
 });
 
-test('DL-028: both phpBB skins prefer compact — a board is dense in either palette', () => {
-  assert.equal(SKINS.phpbb.prefersDensity, 'compact');
-  assert.equal(SKINS['phpbb-dark'].prefersDensity, 'compact');
+test('DL-028: the phpBB FAMILY prefers compact, so both its sides necessarily agree', () => {
+  // Both phpBB skins used to carry this independently; the failure it invited
+  // was a palette toggle silently changing board density. There is now one
+  // value and no way for the two sides to disagree.
+  assert.equal(FAMILIES.phpbb.prefersDensity, 'compact');
+  assert.equal(prefersDensityFor('phpbb'), 'compact');
+  assert.equal(prefersDensityFor('phpbb-dark'), 'compact');
 });

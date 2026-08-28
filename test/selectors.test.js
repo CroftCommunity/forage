@@ -167,17 +167,29 @@ test('thread: children render to depth 10; depth-10 nodes defer their subtree', 
   assert.equal(node.deferred, 1);          // ...and surfaced as "continue this thread"
 });
 
-// ---- auto-collapse threshold boundary ----
+// ---- auto-collapse: RETIRED ----------------------------------------------
+// The boundary test that lived here is DELETED, and the distinction the rest of
+// this change keeps making applies to it too: its subject is gone, not
+// inconvenient.
+//
+// Score-threshold auto-collapse was a downvote feature — a crowd pushes a
+// comment below a line and it folds by default. Downvotes were removed
+// (2026-08-27), so a score starts at 0 and only rises: the default threshold of
+// -4 could never fire again, and re-defaulting it to 0 would have been just as
+// inert. The only reachable version was "fold comments with fewer than N
+// boosts", which hides new, quiet, and last-in-thread comments for not having
+// been boosted yet — worse than not having the feature (owner: *"that's the
+// only sane outcome, we removed the whole mechanism"*).
+//
+// What survives and is tested elsewhere: the MANUAL collapse gutter, which is
+// the control people actually use and never depended on scores.
 
-test('thread: score -4 stays open, -5 auto-collapses (threshold is strict <)', () => {
+test('thread: no comment auto-collapses, because nothing collapses by score any more', () => {
   const log = maskingLog();
-  log.push(ev('comment.created', { id: 'c_at', postId: 'p_norm', bodyMd: 'at threshold', quiet: true }, 'u_aspen'));
-  log.push(ev('comment.created', { id: 'c_under', postId: 'p_norm', bodyMd: 'under it', quiet: true }, 'u_aspen'));
-  for (let i = 0; i < 4; i++) log.push(ev('vote.set', { subjectType: 'comment', subjectId: 'c_at', value: -1 }, `sv_${i}`));
-  for (let i = 0; i < 5; i++) log.push(ev('vote.set', { subjectType: 'comment', subjectId: 'c_under', value: -1 }, `sv_${i}`));
+  log.push(ev('comment.created', { id: 'c_quiet', postId: 'p_norm', bodyMd: 'no boosts', quiet: true }, 'u_aspen'));
   const t = thread(fold(log), 'u_fern', 'p_norm', 'best', T);
-  assert.equal(t.comments.find((c) => c.id === 'c_at').autoCollapsed, false);
-  assert.equal(t.comments.find((c) => c.id === 'c_under').autoCollapsed, true);
+  assert.deepEqual(t.comments.filter((c) => 'autoCollapsed' in c), [],
+    'the field is gone from the shape, not pinned false — an always-false field is a question every caller keeps asking');
 });
 
 // ---- feed + notifications shape ----

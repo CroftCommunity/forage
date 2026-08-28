@@ -12,6 +12,16 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 
 ## Needs the owner
 
+- **The 216 KB wordmark still ships on three surfaces.** Phase E of plan
+  2026-08-26-3 sized the emblem for the LENS hero (400/800/1200w, byte ceilings
+  asserted, `js/hero.js` § EMBLEM). Three callers still point at the original
+  1600x576 JPEG: the MEMORY population's hero (`js/ui/views.js:65`), the
+  `/signup` art (`js/ui/views.js:701`), and `README.md`. All three were outside
+  Phase E's declared write-set, so they were left rather than swept — the
+  sandbox hero is the one that actually costs a visitor bytes. One-line each;
+  point them at `logo-wordmark-800.jpg` and add it wherever a SHELL entry is
+  owed. Not urgent: production defaults to the lens.
+
 - **Phase 5 — the private BBS on Spaces** (plan 2026-08-25-1): **PAUSED behind the
   public-site queue** (owner 2026-08-26: *"we are pausing it until we have the main
   site in better shape"*). Not declined and no longer waiting on a review — the

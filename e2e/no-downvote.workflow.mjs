@@ -1,0 +1,228 @@
+// W14 — there is no downvote (plan 2026-08-27-1, Phase 1).
+//
+// The owner's call, 2026-08-27: bury is not useful. It was worth different
+// amounts in the two populations and neither was enough.
+//
+//   - On the LENS it could never work. Bluesky has likes and no dislikes,
+//     recorded as DL-011: scores are likes-only, downs are always 0. The arrow
+//     rendered on every row, refused on click, and signing in would not have
+//     unlocked it — a control advertising a capability the network lacks.
+//   - In the SANDBOX it worked, and the owner judged the feature not worth its
+//     surface area.
+//
+// Removing it CLOSES a divergence: the two populations now agree about whether
+// a downvote is a thing, so DL-011 retires rather than being carried forever.
+//
+// Why an absence gets its own workflow rather than a line in another one:
+// there are TWO vote controls in js/ui/components.js — `voteBox` on a post row
+// and `miniVote` on a comment — and fixing one while shipping the other is the
+// named risk in the plan. Four combinations (two populations x signed in/out)
+// is what makes that mistake visible, and no existing workflow visits all four.
+//
+// The other half is here on purpose: BOOST still works. A suite that only
+// asserts the absence passes against an app that lost voting entirely.
+import assert from 'node:assert/strict';
+import { scenario } from './harness/scenario.mjs';
+
+const WH = 'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot';
+const post = (r, d, t) => ({ post: {
+  uri: `at://${d}/app.bsky.feed.post/${r}`, cid: 'c' + r,
+  author: { did: d, handle: d.slice(8) + '.test' },
+  record: { text: 'hello ' + r, createdAt: t }, indexedAt: t,
+  replyCount: 1, repostCount: 0, likeCount: 7,
+} });
+
+const RESPONSES = {
+  'getTrendingTopics': { topics: [] },
+  'getFeedGenerator?': { view: { uri: WH, displayName: 'Discover', description: 'trending',
+    likeCount: 39382, creator: { handle: 'bsky.app' } }, isOnline: true, isValid: true },
+  'getFeed?': { feed: [post('a', 'did:plc:aa', '2026-08-26T10:00:00Z')] },
+  'getPostThread': { thread: {
+    post: post('a', 'did:plc:aa', '2026-08-26T10:00:00Z').post,
+    replies: [{ post: post('b', 'did:plc:bb', '2026-08-26T11:00:00Z').post, replies: [] }],
+  } },
+  'getQuotes': { posts: [] },
+  'describeRepo': { handle: 'me.test' },
+  'getPreferences': { preferences: [] },
+};
+
+const FAKE_SIGNED_IN = `(() => {
+  const listeners = new Set(); let session = null; let state = 'unknown';
+  window.__forageFakeSessionManager = {
+    state: () => state, currentSession: () => session,
+    onChange: (fn) => { listeners.add(fn); return () => listeners.delete(fn); },
+    async restore() {
+      session = { did: 'did:plc:me', signOut: async () => {},
+        fetchHandler: (p, i) => window.fetch('https://bsky.social' + p, i) };
+      state = 'signed-in'; for (const f of listeners) f(state); return session;
+    },
+    async signIn() {}, async signOut() {},
+    fetch(p, i) { return session.fetchHandler(p, i); },
+  };
+})();`;
+
+// Every way a downvote could still be on the page: the class, the glyph, and
+// the aria name. Checking only `.vote.bury` would pass against a control that
+// kept the arrow and lost the class.
+const downvotes = (page) => page.evaluate(() => ({
+  byClass: document.querySelectorAll('.vote.bury, .cvote.bury, [class*="bury"]').length,
+  byGlyph: [...document.querySelectorAll('button')].filter((b) => b.textContent.includes('▼')).length,
+  byName: [...document.querySelectorAll('[aria-label], [title]')]
+    .filter((n) => /bury|downvote/i.test(`${n.getAttribute('aria-label') ?? ''} ${n.getAttribute('title') ?? ''}`))
+    .map((n) => n.tagName.toLowerCase()),
+  boosts: document.querySelectorAll('.vote.boost, .cvote.boost').length,
+  // The owner's vocabulary call, 2026-08-27: a like here is a PROMOTION, not an
+  // affection — "Like/Promote", not "like/love". So the word may be "like" and
+  // the shape must stay an upward arrow. A heart says the other thing, and a
+  // rule with no check decays into prose (PATTERN.md).
+  // The /u flag is load-bearing. Without it a character class of astral emoji
+  // is a class of SURROGATE HALVES, and 📌 (U+1F4CC) shares its leading
+  // surrogate D83D with 💚 and 🖤 — so the pinned-post badge read as a heart.
+  // A check that fires on the wrong thing is worse than none: it would have
+  // been "fixed" by deleting the pin.
+  hearts: [...document.querySelectorAll('*')]
+    .filter((n) => !n.children.length && /[♥❤🤍💚🖤]/u.test(n.textContent)).length,
+  voteNames: [...new Set([...document.querySelectorAll('.vote, .cvote')]
+    .map((b) => b.getAttribute('aria-label') ?? b.getAttribute('title') ?? '(unnamed)'))],
+  readonlyNames: [...new Set([...document.querySelectorAll('[data-readonly] .score')]
+    .map((n) => n.getAttribute('aria-label') ?? '(unnamed)'))],
+}));
+
+async function assertNone(page, label, { expectBoosts }) {
+  const seen = await downvotes(page);
+  assert.equal(seen.byClass, 0, `${label}: a bury-classed control still renders`);
+  assert.equal(seen.byGlyph, 0, `${label}: a ▼ button still renders`);
+  assert.deepEqual(seen.byName, [], `${label}: something is still NAMED bury/downvote`);
+  if (expectBoosts) {
+    assert.ok(seen.boosts > 0,
+      `${label}: the like control must survive — an absence-only suite passes against an app that lost voting entirely`);
+  }
+  assert.equal(seen.hearts, 0, `${label}: no heart glyph anywhere — the arrow promotes, it does not react`);
+  for (const n of seen.voteNames) {
+    assert.match(n, /^Like$/, `${label}: the vote control is named "Like", not ${JSON.stringify(n)}`);
+  }
+  for (const n of seen.readonlyNames) {
+    assert.match(n, /^\d+ likes?$/, `${label}: the read-only count names itself in likes: ${JSON.stringify(n)}`);
+  }
+}
+
+export async function run() {
+  // ---------- the lens, signed OUT ----------
+  const out = await scenario('first-visit', { mode: 'bluesky', responses: RESPONSES });
+  try {
+    await out.page.goto(`${out.origin}/f/whats-hot`);
+    await out.page.waitForSelector('.postrow');
+    // Signed out the guest surface hides vote controls entirely (W11), so this
+    // asserts the absence without expecting a boost.
+    await assertNone(out.page, 'lens board, signed out', { expectBoosts: false });
+
+    await out.page.goto(`${out.origin}/p?uri=${encodeURIComponent('at://did:plc:aa/app.bsky.feed.post/a')}`);
+    await out.page.waitForSelector('.comment, .postrow');
+    await assertNone(out.page, 'lens thread, signed out', { expectBoosts: false });
+  } finally { await out.close(); }
+
+  // ---------- the lens, signed IN ----------
+  const inn = await scenario('first-visit', {
+    mode: 'bluesky', initScripts: [FAKE_SIGNED_IN], responses: RESPONSES });
+  try {
+    await inn.page.goto(`${inn.origin}/f/whats-hot`);
+    await inn.page.waitForSelector('.vote.boost');
+    await assertNone(inn.page, 'lens board, signed in', { expectBoosts: true });
+
+    await inn.page.goto(`${inn.origin}/p?uri=${encodeURIComponent('at://did:plc:aa/app.bsky.feed.post/a')}`);
+    await inn.page.waitForSelector('.comment');
+    await assertNone(inn.page, 'lens thread, signed in', { expectBoosts: true });
+  } finally { await inn.close(); }
+
+  // ---------- the sandbox, signed OUT and IN ----------
+  // This is the population where bury actually WORKED, so it is the one where
+  // removing it is a product change rather than the retirement of a dead
+  // control.
+  const mem = await scenario('seeded');
+  try {
+    const { page } = mem;
+    await page.goto(`${mem.origin}/popular`);
+    await page.waitForSelector('.postrow');
+    await assertNone(page, 'sandbox board, logged out', { expectBoosts: false });
+
+    await page.waitForSelector('.devbar');
+    await page.locator('.devbar select[title="Active persona"]').selectOption('u_fern');
+    await page.waitForFunction(() => !!document.querySelector('.vote.boost'));
+    await assertNone(page, 'sandbox board, logged in', { expectBoosts: true });
+
+    // …and boost still round-trips through the store. The optimistic paint is
+    // the part the removal could plausibly break: it used to toggle two classes
+    // and now toggles one.
+    const first = page.locator('.vote.boost').first();
+    const scoreOf = () => page.evaluate(() =>
+      document.querySelector('.votebox .score')?.textContent.trim() ?? null);
+    const before = await scoreOf();
+    await first.click();
+    await page.waitForFunction((b) =>
+      (document.querySelector('.votebox .score')?.textContent.trim() ?? null) !== b, before);
+    assert.notEqual(await scoreOf(), before, 'boosting moves the score');
+    await page.locator('.vote.boost.on').first().click();
+    await page.waitForFunction((b) =>
+      (document.querySelector('.votebox .score')?.textContent.trim() ?? null) === b, before);
+    assert.equal(await scoreOf(), before, 'and un-boosting puts it back — the toggle still toggles');
+
+    // A comment carries the SECOND vote control, and it is the one easiest to
+    // miss — `miniVote` is a separate implementation of the same idea.
+    //
+    // The thread has to be one that actually HAS replies. Navigating to the
+    // first post on the board found an empty thread, which rendered fine and
+    // asserted nothing about comments: a passing absence check over a page with
+    // no comment on it is exactly the shape of coverage this plan warns about.
+    const threadHref = await page.evaluate(() =>
+      [...document.querySelectorAll('.postrow')]
+        .filter((r) => !/\b0 comments\b/.test(r.innerText))
+        .map((r) => r.querySelector('.posttitle a')?.getAttribute('href'))
+        .find(Boolean) ?? null);
+    assert.ok(threadHref, 'the seeded board must offer a thread WITH replies, or the comment control goes unchecked');
+    await page.goto(`${mem.origin}${threadHref}`);
+    await page.waitForSelector('.comment');
+    await assertNone(page, 'sandbox thread, logged in', { expectBoosts: true });
+
+    // ---- Phase 2: Controversial is gone from BOTH sort lists ----------
+    // Two of them exist: the board's and the one for comments inside a thread.
+    // The plan's phase list named only the first; the second was found by
+    // grepping, which is the argument for asserting over both rather than over
+    // the one the plan happened to mention.
+    const threadTabs = await page.evaluate(() =>
+      [...document.querySelectorAll('.tabs .tab')].map((t) => t.textContent.trim()));
+    assert.deepEqual(threadTabs, ['Best', 'Top', 'New'],
+      `a thread offers three comment sorts and Controversial is not one: ${JSON.stringify(threadTabs)}`);
+
+    await page.goto(`${mem.origin}/popular`);
+    await page.waitForSelector('.postrow');
+    const boardTabs = await page.evaluate(() =>
+      [...document.querySelectorAll('.tabs .tab')].map((t) => t.textContent.trim()));
+    assert.deepEqual(boardTabs, ['Hot', 'New', 'Top', 'Rising'],
+      `the board offers four sorts and Controversial is not one: ${JSON.stringify(boardTabs)}`);
+
+    // …and each remaining sort still renders a board. A sort list that lost a
+    // member and quietly broke its neighbours would pass the assertion above.
+    for (const sort of ['hot', 'new', 'top', 'rising']) {
+      await page.goto(`${mem.origin}/popular?sort=${sort}`);
+      await page.waitForSelector('.tabs .tab');
+      const active = await page.evaluate(() =>
+        document.querySelector('.tabs .tab.active')?.textContent.trim() ?? null);
+      assert.equal(active?.toLowerCase(), sort, `?sort=${sort} selects its own tab`);
+    }
+
+    // The edge that reaches a PERSON: a link someone shared before this change.
+    // It must land on a working board, not strand them on a sort that no longer
+    // exists. The engine's unknown-sort fallback is what carries this, and
+    // nothing pinned that this particular name reaches it.
+    await page.goto(`${mem.origin}/popular?sort=controversial`);
+    await page.waitForSelector('.postrow');
+    const stranded = await page.evaluate(() => ({
+      rows: document.querySelectorAll('.postrow').length,
+      tabs: [...document.querySelectorAll('.tabs .tab')].map((t) => t.textContent.trim()),
+      active: document.querySelector('.tabs .tab.active')?.textContent.trim() ?? null,
+    }));
+    assert.ok(stranded.rows > 0, 'an old ?sort=controversial link still shows posts');
+    assert.ok(!stranded.tabs.includes('Controversial'),
+      'and it does not resurrect the tab to match the url');
+  } finally { await mem.close(); }
+}
