@@ -117,20 +117,16 @@ h1.boardtitle{font-family:ui-serif,Georgia,serif;font-size:var(--t-lg);margin:0 
 <div class="wrap">
   <header style="display:flex;flex-direction:column;gap:10px">
     <span class="eyebrow">Forage · design mockup, not the running app</span>
-    <h1>Two answers to “what does the front page show?”</h1>
-    <p class="sub">Same sidebar in both. The only difference is where <code>/</code> lands. Everything in the nav is a <b>board</b> — a list of posts — and boards differ only in where the posts come from: a feed generator, a hashtag, or your own graph at some reach. On the phone, tap ☰.</p>
+    <h1>The sidebar, and where <code>/</code> lands</h1>
+    <p class="sub">Everything in the nav is a <b>board</b> — a list of posts — and boards differ only in where the posts come from: a feed generator, a hashtag, or your own graph at some reach. Where <code>/</code> lands follows the session, so switch <b>Session</b> to see all three real states. On the phone, tap ☰.</p>
   </header>
 
   <div class="controls">
-    <div class="cgroup"><span class="eyebrow">Landing</span>
-      <div class="seg" id="segLand">
-        <button data-land="directory" aria-pressed="true">1 · Directory</button>
-        <button data-land="board" aria-pressed="false">2 · Default board</button>
-      </div></div>
     <div class="cgroup"><span class="eyebrow">Session</span>
       <div class="seg" id="segWho">
         <button data-who="out" aria-pressed="false">Signed out</button>
-        <button data-who="in" aria-pressed="true">Signed in</button>
+        <button data-who="first" aria-pressed="false">First sign-in</button>
+        <button data-who="return" aria-pressed="true">Returning</button>
       </div></div>
     <div class="cgroup"><span class="eyebrow">Skin</span>
       <div class="seg" id="segSkin">
@@ -149,13 +145,16 @@ h1.boardtitle{font-family:ui-serif,Georgia,serif;font-size:var(--t-lg);margin:0 
   <p class="note">On the phone the nav is a drawer: it costs <b>nothing</b> until you open it, where the two-half strip always cost a row. That is a better answer to “usable but not intrusive” than the strip ever had.</p>
 
   <div class="cols">
-    <div class="callout"><h3>1 · Directory</h3>
-      <p>What you described: trending, then topics, then a feed’s posts. You arrive somewhere neutral and choose. <b>Good for a guest</b>, who has no history worth remembering — and identical signed in or out, so there is one front page to design.</p></div>
-    <div class="callout"><h3>2 · Default board</h3>
-      <p>You land on the board you were last reading, marked in the nav. <b>Good for a regular</b> — no click between opening the app and reading. The directory still exists, at <code>/feeds</code>, where it already lives today.</p></div>
-    <div class="callout"><h3>Why not both</h3>
-      <p>They can be: <b>directory for a guest, last board for a regular</b>. That costs one rule and one stored value, and it is what Reddit does. Flip Session on either landing to see the pair.</p></div>
+    <div class="callout"><h3>Signed out → the directory</h3>
+      <p>Trending, browse, then Discover’s posts. A guest has <b>no history worth remembering</b>, and it is the same page for everyone — so there is one front page to design rather than two.</p></div>
+    <div class="callout"><h3>Returning → your last board</h3>
+      <p>You land on what you were reading, marked in the nav with a rail. <b>No click between opening the app and reading.</b> The directory is still one tap away, as Trending and Browse all feeds.</p></div>
+    <div class="callout"><h3>First sign-in → My follows</h3>
+      <p>A new account has no last board. <b>My follows</b> is the closest thing to what someone arriving from Bluesky expects, and it is the one rung whose data is already fetched — so the default costs nothing extra.</p></div>
   </div>
+
+  <p class="note">The last board is remembered <b>on the device</b>, beside skin and density — Bluesky can store a pinned feed but not a Forage board. Sign in on a laptop and a phone and each remembers its own. Worth writing down so nobody later files it as a bug.</p>
+</div>
 </div>
 
 <script>
@@ -187,7 +186,12 @@ const HINT={me:'1 post — just yours.',mut:'2 posts from 2 mutuals.',fol:'3 pos
  'whats-hot':"Bluesky's own algorithmic feed. Its network name is Discover."};
 const TITLE={me:'Just me',mut:'My mutuals',fol:'My follows',hop:'My follows, one hop out',
  world:'World','whats-hot':'Discover'};
-let state={land:'directory',who:'in',skin:'light',sel:'mut',drawer:false};
+// The landing rule, in one place: a guest gets the directory; a returning
+// reader gets the board they left; a brand-new account gets My follows.
+const LAST_BOARD='mut';           // what this device remembers
+const FIRST_TIME='fol';           // My follows
+const landingFor=(who)=> who==='out' ? 'directory' : who==='first' ? FIRST_TIME : LAST_BOARD;
+let state={who:'return',skin:'light',sel:LAST_BOARD,drawer:false};
 
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const plural=(n,w,pl)=>`${n} ${n===1?w:(pl||w+'s')}`;
@@ -207,9 +211,9 @@ function rows(k){
 }
 function nav(isPhone){
   const cur=id=>state.sel===id?' aria-current="page"':'';
-  const feeds=state.who==='in'?FEEDS_IN:FEEDS_OUT;
+  const feeds=state.who!=='out'?FEEDS_IN:FEEDS_OUT;
   let h='';
-  if(state.who==='in'){
+  if(state.who!=='out'){
     h+=`<div class="navsec">Your ring</div>`+
        RUNGS.map(([id,label,ico])=>
         `<button class="navitem" data-sel="${id}"${cur(id)}><span class="ico">${ico}</span>${label}</button>`).join('');
@@ -217,7 +221,7 @@ function nav(isPhone){
   h+=`<div class="navsec">Feeds</div>`+
      feeds.map(([slug,title])=>
       `<button class="navitem" data-sel="${slug}"${cur(slug)}><span class="ico">▦</span>${title}</button>`).join('');
-  if(state.who==='in')
+  if(state.who!=='out')
     h+=`<div class="navsec">Hashtags</div>`+
        TAGS.map(t=>`<button class="navitem" data-sel="tag-${t}"${cur('tag-'+t)}><span class="ico">#</span>${t}</button>`).join('');
   h+=`<hr class="navrule">
@@ -230,11 +234,11 @@ function nav(isPhone){
 function directory(){
   return `<div class="content">
     <h1 class="boardtitle">Trending</h1>
-    <p class="hint">What is moving right now. Every one of these is a feed — tapping one opens it as a board.</p>
+    <p class="hint">${state.who==='out'?'Where a guest lands. ':''}What is moving right now. Every one of these is a feed \u2014 tapping one opens it as a board.</p>
     <div class="card"><h2>Top five</h2>
       ${TREND.map(([t,c])=>`<div class="stackrow"><a href="#">${t}</a><span>${c}</span></div>`).join('')}</div>
     <div class="card"><h2>Browse</h2>
-      ${(state.who==='in'?FEEDS_IN:FEEDS_OUT).map(([s,t,k])=>
+      ${(state.who!=='out'?FEEDS_IN:FEEDS_OUT).map(([s,t,k])=>
         `<div class="stackrow"><a href="#">f/${s}</a><span>${t} · ${k}</span></div>`).join('')}
       ${state.who==='out'?'<div class="xsmuted" style="margin-top:6px">Guest boards. Sign in and these become your feeds.</div>':''}</div>
     <h1 class="boardtitle" style="margin-top:16px">Discover</h1>
@@ -255,35 +259,34 @@ function masthead(isPhone){
     <span class="wordmark"><span class="glyph">🍂</span>Forage</span>
     <span class="who"><button class="themetoggle">${state.skin==='dark'?'☀':'☾'}</button>
       <a href="#">Settings</a>
-      ${state.who==='in'?'<a href="#">cpettet.bsky.social</a><a href="#">▾</a>':'<a href="#">Sign in</a>'}
+      ${state.who!=='out'?'<a href="#">cpettet.bsky.social</a><a href="#">▾</a>':'<a href="#">Sign in</a>'}
     </span></div>`;
 }
 function render(){
   for(const [id,isPhone] of [['appPhone',true],['appDesk',false]]){
     const el0=document.getElementById(id);
-    const body=state.land==='directory'&&state.sel==='mut'?directory():boardView();
+    const body=boardView();
     el0.innerHTML=masthead(isPhone)+
       (isPhone?`<div class="scrim"${state.drawer?'':' hidden'}></div>`:'')+
       `<div class="shell">${nav(isPhone)}${body}</div>`;
     el0.dataset.skin=state.skin;
   }
-  for(const g of ['segLand','segWho','segSkin'])
+  for(const g of ['segWho','segSkin'])
     document.querySelectorAll('#'+g+' button').forEach(b=>{
       const k=Object.keys(b.dataset)[0];
-      b.setAttribute('aria-pressed', b.dataset[k]===state[k==='land'?'land':k]);
+      b.setAttribute('aria-pressed', b.dataset[k]===state[k]);
     });
 }
 document.addEventListener('click',e=>{
-  const seg=e.target.closest('#segLand button,#segWho button,#segSkin button');
+  const seg=e.target.closest('#segWho button,#segSkin button');
   if(seg){const d=seg.dataset;
-    if(d.land){state.land=d.land; state.sel=d.land==='directory'?'mut':'mut';}
-    if(d.who){state.who=d.who; state.drawer=false; if(d.who==='out')state.sel='whats-hot'; else state.sel='mut';}
+    if(d.who){state.who=d.who; state.drawer=false; state.sel=landingFor(d.who);}
     if(d.skin)state.skin=d.skin;
     return render();}
   if(e.target.closest('[data-burger]')){state.drawer=!state.drawer;return render();}
   if(e.target.closest('.scrim')){state.drawer=false;return render();}
   const item=e.target.closest('.navitem');
-  if(item){state.sel=item.dataset.sel; state.land='board'; state.drawer=false; return render();}
+  if(item){state.sel=item.dataset.sel; state.drawer=false; return render();}
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&state.drawer){state.drawer=false;render();}});
 render();

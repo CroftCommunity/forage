@@ -51,7 +51,7 @@ Four problems fall out, and only the first is cosmetic.
    the world ring has no merged board — its board is the sources/feeds surface')`.
    World is the dial's OFF position, not a query.
 
-## Approach
+## Approach — SUPERSEDED by Revision 2 (the strip is dead; a sidebar replaces it)
 
 Collapse the tab and the dial into **one strip with two halves**, and let the right half
 be its own readout.
@@ -153,7 +153,7 @@ an afternoon."*
 
 ---
 
-## Revision, 2026-08-28 — the signed-out half is deleted, not greyed
+## Revision 1, 2026-08-28 — the signed-out half is deleted, not greyed
 
 This plan specified "signed out, the right half shows rungs greyed with a reason." That is
 the shape the owner **rejected** while this plan sat blocked, and the rejection is landed
@@ -191,6 +191,100 @@ inherits them — so a rung board shows a like count and no arrows.
 
 ---
 
+## Revision 2, 2026-08-28 — the strip is rejected; a left sidebar replaces it
+
+**The defect, found by the owner in the mock and not by any test.** The strip's right half
+was a tab *and* a dropdown opener. Clicking it to switch to that view also opened the
+menu, so every switch cost a menu nobody asked for:
+
+> *"when I try to select the right column of my follows or whatever the act of switching
+> also triggers the drop down and I dont' think that's fixable in a sane way"*
+
+That is right and it is not tunable — one control cannot have two jobs when doing either
+requires doing both. The elegance of "the label IS the control", which Revision 0 argued
+for, is exactly what produced it.
+
+**A left sidebar replaces it**, owner's call, with the rungs stacked as plain links.
+
+```
+[☰] Forage                       ☾  Settings  (avatar)
+┌───────────────┬──────────────────────────────────┐
+│ YOUR RING     │  ▲  The rye loaf finally held…    │
+│  Just me      │ 31  f/baking · by wren · 40m      │
+│  My mutuals  ▌│                                   │
+│  My follows   │  ▲  Chanterelles on the north…    │
+│  …one hop out │ 54  f/foraging · by juniper · 3h  │
+│  World        │                                   │
+│ FEEDS         │                                   │
+│  Discover     │                                   │
+│ HASHTAGS      │                                   │
+│  #harvest     │                                   │
+│ ─────         │                                   │
+│  Trending     │                                   │
+│  Browse all   │                                   │
+└───────────────┴──────────────────────────────────┘
+```
+
+Each rung is a link with one job. Three further arguments, none of which is "it looks
+like Reddit":
+
+- **It is this repo's declared genre.** `package.json` describes forage as *"topic-driven
+  aggregation in the Reddit structural family"*. A left nav is that family's grammar.
+- **It removes a column rather than adding one.** `lensSidebar()` already renders Feeds on
+  the RIGHT — navigation on the wrong side. It moves left and joins the rings.
+- **On a phone it costs nothing.** A drawer is off-screen until opened, where the strip
+  always spent a row. That is a better answer to the owner's original *"usable but not
+  intrusive"* than the strip ever had.
+
+### The taxonomy was wrong, and the owner's question fixed it
+
+> *"why is discover a view and what's-hot a feed? they are the same thing literally"*
+
+They are the same **object**. `js/ui/lens-views.js` § *CURATED* is
+`{ slug: 'whats-hot', title: 'Discover', kind: 'feed', … }` — "Discover" is the
+displayName Bluesky reports for that generator, probed 2026-08-26 and kept only as an
+offline fallback. The sidebar sketch listed one feed twice, under two headings. Trending
+is feeds too: `trendingRail()` resolves each topic to a `feedUri` and registers it as a
+source.
+
+**So there is no views-vs-feeds axis.** Everything in the nav is a **board** — a list of
+posts — and boards differ only in where the posts come from: a feed generator, a hashtag,
+or your own graph at some reach. Discover is not a category; it is one feed with a good
+name.
+
+This is also why the strip's LEFT half does not survive. Discover was only ever a peer of
+the ring because a two-half strip needs a partner, so a feed got promoted to a category to
+fill the slot. The shape invented the concept. With no slot, it drops back to one row
+under FEEDS.
+
+### Where `/` lands — the rule
+
+| Session | Lands on | Why |
+|---|---|---|
+| Signed out | the directory (trending, browse, Discover's posts) | a guest has no history worth remembering, and it is one page for everyone |
+| Returning | the board they last read | no click between opening the app and reading |
+| First sign-in | **My follows** | a new account has no last board; this is what someone arriving from Bluesky expects, and its data is already fetched |
+
+The directory is never hidden — it stays in the nav as Trending and Browse all feeds, so a
+signed-in reader is one tap from it.
+
+**The last board is device-local**, beside skin and density. Same constraint as the
+composition: `app.bsky.actor.defs#savedFeed` can store a pinned feed but not a Forage
+board, so a laptop and a phone each remember their own. Stated so it is not later filed as
+a bug.
+
+### This couples E144, which was filed as optional
+
+The mock's phone frame clips the masthead to `cpettet.bsky.so…`. The hamburger costs ~54px
+in a bar that only fits one row *because* `2776537` removed a duplicate to save 52px
+(113px → 61px at 320px). Adding a control back overruns it. **E144** — the avatar
+replacing the handle text — buys roughly 120px and is the fix. So the sidebar cannot ship
+on a phone without E144, which moves it from a deferred backlog row to a dependency. It
+stays a backlog row until the owner decides *how* the masthead shrinks; this plan only
+records that something must.
+
+---
+
 ## Units
 
 Every unit states its RED test before its change, and every unit shipping user-visible
@@ -218,30 +312,25 @@ is the whole reason the ladder is redefined.
 RED: a workflow journey selecting World and asserting posts render. Fails today by
 construction: `ringFeed` throws for `world`. This is the rung with no implementation.
 
-### V4 — the strip
+### V4 — the sidebar
 
-RED: a workflow journey — land signed-out, assert **no strip renders at all** and the ring
-prose stands in its place; sign in, assert the strip appears, pick a rung, assert both the
-view switched and the label now reads that rung. Includes the tap-target assertion for the
-opener (the touch floor gate landed in `2c4b28d`; the opener is exactly what it exists to
-catch) and a **keyboard** journey — the menu is ours, not the platform's, so focus,
-Escape and arrow keys are our responsibility and axe cannot see any of them.
+RED: a workflow journey — signed out, assert there is **no ring section** and the one-line
+reason is present; signed in, assert the rungs render as links, click one, assert the board
+switched AND the nav marks it current. A second journey at 390px: assert the nav is
+**not** rendered until the hamburger is pressed, then is, then closes on scrim-tap and on
+Escape. Includes tap-target assertions for the hamburger and every nav row (the touch floor
+landed in `2c4b28d`), and a keyboard journey — the drawer is ours, so focus, Escape and
+tab-order are our responsibility and axe cannot see any of them.
 
-Deletes `ringDial()`. ~~Removes `Home` from the Bluesky masthead~~ — **already done on main** by `2776537`,
-with a better reason than this plan had: the masthead went sticky, had to meet the 44px
-floor, and the duplicate link was what pushed the bar to a second row (measured 113px with
-it, 61px without, at 320px). The emptied `<nav>` is the slot the strip takes. The **memory**
-masthead is untouched — its wordmark targets `/popular` while `Home` targets `/home`, a
-*different board* (`router.route('/home', …)`), so the same edit there would delete a
-destination.
+Deletes `ringDial()`. Moves `lensSidebar()`'s Feeds card into the nav; `.side` loses its
+only lens occupant, so the shell goes from three columns to two.
 
-### V5 — Discover
+### V5 — the landing rule
 
-The left half is the current `lensHomeView` content re-homed: top five trending, then
-topics, then what's hot. Owner: *"where the left have is really kind of like the front
-page always."* Identical signed in or out, which is what makes it the default landing.
-
----
+RED: three unit tests over one function, `landingFor(session, lastBoard)` — guest yields
+the directory, a returning reader yields the stored board, a session with no stored board
+yields `fol`. Pure, so it is a unit test and not a journey. Then one journey asserting a
+picked board survives a reload, which is what makes "returning" mean anything.
 
 ## Not doing (and where each one lives)
 
@@ -271,3 +360,13 @@ best-practice rules) came from the same survey and is filed alongside them.
   nesting defect (Problem Statement 3) was found while checking whether the owner's
   "inclusive of everything further up the ladder" was true of the existing rings. It was
   not.
+
+- **2026-08-28, mock review with the owner (croftc-40).** The two-half strip died in the
+  mock, killed by a defect no test would have caught: its right half was a tab and a menu
+  opener at once. Worth noting how it was found — the strip's *elegance* caused it. "The
+  label IS the control" is a good sentence and a bad control, and only clicking the thing
+  showed the difference. The sidebar replaced it, and the owner's follow-up question
+  ("why is discover a view and what's-hot a feed?") then collapsed the taxonomy the strip
+  had invented: they are one object in `CURATED`, so there is no views-vs-feeds axis and
+  everything in the nav is a board. Two mocks, two design errors found, neither by a
+  suite. Mocks are in `plans/mocks/`.
