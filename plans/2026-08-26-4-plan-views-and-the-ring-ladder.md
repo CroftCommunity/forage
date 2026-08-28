@@ -294,11 +294,31 @@ kind of see a local preview here before we deploy."* The preview is Pages-faithf
 construction (`scripts/preview.mjs` returns the real 404 status), so it cannot flatter
 the result.
 
-### V1 — the ring becomes device-local state
+### V1 — the last board becomes device-local state — **DONE 2026-08-28**
 
-RED: a unit test that a chosen rung survives a reload, and that sign-out clears it (the
-graph belongs to an account, not a device — the rule `forgetRings()` already encodes).
-Model on `js/board-density.js` including its resolution order. No UI yet.
+Shipped as `js/last-board.js` + `test/last-board.test.js`, modelled on
+`js/board-density.js`: one key (`forage.lastboard`), read through one module, never
+`forage.state`. Reads through storage on every call rather than caching, so a second tab
+writing it is visible on the next read. Six tests; the junk-refusal branch was
+mutation-checked and the suite killed the mutation.
+
+**Two deviations from this unit as written, both deliberate:**
+
+1. **It stores the last BOARD, not the ring.** Revision 2 established that a rung, a feed
+   slug and a hashtag are all boards, and the landing rule needs whichever one you left.
+   Storing only the ring would have needed a second key the moment V5 arrived.
+2. **Sign-out does NOT clear it**, where this unit originally said it should. The
+   reasoning that motivated clearing — *the graph belongs to an account, not a device* —
+   is about graph DATA, which `lens.forgetRings()` already drops. What this stores is the
+   NAME of a reading choice, and clearing it would mean signing out and back in loses your
+   place, defeating the rule the unit exists to serve. The landing rule simply does not
+   consult it while signed out, because a guest gets the directory.
+
+   **Left open for the owner, and not decided here:** an account SWITCH on a shared
+   device. A stored rung is fine — "my mutuals" recomputes for whoever is signed in — but
+   a stored feed or hashtag is the previous reader's preference showing to the next one.
+   Keying the value by DID would fix it and is more machinery than V1 needs. Raise it at
+   V5, where the rule that reads this value lives.
 
 ### V2 — the nested ladder, as data
 
