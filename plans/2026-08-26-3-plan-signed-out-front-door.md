@@ -13,7 +13,11 @@ landed; a Status line that contradicts itself is worse than none):
 | D The hero | **DONE** — stacked on a phone, side-by-side above 560px, dismissal permanent and device-local |
 | E Emblem asset | **DONE** — 400/800/1200w sources, byte ceilings asserted, selected-source pinned. The transparency experiment RAN and is RETIRED |
 
-All four open questions are RESOLVED (see Open Questions). Nothing is blocked on the owner.
+**The plan is COMPLETE.** All six phases are done or deliberately dropped with reasons, all
+four open questions are RESOLVED, and Phase E's experiment has been run and retired. What
+this plan set out to fix — a front door that led with a locked control and hid the key — is
+shipped: sign-in follows you, it is hittable with a thumb, it names more than one server,
+and the emblem greets you at 18.8 KB. Remaining follow-ons live in `TODO.md`, not here.
 
 **Supersedes** `2026-08-26-2-plan-public-site-polish.md` § Phase 2, which becomes a pointer.
 **Worktree:** `worktrees/forage/polish` on `claude/polish`. Claim: `CroftC/.coordination/claims/forage--polish.md`.
