@@ -100,6 +100,13 @@ export async function run() {
           record: { text: '', createdAt: '2026-08-25T15:30:00Z' },
           embed: { $type: 'app.bsky.embed.images#view', images: [
             { thumb: 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==', fullsize: 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==', alt: 'a test image post' } ] } } },
+        // an image-only post whose author wrote NO alt: its title is the
+        // '[image]' placeholder, which card mode must not print above the
+        // rendered image (live on forage.fyi 2026-08-28) and compact keeps
+        { post: { ...post('tp4', 'did:plc:cc', '2026-08-25T15:40:00Z').post,
+          record: { text: '', createdAt: '2026-08-25T15:40:00Z' },
+          embed: { $type: 'app.bsky.embed.images#view', images: [
+            { thumb: 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==', fullsize: 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==', alt: '' } ] } } },
       ] },
       // 3r: the cascade fixture. Routing is first-match-wins by substring, so
       // quote1's own thread/quotes must be declared BEFORE the generic keys.
@@ -555,9 +562,19 @@ export async function run() {
   // 3i segment: media renders in Card; image-only titles from alt; Compact drops it
   await page.waitForSelector('.media-strip img');
   await page.waitForSelector('text=a test image post');
+  // The no-alt image post (tp4): its media renders, so the '[image]'
+  // placeholder title must NOT print above it — the image is the content.
+  assert.ok(await page.locator('.media-strip img').count() >= 2,
+    'the no-alt image post still renders its image in card mode');
+  assert.equal(await page.locator('.posttitle', { hasText: '[image]' }).count(), 0,
+    'card mode never prints the literal [image] placeholder above a rendered image');
   await page.locator('[data-board-toolbar] select').nth(2).selectOption('compact');
   await page.waitForFunction(() => !document.querySelector('.media-strip'));
   assert.ok(await page.locator('.postrow.compact').count() > 0, 'compact rows are compact');
+  // Compact renders no media, so the placeholder is that row's only handle —
+  // there it stays.
+  assert.ok(await page.locator('.posttitle', { hasText: '[image]' }).count() > 0,
+    'compact keeps the [image] placeholder — with no media it is the row\'s only name');
   await page.locator('[data-board-toolbar] select').nth(2).selectOption('card');
   await page.waitForSelector('.media-strip img');
 

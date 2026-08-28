@@ -138,9 +138,15 @@ export function postRow(p, viewerCanVote, opts = {}) {
     : (!opts.compact && p.format === 'text' && p.body && !p.maskedRemoved
       ? el('div', { class: 'clamp' }, p.body) : null);
 
+  // Same contract as bodyNode: an explicit titleNode wins, so the lens can
+  // drop a PLACEHOLDER title from a row that renders the media itself —
+  // "[image]" above the actual image names nothing the reader can't see.
+  const title = opts.titleNode !== undefined ? opts.titleNode
+    : el('div', { class: 'posttitle' }, titleLink);
+
   const right = el('div', {},
     el('div', { class: 'row wrap', style: 'gap:6px;align-items:center' }, ...postBadges(p)),
-    el('div', { class: 'posttitle' }, titleLink),
+    title,
     body, meta,
   );
   const row = el('div', { class: 'postrow' + (p.pinned ? ' pinned-row' : '') + (opts.compact ? ' compact' : '') },

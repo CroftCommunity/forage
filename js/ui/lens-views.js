@@ -545,18 +545,25 @@ const feedHrefFor = (slug) => {
   return (entry && feedPath({ creator: entry.creator, rkey: entry.slug })) || `/f/${slug}`;
 };
 
-const lensRow = (p, view = 'card') => postRow(p, !!session, {
-  onVote: lensVote(p),
-  // 3i: never duplicate the title — a preview renders only when it adds
-  // content. Card mode carries media and tag doorways; compact is dense.
-  bodyNode: view === 'compact' ? null
-    : (p.media && !p.maskedRemoved) ? el('div', {}, mediaNode(p), tagChips(p) || '')
-    : p.preview ? facetedBody({ ...p, body: p.preview }) : tagChips(p),
-  authorBadge: verifiedBadge(p),
-  metaExtra: langChip(p),
-  feedHref: feedHrefFor(p.feedSlug),
-  compact: view === 'compact',
-});
+const lensRow = (p, view = 'card') => {
+  const showsMedia = view !== 'compact' && p.media && !p.maskedRemoved;
+  return postRow(p, !!session, {
+    onVote: lensVote(p),
+    // 3i: never duplicate the title — a preview renders only when it adds
+    // content. Card mode carries media and tag doorways; compact is dense.
+    bodyNode: view === 'compact' ? null
+      : showsMedia ? el('div', {}, mediaNode(p), tagChips(p) || '')
+      : p.preview ? facetedBody({ ...p, body: p.preview }) : tagChips(p),
+    // A placeholder title ('[image]', '[video]') exists so a row is never
+    // blank. A card row showing the media IS the content, so the placeholder
+    // drops there; compact still needs it — it is the row's only handle.
+    ...(showsMedia && p.placeholderTitle ? { titleNode: null } : {}),
+    authorBadge: verifiedBadge(p),
+    metaExtra: langChip(p),
+    feedHref: feedHrefFor(p.feedSlug),
+    compact: view === 'compact',
+  });
+};
 
 // 3u: name the language when the post declared one you do not read. With no
 // preference stored the browser's language stands in, so a mixed board is
