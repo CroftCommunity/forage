@@ -1,0 +1,376 @@
+<title>Forage Ring Ladder</title>
+<style>
+:root{
+  --page-bg:#EFE9DE; --page-card:#F8F4EC; --page-ink:#2B251C; --page-muted:#6B6252;
+  --page-line:#DED5C4; --page-accent:#33623A; --page-accent-soft:#EAEFDF;
+  --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-display:ui-serif,Georgia,"Times New Roman",serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --page-bg:#1C1813; --page-card:#262019; --page-ink:#EFE7D9; --page-muted:#B5A88F;
+  --page-line:#3D3527; --page-accent:#A5CD98; --page-accent-soft:#31291F;
+}}
+:root[data-theme="dark"]{
+  --page-bg:#1C1813; --page-card:#262019; --page-ink:#EFE7D9; --page-muted:#B5A88F;
+  --page-line:#3D3527; --page-accent:#A5CD98; --page-accent-soft:#31291F;
+}
+*{box-sizing:border-box}
+body{background:var(--page-bg);color:var(--page-ink);font-family:var(--f-body);
+  line-height:1.55;margin:0;padding:32px 20px 72px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1{font-family:var(--f-display);font-size:30px;font-weight:600;margin:0;text-wrap:balance;letter-spacing:-.01em}
+.sub{color:var(--page-muted);font-size:15px;max-width:64ch;margin:0}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+.note{border-left:2px solid var(--page-accent);padding-left:14px;color:var(--page-muted);font-size:14px;max-width:70ch}
+
+/* ---- control bar ---- */
+.controls{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-end;
+  background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:16px 18px}
+.cgroup{display:flex;flex-direction:column;gap:7px}
+.seg{display:flex;border:1px solid var(--page-line);border-radius:6px;overflow:hidden}
+.seg button{font:inherit;font-size:13px;padding:9px 15px;min-height:44px;background:transparent;
+  color:var(--page-ink);border:0;border-right:1px solid var(--page-line);cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--page-accent);color:#fff}
+:root[data-theme="dark"] .seg button[aria-pressed="true"],
+:root:not([data-theme="light"]) .seg button[aria-pressed="true"]{color:#14251A}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .seg button[aria-pressed="true"]{color:#fff}}
+.seg button:focus-visible{outline:2px solid var(--page-accent);outline-offset:-2px}
+
+/* ---- device frames ---- */
+.stage{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap}
+.device{display:flex;flex-direction:column;gap:9px;min-width:0}
+.device-label{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+.screen{border:1px solid var(--page-line);border-radius:10px;overflow:hidden;
+  box-shadow:0 1px 3px rgba(0,0,0,.10),0 8px 24px rgba(0,0,0,.06)}
+.phone .screen{width:390px}
+.desk{flex:1;min-width:420px}
+
+/* ---- FORAGE tokens, verbatim from css/tokens.css ---- */
+.app{
+  --bg:#F8F4EC;--card:#FFFFFF;--card-2:#F2EDE2;--text:#2B251C;--muted:#68604F;
+  --border:#E3DCCD;--link:#38683F;--brand-ink:#33623A;--brand-fill:#41724A;
+  --on-brand:#FFFFFF;--tint:#EAEFDF;--gold-strong:#7A6110;--gold-500:#C99A3C;
+  --t-xs:13px;--t-sm:14px;--t-md:16px;--t-lg:20px;
+  --radius-card:6px;--radius-chip:999px;
+  background:var(--bg);color:var(--text);font-size:var(--t-md);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.app[data-skin="dark"]{
+  --bg:#262019;--card:#31291F;--card-2:#3B3226;--text:#EFE7D9;--muted:#B5A88F;
+  --border:#4C4232;--link:#A5CD98;--brand-ink:#A5CD98;--brand-fill:#41724A;
+  --tint:#3A392A;--gold-strong:#E2BC64;--gold-500:#D4A94E}
+
+.masthead{display:flex;align-items:center;gap:12px;padding:8px 12px;position:sticky;top:0;z-index:4;
+  background:var(--card);border-bottom:1px solid var(--border);min-height:61px}
+.wordmark{font-family:ui-serif,Georgia,serif;font-size:var(--t-lg);color:var(--brand-ink);
+  font-weight:700;display:flex;align-items:center;gap:8px;text-decoration:none}
+.glyph{width:28px;height:28px;border-radius:50%;background:var(--tint);
+  display:grid;place-items:center;font-size:15px}
+.who{margin-left:auto;display:flex;gap:12px;align-items:center;font-size:var(--t-sm)}
+.who a,.who button{color:var(--link);text-decoration:none;background:none;border:0;
+  font:inherit;font-size:var(--t-sm);cursor:pointer;padding:0}
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--brand-fill);color:#fff;
+  display:grid;place-items:center;font-size:12px;font-weight:600}
+
+/* the strip */
+.strip{display:flex;background:var(--card);border-bottom:1px solid var(--border);position:relative}
+.half{flex:1;font:inherit;font-size:var(--t-sm);background:transparent;border:0;
+  border-right:1px solid var(--border);padding:0 14px;min-height:44px;cursor:pointer;
+  color:var(--muted);display:flex;align-items:center;justify-content:center;gap:7px}
+.half:last-child{border-right:0}
+.half[aria-selected="true"]{color:var(--brand-ink);font-weight:600;
+  background:var(--tint);box-shadow:inset 0 -2px 0 var(--brand-ink)}
+.half:focus-visible{outline:2px solid var(--brand-ink);outline-offset:-2px}
+.caret{font-size:10px;opacity:.75}
+
+/* the ladder menu */
+.menu{position:absolute;top:100%;right:0;width:290px;background:var(--card);
+  border:1px solid var(--border);border-radius:0 0 var(--radius-card) var(--radius-card);
+  box-shadow:0 8px 24px rgba(0,0,0,.16);z-index:5;padding:5px 0}
+.menu[hidden]{display:none}
+.rung{width:100%;text-align:left;font:inherit;font-size:var(--t-sm);background:none;border:0;
+  cursor:pointer;color:var(--text);padding:9px 13px;min-height:44px;display:flex;
+  flex-direction:column;justify-content:center;gap:1px}
+.rung:hover:not(:disabled){background:var(--card-2)}
+.rung[aria-checked="true"]{background:var(--tint);color:var(--brand-ink);font-weight:600}
+.rung:disabled{color:var(--muted);opacity:.6;cursor:not-allowed}
+.rung small{font-size:11px;color:var(--muted);font-weight:400}
+.rung:focus-visible{outline:2px solid var(--brand-ink);outline-offset:-2px}
+.menu-foot{border-top:1px solid var(--border);padding:8px 13px;font-size:11px;color:var(--muted)}
+
+/* board — mirrors css/app.css postrow grid */
+.board{padding:12px}
+.hint{font-size:var(--t-xs);color:var(--muted);margin:0 0 10px}
+.postrow{display:grid;grid-template-columns:40px 1fr;gap:12px;padding:12px 0;
+  border-bottom:1px solid var(--border)}
+.postrow:last-child{border-bottom:0}
+.votebox{display:flex;flex-direction:column;align-items:center;gap:2px}
+.vote{border:1px solid var(--border);background:var(--card);color:var(--muted);
+  border-radius:var(--radius-card);width:28px;height:28px;line-height:1;cursor:pointer;
+  font-size:13px;padding:0}
+.vote.on{color:var(--boost,#41724A);border-color:var(--boost,#41724A)}
+.score{font-size:var(--t-sm);font-weight:600}
+.posttitle{font-size:var(--t-md);line-height:1.3;margin:2px 0 3px}
+.posttitle a{color:var(--link);text-decoration:none}
+.postmeta{font-size:11px;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px}
+.postmeta a{color:var(--muted);text-decoration:none;border-bottom:1px solid var(--border)}
+.clamp{font-size:var(--t-sm);color:var(--text);margin-bottom:4px;opacity:.92}
+.tag{display:inline-block;border-radius:999px;padding:1px 9px;font-size:var(--t-xs);
+  background:color-mix(in srgb,var(--gold-500) 18%,var(--card));color:var(--gold-strong);
+  border:1px solid color-mix(in srgb,var(--gold-500) 45%,transparent)}
+h1.boardtitle{font-family:ui-serif,Georgia,serif;font-size:var(--t-lg);margin:0 0 10px;color:var(--text)}
+.themetoggle{border:1px solid var(--border);background:var(--card);color:var(--text);
+  border-radius:var(--radius-card);width:30px;height:30px;cursor:pointer;font-size:13px;padding:0}
+
+/* today's dial */
+.dialcard{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-card);
+  padding:12px;margin-bottom:10px}
+.dialcard h2{font-family:ui-serif,Georgia,serif;font-size:var(--t-md);margin:0 0 8px}
+.dialrow{display:flex;flex-wrap:wrap;gap:6px}
+.btnsm{font:inherit;font-size:var(--t-xs);padding:4px 10px;border:1px solid var(--border);
+  background:var(--card);color:var(--text);border-radius:var(--radius-card);cursor:pointer}
+.btnsm.active{background:var(--brand-fill);color:var(--on-brand);border-color:var(--brand-fill)}
+.dialnote{font-size:11px;color:var(--muted);margin-top:6px}
+
+/* callouts */
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px}
+.callout{background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:16px 18px}
+.callout h3{font-family:var(--f-display);font-size:17px;margin:0 0 7px;font-weight:600}
+.callout p{margin:0;font-size:14px;color:var(--page-muted)}
+.callout b{color:var(--page-ink);font-weight:600}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--page-line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page-muted)}
+td.set{color:var(--page-muted)}
+.scroll{overflow-x:auto}
+@media (prefers-reduced-motion:no-preference){.menu{animation:drop .12s ease-out}}
+@keyframes drop{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+</style>
+
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:10px">
+    <span class="eyebrow">Forage · design mockup, not the running app</span>
+    <h1>The ring ladder, as one strip</h1>
+    <p class="sub">Two halves. <b>Discover</b> is the front page, the same signed in or out. The right half is your material, and its label is always the rung you are on — so the strip states what you are looking at instead of needing a separate dial. Click the right half to open the ladder.</p>
+  </header>
+
+  <div class="controls">
+    <div class="cgroup"><span class="eyebrow">Design</span>
+      <div class="seg" id="segWhat">
+        <button data-what="today" aria-pressed="false">Today</button>
+        <button data-what="proposed" aria-pressed="true">Proposed</button>
+      </div></div>
+    <div class="cgroup"><span class="eyebrow">Session</span>
+      <div class="seg" id="segWho">
+        <button data-who="out" aria-pressed="false">Signed out</button>
+        <button data-who="in" aria-pressed="true">Signed in</button>
+      </div></div>
+    <div class="cgroup"><span class="eyebrow">Skin</span>
+      <div class="seg" id="segSkin">
+        <button data-skin="light" aria-pressed="true">Light</button>
+        <button data-skin="dark" aria-pressed="false">Dark</button>
+      </div></div>
+  </div>
+
+  <div class="stage">
+    <div class="device phone">
+      <span class="device-label">Phone · 390px</span>
+      <div class="screen"><div class="app" id="appPhone"></div></div>
+    </div>
+    <div class="device desk">
+      <span class="device-label">Desktop</span>
+      <div class="screen"><div class="app" id="appDesk"></div></div>
+    </div>
+  </div>
+
+  <p class="note">Both frames are the same state at once, so the phone answer and the desktop answer can be judged against each other rather than one at a time. Signed out there is deliberately no strip &mdash; a guest has no graph to slice, and one half is not a strip. The masthead is drawn at its real 61px — the height it came down to when “Home” was removed, measured at 320px.</p>
+
+  <div class="cols">
+    <div class="callout">
+      <h3>Why the label is the control</h3>
+      <p>A separate tab plus a separate dial needs two glances and can disagree with itself. Folding them together means the right half <b>always says exactly what it is showing you</b>, and picking a rung both switches you there and sets the scope in one gesture.</p>
+    </div>
+    <div class="callout">
+      <h3>Why it is not in the top bar</h3>
+      <p>Up there it would govern one surface out of eleven and sit inert on the rest — a control that has to apologise on <b>ten pages</b>. Attached to the half it acts on, it disappears on Discover, where it would mean nothing.</p>
+    </div>
+    <div class="callout">
+      <h3>What World means here</h3>
+      <p>Not the firehose. <b>Unsqueezed</b> — everything in the material you have assembled: your posts, your follows, feeds you follow, hashtags you subscribe to. The composition is the boundary; the ladder narrows inside it.</p>
+    </div>
+  </div>
+
+  <div>
+    <span class="eyebrow">The ladder, as sets</span>
+    <p class="sub" style="margin:8px 0 12px">Each rung contains every rung above it. That ordering is the reason the current four rings had to be redefined: <b>Mutuals +1</b> does not contain <b>Following</b> — someone you follow who follows nobody back, and who none of your mutuals follow, falls out — so stepping “further out” would have shown you less.</p>
+    <div class="scroll"><table>
+      <tr><th>Rung</th><th>Set</th><th>Cost</th></tr>
+      <tr><td>Just me</td><td class="set">my posts</td><td class="set">free</td></tr>
+      <tr><td>My mutuals</td><td class="set">+ follows ∩ followers</td><td class="set">two graph calls, cached</td></tr>
+      <tr><td>My follows</td><td class="set">+ everyone I follow</td><td class="set">already fetched</td></tr>
+      <tr><td>My follows, one hop out</td><td class="set">+ everyone my mutuals follow</td><td class="set">one call per mutual, capped at 25</td></tr>
+      <tr><td>World</td><td class="set">+ everything else in the composition</td><td class="set">no board exists yet</td></tr>
+    </table></div>
+  </div>
+</div>
+
+<script>
+const RUNGS=[
+ {id:'me',   label:'Just me',                 desc:'only what I posted'},
+ {id:'mut',  label:'My mutuals',              desc:'people who follow me back'},
+ {id:'fol',  label:'My follows',              desc:'everyone I follow'},
+ {id:'hop',  label:'My follows, one hop out', desc:'and everyone my mutuals follow'},
+ {id:'world',label:'World',                   desc:'everything in your composition'}
+];
+const POSTS={
+ me:[['Third attempt at a 1:2:3 starter ratio','you','2h','sourdough',18,4,'Cooler proof, longer autolyse. Notes in the thread.']],
+ mut:[['The rye loaf finally held its shape','wren.bsky.social','40m','baking',31,7,'Photos when it cools.'],
+      ['Chanterelles on the north ridge trail','juniper.bsky.social','3h','foraging',54,12,'']],
+ fol:[['The rye loaf finally held its shape','wren.bsky.social','40m','baking',31,7,'Photos when it cools.'],
+      ['Is the feed generator lagging for anyone else?','moss.bsky.social','1h','atproto',9,3,''],
+      ['Chanterelles on the north ridge trail','juniper.bsky.social','3h','foraging',54,12,'']],
+ hop:[['A field guide that finally gets lookalikes right','alder.bsky.social','12m','foraging',22,5,'Three of your mutuals follow them; you do not.'],
+      ['The rye loaf finally held its shape','wren.bsky.social','40m','baking',31,7,'Photos when it cools.'],
+      ['Is the feed generator lagging for anyone else?','moss.bsky.social','1h','atproto',9,3,'']],
+ world:[['Autumn harvest roundup, week 34','fernwatch','8m','feeds',140,26,'From a feed you follow \u2014 nobody you know posted this.'],
+        ['Anyone preserving quince this year?','tallow.bsky.social','22m','harvest',12,8,'From a hashtag you subscribe to.'],
+        ['The rye loaf finally held its shape','wren.bsky.social','40m','baking',31,7,'Photos when it cools.']]
+};
+const HINT={me:'1 post \u2014 just yours.',mut:'2 posts from 2 mutuals.',
+ fol:'3 posts from 3 people you follow.',
+ hop:'3 posts \u2014 one from outside your follows, reached through a mutual.',
+ world:'3 posts \u2014 your follows, plus a feed and a hashtag you subscribe to.'};
+const plural=(n,w,pl)=>`${n} ${n===1?w:(pl||w+'s')}`;
+let state={what:'proposed',who:'in',skin:'light',rung:'mut',open:false,tab:'ladder'};
+
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function voteBox(likes){
+  // components.js voteBox: signed out the ARROW is absent and the number stays,
+  // carrying role="img" so a screen reader hears "31 likes", not a bare 31.
+  if(state.who==='out')
+    return `<div class="votebox" data-readonly="1">
+      <div class="score" role="img" aria-label="${plural(likes,'like')}">${likes}</div></div>`;
+  return `<div class="votebox">
+    <button class="vote" aria-label="Like" title="Like">\u25B2</button>
+    <div class="score">${likes}</div></div>`;
+}
+function rowsFor(r){
+  return POSTS[r].map(([title,author,age,slug,likes,comments,body])=>
+    `<div class="postrow">${voteBox(likes)}<div>
+      <div class="posttitle"><a href="#">${esc(title)}</a></div>
+      ${body?`<div class="clamp">${esc(body)}</div>`:''}
+      <div style="margin-bottom:5px"><span class="tag">${esc(slug)}</span></div>
+      <div class="postmeta"><a href="#">f/${esc(slug)}</a><span>by ${esc(author)}</span>
+        <span>${esc(age)} ago</span><a href="#">${plural(comments,'comment')}</a></div>
+    </div></div>`).join('');
+}
+function masthead(){
+  return `<div class="masthead">
+    <span class="wordmark"><span class="glyph">\ud83c\udf42</span>Forage</span>
+    <span class="who">
+      <button class="themetoggle" title="Switch to dark">${state.skin==='dark'?'\u2600':'\u263e'}</button>
+      <a href="#">Settings</a>
+      ${state.who==='in'?'<a href="#">cpettet.bsky.social</a><a href="#" title="Switch account">\u25be</a>'
+                        :'<a href="#">Sign in</a>'}
+    </span></div>`;
+}
+function strip(){
+  const cur=RUNGS.find(r=>r.id===state.rung);
+  const label=state.who==='in'?cur.label:'My mutuals';
+  const menu=state.open?`<div class="menu" role="menu">${
+    RUNGS.map(r=>`<button class="rung" role="menuitemradio" data-rung="${r.id}"
+        aria-checked="${state.who==='in'&&r.id===state.rung}"
+        ${state.who==='out'?'disabled':''}>
+        <span>${r.label}</span><small>${r.desc}</small></button>`).join('')}
+    ${state.who==='out'?'<div class="menu-foot">Sign in — these are computed from your graph.</div>':''}
+  </div>`:'';
+  return `<div class="strip">
+    <button class="half" data-half="discover" aria-selected="${state.tab==='discover'}">Discover</button>
+    <button class="half" data-half="ladder" aria-selected="${state.tab==='ladder'}" aria-expanded="${state.open}">
+      ${label}<span class="caret">▾</span></button>${menu}</div>`;
+}
+const TRENDING=[['#harvest','412 posts'],['#sourdough','288 posts'],['#foraging','196 posts'],
+  ['#mycology','154 posts'],['#preserving','97 posts']];
+function discoverBoard(){
+  return `<div class="board">
+    <h1 class="boardtitle">Discover</h1>
+    <p class="hint">The front page. Identical signed in or signed out \u2014 which is what makes it the default landing.</p>
+    <div class="dialcard"><h2>Trending now</h2>
+      <div class="dialrow">${TRENDING.map(([t,c])=>
+        `<button class="btnsm">${t} <span style="opacity:.6">${c}</span></button>`).join('')}</div></div>
+    <div class="dialcard"><h2>Topics</h2>
+      <div class="dialrow">${['Food','Outdoors','Craft','Science','Local'].map(t=>
+        `<button class="btnsm">${t}</button>`).join('')}</div></div>
+    <p class="hint" style="margin-top:14px">What's hot</p>
+    ${rowsFor('world')}</div>`;
+}
+function ringProse(){
+  return `<div class="dialcard"><h2>Your ring</h2>
+    <div style="font-size:var(--t-sm)">A ring is how far out you read: everyone, the people you follow, the ones who follow you back, or one step past them.</div>
+    <div class="dialnote">Rings are computed from your own follow graph, so they need an account. Signed out you are reading the whole world.</div></div>`;
+}
+function board(){
+  if(state.tab==='discover') return discoverBoard();
+  if(state.who==='out')
+    return `<div class="board"><h1 class="boardtitle">Your ring</h1>
+      <p class="hint">Sign in and this half fills with your material. The rungs stay visible so you can see what signing in gets you — greyed with a reason, not hidden.</p>
+      ${rowsFor('mut').replace(/class="row"/g,'class="row" style="opacity:.4"')}</div>`;
+  return `<div class="board"><h1 class="boardtitle">${RUNGS.find(r=>r.id===state.rung).label}</h1>
+    <p class="hint">${HINT[state.rung]}</p>${rowsFor(state.rung)}</div>`;
+}
+function today(){
+  if(state.who==='out')
+    return `${masthead()}<div class="board"><h1 class="boardtitle">The Lens</h1>
+      ${ringProse()}
+      <p class="hint">On main today: signed out the dial is already prose, not buttons (49cf873).</p>
+      ${rowsFor('world')}</div>`;
+  return `${masthead()}<div class="board"><h1 class="boardtitle">The Lens</h1>
+    <div class="dialcard"><h2>Your ring</h2>
+      <div class="dialrow">
+        ${['World','Following','Mutuals','Mutuals +1'].map((l,i)=>
+          `<button class="btnsm${i===0?' active':''}">${l}</button>`).join('')}
+      </div>
+      <div class="dialnote">World is everyone; Following is your timeline; Mutuals is follows ∩ followers; +1 adds who they follow.</div>
+    </div>
+    <p class="hint">The dial is a card on this page only. It resets on reload, and six of the seven other lens pages never see it.</p>
+    ${rowsFor('world')}</div>`;
+}
+function render(){
+  let html;
+  if(state.what==='today'){ html=today(); }
+  else if(state.who==='out'){
+    // 49cf873: signed out the controls a guest cannot use are ABSENT, not greyed.
+    // One half is not a strip, so there is no strip at all until there is a session.
+    html=masthead()+`<div class="board">
+      <div class="dialcard" style="border-color:var(--brand-ink)">
+        <h2>Forage</h2>
+        <div style="font-size:var(--t-sm)">Your Bluesky, shaped as a forum. Signed out, the lens is read-only.</div>
+        <div class="dialnote">With an account you get your own ring &mdash; following, mutuals, and one step past them &mdash; plus joining and favouriting feeds, liking posts, and posting and replying.</div>
+      </div>`+ringProse()+discoverBoard().replace('<div class="board">','<div>')+`</div>`;
+  }
+  else { html=masthead()+strip()+board(); }
+  for(const id of ['appPhone','appDesk']){
+    const el=document.getElementById(id);
+    el.innerHTML=html; el.dataset.skin=state.skin;
+  }
+  document.querySelectorAll('#segWhat button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.what===state.what));
+  document.querySelectorAll('#segWho button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.who===state.who));
+  document.querySelectorAll('#segSkin button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.skin===state.skin));
+}
+document.addEventListener('click',e=>{
+  const seg=e.target.closest('#segWhat button,#segWho button,#segSkin button');
+  if(seg){const d=seg.dataset;
+    if(d.what)state.what=d.what; if(d.who){state.who=d.who;state.open=false;} if(d.skin)state.skin=d.skin;
+    return render();}
+  const half=e.target.closest('.half');
+  if(half){
+    if(half.dataset.half==='ladder'){ state.tab='ladder'; state.open=!state.open; }
+    else { state.tab='discover'; state.open=false; }
+    return render(); }
+  const rung=e.target.closest('.rung');
+  if(rung&&!rung.disabled){state.rung=rung.dataset.rung;state.tab='ladder';state.open=false;return render();}
+  if(state.open){state.open=false;render();}
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&state.open){state.open=false;render();}});
+render();
+</script>
