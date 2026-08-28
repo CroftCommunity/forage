@@ -231,7 +231,6 @@ kbd { background: var(--green-100); border: 1px solid var(--border); border-radi
 }
 .vote:hover { background: var(--green-100); }
 .vote.boost.on { color: var(--boost); }
-.vote.bury.on  { color: var(--bury); }
 .score { font-size: var(--t-sm); font-weight: 600; }
 .posttitle { font-size: var(--t-md); font-weight: 600; }
 .posttitle a { color: var(--text); }
@@ -302,7 +301,6 @@ kbd { background: var(--green-100); border: 1px solid var(--border); border-radi
 /* ---- Vote control on comments ---- */
 .cvote { border: none; background: none; cursor: pointer; color: var(--ink-soft); font-size: 13px; padding: 0 2px; }
 .cvote.boost.on { color: var(--boost); }
-.cvote.bury.on { color: var(--bury); }
 
 /* ---- Notices ---- */
 .notice { border: 1px solid var(--border); border-radius: var(--radius-card); padding: var(--s3); margin-bottom: var(--s3); font-size: var(--t-sm); }

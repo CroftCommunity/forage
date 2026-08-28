@@ -352,7 +352,9 @@ const chip = (label, title) => el('span', { class: 'frontier-chip', title }, lab
 // then the 'gated' signal so voteBox reverts silently.
 function lensVote(p) {
   return async (next) => {
-    if (next === -1) { toast('Bury has no Bluesky analogue — boosts ride likes (DL-011).', 'err'); throw new Error('gated'); }
+    // The `next === -1` branch and its DL-011 toast are gone with the control
+    // that produced them (plan 2026-08-27-1). Nothing in the app can send -1
+    // now; js/schema.js is what stops anything else from doing so (Phase 5).
     if (next === 1) {
       const { likeUri } = await lens.like(p.id, p.cid);
       p.likeUri = likeUri; // so an immediate unboost knows its rkey

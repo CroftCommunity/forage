@@ -48,7 +48,12 @@
   --on-brand:    #FFFFFF;   /* text on brand-fill */
 
   --boost:       #41724A;   /* boost-active */
-  --bury:        #A24D2C;   /* bury-active, controversial, limits */
+  /* Was "bury-active, controversial, limits". Downvotes are gone (plan
+     2026-08-27-1) and Controversial goes with them, so the only role left is
+     the rate-limit notice. The TOKEN keeps its name for now because six skins
+     declare it; renaming it is a six-file sweep for a word, and the comment is
+     what stops the next reader looking for a downvote to match it. */
+  --bury:        #A24D2C;   /* limits (the rate-limit notice) */
   --tint:        #EAEFDF;   /* moss tint: joined chip, active-tab bg */
 
   --gold-500:    #C99A3C;   /* gold for fills/borders (pins, steward, tags) */

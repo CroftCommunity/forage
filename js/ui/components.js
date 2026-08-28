@@ -57,8 +57,18 @@ export function voteBox(subjectType, id, data, canVote, orientation = 'col', onV
     scoreEl.setAttribute('aria-label', `${n} ${n === 1 ? 'boost' : 'boosts'}`);
     return el('div', { class: 'votebox', 'data-readonly': '1' }, scoreEl);
   }
+  // Owner, 2026-08-27: there is no downvote. It could never work on the lens
+  // (Bluesky has likes and no dislikes — DL-011) and the owner judged it not
+  // worth its surface area in the sandbox. Removing it makes the two
+  // populations AGREE, which is what lets DL-011 retire instead of being
+  // carried forever.
+  //
+  // `apply` still takes a target and still computes `next` by toggling, rather
+  // than being collapsed to a boolean. That is deliberate: the score
+  // arithmetic (`prevScore - prevVote + next`) is what makes un-boosting
+  // correct, and rewriting it around a single value is a change to working
+  // code that this removal does not need.
   const boost = el('button', { class: 'vote boost' + (data.myVote === 1 ? ' on' : ''), title: 'Boost', 'aria-label': 'Boost' }, '▲');
-  const bury = el('button', { class: 'vote bury' + (data.myVote === -1 ? ' on' : ''), title: 'Bury', 'aria-label': 'Bury' }, '▼');
   let myVote = data.myVote, score = data.score;
 
   const apply = async (target) => {
@@ -68,7 +78,6 @@ export function voteBox(subjectType, id, data, canVote, orientation = 'col', onV
     // optimistic paint
     myVote = next; score = prevScore - prevVote + next;
     boost.classList.toggle('on', next === 1);
-    bury.classList.toggle('on', next === -1);
     scoreEl.textContent = fmtScore(score);
     try {
       if (onVote) await onVote(next, prevVote);
@@ -78,14 +87,12 @@ export function voteBox(subjectType, id, data, canVote, orientation = 'col', onV
       // revert (the "fills green then reverts" path with Fail Next armed)
       myVote = prevVote; score = prevScore;
       boost.classList.toggle('on', prevVote === 1);
-      bury.classList.toggle('on', prevVote === -1);
       scoreEl.textContent = fmtScore(prevScore);
       if (e.message !== 'gated' && e.message !== 'banned') toast('Vote failed — reverted.', 'err');
     }
   };
   boost.addEventListener('click', () => apply(1));
-  bury.addEventListener('click', () => apply(-1));
-  return el('div', { class: 'votebox' }, boost, scoreEl, bury);
+  return el('div', { class: 'votebox' }, boost, scoreEl);
 }
 
 // ---------- badges ----------
@@ -170,7 +177,7 @@ export function commentNode(node, ctx) {
   const actionsRow = el('div', { class: 'comment-actions' });
   if (!node.maskedRemoved && !node.deleted) {
     const vb = miniVote('comment', node.id, node, ctx.canVote);
-    actionsRow.append(vb.up, vb.score, vb.down);
+    actionsRow.append(vb.up, vb.score);
     if (ctx.canComment && !ctx.locked) actionsRow.append(replyButton(node, ctx));
     actionsRow.append(saveButton('comment', node.id, node.saved, ctx));
     if (ctx.canReport) actionsRow.append(reportButton('comment', node.id, ctx));
@@ -228,22 +235,23 @@ function countDesc(node) {
 }
 
 function miniVote(type, id, data, canVote) {
+  // The SECOND vote control (voteBox is the first). Two implementations of one
+  // idea is why the plan named "fix one and ship" as the likely mistake here,
+  // and why e2e/no-downvote.workflow.mjs visits a comment as well as a row.
   const score = el('span', {}, `${fmtScore(data.score)}`);
   let my = data.myVote, sc = data.score;
   const up = el('button', { class: 'cvote boost' + (my === 1 ? ' on' : '') }, '▲');
-  const down = el('button', { class: 'cvote bury' + (my === -1 ? ' on' : '') }, '▼');
   const apply = async (t) => {
     if (!canVote) { toast('Log in to vote.', 'err'); return; }
     const pv = my, ps = sc, next = my === t ? 0 : t;
     my = next; sc = ps - pv + next;
-    up.classList.toggle('on', next === 1); down.classList.toggle('on', next === -1); score.textContent = fmtScore(sc);
+    up.classList.toggle('on', next === 1); score.textContent = fmtScore(sc);
     try { await actions.setVote(type, id, next); }
-    catch (e) { my = pv; sc = ps; up.classList.toggle('on', pv === 1); down.classList.toggle('on', pv === -1); score.textContent = fmtScore(ps);
+    catch (e) { my = pv; sc = ps; up.classList.toggle('on', pv === 1); score.textContent = fmtScore(ps);
       if (e.message !== 'gated' && e.message !== 'banned') toast('Vote failed — reverted.', 'err'); }
   };
   up.addEventListener('click', () => apply(1));
-  down.addEventListener('click', () => apply(-1));
-  return { up, down, score };
+  return { up, score };
 }
 
 function replyButton(node, ctx) {

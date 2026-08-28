@@ -53,7 +53,9 @@ function limitsSidebar() {
 }
 
 // ---------- feeds ----------
-const SORTS = ['hot', 'new', 'top', 'controversial', 'rising'];
+// Controversial is gone with downvotes (plan 2026-08-27-1) — it was the only
+// sort DEFINED by the up/down split, so it has no one-sided form.
+const SORTS = ['hot', 'new', 'top', 'rising'];
 export function boardView(scope, title, query) {
   const sort = query.sort || (S().users[V()]?.prefs?.defaultSort ?? 'hot');
   const data = sel.board(S(), V(), scope, sort, 'all', NOW());
@@ -171,8 +173,12 @@ export function threadView(params, query) {
   // comments
   const ctx = { canVote: t.perms.canVote, canComment: t.perms.canComment, canReport: t.perms.canReport,
     canModerate: t.perms.canModerate, locked: t.locked, feedId: p.feedId, feedSlug: p.feedSlug };
+  // A SECOND sort list, for comments inside a thread. The plan's phase list
+  // named only the board's `SORTS`; this one was found by grepping rather than
+  // by reading the plan, and it is the kind of duplicate a phase list assembled
+  // from a description reliably misses.
   const sortRow = tabs([['Best', `/f/${p.feedSlug}/p/${p.id}?sort=best`], ['Top', `/f/${p.feedSlug}/p/${p.id}?sort=top`],
-    ['New', `/f/${p.feedSlug}/p/${p.id}?sort=new`], ['Controversial', `/f/${p.feedSlug}/p/${p.id}?sort=controversial`]],
+    ['New', `/f/${p.feedSlug}/p/${p.id}?sort=new`]],
     (query.sort || 'best'));
   main.append(el('div', { class: 'card' },
     el('div', { class: 'row spread' }, el('h2', {}, `${t.total} comments`), null), sortRow,

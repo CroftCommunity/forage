@@ -144,7 +144,11 @@ export function board(state, viewerId, scope, sort = 'hot', timeframe = 'all', n
     return true;
   });
 
-  if (timeframe !== 'all' && (sort === 'top' || sort === 'controversial')) {
+  // `top` alone now — the timeframe window applied to the two score-ranked
+  // sorts, and controversial is gone (plan 2026-08-27-1). Not in that plan's
+  // declared write-set for this phase, but a dead sort name left in a live
+  // condition is precisely the residue the change exists to remove.
+  if (timeframe !== 'all' && sort === 'top') {
     const cutoff = now * 1000 - timeframeMs(timeframe);
     posts = posts.filter((p) => p.createdTs >= cutoff);
   }
