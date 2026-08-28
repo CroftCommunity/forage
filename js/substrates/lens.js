@@ -228,9 +228,16 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
         ? { kind: 'external', thumb: mediaEmb.external.thumb, uri: mediaEmb.external.uri,
             title: mediaEmb.external.title || null }
         : undefined;
-  // an image/video-only post titles from its alt text, never renders blank
+  // an image/video-only post titles from its alt text, never renders blank.
+  // When even the alt is missing the title is a PLACEHOLDER — a name for
+  // surfaces that cannot show the media (compact rows, the thread head) —
+  // and the shaper says so, because a surface that renders the media itself
+  // shows "[image]" above the actual image otherwise (live 2026-08-28).
+  const altTitle = media?.items?.find((i) => i.alt)?.alt;
+  const placeholder = !text && !altTitle
+    && (media?.kind === 'images' || media?.kind === 'video');
   const displayTitle = text
-    || media?.items?.find((i) => i.alt)?.alt
+    || altTitle
     || (media?.kind === 'images' ? '[image]' : media?.kind === 'video' ? '[video]' : text);
   return {
     ...base,
@@ -241,6 +248,7 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
     // their title (300/300). Thread/comment rendering keeps using body.
     preview: text && external?.uri ? text : '',
     ...(media ? { media } : {}),
+    ...(placeholder ? { placeholderTitle: true } : {}),
     ...(quoted ? { quoted } : {}),
     ...(disp?.mode === 'warn' ? { warnLabels: disp.labels } : {}),
   };
