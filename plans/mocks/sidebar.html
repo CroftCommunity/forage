@@ -1,0 +1,290 @@
+<title>Forage Sidebar Landings</title>
+<style>
+:root{
+  --page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;
+  --page-line:#DED5C4;--page-accent:#33623A;
+  --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-display:ui-serif,Georgia,"Times New Roman",serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --page-bg:#1C1813;--page-card:#262019;--page-ink:#EFE7D9;--page-muted:#B5A88F;
+  --page-line:#3D3527;--page-accent:#A5CD98;}}
+:root[data-theme="dark"]{
+  --page-bg:#1C1813;--page-card:#262019;--page-ink:#EFE7D9;--page-muted:#B5A88F;
+  --page-line:#3D3527;--page-accent:#A5CD98;}
+*{box-sizing:border-box}
+body{background:var(--page-bg);color:var(--page-ink);font-family:var(--f-body);
+  line-height:1.55;margin:0;padding:30px 20px 70px}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:26px}
+h1{font-family:var(--f-display);font-size:29px;font-weight:600;margin:0;text-wrap:balance}
+.sub{color:var(--page-muted);font-size:15px;max-width:66ch;margin:0}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+.note{border-left:2px solid var(--page-accent);padding-left:14px;color:var(--page-muted);font-size:14px;max-width:72ch}
+.controls{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-end;background:var(--page-card);
+  border:1px solid var(--page-line);border-radius:8px;padding:15px 18px}
+.cgroup{display:flex;flex-direction:column;gap:7px}
+.seg{display:flex;border:1px solid var(--page-line);border-radius:6px;overflow:hidden}
+.seg button{font:inherit;font-size:13px;padding:9px 14px;min-height:44px;background:transparent;
+  color:var(--page-ink);border:0;border-right:1px solid var(--page-line);cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--page-accent);color:var(--page-card)}
+.seg button:focus-visible{outline:2px solid var(--page-accent);outline-offset:-2px}
+.stage{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+.device{display:flex;flex-direction:column;gap:8px;min-width:0}
+.device-label{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+.screen{border:1px solid var(--page-line);border-radius:10px;overflow:hidden;position:relative;
+  box-shadow:0 1px 3px rgba(0,0,0,.10),0 8px 24px rgba(0,0,0,.06)}
+.phone .screen{width:390px;height:620px;overflow-y:auto}
+.desk{flex:1;min-width:470px}
+
+/* ---------- FORAGE tokens, verbatim ---------- */
+.app{--bg:#F8F4EC;--card:#FFFFFF;--card-2:#F2EDE2;--text:#2B251C;--muted:#68604F;
+  --border:#E3DCCD;--link:#38683F;--brand-ink:#33623A;--brand-fill:#41724A;--on-brand:#fff;
+  --tint:#EAEFDF;--gold-strong:#7A6110;--gold-500:#C99A3C;--boost:#41724A;
+  --t-xs:13px;--t-sm:14px;--t-md:16px;--t-lg:20px;--radius-card:6px;
+  background:var(--bg);color:var(--text);font-size:var(--t-md);position:relative;
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.app[data-skin="dark"]{--bg:#262019;--card:#31291F;--card-2:#3B3226;--text:#EFE7D9;
+  --muted:#B5A88F;--border:#4C4232;--link:#A5CD98;--brand-ink:#A5CD98;--tint:#3A392A;
+  --gold-strong:#E2BC64;--gold-500:#D4A94E;--boost:#8FC48A}
+
+.masthead{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--card);
+  border-bottom:1px solid var(--border);min-height:61px;position:sticky;top:0;z-index:6}
+.burger{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:var(--radius-card);
+  width:44px;height:44px;cursor:pointer;font-size:16px;padding:0;flex:none}
+.wordmark{font-family:ui-serif,Georgia,serif;font-size:var(--t-lg);color:var(--brand-ink);
+  font-weight:700;display:flex;align-items:center;gap:8px}
+.glyph{width:28px;height:28px;border-radius:50%;background:var(--tint);display:grid;place-items:center;font-size:15px}
+.who{margin-left:auto;display:flex;gap:11px;align-items:center;font-size:var(--t-sm)}
+.who a{color:var(--link);text-decoration:none}
+.themetoggle{border:1px solid var(--border);background:var(--card);color:var(--text);
+  border-radius:var(--radius-card);width:30px;height:30px;cursor:pointer;font-size:13px;padding:0}
+
+/* ---------- shell ---------- */
+.shell{display:grid;gap:0}
+.desk .shell{grid-template-columns:210px 1fr}
+.nav{border-right:1px solid var(--border);background:var(--card);padding:10px 0;min-height:520px}
+.phone .nav{position:absolute;top:61px;left:0;bottom:0;width:262px;z-index:5;
+  border-right:1px solid var(--border);box-shadow:6px 0 24px rgba(0,0,0,.18)}
+.phone .nav[hidden]{display:none}
+.scrim{position:absolute;inset:61px 0 0 0;background:rgba(0,0,0,.34);z-index:4}
+.scrim[hidden]{display:none}
+.navsec{font-size:10px;text-transform:uppercase;letter-spacing:.10em;color:var(--muted);
+  font-weight:700;padding:12px 14px 5px}
+.navitem{display:flex;align-items:center;gap:9px;width:100%;text-align:left;font:inherit;
+  font-size:var(--t-sm);background:none;border:0;cursor:pointer;color:var(--text);
+  padding:0 14px;min-height:44px;text-decoration:none}
+.navitem:hover{background:var(--card-2)}
+.navitem[aria-current="page"]{background:var(--tint);color:var(--brand-ink);font-weight:600;
+  box-shadow:inset 3px 0 0 var(--brand-ink)}
+.navitem:focus-visible{outline:2px solid var(--brand-ink);outline-offset:-2px}
+.navitem .ico{width:17px;text-align:center;opacity:.8;flex:none}
+.navrule{border:0;border-top:1px solid var(--border);margin:9px 0}
+.navnote{padding:6px 14px 10px;font-size:11px;color:var(--muted)}
+.content{min-width:0;padding:12px}
+
+/* ---------- board, mirroring css/app.css ---------- */
+h1.boardtitle{font-family:ui-serif,Georgia,serif;font-size:var(--t-lg);margin:0 0 3px;color:var(--text)}
+.hint{font-size:var(--t-xs);color:var(--muted);margin:0 0 12px}
+.postrow{display:grid;grid-template-columns:40px 1fr;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.postrow:last-child{border-bottom:0}
+.votebox{display:flex;flex-direction:column;align-items:center;gap:2px}
+.vote{border:1px solid var(--border);background:var(--card);color:var(--muted);border-radius:var(--radius-card);
+  width:28px;height:28px;cursor:pointer;font-size:13px;padding:0;line-height:1}
+.score{font-size:var(--t-sm);font-weight:600}
+.posttitle{font-size:var(--t-md);line-height:1.3;margin:2px 0 3px}
+.posttitle a{color:var(--link);text-decoration:none}
+.clamp{font-size:var(--t-sm);opacity:.92;margin-bottom:4px}
+.postmeta{font-size:11px;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px}
+.postmeta a{color:var(--muted);text-decoration:none;border-bottom:1px solid var(--border)}
+.tag{display:inline-block;border-radius:999px;padding:1px 9px;font-size:var(--t-xs);
+  background:color-mix(in srgb,var(--gold-500) 18%,var(--card));color:var(--gold-strong);
+  border:1px solid color-mix(in srgb,var(--gold-500) 45%,transparent)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-card);
+  padding:12px;margin-bottom:10px}
+.card h2{font-family:ui-serif,Georgia,serif;font-size:var(--t-md);margin:0 0 8px}
+.stackrow{display:flex;justify-content:space-between;gap:10px;padding:5px 0;font-size:var(--t-sm)}
+.stackrow a{color:var(--link);text-decoration:none}
+.stackrow span{color:var(--muted);font-size:11px}
+.xsmuted{font-size:11px;color:var(--muted)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px}
+.callout{background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:16px 18px}
+.callout h3{font-family:var(--f-display);font-size:17px;margin:0 0 7px;font-weight:600}
+.callout p{margin:0;font-size:14px;color:var(--page-muted)}
+.callout b{color:var(--page-ink);font-weight:600}
+</style>
+
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:10px">
+    <span class="eyebrow">Forage · design mockup, not the running app</span>
+    <h1>Two answers to “what does the front page show?”</h1>
+    <p class="sub">Same sidebar in both. The only difference is where <code>/</code> lands. Everything in the nav is a <b>board</b> — a list of posts — and boards differ only in where the posts come from: a feed generator, a hashtag, or your own graph at some reach. On the phone, tap ☰.</p>
+  </header>
+
+  <div class="controls">
+    <div class="cgroup"><span class="eyebrow">Landing</span>
+      <div class="seg" id="segLand">
+        <button data-land="directory" aria-pressed="true">1 · Directory</button>
+        <button data-land="board" aria-pressed="false">2 · Default board</button>
+      </div></div>
+    <div class="cgroup"><span class="eyebrow">Session</span>
+      <div class="seg" id="segWho">
+        <button data-who="out" aria-pressed="false">Signed out</button>
+        <button data-who="in" aria-pressed="true">Signed in</button>
+      </div></div>
+    <div class="cgroup"><span class="eyebrow">Skin</span>
+      <div class="seg" id="segSkin">
+        <button data-skin="light" aria-pressed="true">Light</button>
+        <button data-skin="dark" aria-pressed="false">Dark</button>
+      </div></div>
+  </div>
+
+  <div class="stage">
+    <div class="device phone"><span class="device-label">Phone · 390px</span>
+      <div class="screen"><div class="app" id="appPhone"></div></div></div>
+    <div class="device desk"><span class="device-label">Desktop</span>
+      <div class="screen"><div class="app" id="appDesk"></div></div></div>
+  </div>
+
+  <p class="note">On the phone the nav is a drawer: it costs <b>nothing</b> until you open it, where the two-half strip always cost a row. That is a better answer to “usable but not intrusive” than the strip ever had.</p>
+
+  <div class="cols">
+    <div class="callout"><h3>1 · Directory</h3>
+      <p>What you described: trending, then topics, then a feed’s posts. You arrive somewhere neutral and choose. <b>Good for a guest</b>, who has no history worth remembering — and identical signed in or out, so there is one front page to design.</p></div>
+    <div class="callout"><h3>2 · Default board</h3>
+      <p>You land on the board you were last reading, marked in the nav. <b>Good for a regular</b> — no click between opening the app and reading. The directory still exists, at <code>/feeds</code>, where it already lives today.</p></div>
+    <div class="callout"><h3>Why not both</h3>
+      <p>They can be: <b>directory for a guest, last board for a regular</b>. That costs one rule and one stored value, and it is what Reddit does. Flip Session on either landing to see the pair.</p></div>
+  </div>
+</div>
+
+<script>
+const RUNGS=[['me','Just me','◦'],['mut','My mutuals','◆'],['fol','My follows','●'],
+             ['hop','My follows, one hop out','◐'],['world','World','◍']];
+const FEEDS_IN=[['whats-hot','Discover','feed'],['bsky.app','Bluesky','author'],['science','Science','feed']];
+const FEEDS_OUT=[['whats-hot','Discover','feed'],['bsky.app','Bluesky','author']];
+const TAGS=['harvest','foraging'];
+const TREND=[['Quince season','412 posts'],['Sourdough','288 posts'],['Mycology','196 posts'],
+             ['Preserving','154 posts'],['Wild greens','97 posts']];
+const P={
+ me:[['Third attempt at a 1:2:3 starter ratio','you','2h','sourdough',18,4,'Cooler proof, longer autolyse.']],
+ mut:[['The rye loaf finally held its shape','wren.bsky.social','40m','baking',31,7,'Photos when it cools.'],
+      ['Chanterelles on the north ridge trail','juniper.bsky.social','3h','foraging',54,12,'']],
+ fol:[['The rye loaf finally held its shape','wren.bsky.social','40m','baking',31,7,'Photos when it cools.'],
+      ['Is the feed generator lagging for anyone else?','moss.bsky.social','1h','atproto',9,3,''],
+      ['Chanterelles on the north ridge trail','juniper.bsky.social','3h','foraging',54,12,'']],
+ hop:[['A field guide that finally gets lookalikes right','alder.bsky.social','12m','foraging',22,5,'Three of your mutuals follow them; you do not.'],
+      ['The rye loaf finally held its shape','wren.bsky.social','40m','baking',31,7,'']],
+ world:[['Autumn harvest roundup, week 34','fernwatch','8m','feeds',140,26,'From a feed you follow.'],
+        ['Anyone preserving quince this year?','tallow.bsky.social','22m','harvest',12,8,''],
+        ['The rye loaf finally held its shape','wren.bsky.social','40m','baking',31,7,'']],
+ 'whats-hot':[['The one-pot method that actually works','saffron.bsky.social','5m','cooking',820,140,''],
+        ['Photographing fungi without a macro lens','lichen.bsky.social','30m','mycology',415,62,''],
+        ['Autumn harvest roundup, week 34','fernwatch','1h','feeds',140,26,'']]
+};
+const HINT={me:'1 post — just yours.',mut:'2 posts from 2 mutuals.',fol:'3 posts from 3 people you follow.',
+ hop:'2 posts — one reached through a mutual.',world:'3 posts — everything in your composition.',
+ 'whats-hot':"Bluesky's own algorithmic feed. Its network name is Discover."};
+const TITLE={me:'Just me',mut:'My mutuals',fol:'My follows',hop:'My follows, one hop out',
+ world:'World','whats-hot':'Discover'};
+let state={land:'directory',who:'in',skin:'light',sel:'mut',drawer:false};
+
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const plural=(n,w,pl)=>`${n} ${n===1?w:(pl||w+'s')}`;
+function voteBox(l){
+  if(state.who==='out') return `<div class="votebox"><div class="score" role="img" aria-label="${plural(l,'like')}">${l}</div></div>`;
+  return `<div class="votebox"><button class="vote" aria-label="Like">▲</button><div class="score">${l}</div></div>`;
+}
+function rows(k){
+  return (P[k]||[]).map(([t,a,age,slug,l,c,b])=>
+   `<div class="postrow">${voteBox(l)}<div>
+      <div class="posttitle"><a href="#">${esc(t)}</a></div>
+      ${b?`<div class="clamp">${esc(b)}</div>`:''}
+      <div style="margin-bottom:5px"><span class="tag">${esc(slug)}</span></div>
+      <div class="postmeta"><a href="#">f/${esc(slug)}</a><span>by ${esc(a)}</span>
+        <span>${esc(age)} ago</span><a href="#">${plural(c,'comment')}</a></div>
+    </div></div>`).join('');
+}
+function nav(isPhone){
+  const cur=id=>state.sel===id?' aria-current="page"':'';
+  const feeds=state.who==='in'?FEEDS_IN:FEEDS_OUT;
+  let h='';
+  if(state.who==='in'){
+    h+=`<div class="navsec">Your ring</div>`+
+       RUNGS.map(([id,label,ico])=>
+        `<button class="navitem" data-sel="${id}"${cur(id)}><span class="ico">${ico}</span>${label}</button>`).join('');
+  }
+  h+=`<div class="navsec">Feeds</div>`+
+     feeds.map(([slug,title])=>
+      `<button class="navitem" data-sel="${slug}"${cur(slug)}><span class="ico">▦</span>${title}</button>`).join('');
+  if(state.who==='in')
+    h+=`<div class="navsec">Hashtags</div>`+
+       TAGS.map(t=>`<button class="navitem" data-sel="tag-${t}"${cur('tag-'+t)}><span class="ico">#</span>${t}</button>`).join('');
+  h+=`<hr class="navrule">
+      <button class="navitem" data-sel="directory"${cur('directory')}><span class="ico">✧</span>Trending</button>
+      <button class="navitem" data-sel="feeds"${cur('feeds')}><span class="ico">☷</span>Browse all feeds</button>`;
+  if(state.who==='out')
+    h+=`<div class="navnote">Rings need your own follow graph, so they appear once you sign in.</div>`;
+  return `<nav class="nav"${isPhone&&!state.drawer?' hidden':''}>${h}</nav>`;
+}
+function directory(){
+  return `<div class="content">
+    <h1 class="boardtitle">Trending</h1>
+    <p class="hint">What is moving right now. Every one of these is a feed — tapping one opens it as a board.</p>
+    <div class="card"><h2>Top five</h2>
+      ${TREND.map(([t,c])=>`<div class="stackrow"><a href="#">${t}</a><span>${c}</span></div>`).join('')}</div>
+    <div class="card"><h2>Browse</h2>
+      ${(state.who==='in'?FEEDS_IN:FEEDS_OUT).map(([s,t,k])=>
+        `<div class="stackrow"><a href="#">f/${s}</a><span>${t} · ${k}</span></div>`).join('')}
+      ${state.who==='out'?'<div class="xsmuted" style="margin-top:6px">Guest boards. Sign in and these become your feeds.</div>':''}</div>
+    <h1 class="boardtitle" style="margin-top:16px">Discover</h1>
+    <p class="hint">${HINT['whats-hot']}</p>${rows('whats-hot')}</div>`;
+}
+function boardView(){
+  const k=state.sel;
+  if(k==='directory'||k==='feeds') return directory();
+  if(String(k).startsWith('tag-'))
+    return `<div class="content"><h1 class="boardtitle">#${k.slice(4)}</h1>
+      <p class="hint">Every post carrying this tag, newest first.</p>${rows('world')}</div>`;
+  return `<div class="content"><h1 class="boardtitle">${TITLE[k]||k}</h1>
+    <p class="hint">${HINT[k]||''}</p>${rows(k)}</div>`;
+}
+function masthead(isPhone){
+  return `<div class="masthead">
+    ${isPhone?`<button class="burger" data-burger="1" aria-label="Open navigation" aria-expanded="${state.drawer}">☰</button>`:''}
+    <span class="wordmark"><span class="glyph">🍂</span>Forage</span>
+    <span class="who"><button class="themetoggle">${state.skin==='dark'?'☀':'☾'}</button>
+      <a href="#">Settings</a>
+      ${state.who==='in'?'<a href="#">cpettet.bsky.social</a><a href="#">▾</a>':'<a href="#">Sign in</a>'}
+    </span></div>`;
+}
+function render(){
+  for(const [id,isPhone] of [['appPhone',true],['appDesk',false]]){
+    const el0=document.getElementById(id);
+    const body=state.land==='directory'&&state.sel==='mut'?directory():boardView();
+    el0.innerHTML=masthead(isPhone)+
+      (isPhone?`<div class="scrim"${state.drawer?'':' hidden'}></div>`:'')+
+      `<div class="shell">${nav(isPhone)}${body}</div>`;
+    el0.dataset.skin=state.skin;
+  }
+  for(const g of ['segLand','segWho','segSkin'])
+    document.querySelectorAll('#'+g+' button').forEach(b=>{
+      const k=Object.keys(b.dataset)[0];
+      b.setAttribute('aria-pressed', b.dataset[k]===state[k==='land'?'land':k]);
+    });
+}
+document.addEventListener('click',e=>{
+  const seg=e.target.closest('#segLand button,#segWho button,#segSkin button');
+  if(seg){const d=seg.dataset;
+    if(d.land){state.land=d.land; state.sel=d.land==='directory'?'mut':'mut';}
+    if(d.who){state.who=d.who; state.drawer=false; if(d.who==='out')state.sel='whats-hot'; else state.sel='mut';}
+    if(d.skin)state.skin=d.skin;
+    return render();}
+  if(e.target.closest('[data-burger]')){state.drawer=!state.drawer;return render();}
+  if(e.target.closest('.scrim')){state.drawer=false;return render();}
+  const item=e.target.closest('.navitem');
+  if(item){state.sel=item.dataset.sel; state.land='board'; state.drawer=false; return render();}
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&state.drawer){state.drawer=false;render();}});
+render();
+</script>
