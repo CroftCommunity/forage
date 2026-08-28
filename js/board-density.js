@@ -12,7 +12,7 @@
 //
 // Device-local, like skin and mode; never forage.state.
 
-import { SKINS, activeSkin } from './skins.js';
+import { activeSkin, prefersDensityFor } from './skins.js';
 
 export const DENSITY_KEY = 'forage.boardview';
 export const DENSITIES = Object.freeze([['card', 'Card'], ['compact', 'Compact']]);
@@ -30,7 +30,11 @@ export function density() {
     const stored = localStorage.getItem(DENSITY_KEY);
     if (stored === 'compact' || stored === 'card') return stored;
   } catch { /* no storage: fall through to the skin, then the default */ }
-  const preferred = SKINS[activeSkin()]?.prefersDensity;
+  // Through the FAMILY, not the skin (plan 2026-08-26-2 Phase 1). It sat on
+  // each skin, so the two phpBB entries carried `compact` independently and
+  // nothing stopped them disagreeing — which would mean the ☾/☀ toggle silently
+  // re-laying-out the board. One home per family deletes that class.
+  const preferred = prefersDensityFor(activeSkin());
   return preferred === 'compact' || preferred === 'card' ? preferred : 'card';
 }
 

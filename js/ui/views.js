@@ -574,18 +574,36 @@ export function settingsView() {
   });
   // 4a: the skin picker — skins and modes are independent axes; any skin in
   // any mode. Device-local, like theme and front door.
-  // Grouped by palette so siblings read as a pair: with light and dark now in
-  // one flat list, "Forage (light)" and "Forage (dark)" sitting apart would
-  // look like two unrelated themes rather than two sides of one choice.
-  const optsFor = (want) => Object.entries(skins.SKINS)
-    .filter(([, s]) => s.palette === want)
-    .map(([id, s]) => el('option', { value: id, selected: skins.activeSkin() === id || false }, s.label));
+  //
+  // FAMILY-SHAPED (plan 2026-08-26-2 Phase 1, owner-decided). One row per style,
+  // not one per skin: four rows instead of seven. Grouping the flat list into
+  // Light and Dark optgroups was the previous attempt at the same problem and
+  // it made the wrong thing the choice — "Forage (light)" and "Forage (dark)"
+  // read as two unrelated themes in two separate lists, so picking a style
+  // meant knowing which half of the list you were allowed to look in. Here the
+  // row IS the style and the ☾/☀ toggle is the side.
+  //
+  // The MODEL did not change: `forage.skin` still stores one concrete skin id.
+  // This select's value is a FAMILY id, which is resolved to a skin on change
+  // — and the two namespaces overlap on bbs/usenet/phpbb, so nothing may read
+  // this value as a skin id.
+  const curFamily = skins.SKINS[skins.activeSkin()]?.family ?? null;
   const skinSel = el('select', { class: 'form', id: 'pref-skin' },
-    el('optgroup', { label: 'Light' }, ...optsFor('light')),
-    el('optgroup', { label: 'Dark' }, ...optsFor('dark')));
-  skinSel.addEventListener('change', () => skins.setSkin(skinSel.value));
+    ...skins.families().map((f) => el('option',
+      { value: f.id, 'data-family': f.id, selected: f.id === curFamily || false },
+      f.sole ? `${f.label} — ${f.dark ? 'dark' : 'light'} only` : f.label)));
+  skinSel.addEventListener('change', () => {
+    // The palette is read HERE rather than captured at render time: setSkin
+    // re-renders, and a captured value would be one change stale.
+    const palette = skins.SKINS[skins.activeSkin()]?.palette ?? 'light';
+    skins.setSkin(skins.resolveInFamily(skinSel.value, palette));
+  });
   const themeCard = el('div', { class: 'card' },
     fieldRow('Skin', skinSel),
+    // Say where the other half of the choice lives. Without this the picker
+    // silently lost four rows and nothing tells you the toggle gained them.
+    el('div', { class: 'xs muted', style: 'margin:-4px 0 8px' },
+      'Light or dark is the ☾ toggle in the top bar. A style that ships one palette says so.'),
     el('div', { class: 'field-row' }, el('label', {}, 'Mode'),
       el('a', { href: '/mode' }, 'Bluesky view ↔ Memory sandbox — choose at /mode')),
     el('div', { class: 'field-row' }, el('label', {}, 'Accounts'),

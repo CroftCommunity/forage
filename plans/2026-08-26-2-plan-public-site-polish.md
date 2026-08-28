@@ -8,8 +8,9 @@ Landed on `main` at `7113d87` / `67d8d3c`.
 - **Phase 2 SUPERSEDED** — not open here. It moved to
   `2026-08-26-3-plan-signed-out-front-door.md`, whose Phase A has itself landed. Read
   that plan's Status for the front-door work; nothing in Phase 2 below is actionable.
-- **Phase 1 OPEN** — the family-shaped skin picker. Design decisions settled with the
-  owner 2026-08-26 and recorded below; no code written.
+- **Phase 1 DONE 2026-08-27** — the family-shaped skin picker. Four style rows instead of
+  seven skins; `family` is canonical and `pairedWith` is gone; `prefersDensity` moved onto
+  the family. Execution notes at the end of this plan.
 - **Phase 3 OPEN** — gated controls read as gated. Verified still true on `main`
   2026-08-27: `ringDial` renders four identical `.btn sm` buttons and refuses with an
   error toast on click.
@@ -689,3 +690,65 @@ parallel-safe. Flagged for Pass 2 rather than acted on.
 **Open:** three questions, one BLOCKING (hide-vs-gate per control), one phase-gated
 (`prefersDensity`), one advisory (ledger row). None invented by me except the third; the
 first is the owner's own distinction applied to controls they had not seen enumerated.
+
+## Execution: Phase 1 — 2026-08-27
+
+**Shipped, all three sub-steps.** The picker lists four styles; the ☾/☀ toggle chooses the
+side; `forage.skin` still stores one concrete skin id, so the pre-paint boot scripts in
+`index.html`/`404.html` were not touched.
+
+**1a — the registry.** `family` is canonical, `pairedWith` deleted, `siblingOf` derived.
+That was the point of the sub-step and it is worth stating what it bought: the three
+failure classes `validatePairing` checked — asymmetric, dangling, self-paired — are now
+**structurally impossible** rather than caught, because there is no second place to write
+the relationship. Their four tests were **deleted, not ported**; a test for an impossible
+state is a test that can never fail. Deriving introduces exactly one new class (two
+same-palette skins in one family, where `siblingOf` would pick arbitrarily) and
+`validateFamilies` guards it.
+
+**The owner's naming rule is gated, not written down.** No family label may carry a palette
+word or a parenthetical. `Forage (light)` as a family row would lie about half of what it
+selects; the parenthetical ban is the proxy for "flavour", since `(amber terminal)` and
+`(newsprint)` describe one side. Skin labels keep their parentheticals — they name one
+palette, which is the whole point of them. PATTERN.md: a rule with no check decays into
+prose, and naming conventions decay fastest.
+
+**`prefersDensity` moved to the family**, which deletes a class rather than testing for it.
+Both phpBB entries carried `compact` independently and nothing stopped them disagreeing —
+a disagreement would have meant **the palette toggle silently re-laying-out the board**.
+`e2e/density.workflow.mjs`'s last assertion now says so where it happens.
+
+**1c — the workflow, and the trap the plan named.** `selectOption('bbs')` passes before and
+after this change **for different reasons**, because `bbs` is simultaneously a skin id and
+a family id. Every assertion reads the resolved `link#skin-sheet` href or the computed
+paint — except the one that reads the select value, which IS the feature: after toggling,
+the picker still shows the same style. Under the flat list, toggling moved your selection
+to a different row.
+
+**Three workflow assertions were wrong in the same way, and the way is instructive.** Each
+assumed a LIGHT starting palette that the family model no longer guarantees: picking Forage
+from Classic BBS lands on `forage-dark`, not on the light default, because the palette
+carries across families. That is the feature, and three tests written against the old model
+encoded "changing style resets you to light" without ever saying so. Fixed by threading the
+real palette through — which also gave the carry-across three independent assertions from
+three different origins.
+
+**Left as-is:** the Settings row is still labelled "Skin" though it now lists style
+families. The owner's vocabulary is "skin"; renaming it was not asked for and would churn
+the a11y and workflow selectors that name it.
+
+**Bite-tested, twice, because the plan's own trap warned that these assertions can survive
+a rewrite while proving nothing:**
+
+1. *Revert the picker to per-skin rows, family model intact underneath.* W4 dies — but by
+   `selectOption('forage')` finding no such option, which is a coarse kill and slow (each
+   miss burns a 30s actionability wait).
+2. *Keep the four family rows; hardcode the change handler's palette to `'light'`.* This is
+   the precise mutant, and it is the one worth reporting: picking Usenet gray while in dark
+   lands on `usenet` instead of `usenet-dark`. **The full W4 kills it by TIMEOUT** — the
+   wait for a `usenet-dark` href can never become true — which counts as a kill but takes
+   30s to say so. A five-second targeted probe gave the same verdict immediately, and both
+   directions were confirmed: mutant `usenet`, restored `usenet-dark`.
+
+**Gate:** 486 unit / 88 conformance / 14 workflows, 0 failures. Looked at on 390 and 1280;
+`a11y-skins` still clean over `/settings`.
