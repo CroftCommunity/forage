@@ -74,11 +74,11 @@ test('rising: velocity gate — exactly 2 votes/hour passes, below is -Infinity'
 
 // ---- sortItems ----
 
-test('sortItems: new is createdSec desc; top is boosts desc', () => {
+test('sortItems: new is createdSec desc; top is likes desc', () => {
   const items = [
-    { id: 'old', ups: 9, createdSec: EPOCH },
-    { id: 'mid', ups: 1, createdSec: EPOCH + 100 },
-    { id: 'new', ups: 3, createdSec: EPOCH + 200 },
+    { id: 'old', likes: 9, createdSec: EPOCH },
+    { id: 'mid', likes: 1, createdSec: EPOCH + 100 },
+    { id: 'new', likes: 3, createdSec: EPOCH + 200 },
   ];
   assert.deepStrictEqual(sortItems(items, 'new').map((i) => i.id), ['new', 'mid', 'old']);
   assert.deepStrictEqual(sortItems(items, 'top').map((i) => i.id), ['old', 'new', 'mid']);
@@ -87,8 +87,8 @@ test('sortItems: new is createdSec desc; top is boosts desc', () => {
 
 test('sortItems: unknown sort falls back to hot — and `controversial` is now unknown', () => {
   const items = [
-    { id: 'a', ups: 0, createdSec: EPOCH },
-    { id: 'b', ups: 5, createdSec: EPOCH },
+    { id: 'a', likes: 0, createdSec: EPOCH },
+    { id: 'b', likes: 5, createdSec: EPOCH },
   ];
   assert.deepStrictEqual(sortItems(items, 'nonsense').map((i) => i.id), ['b', 'a']);
   // The edge that matters to a person rather than to the engine: a shared link
@@ -195,8 +195,8 @@ test('sortItems: each sort key dispatches to ITS ranking (orders differ from hot
   const now = EPOCH + 200000;
   // top vs hot: newer low-score beats older high-score on hot, reverses on top
   const t = [
-    { id: 'lowNew', ups: 1, createdSec: EPOCH + 90000 },
-    { id: 'highOld', ups: 100, createdSec: EPOCH },
+    { id: 'lowNew', likes: 1, createdSec: EPOCH + 90000 },
+    { id: 'highOld', likes: 100, createdSec: EPOCH },
   ];
   assert.deepStrictEqual(sortItems(t, 'hot', now).map((i) => i.id), ['lowNew', 'highOld']);
   assert.deepStrictEqual(sortItems(t, 'top', now).map((i) => i.id), ['highOld', 'lowNew']);
@@ -208,15 +208,15 @@ test('sortItems: each sort key dispatches to ITS ranking (orders differ from hot
   // pair is ordered so at least one of them reverses it.
   // best vs top: Wilson favors volume over a single vote
   const b = [
-    { id: 'one', ups: 1, createdSec: EPOCH },     // confidence .378
-    { id: 'many', ups: 50, createdSec: EPOCH },   // confidence ~.96
+    { id: 'one', likes: 1, createdSec: EPOCH },     // confidence .378
+    { id: 'many', likes: 50, createdSec: EPOCH },   // confidence ~.96
   ];
   assert.deepStrictEqual(sortItems(b, 'best', now).map((i) => i.id), ['many', 'one']);
   assert.deepStrictEqual(sortItems(b, 'top', now).map((i) => i.id), ['many', 'one']);
   // rising vs hot: the old high-scorer is age-gated out of rising
   const r = [
-    { id: 'slowNew', ups: 2, createdSec: now - 3600 },
-    { id: 'fastOld', ups: 100, createdSec: now - 7 * 3600 },
+    { id: 'slowNew', likes: 2, createdSec: now - 3600 },
+    { id: 'fastOld', likes: 100, createdSec: now - 7 * 3600 },
   ];
   assert.deepStrictEqual(sortItems(r, 'hot', now).map((i) => i.id), ['fastOld', 'slowNew']);
   assert.deepStrictEqual(sortItems(r, 'rising', now).map((i) => i.id), ['slowNew', 'fastOld']);

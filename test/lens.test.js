@@ -39,7 +39,7 @@ test('a lens post carries every key the memory post shape has', () => {
   const missing = Object.keys(memoryShapes().post).filter((k) => !(k in shaped));
   assert.deepStrictEqual(missing, [], `lens post missing keys: ${missing}`);
   assert.equal(shaped.id, bskyPost.uri);            // the at-uri IS the lens id
-  assert.equal(shaped.ups, bskyPost.likeCount);     // DL: scores are likes-only
+  assert.equal(shaped.likes, bskyPost.likeCount);   // one number, and it IS the like count
   // The field is ABSENT, not zero. DL-011 retired when both populations
   // dropped downvotes; an always-zero field is what that tolerance excused.
   assert.equal('downs' in shaped, false);

@@ -335,7 +335,7 @@ export function profileView(params, query) {
 function profileComment(c) {
   return el('div', { class: 'postrow' }, el('div', {}),
     el('div', {}, el('div', { class: 'small', html: c.maskedRemoved ? '[removed]' : mdLite(c.body) }),
-      el('div', { class: 'postmeta' }, el('span', {}, `${fmtScore(c.score)} pts`), c.postTitle ? el('a', { href: `/f/x/p/${c.postId}` }, `on “${esc(c.postTitle).slice(0, 48)}”`) : null, el('span', {}, timeAgo(c.createdTs) + ' ago'))));
+      el('div', { class: 'postmeta' }, el('span', {}, `${fmtScore(c.likes)} ${c.likes === 1 ? 'like' : 'likes'}`), c.postTitle ? el('a', { href: `/f/x/p/${c.postId}` }, `on “${esc(c.postTitle).slice(0, 48)}”`) : null, el('span', {}, timeAgo(c.createdTs) + ' ago'))));
 }
 
 // ---------- notifications ----------

@@ -740,13 +740,13 @@ export function lensHomeView() {
     trendingRail(),
     el('div', { class: 'card' },
       el('p', { class: 'small' },
-        'Your Bluesky, shaped as a forum: feeds are the boards, threads are threads, and boosting IS liking — a boost here is a real like on Bluesky. Signed out, the lens is read-only.'),
+        'Your Bluesky, shaped as a forum: feeds are the boards, threads are threads, and a like here is a real like on Bluesky — the arrow promotes a post rather than reacting to it. Signed out, the lens is read-only.'),
       // It stated a limitation without naming one thing you would gain. The
       // controls a guest cannot use are ABSENT rather than dangled, so this is
       // where the answer to "what would an account get me" actually lives —
       // once, in prose, instead of six muted nags across every surface.
       ...(session ? [] : [el('p', { class: 'small', 'data-account-adds': '1' },
-        'With an account you get your own ring — following, mutuals, and one step past them — plus joining and favouriting feeds, boosting posts, and posting and replying. Forage has no accounts of its own; you bring one from Bluesky or any other atproto server.')]),
+        'With an account you get your own ring — following, mutuals, and one step past them — plus joining and favouriting feeds, liking posts, and posting and replying. Forage has no accounts of its own; you bring one from Bluesky or any other atproto server.')]),
       el('div', { class: 'row wrap', style: 'gap:6px' },
         ...(session ? [] : [chip('guest search: needs sign-in (DL-014)', 'searchPosts is 403 unauthenticated — probe-verified')]),
         chip('saves: deferred (DL-015)', 'Bookmarks are not public API surface yet'))),
@@ -896,7 +896,7 @@ function quoteNode(node, ctx) {
       el('span', { title: 'A quote-response: this author quoted the post above' }, '❝ '),
       node.author ? el('a', { href: `/u/${encodeURIComponent(node.author)}` }, node.author) : '[muted]',
       el('span', { class: 'muted' },
-        ` quoted ${node.depth ? 'that' : 'this'} · ${timeAgo(node.createdTs)} ago · ${fmtScore(node.score)} likes`)),
+        ` quoted ${node.depth ? 'that' : 'this'} · ${timeAgo(node.createdTs)} ago · ${fmtScore(node.likes)} likes`)),
     el('div', { class: 'quote-body' }, node.maskedRemoved ? el('span', { class: 'muted' }, node.title || '[muted]') : node.body),
     el('div', { class: 'xs quote-open' },
       el('a', { href: `/p?uri=${encodeURIComponent(node.quoteUri)}` }, 'open its thread ↳')),
@@ -1618,7 +1618,7 @@ export function lensThreadView(params, query) {
       el('h1', {}, p.title.slice(0, 300)),
       el('div', { class: 'postmeta' },
         p.author ? el('a', { href: `/u/${encodeURIComponent(p.author)}` }, p.author) : '[muted]',
-        ` · ${fmtScore(p.score)} likes · ${timeAgo(p.createdTs)} ago · ${p.commentCount} replies`),
+        ` · ${fmtScore(p.likes)} likes · ${timeAgo(p.createdTs)} ago · ${p.commentCount} replies`),
       // 3i: the poster's own 1/3-2/3-3/3 chain reads as the post body
       ...(t.selfThread || []).map((part) => el('div', { class: 'small', style: 'margin-top:8px' },
         ...facetSegments(part.text, part.facets).map((seg) => {

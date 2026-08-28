@@ -38,7 +38,7 @@ export function gate(msg) {
 // onVote (optional) replaces the memory-tier write path — the lens injects
 // its like/unlike here so policy stays out of this component (invariant 2).
 export function voteBox(subjectType, id, data, canVote, orientation = 'col', onVote = null) {
-  const scoreEl = el('div', { class: 'score' }, fmtScore(data.score));
+  const countEl = el('div', { class: 'score' }, fmtScore(data.likes));
   // Owner, 2026-08-27: a reader who cannot vote is not shown vote controls —
   // absent, not disabled, and never a control that summons a login. But the
   // SCORE stays: the arrow is an action you cannot take, the number is a fact,
@@ -52,10 +52,10 @@ export function voteBox(subjectType, id, data, canVote, orientation = 'col', onV
     // announces a bare "12" with nothing saying what twelve of. role="img" +
     // aria-label is the supported way to give a glyph-or-number its meaning
     // without adding visible chrome a reader did not ask for.
-    const n = data.score;
-    scoreEl.setAttribute('role', 'img');
-    scoreEl.setAttribute('aria-label', `${n} ${n === 1 ? 'boost' : 'boosts'}`);
-    return el('div', { class: 'votebox', 'data-readonly': '1' }, scoreEl);
+    const n = data.likes;
+    countEl.setAttribute('role', 'img');
+    countEl.setAttribute('aria-label', `${n} ${n === 1 ? 'like' : 'likes'}`);
+    return el('div', { class: 'votebox', 'data-readonly': '1' }, countEl);
   }
   // Owner, 2026-08-27: there is no downvote. It could never work on the lens
   // (Bluesky has likes and no dislikes — DL-011) and the owner judged it not
@@ -68,8 +68,13 @@ export function voteBox(subjectType, id, data, canVote, orientation = 'col', onV
   // arithmetic (`prevScore - prevVote + next`) is what makes un-boosting
   // correct, and rewriting it around a single value is a change to working
   // code that this removal does not need.
-  const boost = el('button', { class: 'vote boost' + (data.myVote === 1 ? ' on' : ''), title: 'Boost', 'aria-label': 'Boost' }, '▲');
-  let myVote = data.myVote, score = data.score;
+  // The glyph is an ARROW and never a heart (owner, 2026-08-27): a like here is
+  // a PROMOTION — it pushes the thing up a ranking — not an affection. The word
+  // and the shape have to agree about that, and a heart says the other thing.
+  // The `.vote.boost` class stays: it is internal, six skins style it, and
+  // renaming it would churn them for no reader's benefit.
+  const boost = el('button', { class: 'vote boost' + (data.myVote === 1 ? ' on' : ''), title: 'Like', 'aria-label': 'Like' }, '▲');
+  let myVote = data.myVote, score = data.likes;
 
   const apply = async (target) => {
     if (!canVote) { toast('Log in to vote.', 'err'); return; }
@@ -78,7 +83,7 @@ export function voteBox(subjectType, id, data, canVote, orientation = 'col', onV
     // optimistic paint
     myVote = next; score = prevScore - prevVote + next;
     boost.classList.toggle('on', next === 1);
-    scoreEl.textContent = fmtScore(score);
+    countEl.textContent = fmtScore(score);
     try {
       if (onVote) await onVote(next, prevVote);
       else await actions.setVote(subjectType, id, next);
@@ -87,12 +92,12 @@ export function voteBox(subjectType, id, data, canVote, orientation = 'col', onV
       // revert (the "fills green then reverts" path with Fail Next armed)
       myVote = prevVote; score = prevScore;
       boost.classList.toggle('on', prevVote === 1);
-      scoreEl.textContent = fmtScore(prevScore);
+      countEl.textContent = fmtScore(prevScore);
       if (e.message !== 'gated' && e.message !== 'banned') toast('Vote failed — reverted.', 'err');
     }
   };
   boost.addEventListener('click', () => apply(1));
-  return el('div', { class: 'votebox' }, boost, scoreEl);
+  return el('div', { class: 'votebox' }, boost, countEl);
 }
 
 // ---------- badges ----------
@@ -168,7 +173,7 @@ export function commentNode(node, ctx) {
   const note = el('span', { class: 'collapse-note' });
   const meta = el('div', { class: 'comment-meta' },
     author,
-    el('span', {}, `${fmtScore(node.score)} pts`),
+    el('span', {}, `${fmtScore(node.likes)} ${node.likes === 1 ? 'like' : 'likes'}`),
     el('span', {}, timeAgo(node.createdTs) + ' ago'),
     node.edited ? el('span', { class: 'muted' }, 'edited') : null,
     node.removed && ctx.canModerate ? el('span', { class: 'chip badge-nsfw' }, 'removed') : null,
@@ -240,9 +245,9 @@ function miniVote(type, id, data, canVote) {
   // The SECOND vote control (voteBox is the first). Two implementations of one
   // idea is why the plan named "fix one and ship" as the likely mistake here,
   // and why e2e/no-downvote.workflow.mjs visits a comment as well as a row.
-  const score = el('span', {}, `${fmtScore(data.score)}`);
-  let my = data.myVote, sc = data.score;
-  const up = el('button', { class: 'cvote boost' + (my === 1 ? ' on' : '') }, '▲');
+  const score = el('span', {}, `${fmtScore(data.likes)}`);
+  let my = data.myVote, sc = data.likes;
+  const up = el('button', { class: 'cvote boost' + (my === 1 ? ' on' : ''), title: 'Like', 'aria-label': 'Like' }, '▲');
   const apply = async (t) => {
     if (!canVote) { toast('Log in to vote.', 'err'); return; }
     const pv = my, ps = sc, next = my === t ? 0 : t;

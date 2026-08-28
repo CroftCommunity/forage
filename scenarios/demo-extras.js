@@ -52,6 +52,6 @@ export const demoExtras = {
     { seat: 'u_dove', probe: 'unread', args: {}, expect: 0 },
     { seat: null, probe: 'feedInfo2', args: { slug: 'gardening', key: 'memberCount' }, expect: 5 }, // sage, fern, thorn, aspen, moss
     { seat: null, probe: 'threadInfo', args: { postId: 'p_stress', key: 'total' }, expect: 40 },
-    { seat: null, probe: 'tally', args: { type: 'post', id: 'p_asp_guide' }, expect: { ups: 500, score: 500 } },
+    { seat: null, probe: 'tally', args: { type: 'post', id: 'p_asp_guide' }, expect: { likes: 500 } },
   ],
 };
