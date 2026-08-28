@@ -1,19 +1,22 @@
 # Plan: public-site polish — the queue behind "the main site in better shape"
 
-**Status:** IN FLIGHT. **Pass 1 run 2026-08-27** (this plan predates the phase-plan
-skill; Phases 1 and 3 now carry the template, the closed phases are left as the record).
-Landed on `main` at `7113d87` / `67d8d3c`.
-- **Phase 0 DONE** — sign-in fixed; live on forage.fyi at `forage-v40`.
-- **Phase 4 DONE** — curated names, `/feeds` → Browse feeds, LIVE drift check.
-- **Phase 2 SUPERSEDED** — not open here. It moved to
-  `2026-08-26-3-plan-signed-out-front-door.md`, whose Phase A has itself landed. Read
-  that plan's Status for the front-door work; nothing in Phase 2 below is actionable.
-- **Phase 1 DONE 2026-08-27** — the family-shaped skin picker. Four style rows instead of
-  seven skins; `family` is canonical and `pairedWith` is gone; `prefersDensity` moved onto
-  the family. Execution notes at the end of this plan.
-- **Phase 3 OPEN** — gated controls read as gated. Verified still true on `main`
-  2026-08-27: `ringDial` renders four identical `.btn sm` buttons and refuses with an
-  error toast on click.
+**Status: COMPLETE 2026-08-27.** Every phase is done or explicitly superseded; nothing
+here is actionable. (Pass 1 was run 2026-08-27 — this plan predates the phase-plan skill,
+so Phases 1 and 3 carry the template and the phases that closed earlier are left as the
+record.) Landed on `main` at `7113d87` / `67d8d3c` / `b9114f2` / `a4d09c5`.
+
+| Phase | State |
+|---|---|
+| 0 Sign-in | **DONE** — live at `forage-v40` |
+| 1 Family-shaped skin picker | **DONE 2026-08-27** — four style rows, `family` canonical, `pairedWith` gone, `prefersDensity` on the family. Notes at the end |
+| 2 Signed-out front door | **SUPERSEDED** — moved to `2026-08-26-3-plan-signed-out-front-door.md`, which is itself complete. Nothing in Phase 2 below is actionable |
+| 3 Guest surface | **DONE 2026-08-27, in its REVISED form** — hide, not gate (owner reversed the approach; see the revision block below). `ringDial` is prose signed out, the vote arrows, star and Join/Leave are absent, and the score survives. `e2e/guest-surface.workflow.mjs` is the gate |
+| 4 Curated names | **DONE** — names, Browse feeds, LIVE drift check |
+
+*This line was itself stale until 2026-08-28: it still read IN FLIGHT with Phase 3 OPEN,
+describing a `ringDial` that renders four buttons, after the hide-not-gate work had
+landed and replaced it. The same defect this file's own note below warns about, committed
+in this file, by appending a Phase 1 update instead of re-reading the whole line.*
 
 *Why this line is this specific:* a peer session read "Phases 1–3 open" from outside and
 could not tell whether Phase 2 was pending work or already superseded, nor whether the
