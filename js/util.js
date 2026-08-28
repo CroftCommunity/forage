@@ -35,6 +35,18 @@ export function fmtScore(n) {
   return String(n);
 }
 
+// "1 comments" shipped and stayed for months because five call sites each
+// interpolated a count beside a hardcoded plural noun and nothing looked at
+// any of them. One helper, one place to get it right.
+//
+// No inflection rules: a helper that pluralises English will one day render
+// "replys". The caller knows the word, so irregulars are PASSED, not guessed.
+// The count goes through fmtScore so a big number reads the same here as it
+// does everywhere else on the row.
+export function plural(n, one, many = one + 's') {
+  return `${fmtScore(n)} ${n === 1 ? one : many}`;
+}
+
 export function el(tag, attrs = {}, ...kids) {
   const n = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) {

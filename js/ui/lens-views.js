@@ -6,7 +6,7 @@
 // official client; the library owns persistence (IndexedDB) and refresh, so
 // sign-in survives reloads. The lens consumes { did, handle, fetchHandler }.
 
-import { el, timeAgo, fmtScore, domainOf } from '../util.js';
+import { el, timeAgo, fmtScore, domainOf, plural } from '../util.js';
 import { postRow, commentNode, voteBox, skeleton, emptyState, toast } from './components.js';
 import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow, affordanceFor,
   feedCardModel, threadNodeStyle, feedPath, parseFeedRoute, sessionGateMessage, canDelete, sourceLabel,
@@ -896,7 +896,7 @@ function quoteNode(node, ctx) {
       el('span', { title: 'A quote-response: this author quoted the post above' }, '❝ '),
       node.author ? el('a', { href: `/u/${encodeURIComponent(node.author)}` }, node.author) : '[muted]',
       el('span', { class: 'muted' },
-        ` quoted ${node.depth ? 'that' : 'this'} · ${timeAgo(node.createdTs)} ago · ${fmtScore(node.likes)} likes`)),
+        ` quoted ${node.depth ? 'that' : 'this'} · ${timeAgo(node.createdTs)} ago · ${plural(node.likes, 'like')}`)),
     el('div', { class: 'quote-body' }, node.maskedRemoved ? el('span', { class: 'muted' }, node.title || '[muted]') : node.body),
     el('div', { class: 'xs quote-open' },
       el('a', { href: `/p?uri=${encodeURIComponent(node.quoteUri)}` }, 'open its thread ↳')),
@@ -1618,7 +1618,7 @@ export function lensThreadView(params, query) {
       el('h1', {}, p.title.slice(0, 300)),
       el('div', { class: 'postmeta' },
         p.author ? el('a', { href: `/u/${encodeURIComponent(p.author)}` }, p.author) : '[muted]',
-        ` · ${fmtScore(p.likes)} likes · ${timeAgo(p.createdTs)} ago · ${p.commentCount} replies`),
+        ` · ${plural(p.likes, 'like')} · ${timeAgo(p.createdTs)} ago · ${plural(p.commentCount, 'reply', 'replies')}`),
       // 3i: the poster's own 1/3-2/3-3/3 chain reads as the post body
       ...(t.selfThread || []).map((part) => el('div', { class: 'small', style: 'margin-top:8px' },
         ...facetSegments(part.text, part.facets).map((seg) => {
