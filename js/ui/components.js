@@ -140,7 +140,8 @@ export function postRow(p, viewerCanVote, opts = {}) {
 
   // Same contract as bodyNode: an explicit titleNode wins, so the lens can
   // drop a PLACEHOLDER title from a row that renders the media itself —
-  // "[image]" above the actual image names nothing the reader can't see.
+  // "[image]" above the actual image names nothing the reader can't see —
+  // or swap it for a tiny thumbnail on a compact row that renders none.
   const title = opts.titleNode !== undefined ? opts.titleNode
     : el('div', { class: 'posttitle' }, titleLink);
 

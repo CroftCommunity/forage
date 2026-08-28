@@ -547,6 +547,14 @@ const feedHrefFor = (slug) => {
 
 const lensRow = (p, view = 'card') => {
   const showsMedia = view !== 'compact' && p.media && !p.maskedRemoved;
+  // Compact renders no media strip, so a placeholder-titled row takes a tiny
+  // thumbnail as its handle instead of the literal '[image]' — the same link
+  // to the same thread, showing a sliver of the thing rather than naming its
+  // absence. A video with no thumbnail keeps the text placeholder: the handle
+  // must render something.
+  const thumb = view === 'compact' && p.placeholderTitle && !p.maskedRemoved
+    ? (p.media?.kind === 'images' ? p.media.items?.[0]?.thumb : p.media?.thumb)
+    : null;
   return postRow(p, !!session, {
     onVote: lensVote(p),
     // 3i: never duplicate the title — a preview renders only when it adds
@@ -556,8 +564,15 @@ const lensRow = (p, view = 'card') => {
       : p.preview ? facetedBody({ ...p, body: p.preview }) : tagChips(p),
     // A placeholder title ('[image]', '[video]') exists so a row is never
     // blank. A card row showing the media IS the content, so the placeholder
-    // drops there; compact still needs it — it is the row's only handle.
+    // drops there outright; a compact row swaps it for the thumb above.
     ...(showsMedia && p.placeholderTitle ? { titleNode: null } : {}),
+    ...(thumb ? { titleNode: el('div', { class: 'posttitle' },
+      // Same href shape postRow builds — renderBoard rewrites it to /p?uri=.
+      // The img stays decorative inside a NAMED link: the label says what the
+      // link does, and invents no description of an undescribed picture.
+      el('a', { href: `/f/${p.feedSlug}/p/${p.id}`,
+        'aria-label': p.media.kind === 'video' ? 'Video post — open thread' : 'Image post — open thread' },
+        el('img', { class: 'title-thumb', src: thumb, alt: '', loading: 'lazy' }))) } : {}),
     authorBadge: verifiedBadge(p),
     metaExtra: langChip(p),
     feedHref: feedHrefFor(p.feedSlug),
@@ -1654,10 +1669,16 @@ export function lensThreadView(params, query) {
       el('div', { class: 'row wrap', style: 'gap:6px' },
         el('a', { href: `/f/${src.feedSlug}`, class: 'xs' }, `f/${src.feedSlug}`),
         p.nsfw ? el('span', { class: 'chip badge-nsfw' }, 'NSFW') : null),
-      el('h1', {}, p.title.slice(0, 300)),
+      // The placeholder heading ('[image]', '[video]') drops when the media
+      // renders below — the picture is the thing the heading stood in for.
+      // A real title (text or alt-derived) keeps its heading above the media.
+      p.placeholderTitle && p.media ? null : el('h1', {}, p.title.slice(0, 300)),
       el('div', { class: 'postmeta' },
         p.author ? el('a', { href: `/u/${encodeURIComponent(p.author)}` }, p.author) : '[muted]',
         ` · ${plural(p.likes, 'like')} · ${timeAgo(p.createdTs)} ago · ${plural(p.commentCount, 'reply', 'replies')}`),
+      // The post's own media, at full board size — until 2026-08-28 an image
+      // post's thread page rendered no image at all.
+      p.media && !p.maskedRemoved ? mediaNode(p) : null,
       // 3i: the poster's own 1/3-2/3-3/3 chain reads as the post body
       ...(t.selfThread || []).map((part) => el('div', { class: 'small', style: 'margin-top:8px' },
         ...facetSegments(part.text, part.facets).map((seg) => {
