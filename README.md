@@ -360,11 +360,17 @@ The running app has **modes** — named routing tables over the same capabilitie
   `forage.state` is provably untouched (byte-identical round-trip under test).
 - The **Bluesky view** (`/`) is deliberately NOT a mode — it is a read
   surface over the live network with its own session; nothing from it enters the
-  event fold. Identity is **Sign in with Bluesky** (the official OAuth flow via
-  the vendored `@atproto/oauth-client-browser`, drift-checked in
-  `test/vendor.test.js`): you authorize on your own server, no credentials touch
-  Forage, and the session survives reloads. Works on forage.fyi and localhost
-  (the OAuth client is origin-bound; other origins are read-only).
+  event fold. Identity is an **atproto account on a server someone else runs**
+  (the official OAuth flow via the vendored `@atproto/oauth-client-browser`,
+  drift-checked in `test/vendor.test.js`): you authorize on your own server, no
+  credentials touch Forage, and the session survives reloads. The masthead keeps
+  the one-tap Bluesky path; the sidebar card's **Use another server** opens the
+  host sheet, which offers Bluesky and Blacksky (open signups), Northsky (invite
+  only), and a handle field for any other atproto host. Forage has no accounts
+  of its own — `js/auth/hosts.js` is the registry and
+  `e2e/hosts-live.workflow.mjs` (LIVE=1) is what notices when a host's posture
+  changes. Works on forage.fyi and localhost (the OAuth client is origin-bound;
+  other origins are read-only).
 
 The dev bar's store-mode control is scaffolding, and the dev bar itself renders in the
 memory population only; the PRESENTATION mode (which population the app *is*) lives at

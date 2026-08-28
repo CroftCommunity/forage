@@ -1,11 +1,20 @@
 # Plan: the signed-out front door — sticky masthead, auth sheet, emblem hero
 
-**Status:** Passes 1, 2 and 3 complete. **Phase 0 DONE** · **Phase A DONE** (its
-`scroll-margin-top` item DROPPED with reasons, see the phase) · **Phase B DONE**
-2026-08-27 · **Phases C and D BLOCKED on three owner confirmations** (see Open
-Questions) · **Phase E** follows D. **Phase 0 D1 RESOLVED** (2026-08-27) — Phases C and D
-are unblocked. **Phase A's tap-target half DONE**; its BLOCKING layout question is resolved.
-Phase A's `scroll-margin-top` item and Phases B–E remain open.
+**Status** (rewritten 2026-08-27 — the previous line had accumulated appended updates
+until it said C/D were both blocked and unblocked, and called Phase B open after it
+landed; a Status line that contradicts itself is worse than none):
+
+| Phase | State |
+|---|---|
+| 0 Discovery | **DONE** — D1 and D2 both answered with observed evidence |
+| A Masthead | **DONE and DEPLOYED** — sticky, at the 44px floor, shorter at 320px. One item DROPPED with reasons (`scroll-margin-top`) |
+| B The seam | **DONE and DEPLOYED** — `signIn` options, host registry, LIVE drift check, end of silent callbacks |
+| C The sheet | **DONE** — `<dialog>`, three hosts, any-server handle field, reachable from the sidebar card on every signed-out surface |
+| D The hero | **NOT BUILT.** Unblocked, fully specified, design confirmed against previews |
+| E Emblem asset | **NOT BUILT.** Follows D |
+
+All four open questions are RESOLVED (see Open Questions). Nothing is blocked on the owner.
+
 **Supersedes** `2026-08-26-2-plan-public-site-polish.md` § Phase 2, which becomes a pointer.
 **Worktree:** `worktrees/forage/polish` on `claude/polish`. Claim: `CroftC/.coordination/claims/forage--polish.md`.
 
@@ -397,12 +406,12 @@ signed-out surface.
 **Goal:** A visitor can choose a server and an intent, and understands why they are being
 asked.
 **Changes:**
-- [ ] `js/ui/lens-views.js` — the `<dialog>`, its rows, and the trigger seam.
-- [ ] `css/app.css` — sheet styling; bottom sheet under ~700px, centred dialog above.
-- [ ] `e2e/auth-sheet.workflow.mjs` (NEW) — the journey.
-- [ ] `e2e/a11y-skins.workflow.mjs` — scan with the sheet OPEN.
-- [ ] `README.md:363`, `AGENTS.md` § Identity + § Surfaces — multi-host wording.
-- [ ] `sw.js` — bump `CACHE`.
+- [x] DONE — `js/ui/lens-views.js`: the `<dialog>`, its rows, `beginSignIn` as the single door, and the trigger inside `sessionCard()`.
+- [x] DONE — `css/app.css` + two new tokens (`--scrim`, `--radius-sheet`): bottom sheet under 700px, centred dialog above, ONE element in both.
+- [x] DONE — `e2e/auth-sheet.workflow.mjs`. RED first (no trigger existed).
+- [x] DONE — `e2e/a11y-skins.workflow.mjs` scans the sheet OPEN on every skin.
+- [x] DONE — `README.md`, `AGENTS.md` § Identity + § Surfaces.
+- [x] DONE — `sw.js` `CACHE` -> `forage-v42`. No SHELL change: the sheet adds no file.
 **Settled with the owner (2026-08-26):** open-signup hosts get `[Create account] [Sign in]`;
 invite-only hosts get the words *invite only* **in the create slot** with Sign in beside
 them, so the column stays aligned and the words explain the missing button; the list is
@@ -766,3 +775,33 @@ plainly rather than presenting three passing tests as three fixes.
 
 **Gate:** 470 unit / 88 conformance / 11 workflows, 0 failures. Both live-only checks
 skip-reported.
+
+### Execution: Phase C — 2026-08-27
+**Shipped.** The sheet is a native `<dialog>` built fresh per open and removed on close,
+opened from **the sidebar sign-in card**, which renders on every signed-out surface. The
+plan called for a *temporary* trigger on the home so the sheet would not ship unreachable;
+Decision 4's permanent trigger was already specified and lands on more surfaces than the
+temporary one would have, so it was built directly and no temporary control existed at any
+point.
+
+**Two defects the tests could not see, both caught by looking at a screenshot:**
+- The sheet rendered **see-through**. `dialog.authsheet` (0,1,1) set `background:
+  transparent` and `.authsheet` (0,1,0) painted `--card` — the same element by two
+  selectors, more specific one wins. Every assertion passed: the dialog was open, the rows
+  were right, axe found nothing, because a transparent modal has no contrast problem. Now
+  one selector for one element.
+- **`[hidden]` does not hide a `.btn`.** The UA styles `[hidden]` at element specificity
+  and the touch-floor block sets `display: inline-flex` on `.btn`, so "Another server"
+  stayed on screen above the field it had just revealed. Fixed with the normalize-style
+  `[hidden] { display: none !important }` rather than per-component, because the next
+  `hidden` toggle in this codebase would hit the identical rule. This one got a RED
+  assertion first and is now pinned — "the field appeared" was true in both worlds.
+
+**One existing invariant earned its keep.** `test/skins.test.js` "2: the hardcoded radii
+are tokenised" failed on the sheet's `border-radius: 16px` — a literal that would have left
+one surface un-squarable by a skin that squares everything else. `--radius-sheet` exists
+because of it. `--scrim` was added for the same reason a level up: `::backdrop` otherwise
+renders a UA colour no skin can reach.
+
+**Gate:** 470 unit / 88 conformance / 13 workflows, 0 failures. Looked at on default,
+forage-dark, usenet and phpbb at 390 and 1280, plus the any-server field expanded.

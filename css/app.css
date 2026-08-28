@@ -420,3 +420,66 @@ input[type="range"][data-media-scale] { width: 110px; accent-color: var(--brand)
 .feed-blurb { margin: 8px 0 0; padding-left: 10px; border-left: 3px solid var(--border); font-size: var(--t-sm); white-space: pre-wrap; overflow-wrap: anywhere; }
 .profile-banner { width: 100%; max-height: 140px; object-fit: cover; border-radius: var(--radius-card); margin-bottom: 8px; }
 .profile-avatar { width: 72px; height: 72px; border-radius: var(--radius-chip); border: 2px solid var(--card); flex: none; }
+
+/* ---- The host sheet (plan 2026-08-26-3, Phase C) ------------------------
+   A bottom sheet on a phone and a centred dialog on a desktop, which is the
+   shape people already know from mobile sign-in flows and the shape the owner
+   asked for by name. It is one element in both: `<dialog>` is positioned by the
+   UA, so the breakpoint moves the box rather than swapping a component.
+
+   The ground and the scrim BOTH come from tokens. ::backdrop otherwise renders
+   a UA colour no skin can reach, which would leave a skinned app with exactly
+   one unskinnable surface — the same gap --band-brand exists to close. */
+/* ONE element, not a box inside a box: the <dialog> IS the sheet. An earlier
+   draft styled `dialog.authsheet` transparent and painted `.authsheet` — the
+   same element by two selectors, where the more specific one won and the sheet
+   rendered see-through over the page. Caught by looking at it; no assertion in
+   this repo can see a transparent modal. */
+dialog.authsheet {
+  border: 0; padding: var(--s4); color: var(--text);
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  position: fixed; left: 0; right: 0; bottom: 0; top: auto;
+  width: 100%; max-width: 100%; max-height: 92dvh; overflow-y: auto;
+  box-shadow: var(--card-shadow);
+}
+dialog.authsheet::backdrop { background: var(--scrim); }
+.sheet-x { background: none; border: 0; color: var(--muted); cursor: pointer;
+  font-size: var(--t-md); line-height: 1; padding: 4px 8px; }
+.sheet-x:hover { color: var(--text); }
+.sheet-list { margin: var(--s3) 0; }
+.sheet-row { display: flex; justify-content: space-between; align-items: center;
+  gap: var(--s3); padding: 6px 0; }
+.sheet-row + .sheet-row { border-top: 1px solid var(--border); }
+.sheet-host { font-weight: 600; }
+.sheet-actions { display: flex; align-items: center; gap: 6px; flex: none; }
+/* The words occupy the create slot rather than sitting after the row, so the
+   Sign in column stays aligned down the list and the italic reads as the
+   explanation for the button that is not there. min-width keeps that column
+   honest when one row has a button and its neighbour has words. */
+.sheet-invite { min-width: 92px; text-align: center; font-style: italic;
+  color: var(--muted); font-size: var(--t-xs); }
+.sheet-more { width: 100%; justify-content: center; }
+.sheet-other { margin-top: var(--s3); }
+.sheet-other input { flex: 1; min-width: 0; padding: 8px 10px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--card); color: var(--text); font-size: var(--t-sm); }
+.sheet-open { white-space: nowrap; }
+
+/* The UA styles [hidden] at ELEMENT specificity, so any class that sets
+   `display` silently outranks it and the element stays on screen. .btn does,
+   inside the touch-floor block, which is how "Another server" kept sitting
+   above the field it had just revealed. This is the normalize-style backstop
+   rather than a per-component fix, because the next `hidden` toggle in this
+   codebase will hit exactly the same rule. */
+[hidden] { display: none !important; }
+
+/* Above the sheet breakpoint the same element becomes a centred dialog: the UA
+   positions it, so this moves the box rather than swapping a component. */
+@media (min-width: 700px) {
+  dialog.authsheet { position: fixed; inset: 0; margin: auto; height: fit-content;
+    max-width: 460px; border: 1px solid var(--border);
+    border-radius: var(--radius-card); }
+}
+}
