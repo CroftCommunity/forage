@@ -737,4 +737,18 @@ three different origins.
 families. The owner's vocabulary is "skin"; renaming it was not asked for and would churn
 the a11y and workflow selectors that name it.
 
-**Gate:** 486 unit / 88 conformance / 14 workflows, 0 failures. Looked at on 390 and 1280.
+**Bite-tested, twice, because the plan's own trap warned that these assertions can survive
+a rewrite while proving nothing:**
+
+1. *Revert the picker to per-skin rows, family model intact underneath.* W4 dies — but by
+   `selectOption('forage')` finding no such option, which is a coarse kill and slow (each
+   miss burns a 30s actionability wait).
+2. *Keep the four family rows; hardcode the change handler's palette to `'light'`.* This is
+   the precise mutant, and it is the one worth reporting: picking Usenet gray while in dark
+   lands on `usenet` instead of `usenet-dark`. **The full W4 kills it by TIMEOUT** — the
+   wait for a `usenet-dark` href can never become true — which counts as a kill but takes
+   30s to say so. A five-second targeted probe gave the same verdict immediately, and both
+   directions were confirmed: mutant `usenet`, restored `usenet-dark`.
+
+**Gate:** 486 unit / 88 conformance / 14 workflows, 0 failures. Looked at on 390 and 1280;
+`a11y-skins` still clean over `/settings`.
