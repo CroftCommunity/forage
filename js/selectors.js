@@ -177,7 +177,6 @@ export function thread(state, viewerId, postId, sort = 'best', now) {
   const childrenOf = {};
   for (const c of all) { const k = c.parentId || 'root'; (childrenOf[k] = childrenOf[k] || []).push(c); }
 
-  const threshold = state.users[viewerId]?.prefs?.commentThreshold ?? -4;
 
   function build(parentKey, depth) {
     const kids = (childrenOf[parentKey] || []).map((c) => ({
@@ -188,7 +187,6 @@ export function thread(state, viewerId, postId, sort = 'best', now) {
     return sorted.map(({ c }) => {
       const shaped = shapeComment(state, viewerId, c, perms);
       const node = { ...shaped, depth,
-        autoCollapsed: shaped.score < threshold && !shaped.maskedRemoved,
         children: depth >= 10 ? [] : build(c.id, depth + 1),
         deferred: depth >= 10 ? (childrenOf[c.id] || []).length : 0, // "continue this thread"
       };

@@ -17,7 +17,11 @@ export function emptyState() {
   };
 }
 
-const DEFAULT_PREFS = { theme: 'auto', commentThreshold: -4, defaultSort: 'hot', defaultFeed: 'home' };
+// `commentThreshold` is gone (2026-08-27). Score-threshold auto-collapse was a
+// downvote feature; with downvotes removed a score starts at 0 and only rises,
+// so no threshold is reachable. See js/selectors.js where the collapse used to
+// be computed.
+const DEFAULT_PREFS = { theme: 'auto', defaultSort: 'hot', defaultFeed: 'home' };
 
 export function reduce(state, ev) {
   const s = state; // mutate the working copy; store rebuilds from scratch each fold

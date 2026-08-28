@@ -205,7 +205,7 @@ test('account.registered defaults + prefs.updated merge + account.suspended', ()
   ]);
   assert.equal(s.users.u_a.email, '');
   assert.deepStrictEqual(s.users.u_a.prefs,
-    { theme: 'dark', commentThreshold: -4, defaultSort: 'hot', defaultFeed: 'home' });
+    { theme: 'dark', defaultSort: 'hot', defaultFeed: 'home' });
   assert.deepStrictEqual(s.users.u_a.suspended, { reason: 'spam', ts: 120 });
 });
 
@@ -323,7 +323,7 @@ test('comment.created: exact default shape', () => {
 test('a fresh account carries the exact default prefs', () => {
   const s = fold([ev('account.registered', { handle: 'a' }, 'u_a', 100)]);
   assert.deepStrictEqual(s.users.u_a.prefs,
-    { theme: 'auto', commentThreshold: -4, defaultSort: 'hot', defaultFeed: 'home' });
+    { theme: 'auto', defaultSort: 'hot', defaultFeed: 'home' });
 });
 
 test('feed.created merges caller-supplied settings over the defaults', () => {

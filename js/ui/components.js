@@ -148,7 +148,10 @@ export function postRow(p, viewerCanVote, opts = {}) {
 const CHILD_PAGE = 20; // "load N more replies" threshold
 
 export function commentNode(node, ctx) {
-  const wrap = el('div', { class: 'comment' + (node.autoCollapsed ? ' collapsed' : ''), 'data-node-id': node.id });
+  // No auto-collapse. The score-threshold fold was a downvote feature and is
+  // retired (2026-08-27); the MANUAL gutter below is what remains, and it is
+  // the one people actually use.
+  const wrap = el('div', { class: 'comment', 'data-node-id': node.id });
 
   const gutter = el('button', { class: 'gutter', 'aria-label': 'Collapse thread', title: 'Collapse' });
   gutter.addEventListener('click', () => {
@@ -197,7 +200,6 @@ export function commentNode(node, ctx) {
   // render children with paging + continuation stubs
   renderChildren(childrenWrap, node, ctx);
 
-  if (node.autoCollapsed) note.textContent = ` [+] ${countDesc(node)} hidden`;
   return wrap;
 }
 

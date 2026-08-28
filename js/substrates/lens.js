@@ -286,7 +286,6 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
     body: p.body, author: p.author, authorId: p.authorId,
     ...(p.maskedRemoved ? { maskedRemoved: true, title: p.title } : { removedReason: '' }),
     depth,
-    autoCollapsed: false,
     children: [], deferred: 0,
     kind: 'reply',
     ...extra,

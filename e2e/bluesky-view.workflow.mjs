@@ -224,6 +224,20 @@ export async function run() {
     .evaluate((n) => ({ wall: parseFloat(getComputedStyle(n).borderLeftWidth), gutters: n.querySelectorAll(':scope > .gutter').length }));
   assert.equal(replyBox.wall, 0, 'a reply is NOT walled');
   assert.ok(replyBox.gutters >= 1, 'a reply keeps its collapse gutter');
+
+  // …and the gutter actually COLLAPSES. This was asserted nowhere until
+  // 2026-08-27, and it mattered from that day: score-threshold auto-collapse
+  // was retired (downvotes are gone, so no score can fall below a threshold),
+  // and it was the only collapse with behavioural coverage. Removing a feature
+  // must not leave the surviving one with LESS coverage than the pair had.
+  const foldTarget = page.locator('.card > .comment:not([data-kind="quote"])').first();
+  const bodyShown = () => foldTarget.locator(':scope > .comment-body > .comment-text').first().isVisible();
+  assert.equal(await bodyShown(), true, 'a reply starts open — nothing folds on its own now');
+  await foldTarget.locator(':scope > .gutter').first().click();
+  assert.equal(await bodyShown(), false, 'clicking the rail folds the subtree');
+  assert.match(await foldTarget.innerText(), /\[\+\]/, 'and says how much it hid');
+  await foldTarget.locator(':scope > .gutter').first().click();
+  assert.equal(await bodyShown(), true, 'clicking it again unfolds — a one-way collapse is a trap');
   // and the body is styled at all — .cmeta/.cbody had no rules, so the node
   // used to render as default body text (2026-08-26)
   const qFont = await qnode.locator(':scope > .quote-body').evaluate((n) => parseFloat(getComputedStyle(n).fontSize));
