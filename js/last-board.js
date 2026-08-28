@@ -51,3 +51,34 @@ export function setLastBoard(id) {
   try { localStorage.setItem(LAST_BOARD_KEY, next); } catch { /* private mode */ }
   for (const fn of listeners) fn(next);
 }
+
+// ---- the landing rule ----
+//
+// Where `/` goes, in one pure function so the three cases are readable
+// together rather than scattered across a router. The rule is the owner's
+// (plan 2026-08-26-4, Revision 2):
+//
+//   signed out          -> the directory. A guest has no history worth
+//                          remembering, and it is the same page for everyone,
+//                          so there is ONE front page to design.
+//   returning           -> the board they left. No click between opening the
+//                          app and reading, which is the whole reason the
+//                          board above is remembered at all.
+//   first sign-in       -> My follows. A new account has no board to return
+//                          to, and this is the closest thing to what someone
+//                          arriving from Bluesky expects. It is also the one
+//                          rung whose data the first two graph calls already
+//                          fetched, so the default costs nothing extra.
+//
+// A stored board is IGNORED while signed out rather than cleared: signed out,
+// no rung resolves (they are computed from a graph the guest does not have),
+// and a feed slug would resolve to a board with none of the reader's context.
+// Ignoring is reversible on the next sign-in; clearing is not.
+
+export const DIRECTORY = 'directory';
+export const FIRST_TIME_BOARD = 'fol';
+
+export function landingBoard({ signedIn, stored } = {}) {
+  if (!signedIn) return DIRECTORY;
+  return typeof stored === 'string' && stored.trim() !== '' ? stored : FIRST_TIME_BOARD;
+}

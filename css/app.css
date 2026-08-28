@@ -530,3 +530,38 @@ dialog.authsheet::backdrop { background: var(--scrim); }
   .hero-lens .hero-copy { flex: none; padding-right: 0; }
   .hero-lens .btn.primary { width: 100%; }
 }
+
+/* ---- the left navigation (V4) ------------------------------------------
+   The shell goes two-column for the lens: nav + content. `.side` keeps its
+   rule for the memory population, which still uses it. On a phone the nav is
+   a DRAWER — off-canvas until asked for — which is the whole reason it beats
+   the strip it replaced: it costs no vertical space until you open it, where
+   a strip always spent a row. */
+.shell.with-nav { grid-template-columns: 210px minmax(0, 1fr); }
+.nav { border-right: 1px solid var(--border); background: var(--panel); padding: var(--s2) 0; }
+.navsec { font-size: 10px; text-transform: uppercase; letter-spacing: .10em;
+  color: var(--muted); font-weight: 700; padding: 12px var(--s3) 5px; }
+.navitem { display: flex; align-items: center; gap: 9px; font-size: var(--t-sm);
+  color: var(--text); padding: 0 var(--s3); min-height: 44px; text-decoration: none; }
+.navitem:hover { background: var(--card-2); text-decoration: none; }
+.navitem[aria-current="page"] { background: var(--tint); color: var(--brand-ink);
+  font-weight: 600; box-shadow: inset 3px 0 0 var(--brand-ink); }
+.navitem .ico { width: 17px; text-align: center; opacity: .8; flex: none; }
+.navrule { border: 0; border-top: 1px solid var(--border); margin: 9px 0; }
+.navnote { padding: 6px var(--s3) 10px; font-size: 11px; color: var(--muted); }
+.navburger { display: none; }
+.navscrim { display: none; }
+
+@media (max-width: 800px) {
+  .shell.with-nav { grid-template-columns: minmax(0, 1fr); }
+  .navburger { display: inline-flex; align-items: center; justify-content: center;
+    width: 44px; height: 44px; flex: none; border: 1px solid var(--border);
+    background: var(--card); color: var(--text); border-radius: var(--radius-card);
+    font-size: 16px; cursor: pointer; }
+  .nav { position: fixed; top: 61px; left: 0; bottom: 0; width: 262px; z-index: 30;
+    overflow-y: auto; box-shadow: 6px 0 24px rgba(0,0,0,.18); }
+  .nav[hidden] { display: none; }
+  .navscrim { display: block; position: fixed; inset: 61px 0 0 0; z-index: 29;
+    background: rgba(0,0,0,.34); border: 0; width: 100%; }
+  .navscrim[hidden] { display: none; }
+}

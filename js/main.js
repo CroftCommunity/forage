@@ -23,8 +23,14 @@ const devHost = el('div', { id: 'devhost' });
 const mastHost = el('div', { id: 'masthost' });
 const mainEl = el('div', { class: 'main', id: 'main' });
 const sideEl = el('div', { id: 'side' });
-const shell = el('div', { class: 'shell' }, mainEl, sideEl);
-app.append(devHost, mastHost, shell);
+// V4: the left nav lives in the shell rather than in each view, so it is drawn
+// once and stays put across navigations instead of being rebuilt by every
+// board. Its host is hidden entirely in the memory population, which keeps its
+// own right-hand rail.
+const navHost = el('div', { id: 'navhost' });
+const navScrim = el('button', { class: 'navscrim', 'aria-label': 'Close navigation', hidden: true });
+const shell = el('div', { class: 'shell' }, navHost, mainEl, sideEl);
+app.append(devHost, mastHost, shell, navScrim);
 if (!document.getElementById('toasts')) document.body.append(el('div', { id: 'toasts' }));
 
 // The upper-right control moves between a skin and its PAIRED OPPOSITE. Skins
@@ -57,7 +63,11 @@ function masthead() {
   // chrome (no persona, no notifications, no memory search).
   if (pmode.active() === 'bluesky') {
     const who = lensViews.sessionIdentity();
+    const burger = el('button', { class: 'navburger', 'aria-label': 'Open navigation',
+      'aria-expanded': 'false', title: 'Boards' }, '\u2630');
+    burger.addEventListener('click', () => setDrawer(!drawerOpen));
     return el('header', { class: 'masthead' },
+      burger,
       el('a', { class: 'wordmark', href: '/' },
         el('img', { class: 'wordmark-glyph', src: '/icons/icon-192.png', alt: '' }), 'Forage'),
       // 4j: no nav here. It held ONE link — "Home", href '/' — which is the
@@ -119,7 +129,25 @@ const byMode = (bluesky, memory) => (p, q) => (inBluesky() ? bluesky(p, q) : mem
 const memoryOnly = (handler) => (p, q) => (inBluesky() ? wrongPopulation('memory') : handler(p, q));
 const blueskyOnly = (handler) => (p, q) => (inBluesky() ? handler(p, q) : wrongPopulation('bluesky'));
 
-router.route('/', byMode(lensViews.lensHomeView, (p, q) => views.boardView('popular', 'Popular', q)));
+// V5: `/` is where the landing rule is applied. A guest falls through to the
+// directory (lensHomeView); a signed-in reader is REPLACED onto the board they
+// left, or onto My follows the first time. replaceState rather than push, so
+// Back still leaves the app instead of bouncing between / and the board.
+router.route('/', byMode((p, q) => {
+  const path = lensViews.landingPath();
+  if (path && router.currentPath() === '/') {
+    history.replaceState({}, '', path);
+    return router.dispatch(path);
+  }
+  return lensViews.lensHomeView(p, q);
+}, (p, q) => views.boardView('popular', 'Popular', q)));
+router.route('/r/:rung', blueskyOnly(lensViews.lensRingView));
+// The directory needs an address of its own. Its row in the nav used to point
+// at '/', which the landing rule redirects away from the instant a signed-in
+// reader touches it — so the directory was unreachable for exactly the readers
+// who have a nav. Caught by bluesky-view, which clicked through to Trending
+// and found a board. '/' stays the landing; '/trending' is the destination.
+router.route('/trending', blueskyOnly(lensViews.lensHomeView));
 router.route('/mode', modeView);
 router.route('/home', memoryOnly((p, q) => views.boardView('home', 'Home', q)));
 router.route('/popular', memoryOnly((p, q) => views.boardView('popular', 'Popular', q)));
@@ -165,6 +193,24 @@ router.route('/lens/h/:tag', (p) => redirectTo(`/h/${p.tag}`));
 router.route('/lens/p', (p, q) => redirectTo(`/p?uri=${encodeURIComponent(q.uri || '')}${q.from ? `&from=${q.from}` : ''}`));
 router.setNotFound(() => ({ main: el('div', { class: 'empty' }, el('h2', {}, 'Lost in the pasture'), el('p', { class: 'muted' }, 'No such page.'), el('a', { class: 'btn', href: '/' }, 'Go home')), side: null }));
 
+// ---------- the nav drawer (narrow viewports only) ----------
+// Off-canvas until asked for, which is the whole reason the sidebar beat the
+// strip it replaced: it costs no vertical space until you open it. Closing on
+// the scrim AND on Escape is not decoration — this is our own drawer, so focus
+// and dismissal are our responsibility and no axe rule can see them.
+let drawerOpen = false;
+let lastRenderedPath = null;
+function setDrawer(open) {
+  drawerOpen = open;
+  const nav = navHost.firstElementChild;
+  if (nav) nav.hidden = !open && window.matchMedia('(max-width: 800px)').matches;
+  navScrim.hidden = !open;
+  const btn = document.querySelector('.navburger');
+  if (btn) btn.setAttribute('aria-expanded', String(open));
+}
+navScrim.addEventListener('click', () => setDrawer(false));
+window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && drawerOpen) setDrawer(false); });
+
 // ---------- render pipeline ----------
 let currentCleanup = null;
 function render() {
@@ -176,8 +222,30 @@ function render() {
   try { out = router.dispatch() || { main: el('div', {}), side: null }; }
   catch (e) { console.error(e); out = { main: el('div', { class: 'errstate' }, 'View error: ' + e.message), side: null }; }
   if (out.main && out.main._cleanup) currentCleanup = out.main._cleanup;
+  const lensMode = pmode.active() === 'bluesky';
+  // Auth boots from the RENDER PIPELINE, not as a side effect of some view
+  // rendering the sign-in card. Before V4 every guest landing drew that card,
+  // so the boot happened by accident; the moment a rung became a real address
+  // (/r/mut), landing there directly meant the session never restored and the
+  // nav showed a guest their own account as signed out. Booting here makes it
+  // independent of which board you arrived on. bootAuth() shares one in-flight
+  // promise, so calling it every render costs nothing after the first.
+  if (lensMode) lensViews.ensureAuthBoot();
+  navHost.hidden = !lensMode;
+  shell.classList.toggle('with-nav', lensMode);
+  if (lensMode) {
+    navHost.replaceChildren(lensViews.lensNav(lensViews.currentBoardId(router.currentPath())));
+    // Close the drawer on a NAVIGATION, never on a re-render. render() runs on
+    // every store change — a session restoring, saved feeds landing — and
+    // closing here unconditionally shut the drawer under the reader's finger a
+    // beat after they opened it. Caught by the workflow, which could not click
+    // a scrim that had already been dismissed by a background fetch.
+    if (router.currentPath() !== lastRenderedPath) { lastRenderedPath = router.currentPath(); setDrawer(false); }
+    else setDrawer(drawerOpen); // re-apply state to the freshly built nav
+  } else navHost.replaceChildren();
   mainEl.replaceChildren(out.main || el('div', {}));
   sideEl.replaceChildren(out.side || el('div', {}));
+  sideEl.hidden = lensMode && !out.side;
   // reflect frontier dev toggle
   document.body.classList.toggle('hide-frontiers', !store.getDev().frontiers);
   window.scrollingReset && window.scrollTo(0, 0);

@@ -8,6 +8,9 @@
 
 import { el, timeAgo, fmtScore, domainOf, plural } from '../util.js';
 import { postRow, commentNode, voteBox, skeleton, emptyState, toast } from './components.js';
+import { navTree } from './nav.js';
+import { LADDER, RUNG_IDS, labelFor } from '../rings.js';
+import { lastBoard, setLastBoard, landingBoard, DIRECTORY } from '../last-board.js';
 import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow, affordanceFor,
   feedCardModel, threadNodeStyle, feedPath, parseFeedRoute, sessionGateMessage, canDelete, sourceLabel,
   sortFeeds, filterFeeds, platforms, liveFeeds } from '../substrates/lens.js';
@@ -616,7 +619,6 @@ function sessionCard() {
       savedFeedUris.clear();
       pinnedFeedUris.clear();
       savedFeedsPromise = null;
-      activeRing = 'world';
       // (the new lens above has no ring memory — the graph belongs to the
       // account that just left)
       toast('Signed out.', 'ok');
@@ -657,41 +659,11 @@ function sessionCard() {
     el('div', { class: 'row wrap', style: 'gap:6px' }, btn, more));
 }
 
-// 3b: the ring dial — how far out does your ring go? Session-gated rings
-// refuse with words; the selection is page-lifetime state (a view concern).
-let activeRing = 'world';
-
-function ringDial() {
-  // Signed out, this is NOT a dial. Three of its four settings need your
-  // follow graph, and hiding them would leave a control with one option —
-  // which reads as broken, not clean. So a guest gets the explanation the dial
-  // would have carried, and no buttons at all. Words cannot be tapped by
-  // accident and do not pretend to be interactive.
-  if (!session) {
-    return el('div', { class: 'card' }, el('h2', {}, 'Your ring'),
-      el('div', { class: 'small' },
-        'A ring is how far out you read: everyone, the people you follow, the ones who follow you back, or one step past them.'),
-      el('div', { class: 'xs muted', style: 'margin-top:4px' },
-        'Rings are computed from your own follow graph, so they need an account. Signed out you are reading the whole world.'));
-  }
-  const RINGS = [['world', 'World'], ['following', 'Following'], ['mutuals', 'Mutuals'], ['mutuals+1', 'Mutuals +1']];
-  const row = el('div', { class: 'row wrap', style: 'gap:6px', 'data-ring-dial': '1' });
-  for (const [id, label] of RINGS) {
-    const b = el('button', { class: 'btn sm' + (activeRing === id ? ' primary' : '') }, label);
-    b.addEventListener('click', () => {
-      if (id !== 'world' && !session) {
-        const connecting = manager && manager !== 'unavailable' && manager.state && ['unknown', 'pending'].includes(manager.state());
-        return toast(connecting ? 'Still restoring your session — one moment.' : 'Sign in first — rings are computed from your graph.', 'err');
-      }
-      activeRing = id;
-      rerender();
-    });
-    row.append(b);
-  }
-  return el('div', { class: 'card' }, el('h2', {}, 'Your ring'), row,
-    el('div', { class: 'xs muted', style: 'margin-top:4px' },
-      'World is everyone; Following is your timeline; Mutuals is follows ∩ followers; +1 adds who they follow (capped honestly).'));
-}
+// 3b/V4: the ring dial is GONE. It was a card on one page, holding
+// page-lifetime state that reset on reload, and the redesign moved the ladder
+// into the left nav where every rung is a link with one job. What used to be
+// `activeRing` is now the URL (/r/:rung) plus js/last-board.js, so the board
+// you are on is shareable, reloadable, and remembered.
 
 function ringBoard(ring, cursor) {
   const holder = el('div', {}, skeleton(6));
@@ -724,19 +696,71 @@ function ringBoard(ring, cursor) {
   return holder;
 }
 
-export function lensHomeView() {
-  if (activeRing !== 'world') {
-    const title = activeRing === 'following' ? 'Following' : activeRing === 'mutuals' ? 'Mutuals' : 'Mutuals +1';
-    return { main: el('div', {}, el('h1', {}, title), ringDial(), ringBoard(activeRing)),
-      side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()) };
+// The left nav for the Bluesky population. Feeds arrive async, so the tree is
+// drawn immediately with what is known and the feed rows are filled in when
+// they land — the same shape lensSidebar used, moved to the side of the screen
+// navigation actually belongs on.
+export function lensNav(current) {
+  const guestFeeds = CURATED.map((c) => ({ slug: c.slug, title: c.title }));
+  const host = el('div', { 'data-navhost': '1' },
+    navTree({ el, session, feeds: guestFeeds, tags: [], current }));
+  if (session) {
+    ensureSavedFeeds().then((feeds) => {
+      if (!session) return;
+      host.replaceChildren(navTree({ el, session, current, tags: [],
+        feeds: feeds.map((f) => ({ slug: f.slug, title: f.title,
+          href: feedPath({ creator: f.creator, rkey: f.slug }) || `/f/${f.slug}` })) }));
+    }).catch(() => { /* the nav keeps the curated rows rather than emptying */ });
   }
+  return host;
+}
+
+// Which nav row is current, from the path alone — so the marker cannot drift
+// from the address bar.
+export function currentBoardId(path) {
+  const m = /^\/r\/([a-z+]+)/.exec(path);
+  if (m) return m[1];
+  const h = /^\/h\/([^/?]+)/.exec(path);
+  if (h) return `tag-${decodeURIComponent(h[1])}`;
+  const f = /^\/f\/([^/?]+)/.exec(path);
+  if (f) return decodeURIComponent(f[1]);
+  if (path === '/feeds') return 'feeds';
+  if (path === '/trending') return DIRECTORY;
+  return DIRECTORY;
+}
+
+// /r/:rung — a rung is a destination now, not a mode flag.
+export function lensRingView(params) {
+  const rung = params.rung;
+  if (!RUNG_IDS.includes(rung)) {
+    return { main: emptyState('No such ring', `Known rings: ${RUNG_IDS.join(', ')}.`), side: null };
+  }
+  if (!session) {
+    return { main: el('div', {}, el('h1', {}, labelFor(rung)),
+      el('p', { class: 'muted small' },
+        'Rings are computed from your own follow graph, so they need an account.')), side: null };
+  }
+  setLastBoard(rung);
+  return { main: el('div', {}, el('h1', {}, labelFor(rung)), ringBoard(rung)), side: null };
+}
+
+// V5: where `/` lands, as a PATH, for the route handler to redirect to. It
+// lives here because it needs the session, and it returns a path rather than
+// performing the navigation because a view that redirects itself is a view
+// that cannot be rendered — which is exactly what the first attempt did.
+export function landingPath() {
+  const landing = landingBoard({ signedIn: !!session, stored: lastBoard() });
+  if (landing === DIRECTORY) return null;
+  return RUNG_IDS.includes(landing) ? `/r/${landing}` : `/f/${landing}`;
+}
+
+export function lensHomeView() {
   const main = el('div', {},
     // The hero comes FIRST and outside the <h1>: it is the front door, and a
     // door behind the sign is not a door. Home only (owner) — a hero on every
     // board would be an ad rather than a welcome.
     !session && !heroDismissed() ? heroCard() : null,
     el('h1', {}, 'The Lens'),
-    ringDial(),
     trendingRail(),
     el('div', { class: 'card' },
       el('p', { class: 'small' },
@@ -754,7 +778,7 @@ export function lensHomeView() {
       el('h2', {}, 'Browse'),
       el('div', { class: 'stack' },
         ...CURATED.map((c) => el('div', {}, el('a', { href: `/f/${c.slug}` }, `f/${sourceLabel(c)}`), el('span', { class: 'xs muted' }, ` — ${c.kind}`))))));
-  return { main, side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()) };
+  return { main, side: session ? null : el('div', { class: 'side' }, sessionCard()) };
 }
 
 // 3v: /f/ has two shapes. A creator-qualified path (/f/@handle/rkey) is the
@@ -1160,7 +1184,7 @@ export function accountMenu() {
     const did = session?.did;
     try { await manager.signOut(); } catch (e) { toast(e.message, 'err'); }
     if (did) roster.forget(did);
-    session = null; lens = createLens({}); savedFeedUris.clear(); pinnedFeedUris.clear(); savedFeedsPromise = null; activeRing = 'world';
+    session = null; lens = createLens({}); savedFeedUris.clear(); pinnedFeedUris.clear(); savedFeedsPromise = null;
     toast('Signed out.', 'ok');
     rerender();
   });

@@ -53,9 +53,15 @@ const FAKE_SIGNED_IN = `(() => {
 })();`;
 
 const seen = (page) => page.evaluate(() => ({
-  ringButtons: [...document.querySelectorAll('[data-ring-dial] button')].map((b) => b.textContent.trim()),
-  ringCardText: document.querySelector('[data-ring-dial]')?.closest('.card')?.innerText?.replace(/\n+/g, ' ') ?? null,
-  ringCardAnywhere: [...document.querySelectorAll('.card')].map((c) => c.innerText.replace(/\n+/g, ' ')).find((t) => /ring/i.test(t)) ?? null,
+  // V4: the dial is gone and the ladder lives in the left nav, so "is a rung
+  // offered to a guest?" is now a question about nav rows. The PROPERTY this
+  // workflow asserts is unchanged — a guest is shown no rung at all, and is
+  // told once why — only the surface it lives on moved.
+  ringButtons: [...document.querySelectorAll('.nav [data-nav-item]')]
+    .map((b) => b.getAttribute('data-nav-item'))
+    .filter((id) => ['me', 'mut', 'fol', 'hop', 'world'].includes(id)),
+  ringCardAnywhere: document.querySelector('.navnote')?.innerText?.replace(/\n+/g, ' ')
+    ?? [...document.querySelectorAll('.card')].map((c) => c.innerText.replace(/\n+/g, ' ')).find((t) => /ring/i.test(t)) ?? null,
   favorite: document.querySelectorAll('[data-feed-favorite]').length,
   joinLeave: [...document.querySelectorAll('button')].filter((b) => /^(Join|Leave)$/.test(b.textContent.trim())).length,
   voteArrows: document.querySelectorAll('.vote.boost, .cvote').length,
@@ -73,8 +79,8 @@ export async function run() {
 
     assert.deepEqual(home.ringButtons, [],
       `a guest is shown no ring buttons at all — a one-option dial is not "clean", it is broken. Saw: ${JSON.stringify(home.ringButtons)}`);
-    assert.ok(home.ringCardAnywhere && /account|sign in/i.test(home.ringCardAnywhere),
-      `the ring card must still SAY what rings are and that they need an account: ${JSON.stringify(home.ringCardAnywhere)}`);
+    assert.ok(home.ringCardAnywhere && /account|sign in|follow graph/i.test(home.ringCardAnywhere),
+      `the absence must still be EXPLAINED once, in words: ${JSON.stringify(home.ringCardAnywhere)}`);
 
     await out.page.goto(`${out.origin}/f/whats-hot`);
     await out.page.waitForSelector('.postrow');
@@ -93,10 +99,10 @@ export async function run() {
     mode: 'bluesky', initScripts: [FAKE_SIGNED_IN], responses: RESPONSES });
   try {
     await inn.page.goto(`${inn.origin}/`);
-    await inn.page.waitForSelector('[data-ring-dial] button');
+    await inn.page.waitForSelector('.nav [data-nav-item="mut"]');
     const home = await seen(inn.page);
     assert.ok(home.ringButtons.length >= 4,
-      `signed in the dial is a dial again: ${JSON.stringify(home.ringButtons)}`);
+      `signed in the ladder is offered in full: ${JSON.stringify(home.ringButtons)}`);
 
     await inn.page.goto(`${inn.origin}/f/whats-hot`);
     await inn.page.waitForSelector('.postrow');

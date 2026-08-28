@@ -48,14 +48,24 @@ export async function run() {
     // --- the guest sidebar names the feed, not the record key ---------------
     const feedLink = page.locator('a[href="/f/whats-hot"]').first();
     await feedLink.waitFor();
-    assert.equal((await feedLink.innerText()).trim(), 'f/Discover',
-      'the guest sidebar names the feed — a record key is a route, not a name');
+    // V4: the sidebar became the left nav, and a nav row carries an icon
+    // alongside the label. The RULE is unchanged and is what is asserted: the
+    // row shows the feed's NAME and never its record key. Matching on
+    // containment rather than on the exact string keeps this about naming
+    // instead of about markup.
+    const feedText = (await feedLink.innerText()).trim();
+    assert.ok(feedText.includes('Discover'), `the nav names the feed: ${JSON.stringify(feedText)}`);
+    assert.ok(!feedText.includes('whats-hot'),
+      `and never its record key — a key is a route, not a name: ${JSON.stringify(feedText)}`);
 
     // …and the AUTHOR board keeps its handle. Different rule, same row.
     const authorLink = page.locator('a[href="/f/bsky.app"]').first();
     await authorLink.waitFor();
-    assert.equal((await authorLink.innerText()).trim(), 'f/Bluesky',
-      'an author board is named the same way a feed is — the handle stays the route');
+    const authorText = (await authorLink.innerText()).trim();
+    assert.ok(authorText.includes('Bluesky'),
+      `an author board is named the same way a feed is: ${JSON.stringify(authorText)}`);
+    assert.ok(!authorText.includes('bsky.app'),
+      `the handle stays the route, not the label: ${JSON.stringify(authorText)}`);
 
     // No surface anywhere on the signed-out home may still show the raw rkey.
     const home = await page.locator('body').innerText();

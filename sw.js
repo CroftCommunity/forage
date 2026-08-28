@@ -7,7 +7,7 @@
 // Bump CACHE whenever you want to force a clean re-cache on the very next load
 // (asset URLs are hashless, so the name is the version).
 
-const CACHE = 'forage-v51';
+const CACHE = 'forage-v52';
 const SHELL = [
   '/', '/404.html', '/skins/bbs.css', '/skins/usenet.css', '/skins/usenet-dark.css', '/skins/forage-dark.css', '/skins/phpbb.css', '/skins/phpbb-dark.css',
   '/vendor/atproto-oauth-client-browser.js', '/js/auth/session.js', '/js/auth/hosts.js', '/js/skins.js',
@@ -16,7 +16,7 @@ const SHELL = [
   '/js/reducers.js', '/js/selectors.js', '/js/personas.js', '/js/actions.js', '/js/util.js',
   '/js/board-density.js', '/js/last-board.js', '/js/rings.js', '/js/prng.js', '/js/devbar.js', '/js/engines/rank.js',
   '/js/engines/limits.js', '/js/config/routing.js', '/js/substrates/memory.js',
-  '/js/substrates/atproto.js', '/js/substrates/lens.js', '/js/ui/components.js',
+  '/js/substrates/atproto.js', '/js/substrates/lens.js', '/js/ui/components.js', '/js/ui/nav.js',
   '/js/ui/views.js', '/js/ui/lens-views.js', '/data/seed.js', '/scenarios/ban-readonly.js',
   '/scenarios/comment-tree-collapse.js', '/scenarios/demo-extras.js',
   '/scenarios/feed-lifecycle.js', '/scenarios/format.js', '/scenarios/index.js',

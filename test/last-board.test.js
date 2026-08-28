@@ -83,3 +83,33 @@ test('junk is refused rather than written, and never clobbers a good value', () 
     }
   });
 });
+
+// ---- V5: the landing rule ----
+//
+// Where `/` goes, as one pure function, because the interesting part is the
+// THREE cases and not the storage. Owner's rule (plan 2026-08-26-4, Revision
+// 2): a guest gets the directory; a returning reader gets the board they left;
+// a brand-new account gets My follows.
+import { landingBoard, DIRECTORY } from '../js/last-board.js';
+
+test('a guest lands on the directory — they have no history worth remembering', () => {
+  assert.equal(landingBoard({ signedIn: false, stored: null }), DIRECTORY);
+  assert.equal(landingBoard({ signedIn: false, stored: 'mut' }), DIRECTORY,
+    'even with a board remembered from a previous session: signed out, rungs do not resolve');
+});
+
+test('a returning reader lands on the board they left', () => {
+  assert.equal(landingBoard({ signedIn: true, stored: 'mut' }), 'mut');
+  assert.equal(landingBoard({ signedIn: true, stored: 'whats-hot' }), 'whats-hot',
+    'a feed is a board too — the whole point of the taxonomy');
+  assert.equal(landingBoard({ signedIn: true, stored: 'tag-harvest' }), 'tag-harvest');
+});
+
+test('a first sign-in lands on My follows, since there is no board to return to', () => {
+  assert.equal(landingBoard({ signedIn: true, stored: null }), 'fol');
+});
+
+test('the directory is a named destination, not an empty string masquerading as one', () => {
+  assert.equal(typeof DIRECTORY, 'string');
+  assert.ok(DIRECTORY.length > 0);
+});
