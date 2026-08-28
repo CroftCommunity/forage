@@ -153,6 +153,44 @@ an afternoon."*
 
 ---
 
+## Revision, 2026-08-28 — the signed-out half is deleted, not greyed
+
+This plan specified "signed out, the right half shows rungs greyed with a reason." That is
+the shape the owner **rejected** while this plan sat blocked, and the rejection is landed
+behaviour on main. Recorded as a revision rather than quietly edited, because V4 asserted
+the opposite and a future reader would otherwise find the two irreconcilable.
+
+`49cf873` (*guest surface: hide what a reader cannot use, keep what they can read*) quotes
+the owner killing the gated shape before it was built:
+
+> *"a thousand things that pop up a login seems pretty obnoxious to me… I actually think
+> bury or hide is the better option then for logged out… putting a bunch of pop up
+> landmines, even if it's our own pop up, is a bad plan."*
+
+and draws the consequence for this exact control: **the ring dial stops being a dial.**
+Hiding three of four settings leaves one option, "which reads as broken rather than
+clean", so signed out it is prose — what a ring is, and that it needs your own follow
+graph. `ringDial()` on main now returns exactly that and no buttons.
+
+**The same argument applies one level up, which is the revision.** Hiding the right half
+of a two-half strip leaves one half, and one half is not a strip — it is a title with a
+border. So signed out there is no strip: home is the front door (`heroCard`, landed
+`5c9d4d7`) plus the Discover material, which is what a guest already gets. The strip
+arrives with the session, because it slices a graph and a guest has none.
+
+**What this does NOT change**, stated so it is not over-applied: the ladder still explains
+each rung to a signed-in reader, and the answer to "what would an account get me" still
+gets told once — `lensHomeView` does it in prose through the `data-account-adds`
+paragraph. That paragraph is the right home for it. The rejected thing was dangling an
+unusable control at a guest, not explaining the account.
+
+**Also landed while this was blocked, and folded in:** downvotes are gone from both
+populations (DL-011 retired, `9bcd5dc`), the score is now called likes (`c7a1e61`), and
+score-threshold auto-collapse is retired. None touches the strip, but every rung board
+inherits them — so a rung board shows a like count and no arrows.
+
+---
+
 ## Units
 
 Every unit states its RED test before its change, and every unit shipping user-visible
@@ -182,16 +220,17 @@ construction: `ringFeed` throws for `world`. This is the rung with no implementa
 
 ### V4 — the strip
 
-RED: a workflow journey — land signed-out, assert the left half is active and the right
-half shows rungs greyed with a reason; sign in, pick a rung, assert both the view
-switched and the label now reads that rung. Includes the tap-target assertion for the
+RED: a workflow journey — land signed-out, assert **no strip renders at all** and the ring
+prose stands in its place; sign in, assert the strip appears, pick a rung, assert both the
+view switched and the label now reads that rung. Includes the tap-target assertion for the
 opener (the touch floor gate landed in `2c4b28d`; the opener is exactly what it exists to
 catch) and a **keyboard** journey — the menu is ours, not the platform's, so focus,
 Escape and arrow keys are our responsibility and axe cannot see any of them.
 
-Deletes `ringDial()`. Removes `Home` from the **Bluesky** masthead only
-(`js/main.js`, § *the Bluesky masthead*): there the wordmark and `Home` both target `/`,
-a true duplicate, and the emptied `<nav>` is the slot the strip takes. The **memory**
+Deletes `ringDial()`. ~~Removes `Home` from the Bluesky masthead~~ — **already done on main** by `2776537`,
+with a better reason than this plan had: the masthead went sticky, had to meet the 44px
+floor, and the duplicate link was what pushed the bar to a second row (measured 113px with
+it, 61px without, at 320px). The emptied `<nav>` is the slot the strip takes. The **memory**
 masthead is untouched — its wordmark targets `/popular` while `Home` targets `/home`, a
 *different board* (`router.route('/home', …)`), so the same edit there would delete a
 destination.
