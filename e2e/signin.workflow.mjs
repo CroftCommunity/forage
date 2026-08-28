@@ -173,7 +173,7 @@ export async function run() {
   // card path: handle → button → (redirect-in-miniature) → signed-in identity
   await page.locator('input[placeholder="you.bsky.social"]').fill('wtest.bsky.social');
   await page.locator('button:has-text("Sign in with Bluesky")').click();
-  await page.waitForSelector('.masthead a[title="Your Forage profile"]', { timeout: 10000 });
+  await page.waitForSelector('.masthead [data-account="1"][aria-label*="."]', { timeout: 10000 });
 
   // the personal surface opens: saved feeds in the sidebar; the identity and
   // moderation mirror live on /me, NOT the front page
@@ -183,7 +183,7 @@ export async function run() {
 
   // the masthead @handle IS the profile link
   await page.goto(`${s.origin}/`);
-  await page.locator('.masthead a[title="Your Forage profile"]').click();
+  await page.locator('.masthead [data-account="1"]').click();
   await page.waitForSelector('text=@wtest.bsky.social');
   await page.waitForSelector('[data-moderation-panel]');
 
@@ -393,7 +393,7 @@ export async function run() {
   // the masthead direct path: no local form — straight to the entryway (the
   // fake manager stamps and reloads, same shape as the real redirect)
   await page.locator('.masthead .who a:has-text("Sign in")').click();
-  await page.waitForSelector('.masthead a[title="Your Forage profile"]', { timeout: 10000 });
+  await page.waitForSelector('.masthead [data-account="1"][aria-label*="."]', { timeout: 10000 });
 
   assert.deepEqual(await s.shimMisses(), [], 'every network read had a fixture');
   await s.close();
@@ -460,15 +460,25 @@ export async function run() {
       `the callback params must survive until the exchange reads them — saw ${JSON.stringify(midFlight)}`);
 
     await cb.page.evaluate(() => window.__release());
-    await cb.page.waitForSelector('.masthead a[title="Your Forage profile"]', { timeout: 10000 });
+    // E144: the profile link became the account control. Waiting on its
+    // aria-label keeps this assertion about IDENTITY rather than about which
+    // element carries it.
+    await cb.page.waitForSelector('.masthead [data-account="1"][aria-label*="."]', { timeout: 10000 });
     const sawHash = await cb.page.evaluate(() => window.__restoreSawHash);
     assert.match(sawHash, /code=cod-abc/,
       `the exchange must READ the code, not an emptied URL — saw ${JSON.stringify(sawHash)}`);
 
     // …and only then is the bar cleaned, so a reload cannot replay a spent code.
     await cb.page.waitForFunction(() => !location.hash.includes('code='));
-    assert.equal(await cb.page.evaluate(() => location.pathname), '/',
-      'a completed callback lands on the lens root');
+    // V5: a completed callback lands on a BOARD, not on the lens root. The
+    // landing rule sends a session with nothing remembered to My follows —
+    // signing in and being dropped back on a directory would make the sign-in
+    // feel like it changed nothing. The property that matters here is that the
+    // spent code is gone from the URL, which is asserted above; where the
+    // reader ends up is the rule's business and is asserted in
+    // test/last-board.test.js.
+    assert.equal(await cb.page.evaluate(() => location.pathname), '/r/fol',
+      'a completed callback lands on the first-time board, per the landing rule');
   } finally {
     await cb.close();
   }

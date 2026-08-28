@@ -135,11 +135,15 @@ export async function run() {
   });
   const { page } = s;
 
-  // 3b segment: signed-in → dial to Mutuals → the merged board renders
+  // 3b segment: signed-in → pick My mutuals in the nav → the merged board renders.
+  // V4: the dial became the left nav, so the gesture is a nav row rather than a
+  // dial button. The property under test is the BOARD, not the control.
   await page.goto(`${s.origin}/`);
-  await page.waitForSelector('text=@me.test');
-  await page.waitForSelector('[data-ring-dial]');
-  await page.locator('[data-ring-dial] button:has-text("Mutuals")').first().click();
+  // E144: the masthead shows a named account control instead of the handle
+  // as text. Same signal — 'this session is signed in' — new surface.
+  await page.waitForSelector('[data-account="1"][aria-label*="me.test"]');
+  await page.waitForSelector('.nav [data-nav-item="mut"]');
+  await page.locator('.nav [data-nav-item="mut"]').first().click();
   await page.waitForSelector('text=post b1');
   await page.waitForSelector('text=post a1');
   const text = await page.locator('main, body').first().innerText();
@@ -152,12 +156,12 @@ export async function run() {
     .filter((h) => /getFollows|getFollowers/.test(h.url)).length);
   const afterFirstDial = await graphCalls();
   assert.ok(afterFirstDial > 0, 'the first dial did read the graph');
-  await page.locator('[data-ring-dial] button:has-text("World")').first().click();
+  await page.locator('.nav [data-nav-item="world"]').first().click();
   // wait for the World dial to have SETTLED rather than sleeping at it: a fixed
   // delay before an assertion that nothing happened can only be too short or
   // wasteful, and under load it is the former (croftc-e2's observation).
   await page.waitForFunction(() => !document.querySelector('.skeleton'), null, { timeout: 15000 });
-  await page.locator('[data-ring-dial] button:has-text("Mutuals")').first().click();
+  await page.locator('.nav [data-nav-item="mut"]').first().click();
   await page.waitForSelector('text=post b1');
   assert.equal(await graphCalls(), afterFirstDial,
     'dialing back re-used the remembered ring — no new graph reads');
@@ -365,7 +369,7 @@ export async function run() {
 
   // …and the facet #tag in a board post is a doorway into /h/
   await page.goto(`${s.origin}/`);
-  await page.locator('[data-ring-dial] button:has-text("Mutuals")').first().click();
+  await page.locator('.nav [data-nav-item="mut"]').first().click();
   await page.waitForSelector('a[data-tag="camp"]');
   await page.locator('a[data-tag="camp"]').first().click();
   await page.waitForSelector('h1:has-text("#camp")');
@@ -467,7 +471,9 @@ export async function run() {
 
   // 3g segment: the trending rail (world ring) opens a topic as a FEED board
   await page.goto(`${s.origin}/`);
-  await page.locator('[data-ring-dial] button:has-text("World")').first().click();
+  // The trending rail lives on the DIRECTORY, which has its own address now —
+  // '/' is the landing and redirects a signed-in reader to their board.
+  await page.locator('.nav [data-nav-item="directory"]').first().click();
   await page.waitForSelector('[data-trending] a:has-text("Meadow Fest")');
   await page.locator('[data-trending] a:has-text("Meadow Fest")').click();
   await page.waitForSelector('text=post tp1');

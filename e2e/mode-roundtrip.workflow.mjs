@@ -48,9 +48,13 @@ export async function run() {
   // in-app navigation pushes real history — back returns to the previous page
   await cp.page.goto(`${cp.origin}/`);
   await cp.page.waitForSelector('text=The Lens');
-  await cp.page.locator('a[href="/settings"]').first().click();
-  await cp.page.waitForSelector('text=Skin');
-  assert.equal(new URL(cp.page.url()).pathname, '/settings', 'a click navigated without a page load');
+  // E144: the masthead's Settings link became the account control, and
+  // Preferences moved onto /me. The property under test is unchanged — an
+  // in-app click navigates without a page load and Back returns — so it now
+  // drives the control that actually exists.
+  await cp.page.locator('[data-account="1"]').first().click();
+  await cp.page.waitForSelector('#pref-skin');
+  assert.equal(new URL(cp.page.url()).pathname, '/me', 'a click navigated without a page load');
   await cp.page.goBack();
   await cp.page.waitForSelector('text=The Lens');
   assert.equal(new URL(cp.page.url()).pathname, '/', 'back works');

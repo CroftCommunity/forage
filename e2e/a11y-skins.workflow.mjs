@@ -120,6 +120,37 @@ const LENS_SURFACES = ['/'];
 // enforced for every skin like any other.
 const EXCLUDED_RULES = [];
 
+// WHAT THIS GATE CANNOT FIND, BY CONSTRUCTION — read this before concluding the
+// app is clean because the sweep is green.
+//
+// Both scans below filter to ['wcag2a', 'wcag2aa']. That is deliberate and
+// matches the workspace standard (croft-pwa/docs/ACCESSIBILITY.md: serious and
+// critical block, "a gate that fires on cosmetic findings gets muted"). The
+// consequence is that every axe rule tagged BEST-PRACTICE is invisible here, no
+// matter how many surfaces we add — the coverage axis and the rule axis are
+// independent, and only one of them was widened in 2c4b28d.
+//
+// A live unfiltered scan of the deployed site on 2026-08-26 found three such
+// classes that this gate had never reported and never could: no landmarks
+// anywhere (js/main.js renders div#main, not <main>; no skip link ->
+// landmark-one-main + region on every route), /feeds sort selects labelled by
+// `title` alone (label-title-only), and no h1 on the signed-out /h/:tag
+// (page-has-heading-one). Whether to adopt any of them is an OWNER decision,
+// open as roadmap E145 — not drift, and not something to quietly widen here.
+//
+// To re-run that audit (it is the only way to see this class):
+//   Playwright + @axe-core/playwright against the DEPLOYED origin,
+//   serviceWorkers: 'block'      -- so you grade the first-hit DOM, not the
+//                                   service-worker-upgraded one a bot never gets
+//   AxeBuilder(...).analyze()    -- NO .withTags(), which is the whole point
+//   waitUntil: 'networkidle' + ~1200ms settle
+//   plus a geometry pass over a/button/input/select/summary/[role=button]
+//   for anything under 44px in either dimension (the touch floor).
+//
+// Re-measure against the CURRENT deployed build every time. A v38 measurement
+// does not settle a v40 question, and three of that survey's four findings were
+// closed within hours of being reported.
+
 export async function run() {
   const failures = [];
 

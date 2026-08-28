@@ -9,6 +9,7 @@
 // Lens surfaces are read-only; the write gates all stay shut (frontier chips,
 // never dead buttons — the UI renders these as deferred, invariant 7).
 import { buildPost, withTag, IMAGE_LIMITS } from '../compose.js';
+import { RUNG_IDS, membersFor, labelFor } from '../rings.js';
 
 export const LENS_PERMS = Object.freeze({
   viewerId: null, loggedIn: false, admin: false, probation: false,
@@ -950,9 +951,11 @@ export function createLens({ session = null, transport = fetch } = {}) {
     // follows ∩ followers; mutuals+1 adds each mutual's follows under
     // RING_CAP with HONEST overflow (the true pre-cap count — never silent).
     ringMembers(ring) {
-      if (ring === 'world' || ring === 'following') return Promise.resolve({ members: null });
-      if (ring !== 'mutuals' && ring !== 'mutuals+1') {
-        return Promise.reject(new Error(`lens: unknown ring: ${ring} (known: world, following, mutuals, mutuals+1)`));
+      // World has no member list — null means "do not filter", where [] would
+      // mean "filter to nobody". js/rings.js owns that distinction.
+      if (ring === 'world') return Promise.resolve({ members: null });
+      if (!RUNG_IDS.includes(ring)) {
+        return Promise.reject(new Error(`lens: unknown rung: ${ring} (known: ${RUNG_IDS.join(', ')})`));
       }
       if (!session) return Promise.reject(new Error('lens: rings are computed from YOUR graph — needs a session'));
       const cached = ringCache.get(ring);
@@ -967,21 +970,25 @@ export function createLens({ session = null, transport = fetch } = {}) {
     // explicit refresh. The graph belongs to an account, not to a device.
     forgetRings() { ringCache.clear(); },
 
-    // The actual graph walk, cached by ringMembers above.
+    // The graph walk, cached by ringMembers above. This function FETCHES; it
+    // does not decide what a rung means — js/rings.js does, purely, which is
+    // what let the containment property be tested without a network.
+    //
+    // The second hop is fetched only for the rung that needs it. Every tighter
+    // rung is a union over data the first two calls already returned, so 'me',
+    // 'mut' and 'fol' cost exactly two requests between them.
     async computeRing(ring) {
       const [follows, followers] = await Promise.all([
         pagedGraph('getFollows', session.did),
         pagedGraph('getFollowers', session.did),
       ]);
-      const mutuals = computeMutuals(follows, followers);
-      if (ring === 'mutuals') return { members: mutuals };
-      const seen = new Set(mutuals);
-      for (const m of mutuals) {
-        for (const did of await pagedGraph('getFollows', m)) seen.add(did);
+      const hopFollows = new Map();
+      if (ring === 'hop') {
+        for (const m of computeMutuals(follows, followers)) {
+          hopFollows.set(m, await pagedGraph('getFollows', m));
+        }
       }
-      const all = [...seen];
-      if (all.length <= RING_CAP) return { members: all };
-      return { members: all.slice(0, RING_CAP), overflow: { capped: true, total: all.length } };
+      return membersFor(ring, { me: session.did, follows, followers, hopFollows });
     },
 
     // 3b: the merged ring board. One page = one fan-out round over the ring's
@@ -995,18 +1002,65 @@ export function createLens({ session = null, transport = fetch } = {}) {
     // timeoutMs bounds each member — D6 measured a ~20s cold-start stall, and
     // one slow member must never hold the board hostage.
     async ringFeed(ring, { cursor, onPage, timeoutMs = 8000 } = {}) {
-      if (ring === 'world') {
-        throw new Error('lens: the world ring has no merged board — its board is the sources/feeds surface');
-      }
-      if (ring === 'following') {
-        const board = await this.feed({ kind: 'timeline' }, { title: 'Following' });
+      // WHY 'fol' DELEGATES INSTEAD OF FANNING OUT, stated because it is the
+      // one place the ladder's set and the board's FETCH differ. js/rings.js
+      // defines 'fol' as me ∪ mutuals ∪ everyone I follow. Fanning out over
+      // that set would be one getAuthorFeed per follow — hundreds of requests
+      // for an ordinary account, which is the cost RING_CAP exists to bound and
+      // is why 'hop' is capped at all. `getTimeline` is the network's own answer
+      // to the same question in ONE request, so the rung is fetched that way.
+      //
+      // The honest consequence: containment is a property of the MEMBER SETS
+      // (proven in test/rings.test.js), not of the rendered boards, because the
+      // timeline is Bluesky's composed following feed rather than a literal
+      // union of author feeds. Every other rung fans out and is literal. If
+      // that difference ever matters to a reader, the fix is to say so on the
+      // board, not to make the fan-out unaffordable.
+      if (ring === 'fol') {
+        const board = await this.feed({ kind: 'timeline' }, { title: 'My follows' });
         return { ...board, ring, failures: [] };
+      }
+      // V3: World is the widest rung, and the only one whose members are not
+      // people. It draws the COMPOSITION — your timeline plus every feed you
+      // have saved — merged and unsqueezed. That is what the owner's
+      // definition requires: "everybody's interactions on this combination of
+      // my own posts, my follows posts, my mutuals, and like feeds I follow".
+      // Not the firehose: the composition is the boundary, which is why
+      // nothing global is fetched here.
+      //
+      // Same failure discipline as the member fan-out: one dead source is
+      // NAMED and the rest of the board still paints. A composition of nothing
+      // is an empty board, not an error — a reader who has saved no feeds and
+      // follows nobody has an empty world, honestly.
+      if (ring === 'world') {
+        if (!session) throw new Error('lens: World is your composition — needs a session');
+        const saved = await this.feeds().catch(() => []);
+        const sources = [
+          { key: 'timeline', source: { kind: 'timeline' }, title: 'Following' },
+          ...saved.filter((f) => f.kind === 'feed')
+            .map((f) => ({ key: f.slug || f.id, source: { kind: 'feed', uri: f.id }, title: f.title })),
+        ];
+        const failures = [];
+        const pages = await Promise.all(sources.map(async (s) => {
+          try {
+            const b = await this.feed(s.source, { title: s.title, slug: s.key });
+            if (onPage && b.posts.length) onPage(b.posts);
+            return b.posts;
+          } catch { failures.push(s.key); return []; }
+        }));
+        const posts = pages.flat().sort((x, y) => {
+          const t = String(y.createdTs).localeCompare(String(x.createdTs));
+          if (t) return t;
+          const a = String(x.author).localeCompare(String(y.author));
+          return a || String(x.id).localeCompare(String(y.id));
+        });
+        return { posts, ring, failures, feedTitle: 'World', feedSlug: 'ring:world', cursor: null };
       }
       const resumed = cursor ? JSON.parse(atob(cursor)) : null;
       const ringInfo = resumed ? { members: Object.keys(resumed.m) } : await this.ringMembers(ring);
       const cursors = resumed ? resumed.m : Object.fromEntries((ringInfo.members ?? []).map((d) => [d, undefined]));
       const failures = [];
-      const src0 = { feedId: `lens:ring:${ring}`, feedSlug: `ring:${ring}`, feedTitle: ring === 'mutuals' ? 'Mutuals' : 'Mutuals +1' };
+      const src0 = { feedId: `lens:ring:${ring}`, feedSlug: `ring:${ring}`, feedTitle: labelFor(ring) };
       const withTimeout = (p, did) => new Promise((resolve) => {
         let settled = false;
         const timer = setTimeout(() => { if (!settled) { settled = true; failures.push(did); resolve(null); } }, timeoutMs);
