@@ -1,11 +1,24 @@
 # Plan: the signed-out front door — sticky masthead, auth sheet, emblem hero
 
-**Status:** Passes 1, 2 and 3 complete. **Phase 0 DONE** · **Phase A DONE** (its
-`scroll-margin-top` item DROPPED with reasons, see the phase) · **Phase B DONE**
-2026-08-27 · **Phases C and D BLOCKED on three owner confirmations** (see Open
-Questions) · **Phase E** follows D. **Phase 0 D1 RESOLVED** (2026-08-27) — Phases C and D
-are unblocked. **Phase A's tap-target half DONE**; its BLOCKING layout question is resolved.
-Phase A's `scroll-margin-top` item and Phases B–E remain open.
+**Status** (rewritten 2026-08-27 — the previous line had accumulated appended updates
+until it said C/D were both blocked and unblocked, and called Phase B open after it
+landed; a Status line that contradicts itself is worse than none):
+
+| Phase | State |
+|---|---|
+| 0 Discovery | **DONE** — D1 and D2 both answered with observed evidence |
+| A Masthead | **DONE and DEPLOYED** — sticky, at the 44px floor, shorter at 320px. One item DROPPED with reasons (`scroll-margin-top`) |
+| B The seam | **DONE and DEPLOYED** — `signIn` options, host registry, LIVE drift check, end of silent callbacks |
+| C The sheet | **DONE** — `<dialog>`, three hosts, any-server handle field, reachable from the sidebar card on every signed-out surface |
+| D The hero | **DONE** — stacked on a phone, side-by-side above 560px, dismissal permanent and device-local |
+| E Emblem asset | **DONE** — 400/800/1200w sources, byte ceilings asserted, selected-source pinned. The transparency experiment RAN and is RETIRED |
+
+**The plan is COMPLETE.** All six phases are done or deliberately dropped with reasons, all
+four open questions are RESOLVED, and Phase E's experiment has been run and retired. What
+this plan set out to fix — a front door that led with a locked control and hid the key — is
+shipped: sign-in follows you, it is hittable with a thumb, it names more than one server,
+and the emblem greets you at 18.8 KB. Remaining follow-ons live in `TODO.md`, not here.
+
 **Supersedes** `2026-08-26-2-plan-public-site-polish.md` § Phase 2, which becomes a pointer.
 **Worktree:** `worktrees/forage/polish` on `claude/polish`. Claim: `CroftC/.coordination/claims/forage--polish.md`.
 
@@ -397,12 +410,12 @@ signed-out surface.
 **Goal:** A visitor can choose a server and an intent, and understands why they are being
 asked.
 **Changes:**
-- [ ] `js/ui/lens-views.js` — the `<dialog>`, its rows, and the trigger seam.
-- [ ] `css/app.css` — sheet styling; bottom sheet under ~700px, centred dialog above.
-- [ ] `e2e/auth-sheet.workflow.mjs` (NEW) — the journey.
-- [ ] `e2e/a11y-skins.workflow.mjs` — scan with the sheet OPEN.
-- [ ] `README.md:363`, `AGENTS.md` § Identity + § Surfaces — multi-host wording.
-- [ ] `sw.js` — bump `CACHE`.
+- [x] DONE — `js/ui/lens-views.js`: the `<dialog>`, its rows, `beginSignIn` as the single door, and the trigger inside `sessionCard()`.
+- [x] DONE — `css/app.css` + two new tokens (`--scrim`, `--radius-sheet`): bottom sheet under 700px, centred dialog above, ONE element in both.
+- [x] DONE — `e2e/auth-sheet.workflow.mjs`. RED first (no trigger existed).
+- [x] DONE — `e2e/a11y-skins.workflow.mjs` scans the sheet OPEN on every skin.
+- [x] DONE — `README.md`, `AGENTS.md` § Identity + § Surfaces.
+- [x] DONE — `sw.js` `CACHE` -> `forage-v42`. No SHELL change: the sheet adds no file.
 **Settled with the owner (2026-08-26):** open-signup hosts get `[Create account] [Sign in]`;
 invite-only hosts get the words *invite only* **in the create slot** with Sign in beside
 them, so the column stays aligned and the words explain the missing button; the list is
@@ -451,11 +464,11 @@ variant showed it overlapping the headline when space is tight.
 
 **Goal:** The emblem is seen, and the sheet has a front door.
 **Changes:**
-- [ ] `js/ui/lens-views.js` — hero on the signed-out lens **home only**.
-- [ ] `js/hero.js` (NEW) — pure dismissal state, device-local.
-- [ ] `test/hero.test.js` (NEW), `e2e/feed-naming.workflow.mjs` or a new journey.
-- [ ] `css/app.css` — hero layout; stacks under ~560px.
-- [ ] `sw.js` — SHELL + `CACHE`.
+- [x] DONE — `js/ui/lens-views.js`, `heroCard()` on the signed-out lens home only.
+- [x] DONE — `js/hero.js`: persistence only. Removing the node is the VIEW's job, so a reader in private mode gets a ✕ that does something rather than one that silently no-ops.
+- [x] DONE — `test/hero.test.js` (7 tests, RED first) and `e2e/hero.workflow.mjs` (new journey, RED first).
+- [x] DONE — `css/app.css`, stacks under 560px. Every rule SCOPED under `.hero-lens` — see below.
+- [x] DONE — `sw.js`: `/js/hero.js` in SHELL, `CACHE` -> `forage-v43`.
 **Owner decisions:** expanded by default; **dismissal never expires**; **on desktop too**
 (branding, not only funnel); close is a ✕ in the corner, not a button competing with the
 primary action; home only.
@@ -491,9 +504,9 @@ is the lens. No other shared mutable state beyond the write-set and `CACHE`.
 
 **Goal:** The front door does not cost 216 KB above the fold.
 **Changes:**
-- [ ] `assets/` — correctly-sized sources; `<picture>`/`srcset` in the hero.
-- [ ] a byte-ceiling assertion.
-- [ ] `sw.js` — SHELL + `CACHE`.
+- [x] DONE — `assets/logo-wordmark-{400,800,1200}.jpg`; `srcset` + `sizes` on the hero `<img>`. No `<picture>` and no second format: one format is one URL per width, and every one has to be named in SHELL.
+- [x] DONE — `test/hero.test.js`: smallest source <= 30 KB, no source above 140 KB, `src` must BE the small source, `sizes` breakpoint must match the CSS, and every source must be in SHELL.
+- [x] DONE — `sw.js`: three emblem SHELL entries, `CACHE` -> `forage-v44`.
 **Call chain:** `heroCard()` → `<picture>` → the sized source the viewport selects.
 **Wiring test:** a workflow assertion that at 390px the *selected* source is the small one
 — not merely that a small file exists on disk. Testing the file's existence would pass
@@ -766,3 +779,117 @@ plainly rather than presenting three passing tests as three fixes.
 
 **Gate:** 470 unit / 88 conformance / 11 workflows, 0 failures. Both live-only checks
 skip-reported.
+
+### Execution: Phase C — 2026-08-27
+**Shipped.** The sheet is a native `<dialog>` built fresh per open and removed on close,
+opened from **the sidebar sign-in card**, which renders on every signed-out surface. The
+plan called for a *temporary* trigger on the home so the sheet would not ship unreachable;
+Decision 4's permanent trigger was already specified and lands on more surfaces than the
+temporary one would have, so it was built directly and no temporary control existed at any
+point.
+
+**Two defects the tests could not see, both caught by looking at a screenshot:**
+- The sheet rendered **see-through**. `dialog.authsheet` (0,1,1) set `background:
+  transparent` and `.authsheet` (0,1,0) painted `--card` — the same element by two
+  selectors, more specific one wins. Every assertion passed: the dialog was open, the rows
+  were right, axe found nothing, because a transparent modal has no contrast problem. Now
+  one selector for one element.
+- **`[hidden]` does not hide a `.btn`.** The UA styles `[hidden]` at element specificity
+  and the touch-floor block sets `display: inline-flex` on `.btn`, so "Another server"
+  stayed on screen above the field it had just revealed. Fixed with the normalize-style
+  `[hidden] { display: none !important }` rather than per-component, because the next
+  `hidden` toggle in this codebase would hit the identical rule. This one got a RED
+  assertion first and is now pinned — "the field appeared" was true in both worlds.
+
+**One existing invariant earned its keep.** `test/skins.test.js` "2: the hardcoded radii
+are tokenised" failed on the sheet's `border-radius: 16px` — a literal that would have left
+one surface un-squarable by a skin that squares everything else. `--radius-sheet` exists
+because of it. `--scrim` was added for the same reason a level up: `::backdrop` otherwise
+renders a UA colour no skin can reach.
+
+**Gate:** 470 unit / 88 conformance / 13 workflows, 0 failures. Looked at on default,
+forage-dark, usenet and phpbb at 390 and 1280, plus the any-server field expanded.
+
+### Execution: Phase D — 2026-08-27
+**Shipped.** ~41% of a 390px fold, measured, with a 55% ceiling asserted so a later change
+cannot quietly take the rest. "The Lens" and the first board card both still clear the fold.
+
+**Three defects, and only one of them had a test that could have caught it:**
+- **`[hidden]` again, in a new costume** — no; this one was new. A stray `}` left by a
+  scripted splice of `css/app.css` silently swallowed the entire `.hero-lens` rule. The
+  hero still rendered, still stacked, still passed its shape assertions, and the ✕ landed
+  *under the sticky masthead* because its absolutely-positioned box fell back to the
+  viewport. The symptom was a Playwright click timing out with "Sign in intercepts pointer
+  events", which reads like a test problem and was a product one: on a phone the dismiss
+  control was genuinely untappable. A CSS parse error has no error channel — worth knowing
+  that this repo's only detector for one is a workflow that touches the thing.
+- **A CLASS COLLISION ACROSS POPULATIONS.** `.hero-copy` and `.hero-art` already belong to
+  the MEMORY population's hero (`boardView()`, `.hero-gate`). Unscoped,
+  `.hero-copy { padding-right: 36px }` reached across and broke `/popular` at 320px — a
+  surface this phase never touched, in a population it never touched. **W6 caught it**;
+  nothing about the lens did. Every hero rule is now scoped under `.hero-lens`. Two heroes
+  in one class vocabulary is the standing hazard, and the scoping is what contains it.
+- The ✕ needed its corner RESERVED rather than floated, exactly as the rejected
+  side-by-side preview predicted. `padding-right` on the copy, dropped at the stacked
+  breakpoint where there is no headline beside it.
+
+**On the a11y bite test for Phase C's new coverage** (run here because it belongs with the
+sheet): planting an unnamed close button produced **7 violations, one per skin, each
+labelled `(sheet open)`** — the scan genuinely reaches inside the dialog on every skin.
+Worth recording what did NOT bite: removing only the `aria-label` and leaving the `✕`
+glyph passes, because axe accepts visible text as an accessible name. The label is a
+quality choice ("Hide this" vs "multiplication x"), and no gate in this repo enforces it.
+
+**Gate:** 477 unit / 88 conformance / 14 workflows, 0 failures. Looked at on default,
+forage-dark, usenet and phpbb at 390 and 1280.
+
+### Execution: Phase E — 2026-08-27
+**Shipped.** The emblem renders at ~340 CSS px and used to cost 216 KB. It now costs
+**18.8 KB** on a 1x phone, with 800w and 1200w above it. The assertion is on
+`img.currentSrc`, not on a small file existing — the second would have passed while the
+phone still pulled the original, which is the entire failure this replaces.
+
+**`height: auto` was load-bearing, and Phase D's fold ceiling is what caught it.** Adding
+`width`/`height` attributes — so the browser reserves the box before the bytes arrive —
+maps them to presentational width/height, and the stacked hero rendered **576px tall, 103%
+of a 390px fold**. That ceiling was written as a guard against future scope creep and
+caught a defect in the phase after it instead.
+
+### The transparency experiment: RAN, and RETIRED — keep the paper plaque
+The retire-by was "better than the plaque on at least three of the four skins, or close the
+question". Rendered against every skin's real `--card`:
+
+```
+default     #FFFFFF   transparent BETTER      — the plaque reads as a pasted rectangle
+usenet      #F5F5F1   transparent better      — marginal; the plaque's warmth is subtle
+phpbb       #FFFFFF   transparent BETTER      — same as default
+forage-dark #31291F   transparent MUCH WORSE  — the wordmark is ILLEGIBLE
+```
+
+**Three of four, and the answer is still no.** The count-based criterion assumed the losses
+would be cosmetic. They are not: the wordmark's letters are dark green, so on the dark skin
+the transparent variant does not look worse — it stops being readable. A wordmark you
+cannot read on one skin in four is not offset by three wins, and no threshold expressed as
+a count can say so. Recording the criterion's limit rather than quietly reinterpreting it,
+because the next retire-by written this way will have the same blind spot.
+
+Two further reasons, either sufficient alone:
+- **Bytes.** A transparent variant must be PNG: 400w PNG is **124 KB against 18.8 KB** for
+  the JPEG — 6.6x, straight through the byte ceiling this phase exists to enforce. The
+  experiment fails the phase's own goal.
+- **The extraction is not clean.** Flood-filling a JPEG's paper ground leaves speckle
+  around the letters. That one is an artifact of MY extraction rather than of a transparent
+  emblem in principle — said plainly so it is not counted as evidence it is not.
+
+**The cause was predicted by this plan's own Reasoning** ("the wordmark letters are dark
+green; making them follow the skin means SVG text taking `currentColor` — a redraw"). The
+experiment confirmed the prediction rather than overturning it. **Question closed, no
+lingering someday-SVG.** If the emblem is ever redrawn as vector art this becomes possible,
+and the reason it was not is written down here.
+
+**Left undone deliberately:** three callers still point at the 216 KB original — the memory
+population's hero, `/signup`, and `README.md`. All three are outside this phase's declared
+write-set, so they are filed in `TODO.md` rather than swept in. Production defaults to the
+lens; the sandbox hero is the only one of the three that costs a visitor real bytes.
+
+**Gate:** 481 unit / 88 conformance / 14 workflows, 0 failures.
