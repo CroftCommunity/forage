@@ -1,8 +1,18 @@
-// W4 — the skins journey (4a/4b): pick a skin in Settings, it applies
+// W4 — the skins journey (4a/4b): pick a style in Settings, it applies
 // instantly, persists across reload, follows you across modes/views, and
-// default restores today's look exactly (no link element at all).
+// Forage-in-light restores today's look exactly (no link element at all).
+//
+// REWORKED for the family-shaped picker (plan 2026-08-26-2 Phase 1). The select
+// now carries FAMILY ids, and the two namespaces overlap: `bbs`, `usenet` and
+// `phpbb` are each a skin id AND a family id. So `selectOption('bbs')` passed
+// before this change and passes after it FOR A DIFFERENT REASON — which is
+// exactly the shape of assertion that survives a rewrite while proving nothing.
+// Every assertion below reads the resolved `link#skin-sheet` href or the
+// computed paint, never the select value — except the one that is deliberately
+// about the select value, which is the feature itself.
 import assert from 'node:assert/strict';
 import { scenario } from './harness/scenario.mjs';
+import { FAMILIES, SKINS } from '../js/skins.js';
 
 export async function run() {
   const s = await scenario('seeded', { responses: { 'getTrendingTopics': { topics: [] } } });
@@ -32,12 +42,24 @@ export async function run() {
   await page.waitForSelector('.masthead');
   assert.match(await fontOf(), /mono/i, 'the BBS skin dresses every surface');
 
-  // back to default: the look is exactly today's (no sheet at all)
+  // Back to Forage — and this is where the family model shows itself. Classic
+  // BBS is DARK, so picking Forage from there lands on forage-dark, NOT on the
+  // light default: the palette carries across families and the style is what
+  // you chose. Under the old flat picker, `selectOption('default')` jumped both
+  // axes at once and nobody could see that it had.
   await page.goto(`${s.origin}/settings`);
   await page.waitForSelector('text=Skin');
-  await page.locator('.field-row:has-text("Skin") select').selectOption('default');
+  await page.locator('.field-row:has-text("Skin") select').selectOption('forage');
+  await page.waitForFunction(() =>
+    document.getElementById('skin-sheet')?.getAttribute('href')?.includes('forage-dark'));
+  assert.equal(await page.evaluate(() => localStorage.getItem('forage.skin')), 'forage-dark',
+    'picking a style keeps the palette you were in');
+
+  // and the light side of that same family IS the no-sheet default
+  await page.locator('.themetoggle').first().click();
   await page.waitForFunction(() => !document.getElementById('skin-sheet'));
-  assert.equal(await fontOf(), before, 'default restores the exact original font stack');
+  assert.equal(await fontOf(), before, 'Forage in light restores the exact original font stack');
+  assert.equal(await linkCount(), 0, 'and it is still the no-sheet case');
 
   // 3o: Settings answers "which build am I looking at?"
   await page.waitForSelector('[data-version]');
@@ -63,7 +85,9 @@ export async function run() {
     await chrome.page.waitForSelector('text=Skin');
     assert.match(await schemeOf(), /light/, 'the light default declares light native chrome');
 
-    await chrome.page.locator('.field-row:has-text("Skin") select').selectOption('forage-dark');
+    // Dark is reached through the TOGGLE now — `forage-dark` is a skin id and
+    // no longer a value this select carries.
+    await chrome.page.locator('.themetoggle').first().click();
     await chrome.page.waitForFunction(() =>
       getComputedStyle(document.documentElement).colorScheme.includes('dark'));
     assert.match(await schemeOf(), /dark/, 'forage-dark drives native chrome dark, not just tokens');
@@ -128,6 +152,90 @@ export async function run() {
     } finally {
       await boot.close();
     }
+  }
+
+  // --- the picker is FAMILY-shaped (plan 2026-08-26-2 Phase 1) -----------
+  // The whole feature in one journey: you choose a STYLE and the ☾/☀ toggle
+  // chooses the side, so moving between light and dark no longer costs you your
+  // place in the list.
+  const fam = await scenario('seeded');
+  try {
+    const { page } = fam;
+    const sel = () => page.locator('.field-row:has-text("Skin") select');
+    const sheet = () => page.evaluate(() =>
+      document.getElementById('skin-sheet')?.getAttribute('href') ?? null);
+
+    await page.goto(`${fam.origin}/settings`);
+    await page.waitForSelector('text=Skin');
+
+    // one row per FAMILY, not one per skin
+    const rows = await page.locator('.field-row:has-text("Skin") select option').count();
+    assert.equal(rows, Object.keys(FAMILIES).length,
+      `the picker lists ${Object.keys(FAMILIES).length} styles, not ${Object.keys(SKINS).length} skins (saw ${rows})`);
+    assert.equal(await page.locator('.field-row:has-text("Skin") select optgroup').count(), 0,
+      'and it is a flat list — the Light/Dark optgroups were the old shape of this problem');
+
+    // pick a style from LIGHT -> the light member
+    await sel().selectOption('usenet');
+    await page.waitForFunction(() => document.getElementById('skin-sheet'));
+    assert.match(await sheet(), /\/skins\/usenet\.css$/, 'picking Usenet gray in light lands on its light member');
+
+    // toggle -> the dark member, AND THE PICKER STILL READS THE SAME STYLE.
+    // That second half is the feature. The first half passed on the old code.
+    await page.locator('.themetoggle').first().click();
+    await page.waitForFunction(() =>
+      document.getElementById('skin-sheet')?.getAttribute('href')?.includes('usenet-dark'));
+    assert.match(await sheet(), /\/skins\/usenet-dark\.css$/, 'the toggle moves to the family\'s dark side');
+    assert.equal(await sel().inputValue(), 'usenet',
+      'and the picker still shows Usenet gray — under the flat list, toggling moved your selection to a different row');
+
+    // pick another style while DARK -> its dark member. Both directions, or a
+    // hardcoded palette would pass.
+    await sel().selectOption('forage');
+    await page.waitForFunction(() =>
+      document.getElementById('skin-sheet')?.getAttribute('href')?.includes('forage-dark'));
+    assert.equal(await page.evaluate(() => localStorage.getItem('forage.skin')), 'forage-dark',
+      'the palette carries ACROSS families — not back to the light default');
+
+    // a sole-palette family says so in its own row, and disables the toggle
+    const bbsLabel = await page.locator('.field-row:has-text("Skin") select option[value="bbs"]').innerText();
+    assert.match(bbsLabel, /dark only/i, `the row itself says the family ships one palette: ${bbsLabel}`);
+    await sel().selectOption('bbs');
+    await page.waitForFunction(() =>
+      document.getElementById('skin-sheet')?.getAttribute('href')?.includes('bbs'));
+    assert.match(await sheet(), /\/skins\/bbs\.css$/, 'Classic BBS resolves to its only member');
+    assert.equal(await page.locator('.themetoggle').first().isDisabled(), true,
+      'and the toggle has nowhere to go');
+
+    // Choosing it from LIGHT is a legal answer, not a refusal. Getting back to
+    // light takes two steps and the reason is the feature working: from a
+    // dark-only family the toggle is dead, so you pick a two-sided style first
+    // — which keeps you in DARK — and only then can you toggle.
+    await sel().selectOption('forage');
+    await page.waitForFunction(() =>
+      document.getElementById('skin-sheet')?.getAttribute('href')?.includes('forage-dark'));
+    await page.locator('.themetoggle').first().click();
+    await page.waitForFunction(() => !document.getElementById('skin-sheet'));
+    await sel().selectOption('bbs');
+    await page.waitForFunction(() => document.getElementById('skin-sheet'));
+    assert.match(await sheet(), /\/skins\/bbs\.css$/,
+      'picked from LIGHT, a dark-only family still lands on its dark member rather than refusing');
+
+    // Reload: BOTH the style and the palette survive, from one stored id. We
+    // are on Classic BBS and therefore in dark, so picking Usenet gray lands on
+    // its dark member without touching the toggle — which is the carry-across
+    // asserted a third time, from a dark-ONLY origin this time.
+    await sel().selectOption('usenet');
+    await page.waitForFunction(() =>
+      document.getElementById('skin-sheet')?.getAttribute('href')?.includes('usenet-dark'));
+    await page.reload();
+    await page.waitForSelector('text=Skin');
+    assert.match(await sheet(), /\/skins\/usenet-dark\.css$/, 'the palette survives reload');
+    assert.equal(await sel().inputValue(), 'usenet', 'and so does the style, from ONE stored key');
+    assert.equal(await page.evaluate(() => localStorage.getItem('forage.skin')), 'usenet-dark',
+      'one key, still a concrete skin id — the pre-paint boot scripts read this and were not touched');
+  } finally {
+    await fam.close();
   }
 
   // --- the toggle swaps to the SIBLING, and says so when there isn't one (1E)

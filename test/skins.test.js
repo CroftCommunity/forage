@@ -77,8 +77,24 @@ test('every REGISTERED skin file passes the scan against the real tokens', () =>
 // resolution order (stored -> transient -> OS preference) before any UI moves.
 // ---------------------------------------------------------------------------
 
-import { siblingOf, validatePairing, resolveDefault, prefersDark,
-         activeSkin, setTransient, clearTransient } from '../js/skins.js';
+import { siblingOf, resolveDefault, prefersDark,
+         activeSkin, setTransient, clearTransient,
+         FAMILIES, familyOf, familyMembers, resolveInFamily, families,
+         validateFamilies, prefersDensityFor } from '../js/skins.js';
+
+// ---------------------------------------------------------------------------
+// Phase 1 (plan 2026-08-26-2) — FAMILY is canonical; `pairedWith` is gone.
+//
+// The registry used to declare pairing directly, and validatePairing checked
+// three ways it could be wrong: asymmetric, dangling, self-paired. Deriving the
+// sibling from family + palette makes all three STRUCTURALLY IMPOSSIBLE rather
+// than merely checked — there is no second place to write the relationship, so
+// there is nothing to disagree with. The tests that guarded those three classes
+// are deleted rather than ported, because the classes no longer exist.
+//
+// What replaces them is the one class deriving INTRODUCES: two skins of the
+// same palette in one family, which would make `siblingOf` pick arbitrarily.
+// ---------------------------------------------------------------------------
 
 test('1A: every registered skin declares which palette it IS', () => {
   for (const [id, s] of Object.entries(SKINS)) {
@@ -87,19 +103,84 @@ test('1A: every registered skin declares which palette it IS', () => {
   }
 });
 
-test('1A: no sibling is LEGAL and reports as null — that is what disables the toggle', () => {
-  const reg = { solo: { label: 'Solo', file: null, palette: 'light' } };
-  assert.equal(siblingOf('solo', reg), null,
-    'a single-palette skin reports no sibling rather than throwing');
+test('P1: every skin declares a REGISTERED family', () => {
+  const fake = { ...SKINS, ghost: { label: 'Ghost', file: null, palette: 'light', family: 'nope' } };
+  assert.throws(() => validateFamilies(FAMILIES, fake), (e) => {
+    assert.match(e.message, /ghost/, 'names the skin');
+    assert.match(e.message, /nope/, 'and the family it claims');
+    return true;
+  });
 });
 
-test('1A: a declared sibling resolves in both directions', () => {
+test('P1: no family may hold two skins of the same palette', () => {
+  // This is the ONE failure class that deriving the sibling introduces, and it
+  // is why validateFamilies exists at all: with two lights in one family,
+  // siblingOf from the dark side would pick whichever came first.
+  const twoLights = {
+    a: { label: 'A', file: null, palette: 'light', family: 'forage' },
+    b: { label: 'B', file: 'skins/b.css', palette: 'light', family: 'forage' },
+  };
+  assert.throws(() => validateFamilies(FAMILIES, twoLights), (e) => {
+    assert.match(e.message, /forage/, 'names the family');
+    assert.match(e.message, /a/);
+    assert.match(e.message, /b/, 'and BOTH ids, so you can see which pair collided');
+    return true;
+  });
+});
+
+test('P1: a registered family with no members fails loudly', () => {
+  // An empty family renders a picker row that resolves to nothing.
+  const orphanFamily = { ...FAMILIES, ghosts: { label: 'Ghosts' } };
+  assert.throws(() => validateFamilies(orphanFamily, SKINS), (e) => {
+    assert.match(e.message, /ghosts/);
+    return true;
+  });
+});
+
+test('P1: the REAL registry passes family validation', () => {
+  validateFamilies();
+});
+
+test('P1: familyOf and familyMembers name what they do not know, like hrefFor does', () => {
+  assert.throws(() => familyOf('neon-dreams'), (e) => {
+    assert.match(e.message, /neon-dreams/);
+    return true;
+  });
+  assert.throws(() => familyMembers('neon-dreams'), (e) => {
+    assert.match(e.message, /neon-dreams/);
+    return true;
+  });
+});
+
+test('P1: the two id namespaces OVERLAP, and a wrong-namespace argument must not resolve silently', () => {
+  // `bbs`, `usenet` and `phpbb` are each simultaneously a skin id and a family
+  // id. That is the hazard: an argument passed to the wrong function still
+  // resolves for three of the seven skins and quietly means something else.
+  for (const both of ['bbs', 'usenet', 'phpbb']) {
+    assert.ok(SKINS[both], `${both} is a skin id`);
+    assert.ok(FAMILIES[both], `${both} is ALSO a family id`);
+  }
+  // So the guard has to come from the ids that do NOT overlap.
+  assert.throws(() => familyMembers('default'), (e) => {
+    assert.match(e.message, /default/, '`default` is a SKIN id and must not resolve as a family');
+    return true;
+  });
+  assert.throws(() => hrefFor('forage'), (e) => {
+    assert.match(e.message, /forage/, '`forage` is a FAMILY id and must not resolve as a skin');
+    return true;
+  });
+});
+
+test('P1: siblingOf is DERIVED — opposite palette in the same family, else null', () => {
   const reg = {
-    day:   { label: 'Day',   file: null,            palette: 'light', pairedWith: 'night' },
-    night: { label: 'Night', file: 'skins/n.css',   palette: 'dark',  pairedWith: 'day' },
+    day:   { label: 'Day',   file: null,          palette: 'light', family: 'f' },
+    night: { label: 'Night', file: 'skins/n.css', palette: 'dark',  family: 'f' },
+    solo:  { label: 'Solo',  file: 'skins/s.css', palette: 'dark',  family: 'g' },
   };
   assert.equal(siblingOf('day', reg), 'night');
   assert.equal(siblingOf('night', reg), 'day');
+  assert.equal(siblingOf('solo', reg), null,
+    'a sole-palette family reports null rather than throwing — null is what disables the toggle');
 });
 
 test('1A: siblingOf names the skin it does not know, like hrefFor does', () => {
@@ -109,71 +190,93 @@ test('1A: siblingOf names the skin it does not know, like hrefFor does', () => {
   });
 });
 
-test('1A: pairing must be SYMMETRIC — a one-sided pair fails loudly, naming both ids', () => {
-  const oneSided = {
-    day:   { label: 'Day',   file: null,          palette: 'light', pairedWith: 'night' },
-    night: { label: 'Night', file: 'skins/n.css', palette: 'dark' }, // does not point back
-  };
-  assert.throws(() => validatePairing(oneSided), (e) => {
-    assert.match(e.message, /day/);
-    assert.match(e.message, /night/);
+test('P1: resolveInFamily returns the WANTED palette, in both directions', () => {
+  // Both directions, or a hardcoded palette passes half the test.
+  assert.equal(resolveInFamily('forage', 'light'), 'default');
+  assert.equal(resolveInFamily('forage', 'dark'), 'forage-dark');
+  assert.equal(resolveInFamily('usenet', 'light'), 'usenet');
+  assert.equal(resolveInFamily('usenet', 'dark'), 'usenet-dark');
+});
+
+test('P1: resolveInFamily FALLS BACK where the wanted palette does not exist', () => {
+  // Choosing Classic BBS while in light lands on its dark member. That is a
+  // legal answer, not an error: the alternative is a picker row that refuses.
+  assert.equal(resolveInFamily('bbs', 'light'), 'bbs');
+  assert.equal(resolveInFamily('bbs', 'dark'), 'bbs');
+  assert.throws(() => resolveInFamily('nope', 'light'), (e) => {
+    assert.match(e.message, /nope/);
     return true;
   });
 });
 
-test('1A: a dangling pairedWith fails loudly, naming the missing id', () => {
-  const dangling = {
-    day: { label: 'Day', file: null, palette: 'light', pairedWith: 'nonesuch' },
-  };
-  assert.throws(() => validatePairing(dangling), (e) => {
-    assert.match(e.message, /nonesuch/);
-    assert.match(e.message, /day/);
-    return true;
-  });
+test('P1: families() is one row per family, with both sides and a sole flag', () => {
+  const rows = families();
+  assert.equal(rows.length, Object.keys(FAMILIES).length);
+  const byId = Object.fromEntries(rows.map((r) => [r.id, r]));
+  assert.deepEqual(
+    { light: byId.forage.light, dark: byId.forage.dark, sole: byId.forage.sole },
+    { light: 'default', dark: 'forage-dark', sole: false });
+  assert.deepEqual(
+    { light: byId.bbs.light, dark: byId.bbs.dark, sole: byId.bbs.sole },
+    { light: null, dark: 'bbs', sole: true },
+    'a one-palette family flags itself, which is what the picker labels and the toggle disables on');
+  assert.ok(rows.every((r) => r.label), 'every row carries a human label');
 });
 
-test('1A: a skin may not be its own sibling, and SAYS so — not "same palette"', () => {
-  const selfPaired = {
-    day: { label: 'Day', file: null, palette: 'light', pairedWith: 'day' },
-  };
-  // A self-pair trivially shares its own palette, so the same-palette guard
-  // would also throw here. Assert the DISTINGUISHING words, or this test passes
-  // whether or not the self-pair check exists (found by mutation, 2026-08-26).
-  assert.throws(() => validatePairing(selfPaired), (e) => {
-    assert.match(e.message, /day/);
-    assert.match(e.message, /itself/, 'the self-pair guard must be the one that fires');
+test('P1: no family label may carry a palette or a flavour word (owner’s naming rule)', () => {
+  // The rule, owner 2026-08-26: a family name has to READ for both sides. The
+  // skin labels are free to say "(after dark)" — they name one palette. The
+  // family label names the STYLE, so "Forage (light)" as a family would be a
+  // row that lies about half of what it selects.
+  //
+  // Gated rather than written down, per PATTERN.md: a rule with no check
+  // decays into prose, and this one is a naming convention, which is the kind
+  // that decays fastest.
+  assert.throws(() => validateFamilies({ ...FAMILIES, forage: { label: 'Forage (light)' } }, SKINS), (e) => {
+    assert.match(e.message, /forage/);
+    assert.match(e.message, /light/, 'names the offending word, not just the label');
     return true;
   });
-});
-
-test('1A: siblings must differ in palette — pairing two lights is a mistake', () => {
-  const sameTone = {
-    a: { label: 'A', file: null,          palette: 'light', pairedWith: 'b' },
-    b: { label: 'B', file: 'skins/b.css', palette: 'light', pairedWith: 'a' },
-  };
-  assert.throws(() => validatePairing(sameTone), (e) => {
-    assert.match(e.message, /palette/);
+  assert.throws(() => validateFamilies({ ...FAMILIES, usenet: { label: 'Usenet gray (newsprint)' } }, SKINS), (e) => {
+    assert.match(e.message, /usenet/);
     return true;
   });
+  // and the real labels pass, which is the half that would otherwise be
+  // satisfiable by a check that rejects everything
+  for (const f of Object.values(FAMILIES)) assert.ok(f.label);
+  validateFamilies();
 });
 
-test('1A: the REAL registry passes pairing validation', () => {
-  validatePairing(SKINS); // throws on any asymmetry, dangle, self-pair, or same-tone pair
+test('P1: prefersDensity lives on the FAMILY, so a palette toggle cannot change density', () => {
+  // DL-028 used to sit on each SKIN. Both phpBB entries carried `compact`
+  // independently and nothing stopped them disagreeing — a disagreement means
+  // toggling light/dark silently re-lays-out the board. Moving it up deletes
+  // that class rather than testing for it.
+  assert.equal(FAMILIES.phpbb.prefersDensity, 'compact');
+  assert.equal(prefersDensityFor('phpbb'), 'compact');
+  assert.equal(prefersDensityFor('phpbb-dark'), 'compact',
+    'both sides of the family, necessarily the same value now');
+  assert.equal(prefersDensityFor('default'), undefined);
+  for (const [id, s] of Object.entries(SKINS)) {
+    assert.equal(s.prefersDensity, undefined,
+      `${id} still declares prefersDensity — it belongs to the family now, and two homes is how they drift`);
+  }
+  // A stale stored id must not throw here: js/board-density.js reads this on
+  // every render and used to be tolerant (`SKINS[...]?.prefersDensity`).
+  assert.equal(prefersDensityFor('a-skin-from-an-older-build'), undefined);
 });
 
 test('1A: OS preference picks the default palette via the default skin\'s sibling', () => {
   // The MECHANISM, tested against fixtures so it stays true whatever the real
-  // registry holds. (Until Phase 1C registered forage-dark, this also asserted
-  // that the real registry's dark branch fell back to `default`; 1C changed
-  // that by design, and test 1C covers the live registry now.)
-  const noSibling = { default: { label: 'D', file: null, palette: 'light' } };
+  // registry holds.
+  const noSibling = { default: { label: 'D', file: null, palette: 'light', family: 'forage' } };
   assert.equal(resolveDefault(false, noSibling), 'default', 'light OS -> default');
   assert.equal(resolveDefault(true, noSibling), 'default',
     'dark OS with no sibling -> falls back to default rather than throwing');
 
   const withDark = {
-    default:      { label: 'Forage', file: null,                    palette: 'light', pairedWith: 'forage-dark' },
-    'forage-dark': { label: 'Forage dark', file: 'skins/forage-dark.css', palette: 'dark', pairedWith: 'default' },
+    default:       { label: 'Forage', file: null, palette: 'light', family: 'forage' },
+    'forage-dark': { label: 'Forage dark', file: 'skins/forage-dark.css', palette: 'dark', family: 'forage' },
   };
   assert.equal(resolveDefault(true, withDark), 'forage-dark', 'dark OS -> the sibling');
   assert.equal(resolveDefault(false, withDark), 'default', 'light OS -> still the light skin');
@@ -299,13 +402,16 @@ function blockTokens(css, selectorStartsWith) {
   return out;
 }
 
-test('1C: forage-dark is registered, dark, and paired with the light default', () => {
+test('1C: forage-dark is registered, dark, and the light default\'s sibling', () => {
   assert.ok(SKINS['forage-dark'], 'forage-dark is registered');
   assert.equal(SKINS['forage-dark'].palette, 'dark');
   assert.equal(SKINS.default.palette, 'light');
   assert.equal(siblingOf('default'), 'forage-dark');
   assert.equal(siblingOf('forage-dark'), 'default');
-  validatePairing(SKINS);
+  // Phase 1 (2026-08-26-2): validatePairing is gone with `pairedWith`. The two
+  // sides are one family now, so the pairing this test names is derived rather
+  // than declared — and validateFamilies is what guards it.
+  validateFamilies();
 });
 
 test('1C: the OS dark preference now resolves THROUGH the registry to forage-dark', () => {
