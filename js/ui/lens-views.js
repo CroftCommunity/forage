@@ -516,6 +516,18 @@ function sessionCard() {
 let activeRing = 'world';
 
 function ringDial() {
+  // Signed out, this is NOT a dial. Three of its four settings need your
+  // follow graph, and hiding them would leave a control with one option —
+  // which reads as broken, not clean. So a guest gets the explanation the dial
+  // would have carried, and no buttons at all. Words cannot be tapped by
+  // accident and do not pretend to be interactive.
+  if (!session) {
+    return el('div', { class: 'card' }, el('h2', {}, 'Your ring'),
+      el('div', { class: 'small' },
+        'A ring is how far out you read: everyone, the people you follow, the ones who follow you back, or one step past them.'),
+      el('div', { class: 'xs muted', style: 'margin-top:4px' },
+        'Rings are computed from your own follow graph, so they need an account. Signed out you are reading the whole world.'));
+  }
   const RINGS = [['world', 'World'], ['following', 'Following'], ['mutuals', 'Mutuals'], ['mutuals+1', 'Mutuals +1']];
   const row = el('div', { class: 'row wrap', style: 'gap:6px', 'data-ring-dial': '1' });
   for (const [id, label] of RINGS) {
@@ -579,6 +591,12 @@ export function lensHomeView() {
     el('div', { class: 'card' },
       el('p', { class: 'small' },
         'Your Bluesky, shaped as a forum: feeds are the boards, threads are threads, and boosting IS liking — a boost here is a real like on Bluesky. Signed out, the lens is read-only.'),
+      // It stated a limitation without naming one thing you would gain. The
+      // controls a guest cannot use are ABSENT rather than dangled, so this is
+      // where the answer to "what would an account get me" actually lives —
+      // once, in prose, instead of six muted nags across every surface.
+      ...(session ? [] : [el('p', { class: 'small', 'data-account-adds': '1' },
+        'With an account you get your own ring — following, mutuals, and one step past them — plus joining and favouriting feeds, boosting posts, and posting and replying. Forage has no accounts of its own; you bring one from Bluesky or any other atproto server.')]),
       el('div', { class: 'row wrap', style: 'gap:6px' },
         ...(session ? [] : [chip('guest search: needs sign-in (DL-014)', 'searchPosts is 403 unauthenticated — probe-verified')]),
         chip('saves: deferred (DL-015)', 'Bookmarks are not public API surface yet'))),
@@ -1096,7 +1114,9 @@ function feedHeaderCard(info, onChange) {
           el('div', { class: 'small' }, el('strong', {}, m.headline)),
           el('div', { class: 'xs muted' }, `${fmtScore(m.likeCount)} likes`),
           adoption)),
-      el('div', { class: 'row', style: 'gap:6px;align-items:center' }, star, btn)),
+      // A guest manages nothing here — the header reads as a thing you are
+      // looking at rather than one you own. Absent, not disabled (owner).
+      el('div', { class: 'row', style: 'gap:6px;align-items:center' }, ...(session ? [star, btn] : []))),
     el('div', { class: 'feed-blurb' + (m.blurbIsOwnWords ? '' : ' muted'), 'data-feed-blurb': m.blurbIsOwnWords ? 'feed' : 'ours' },
       m.blurb),
     m.degraded ? el('div', { class: 'xs muted' }, 'This feed’s server is not responding right now.') : null);
