@@ -1,7 +1,7 @@
 // Page views. Each returns { main, side } DOM. Policy comes from selectors; these
 // only render. Every screen has skeleton/empty/error/gated states available.
 
-import { el, esc, mdLite, timeAgo, domainOf, fmtScore } from '../util.js';
+import { el, esc, mdLite, timeAgo, domainOf, fmtScore, plural } from '../util.js';
 import * as store from '../store.js';
 import * as sel from '../selectors.js';
 import * as actions from '../actions.js';
@@ -156,7 +156,7 @@ export function threadView(params, query) {
         el('div', { class: 'postmeta' },
           p.author ? el('a', { href: `/u/${p.author}` }, p.author) : el('span', { class: 'muted' }, '[removed]'),
           el('span', {}, timeAgo(p.createdTs) + ' ago'),
-          el('span', {}, `${p.commentCount} comments`),
+          el('span', {}, plural(p.commentCount, 'comment')),
           t.perms.canReport ? linkAction('report', () => doReport('post', p.id, p.feedId)) : null,
           saveInline('post', p.id, p.saved),
           ...(t.perms.canModerate ? modInline('post', p) : [])))));
@@ -180,7 +180,7 @@ export function threadView(params, query) {
     ['New', `/f/${p.feedSlug}/p/${p.id}?sort=new`]],
     (query.sort || 'best'));
   main.append(el('div', { class: 'card' },
-    el('div', { class: 'row spread' }, el('h2', {}, `${t.total} comments`), null), sortRow,
+    el('div', { class: 'row spread' }, el('h2', {}, plural(t.total, 'comment')), null), sortRow,
     ...(t.comments.length ? t.comments.map((c) => commentNode(c, ctx)) : [el('div', { class: 'muted small' }, 'No comments yet.')])));
 
   return { main, side: el('div', { class: 'side' }, feedsSidebar()) };
@@ -335,7 +335,7 @@ export function profileView(params, query) {
 function profileComment(c) {
   return el('div', { class: 'postrow' }, el('div', {}),
     el('div', {}, el('div', { class: 'small', html: c.maskedRemoved ? '[removed]' : mdLite(c.body) }),
-      el('div', { class: 'postmeta' }, el('span', {}, `${fmtScore(c.likes)} ${c.likes === 1 ? 'like' : 'likes'}`), c.postTitle ? el('a', { href: `/f/x/p/${c.postId}` }, `on “${esc(c.postTitle).slice(0, 48)}”`) : null, el('span', {}, timeAgo(c.createdTs) + ' ago'))));
+      el('div', { class: 'postmeta' }, el('span', {}, plural(c.likes, 'like')), c.postTitle ? el('a', { href: `/f/x/p/${c.postId}` }, `on “${esc(c.postTitle).slice(0, 48)}”`) : null, el('span', {}, timeAgo(c.createdTs) + ' ago'))));
 }
 
 // ---------- notifications ----------

@@ -1,6 +1,6 @@
 // Shared UI components. DOM built imperatively (no build step, no framework).
 
-import { el, esc, mdLite, timeAgo, domainOf, fmtScore } from '../util.js';
+import { el, esc, mdLite, timeAgo, domainOf, fmtScore, plural } from '../util.js';
 import * as actions from '../actions.js';
 
 // ---------- toasts ----------
@@ -52,9 +52,8 @@ export function voteBox(subjectType, id, data, canVote, orientation = 'col', onV
     // announces a bare "12" with nothing saying what twelve of. role="img" +
     // aria-label is the supported way to give a glyph-or-number its meaning
     // without adding visible chrome a reader did not ask for.
-    const n = data.likes;
     countEl.setAttribute('role', 'img');
-    countEl.setAttribute('aria-label', `${n} ${n === 1 ? 'like' : 'likes'}`);
+    countEl.setAttribute('aria-label', plural(data.likes, 'like'));
     return el('div', { class: 'votebox', 'data-readonly': '1' }, countEl);
   }
   // Owner, 2026-08-27: there is no downvote. It could never work on the lens
@@ -127,7 +126,7 @@ export function postRow(p, viewerCanVote, opts = {}) {
     p.author ? el('span', {}, `by ${p.author}`, opts.authorBadge || '') : el('span', { class: 'muted' }, 'by [removed]'),
     el('span', {}, timeAgo(p.createdTs) + ' ago'),
     p.format === 'link' && p.url ? el('span', { class: 'domain' }, domainOf(p.url)) : null,
-    el('a', { href: link }, `${p.commentCount} comments`),
+    el('a', { href: link }, plural(p.commentCount, 'comment')),
     p.edited ? el('span', { class: 'muted' }, 'edited') : null,
     opts.metaExtra || null, // 3u: the lens hangs a language chip here
   );
@@ -173,7 +172,7 @@ export function commentNode(node, ctx) {
   const note = el('span', { class: 'collapse-note' });
   const meta = el('div', { class: 'comment-meta' },
     author,
-    el('span', {}, `${fmtScore(node.likes)} ${node.likes === 1 ? 'like' : 'likes'}`),
+    el('span', {}, plural(node.likes, 'like')),
     el('span', {}, timeAgo(node.createdTs) + ' ago'),
     node.edited ? el('span', { class: 'muted' }, 'edited') : null,
     node.removed && ctx.canModerate ? el('span', { class: 'chip badge-nsfw' }, 'removed') : null,
@@ -222,7 +221,7 @@ function renderChildren(container, node, ctx) {
     more.remove();
     if (shown < kids.length) container.append(more);
   };
-  const more = el('button', { class: 'loadmore btn sm' }, `load ${Math.min(CHILD_PAGE, kids.length)} more replies`);
+  const more = el('button', { class: 'loadmore btn sm' }, `load ${plural(Math.min(CHILD_PAGE, kids.length), 'more reply', 'more replies')}`);
   more.addEventListener('click', showBatch);
 
   if (kids.length) showBatch();
