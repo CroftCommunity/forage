@@ -167,31 +167,29 @@ test('thread: children render to depth 10; depth-10 nodes defer their subtree', 
   assert.equal(node.deferred, 1);          // ...and surfaced as "continue this thread"
 });
 
-// ---- auto-collapse threshold boundary ----
+// ---- auto-collapse: RETIRED ----------------------------------------------
+// The boundary test that lived here is DELETED, and the distinction the rest of
+// this change keeps making applies to it too: its subject is gone, not
+// inconvenient.
+//
+// Score-threshold auto-collapse was a downvote feature — a crowd pushes a
+// comment below a line and it folds by default. Downvotes were removed
+// (2026-08-27), so a score starts at 0 and only rises: the default threshold of
+// -4 could never fire again, and re-defaulting it to 0 would have been just as
+// inert. The only reachable version was "fold comments with fewer than N
+// boosts", which hides new, quiet, and last-in-thread comments for not having
+// been boosted yet — worse than not having the feature (owner: *"that's the
+// only sane outcome, we removed the whole mechanism"*).
+//
+// What survives and is tested elsewhere: the MANUAL collapse gutter, which is
+// the control people actually use and never depended on scores.
 
-test('thread: auto-collapse is strict < against the viewer\'s threshold', () => {
-  // WAS "score -4 stays open, -5 auto-collapses", driven by five buries.
-  //
-  // Downvotes are gone (plan 2026-08-27-1) and this test is where the
-  // consequence nobody described shows up: a score cannot be negative any more,
-  // so **the DEFAULT commentThreshold of -4 can never fire again**. The feature
-  // is not dead — the threshold is a user preference and a POSITIVE one still
-  // collapses lightly-boosted comments — but its default is now inert and its
-  // name means the opposite of what it used to.
-  //
-  // That is a product question for the owner, flagged in the plan. What this
-  // test does is keep the boundary itself covered under the surviving
-  // semantics, so the strict-< behaviour is not silently uncovered while the
-  // question is open.
+test('thread: no comment auto-collapses, because nothing collapses by score any more', () => {
   const log = maskingLog();
-  log.push(ev('prefs.updated', { patch: { commentThreshold: 2 } }, 'u_fern'));
-  log.push(ev('comment.created', { id: 'c_at', postId: 'p_norm', bodyMd: 'at threshold', quiet: true }, 'u_aspen'));
-  log.push(ev('comment.created', { id: 'c_under', postId: 'p_norm', bodyMd: 'under it', quiet: true }, 'u_aspen'));
-  for (let i = 0; i < 2; i++) log.push(ev('vote.set', { subjectType: 'comment', subjectId: 'c_at', value: 1 }, `sv_${i}`));
-  log.push(ev('vote.set', { subjectType: 'comment', subjectId: 'c_under', value: 1 }, 'sv_0'));
+  log.push(ev('comment.created', { id: 'c_quiet', postId: 'p_norm', bodyMd: 'no boosts', quiet: true }, 'u_aspen'));
   const t = thread(fold(log), 'u_fern', 'p_norm', 'best', T);
-  assert.equal(t.comments.find((c) => c.id === 'c_at').autoCollapsed, false, 'score 2 is NOT < 2');
-  assert.equal(t.comments.find((c) => c.id === 'c_under').autoCollapsed, true, 'score 1 is');
+  assert.deepEqual(t.comments.filter((c) => 'autoCollapsed' in c), [],
+    'the field is gone from the shape, not pinned false — an always-false field is a question every caller keeps asking');
 });
 
 // ---- feed + notifications shape ----

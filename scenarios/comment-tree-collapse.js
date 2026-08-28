@@ -1,8 +1,13 @@
-// Scenario: the comment tree — nesting, edits, auto-collapse below the score
-// threshold, and the depth-10 deferral ("continue this thread").
-// The threshold is set explicitly here rather than relying on the default; see
-// the note beside the events.
+// Scenario: the comment tree — nesting, edits, and the depth-10 deferral
+// ("continue this thread").
 // Covers: comment.created, comment.edited (+ post, votes).
+//
+// It used to cover auto-collapse below a score threshold too, driven by five
+// buries. That feature is RETIRED (2026-08-27): downvotes are gone, so a score
+// starts at 0 and only rises, and nothing can fall below a threshold. The id
+// stays `comment-tree-collapse` deliberately — it is a stable conformance
+// identifier and renaming it would churn every observable — and the name is
+// still honest about the MANUAL collapse this tree supports.
 
 const DAY = 86400;
 
@@ -16,21 +21,6 @@ const events = [
   { t: 40, actor: 'u_sage', type: 'comment.edited', payload: { commentId: 'c_reply', patch: { bodyMd: 'A reply (edited)' } } },
   { t: 50, actor: 'u_sage', type: 'comment.created', payload: { id: 'c_bad', postId: 'p_tree', bodyMd: 'Bad take', quiet: true } },
 ];
-// Auto-collapse used to be driven by five BURIES pushing c_bad under the
-// default -4 threshold. Downvotes are gone (plan 2026-08-27-1), which has a
-// consequence nobody's description of that change mentioned: a score can no
-// longer be negative, so **the default commentThreshold of -4 can never fire
-// again**. The feature is not dead — the threshold is a user preference, and a
-// POSITIVE one still collapses lightly-boosted comments — but its default
-// makes it inert and its name now means the opposite of what it used to.
-//
-// That is a product question for the owner (see the plan's Review Log), not a
-// call this scenario should make silently. What it does here is keep the
-// feature EXERCISED under its new semantics — collapse below N boosts — so the
-// removal of downvotes does not quietly take auto-collapse's only coverage with
-// it. If the owner retires the feature, this is the scenario that goes.
-events.push({ t: 60, actor: 'u_fern', type: 'prefs.updated', payload: { patch: { commentThreshold: 1 } } });
-events.push({ t: 61, actor: 'sv_0', type: 'vote.set', payload: { subjectType: 'comment', subjectId: 'c_top', value: 1 } });
 // a chain to depth 11: c_d0 (depth 1, under c_top? no — own root chain)
 let parent = null;
 for (let d = 0; d <= 11; d++) {
@@ -40,11 +30,9 @@ for (let d = 0; d <= 11; d++) {
 
 export const commentTreeCollapse = {
   id: 'comment-tree-collapse',
-  description: 'Nested comments render as a tree; low scores auto-collapse; depth 10 defers its subtree.',
+  description: 'Nested comments render as a tree; depth 10 defers its subtree.',
   events,
   assertions: [
-    { seat: 'u_fern', probe: 'threadNode', args: { postId: 'p_tree', id: 'c_bad', key: 'autoCollapsed' }, expect: true },
-    { seat: 'u_fern', probe: 'threadNode', args: { postId: 'p_tree', id: 'c_top', key: 'autoCollapsed' }, expect: false },
     { seat: 'u_fern', probe: 'threadNode', args: { postId: 'p_tree', id: 'c_reply', key: 'body' }, expect: 'A reply (edited)' },
     { seat: 'u_fern', probe: 'threadNode', args: { postId: 'p_tree', id: 'c_reply', key: 'edited' }, expect: true },
     { seat: 'u_fern', probe: 'threadNode', args: { postId: 'p_tree', id: 'c_d10', key: 'deferred' }, expect: 1 },

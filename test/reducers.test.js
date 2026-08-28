@@ -49,21 +49,22 @@ test('the fold reads event ts, never the wall clock (log without report resoluti
 
 // ---- derived: tally / myVote / reputation ----
 
-test('tally counts boosts; there is no downs field to be always zero', () => {
-  // `downs` is REMOVED from the shape rather than pinned to 0. An always-zero
-  // field in a derived shape is a question every caller keeps having to ask,
-  // and it is exactly what DL-011 used to tolerate on the lens side.
+test('tally is ONE number: how many people liked it', () => {
+  // ONE field. `ups` and `score` were the same number under two names once
+  // downvotes went: `score` had meant `ups - downs`, a net figure that could
+  // differ from either input, and with nothing to subtract it became a count
+  // with a computed-sounding name. It is a count of likes, so it is `likes`.
   const s = fold(sampleLog());
-  assert.deepStrictEqual(tally(s, 'post', 'p1'), { ups: 1, score: 1 });
-  assert.deepStrictEqual(tally(s, 'comment', 'c1'), { ups: 1, score: 1 });
+  assert.deepStrictEqual(tally(s, 'post', 'p1'), { likes: 1 });
+  assert.deepStrictEqual(tally(s, 'comment', 'c1'), { likes: 1 });
 });
 
 test('a re-vote overwrites; vote 0 retracts', () => {
   const log = sampleLog();
   log.push(ev('vote.set', { subjectType: 'post', subjectId: 'p1', value: 0 }, 'u_b', 210));
-  assert.deepStrictEqual(tally(fold(log), 'post', 'p1'), { ups: 0, score: 0 });
+  assert.deepStrictEqual(tally(fold(log), 'post', 'p1'), { likes: 0 });
   log.push(ev('vote.set', { subjectType: 'post', subjectId: 'p1', value: 1 }, 'u_b', 220));
-  assert.deepStrictEqual(tally(fold(log), 'post', 'p1'), { ups: 1, score: 1 });
+  assert.deepStrictEqual(tally(fold(log), 'post', 'p1'), { likes: 1 });
 });
 
 test('a STORED -1 folds to no vote — the one place this change touches data people have', () => {
@@ -81,7 +82,7 @@ test('a STORED -1 folds to no vote — the one place this change touches data pe
   const log = sampleLog();
   log.push(ev('vote.set', { subjectType: 'post', subjectId: 'p1', value: -1 }, 'u_c', 230));
   const s = fold(log);
-  assert.deepStrictEqual(tally(s, 'post', 'p1'), { ups: 1, score: 1 },
+  assert.deepStrictEqual(tally(s, 'post', 'p1'), { likes: 1 },
     'the stale downvote is dropped, not counted, and the boost beside it survives');
   assert.equal(myVote(s, 'u_c', 'post', 'p1'), 0,
     'and the person who cast it reads as not having voted, so the UI is consistent with the tally');
@@ -89,7 +90,7 @@ test('a STORED -1 folds to no vote — the one place this change touches data pe
   // …and it must not resurrect if they vote again and retract
   log.push(ev('vote.set', { subjectType: 'post', subjectId: 'p1', value: 1 }, 'u_c', 240));
   log.push(ev('vote.set', { subjectType: 'post', subjectId: 'p1', value: 0 }, 'u_c', 250));
-  assert.deepStrictEqual(tally(fold(log), 'post', 'p1'), { ups: 1, score: 1 });
+  assert.deepStrictEqual(tally(fold(log), 'post', 'p1'), { likes: 1 });
 });
 
 test('myVote: the viewer sees their own vote; logged-out sees 0', () => {
@@ -205,7 +206,7 @@ test('account.registered defaults + prefs.updated merge + account.suspended', ()
   ]);
   assert.equal(s.users.u_a.email, '');
   assert.deepStrictEqual(s.users.u_a.prefs,
-    { theme: 'dark', commentThreshold: -4, defaultSort: 'hot', defaultFeed: 'home' });
+    { theme: 'dark', defaultSort: 'hot', defaultFeed: 'home' });
   assert.deepStrictEqual(s.users.u_a.suspended, { reason: 'spam', ts: 120 });
 });
 
@@ -323,7 +324,7 @@ test('comment.created: exact default shape', () => {
 test('a fresh account carries the exact default prefs', () => {
   const s = fold([ev('account.registered', { handle: 'a' }, 'u_a', 100)]);
   assert.deepStrictEqual(s.users.u_a.prefs,
-    { theme: 'auto', commentThreshold: -4, defaultSort: 'hot', defaultFeed: 'home' });
+    { theme: 'auto', defaultSort: 'hot', defaultFeed: 'home' });
 });
 
 test('feed.created merges caller-supplied settings over the defaults', () => {

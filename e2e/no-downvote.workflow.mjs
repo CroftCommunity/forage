@@ -71,6 +71,21 @@ const downvotes = (page) => page.evaluate(() => ({
     .filter((n) => /bury|downvote/i.test(`${n.getAttribute('aria-label') ?? ''} ${n.getAttribute('title') ?? ''}`))
     .map((n) => n.tagName.toLowerCase()),
   boosts: document.querySelectorAll('.vote.boost, .cvote.boost').length,
+  // The owner's vocabulary call, 2026-08-27: a like here is a PROMOTION, not an
+  // affection — "Like/Promote", not "like/love". So the word may be "like" and
+  // the shape must stay an upward arrow. A heart says the other thing, and a
+  // rule with no check decays into prose (PATTERN.md).
+  // The /u flag is load-bearing. Without it a character class of astral emoji
+  // is a class of SURROGATE HALVES, and 📌 (U+1F4CC) shares its leading
+  // surrogate D83D with 💚 and 🖤 — so the pinned-post badge read as a heart.
+  // A check that fires on the wrong thing is worse than none: it would have
+  // been "fixed" by deleting the pin.
+  hearts: [...document.querySelectorAll('*')]
+    .filter((n) => !n.children.length && /[♥❤🤍💚🖤]/u.test(n.textContent)).length,
+  voteNames: [...new Set([...document.querySelectorAll('.vote, .cvote')]
+    .map((b) => b.getAttribute('aria-label') ?? b.getAttribute('title') ?? '(unnamed)'))],
+  readonlyNames: [...new Set([...document.querySelectorAll('[data-readonly] .score')]
+    .map((n) => n.getAttribute('aria-label') ?? '(unnamed)'))],
 }));
 
 async function assertNone(page, label, { expectBoosts }) {
@@ -80,7 +95,14 @@ async function assertNone(page, label, { expectBoosts }) {
   assert.deepEqual(seen.byName, [], `${label}: something is still NAMED bury/downvote`);
   if (expectBoosts) {
     assert.ok(seen.boosts > 0,
-      `${label}: boost must survive — an absence-only suite passes against an app that lost voting entirely`);
+      `${label}: the like control must survive — an absence-only suite passes against an app that lost voting entirely`);
+  }
+  assert.equal(seen.hearts, 0, `${label}: no heart glyph anywhere — the arrow promotes, it does not react`);
+  for (const n of seen.voteNames) {
+    assert.match(n, /^Like$/, `${label}: the vote control is named "Like", not ${JSON.stringify(n)}`);
+  }
+  for (const n of seen.readonlyNames) {
+    assert.match(n, /^\d+ likes?$/, `${label}: the read-only count names itself in likes: ${JSON.stringify(n)}`);
   }
 }
 

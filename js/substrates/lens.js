@@ -169,7 +169,7 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
     // Was `downs: 0` under DL-011 ("lens scores are likes-only"). That
     // tolerance RETIRED 2026-08-27 when the sandbox dropped downvotes too: the
     // two populations agree now, so there is no divergence to pin a zero for.
-    ups: post.likeCount ?? 0, score: post.likeCount ?? 0,
+    likes: post.likeCount ?? 0,
     myVote: post.viewer?.like ? 1 : 0,
     cid: post.cid ?? null, likeUri: post.viewer?.like ?? null, // 3c: the boost write pair's inputs
     facets: record.facets || [],
@@ -282,11 +282,10 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
     id: p.id, postId: post.id, parentId: null,
     createdTs: p.createdTs, createdSec: p.createdSec, edited: false,
     removed: false, deleted: false,
-    ups: p.ups, score: p.score, myVote: p.myVote, saved: false,
+    likes: p.likes, myVote: p.myVote, saved: false,
     body: p.body, author: p.author, authorId: p.authorId,
     ...(p.maskedRemoved ? { maskedRemoved: true, title: p.title } : { removedReason: '' }),
     depth,
-    autoCollapsed: false,
     children: [], deferred: 0,
     kind: 'reply',
     ...extra,
@@ -418,7 +417,7 @@ export function sortWindow(posts, sort, timeframe, nowMs) {
     const cutoff = nowMs - span;
     window = posts.filter((p) => p.createdTs >= cutoff);
   }
-  return [...window].sort((a, b) => (sort === 'new' ? b.createdTs - a.createdTs : b.score - a.score));
+  return [...window].sort((a, b) => (sort === 'new' ? b.createdTs - a.createdTs : b.likes - a.likes));
 }
 
 // 4e: /h/ boards ride searchPosts, which takes sort=top|latest plus since/until

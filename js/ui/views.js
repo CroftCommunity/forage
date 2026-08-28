@@ -335,7 +335,7 @@ export function profileView(params, query) {
 function profileComment(c) {
   return el('div', { class: 'postrow' }, el('div', {}),
     el('div', {}, el('div', { class: 'small', html: c.maskedRemoved ? '[removed]' : mdLite(c.body) }),
-      el('div', { class: 'postmeta' }, el('span', {}, `${fmtScore(c.score)} pts`), c.postTitle ? el('a', { href: `/f/x/p/${c.postId}` }, `on “${esc(c.postTitle).slice(0, 48)}”`) : null, el('span', {}, timeAgo(c.createdTs) + ' ago'))));
+      el('div', { class: 'postmeta' }, el('span', {}, `${fmtScore(c.likes)} ${c.likes === 1 ? 'like' : 'likes'}`), c.postTitle ? el('a', { href: `/f/x/p/${c.postId}` }, `on “${esc(c.postTitle).slice(0, 48)}”`) : null, el('span', {}, timeAgo(c.createdTs) + ' ago'))));
 }
 
 // ---------- notifications ----------
@@ -621,14 +621,11 @@ export function settingsView() {
       el('p', { class: 'muted small', style: 'margin-top:12px' }, 'Log in to set comment and feed preferences.')), side: null };
   }
   const prefs = S().users[V()].prefs;
-  const thr = el('input', { type: 'number', id: 'pref-threshold', value: prefs.commentThreshold });
-  thr.addEventListener('change', async () => { await actions.updatePrefs({ commentThreshold: parseInt(thr.value, 10) || 0 }); });
   const sort = el('select', { class: 'form', id: 'pref-sort' }, ...['hot', 'new', 'top', 'best'].map((s) => el('option', { value: s, selected: prefs.defaultSort === s || false }, s)));
   sort.addEventListener('change', async () => { await actions.updatePrefs({ defaultSort: sort.value }); });
   return { main: el('div', {}, el('h1', {}, 'Preferences'),
     themeCard,
     el('div', { class: 'card', style: 'margin-top:12px' },
-      fieldRow('Auto-collapse comments below score', thr),
       fieldRow('Default feed sort', sort))), side: null };
 }
 

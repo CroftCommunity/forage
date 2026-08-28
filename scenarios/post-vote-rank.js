@@ -32,9 +32,9 @@ export const postVoteRank = {
     { t: 500, actor: 'u_alder', type: 'post.edited', payload: { postId: 'p_b', patch: { title: 'Bed rotation (fixed)' } } },
   ],
   assertions: [
-    { seat: null, probe: 'tally', args: { type: 'post', id: 'p_a' }, expect: { ups: 3, score: 3 } },
-    { seat: null, probe: 'tally', args: { type: 'post', id: 'p_b' }, expect: { ups: 1, score: 1 } },
-    { seat: null, probe: 'tally', args: { type: 'post', id: 'p_c' }, expect: { ups: 2, score: 2 } },
+    { seat: null, probe: 'tally', args: { type: 'post', id: 'p_a' }, expect: { likes: 3 } },
+    { seat: null, probe: 'tally', args: { type: 'post', id: 'p_b' }, expect: { likes: 1 } },
+    { seat: null, probe: 'tally', args: { type: 'post', id: 'p_c' }, expect: { likes: 2 } },
     { seat: null, probe: 'feedIds', args: { scope: 'feed:meadow', sort: 'top' }, expect: ['p_a', 'p_c', 'p_b'] },
     { seat: null, probe: 'feedIds', args: { scope: 'feed:meadow', sort: 'new' }, expect: ['p_c', 'p_b', 'p_a'] },
     { seat: null, probe: 'postInfo', args: { id: 'p_b', key: 'title' }, expect: 'Bed rotation (fixed)' },
