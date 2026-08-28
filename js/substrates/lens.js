@@ -1020,8 +1020,41 @@ export function createLens({ session = null, transport = fetch } = {}) {
         const board = await this.feed({ kind: 'timeline' }, { title: 'My follows' });
         return { ...board, ring, failures: [] };
       }
+      // V3: World is the widest rung, and the only one whose members are not
+      // people. It draws the COMPOSITION — your timeline plus every feed you
+      // have saved — merged and unsqueezed. That is what the owner's
+      // definition requires: "everybody's interactions on this combination of
+      // my own posts, my follows posts, my mutuals, and like feeds I follow".
+      // Not the firehose: the composition is the boundary, which is why
+      // nothing global is fetched here.
+      //
+      // Same failure discipline as the member fan-out: one dead source is
+      // NAMED and the rest of the board still paints. A composition of nothing
+      // is an empty board, not an error — a reader who has saved no feeds and
+      // follows nobody has an empty world, honestly.
       if (ring === 'world') {
-        throw new Error('lens: the world rung has no merged board yet — V3');
+        if (!session) throw new Error('lens: World is your composition — needs a session');
+        const saved = await this.feeds().catch(() => []);
+        const sources = [
+          { key: 'timeline', source: { kind: 'timeline' }, title: 'Following' },
+          ...saved.filter((f) => f.kind === 'feed')
+            .map((f) => ({ key: f.slug || f.id, source: { kind: 'feed', uri: f.id }, title: f.title })),
+        ];
+        const failures = [];
+        const pages = await Promise.all(sources.map(async (s) => {
+          try {
+            const b = await this.feed(s.source, { title: s.title, slug: s.key });
+            if (onPage && b.posts.length) onPage(b.posts);
+            return b.posts;
+          } catch { failures.push(s.key); return []; }
+        }));
+        const posts = pages.flat().sort((x, y) => {
+          const t = String(y.createdTs).localeCompare(String(x.createdTs));
+          if (t) return t;
+          const a = String(x.author).localeCompare(String(y.author));
+          return a || String(x.id).localeCompare(String(y.id));
+        });
+        return { posts, ring, failures, feedTitle: 'World', feedSlug: 'ring:world', cursor: null };
       }
       const resumed = cursor ? JSON.parse(atob(cursor)) : null;
       const ringInfo = resumed ? { members: Object.keys(resumed.m) } : await this.ringMembers(ring);

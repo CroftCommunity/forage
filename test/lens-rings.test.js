@@ -197,7 +197,7 @@ test('3b: cursor round-trip resumes WITHOUT duplicates; exhausted members drop o
   assert.equal(p2.cursor, undefined, 'everyone exhausted');
 });
 
-test('3b: my-follows delegates to the timeline; world has no board yet (V3)', async () => {
+test('3b: my-follows delegates to the timeline in ONE request, not a fan-out', async () => {
   const calls = [];
   const session = { did: 'did:plc:me', handle: 'me.test', fetchHandler: async (path) => {
     calls.push(path);
@@ -205,7 +205,8 @@ test('3b: my-follows delegates to the timeline; world has no board yet (V3)', as
   } };
   await createLens({ session }).ringFeed('fol');
   assert.ok(calls[0].includes('getTimeline'));
-  await assert.rejects(() => createLens({ session }).ringFeed('world'), /world.*V3|no merged board/i);
+  assert.ok(!calls.some((c) => c.includes('getAuthorFeed')),
+    'the whole point: one request instead of one per follow');
 });
 
 test('3b: the overflow rides the board (capped ring reports it through)', async () => {
