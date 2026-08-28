@@ -14,7 +14,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const COLLECTIONS = [
   'fyi.forage.post',       // post.created (+edited via editedAt; deletedByAuthor = record delete)
   'fyi.forage.comment',    // comment.created (+edited/deleted likewise)
-  'fyi.forage.vote',       // vote.set 1|-1; retraction = record delete
+  'fyi.forage.vote',       // vote.set 1 (boost only since 2026-08-27); retraction = record delete
   'fyi.forage.save',       // save.set true; unsave = record delete
   'fyi.forage.feed',      // feed.created (+settingsUpdated via putRecord)
   'fyi.forage.membership', // feed.joined; feed.left = record delete

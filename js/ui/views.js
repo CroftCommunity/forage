@@ -43,12 +43,11 @@ function feedsSidebar() {
 function limitsSidebar() {
   const v = V(); if (!v) return null;
   const lim = sel.limits(S(), v, NOW(), store.getEvents());
-  if (lim.canPost && lim.canComment && !lim.probation && !lim.coolOff) return null;
+  if (lim.canPost && lim.canComment && !lim.probation) return null;
   const notes = [];
   if (lim.probation) notes.push('On probation: cooldowns are doubled and report weight is reduced.');
   if (!lim.canPost) notes.push(`Next post available in ${humanWait(lim.postWaitSec)}.`);
   if (!lim.canComment) notes.push(`Next comment available in ${humanWait(lim.commentWaitSec)}.`);
-  if (lim.coolOff) notes.push('Cooling-off active after rapid burying.');
   return el('div', { class: 'notice limit' }, el('strong', {}, 'Rate limits'), ...notes.map((n) => el('div', { class: 'xs' }, n)));
 }
 

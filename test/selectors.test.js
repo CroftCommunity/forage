@@ -169,15 +169,29 @@ test('thread: children render to depth 10; depth-10 nodes defer their subtree', 
 
 // ---- auto-collapse threshold boundary ----
 
-test('thread: score -4 stays open, -5 auto-collapses (threshold is strict <)', () => {
+test('thread: auto-collapse is strict < against the viewer\'s threshold', () => {
+  // WAS "score -4 stays open, -5 auto-collapses", driven by five buries.
+  //
+  // Downvotes are gone (plan 2026-08-27-1) and this test is where the
+  // consequence nobody described shows up: a score cannot be negative any more,
+  // so **the DEFAULT commentThreshold of -4 can never fire again**. The feature
+  // is not dead — the threshold is a user preference and a POSITIVE one still
+  // collapses lightly-boosted comments — but its default is now inert and its
+  // name means the opposite of what it used to.
+  //
+  // That is a product question for the owner, flagged in the plan. What this
+  // test does is keep the boundary itself covered under the surviving
+  // semantics, so the strict-< behaviour is not silently uncovered while the
+  // question is open.
   const log = maskingLog();
+  log.push(ev('prefs.updated', { patch: { commentThreshold: 2 } }, 'u_fern'));
   log.push(ev('comment.created', { id: 'c_at', postId: 'p_norm', bodyMd: 'at threshold', quiet: true }, 'u_aspen'));
   log.push(ev('comment.created', { id: 'c_under', postId: 'p_norm', bodyMd: 'under it', quiet: true }, 'u_aspen'));
-  for (let i = 0; i < 4; i++) log.push(ev('vote.set', { subjectType: 'comment', subjectId: 'c_at', value: -1 }, `sv_${i}`));
-  for (let i = 0; i < 5; i++) log.push(ev('vote.set', { subjectType: 'comment', subjectId: 'c_under', value: -1 }, `sv_${i}`));
+  for (let i = 0; i < 2; i++) log.push(ev('vote.set', { subjectType: 'comment', subjectId: 'c_at', value: 1 }, `sv_${i}`));
+  log.push(ev('vote.set', { subjectType: 'comment', subjectId: 'c_under', value: 1 }, 'sv_0'));
   const t = thread(fold(log), 'u_fern', 'p_norm', 'best', T);
-  assert.equal(t.comments.find((c) => c.id === 'c_at').autoCollapsed, false);
-  assert.equal(t.comments.find((c) => c.id === 'c_under').autoCollapsed, true);
+  assert.equal(t.comments.find((c) => c.id === 'c_at').autoCollapsed, false, 'score 2 is NOT < 2');
+  assert.equal(t.comments.find((c) => c.id === 'c_under').autoCollapsed, true, 'score 1 is');
 });
 
 // ---- feed + notifications shape ----

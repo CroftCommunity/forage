@@ -4,10 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { hot, confidence, rising, sortItems } from '../js/engines/rank.js';
-import {
-  limits, humanWait,
-  REP_FAST_THRESHOLD, RAPID_BURY_COUNT, RAPID_BURY_WINDOW, RAPID_BURY_PENALTY,
-} from '../js/engines/limits.js';
+import { limits, humanWait, REP_FAST_THRESHOLD } from '../js/engines/limits.js';
 
 const EPOCH = 1134028003; // reddit epoch, rank.js
 
@@ -109,7 +106,7 @@ const evAt = (type, sec, extra = {}) => ({ type, actor: 'u_x', ts: sec * 1000, p
 test('limits: logged-out can do nothing, with words (exact shape)', () => {
   assert.deepStrictEqual(limits(null, [], 0, false, 1000), {
     canComment: false, canPost: false, commentWaitSec: 0, postWaitSec: 0,
-    probation: false, reason: 'logged-out', coolOff: false,
+    probation: false, reason: 'logged-out',
   });
 });
 
@@ -157,31 +154,29 @@ test('limits: only own events count against the budget', () => {
   assert.equal(limits('u_x', events, 0, false, 101).canComment, true);
 });
 
-const bury = (sec) => evAt('vote.set', sec, { payload: { value: -1 } });
+// The rapid-bury cool-off is GONE (plan 2026-08-27-1 Phase 3). Three tests
+// covered it — the 5-in-60s trigger, its window edge, and the "only buries
+// count" discrimination — and all three are deleted because the act they
+// measure cannot happen: nothing in the app can produce a `vote.set` of -1 any
+// more. That is different from removing a rule we still want; the rules that
+// remain are asserted below and must NOT have moved.
 
-test('limits: rapid-bury cool-off at exactly 5 buries in the window; 4 does not trip', () => {
+test('limits: removing the bury cool-off NARROWED the rule set, it did not weaken it', () => {
+  // The phase's actual risk. A cool-off removal that also dropped the penalty
+  // arithmetic, or loosened a cooldown, would look identical in a diff to one
+  // that only removed the unreachable rule.
   const now = 1000;
-  const five = [1, 2, 3, 4, 5].map((i) => bury(now - i));
-  // a comment exactly at the normal free point (60s ago) stays blocked by the penalty
-  const events = [evAt('comment.created', now - 60), ...five];
-  // a post exactly at ITS normal free point (300s) is likewise penalty-blocked
-  events.push(evAt('post.created', now - 300));
-  const tripped = limits('u_x', events, 0, false, now);
-  assert.equal(tripped.coolOff, true);
-  assert.equal(tripped.canComment, false);
-  assert.equal(tripped.commentWaitSec, RAPID_BURY_PENALTY); // 60 + 30 - 60
-  assert.equal(tripped.postWaitSec, RAPID_BURY_PENALTY);    // 300 + 30 - 300
-  const four = five.slice(0, RAPID_BURY_COUNT - 1);
-  assert.equal(limits('u_x', four, 0, false, now).coolOff, false);
-});
-
-test('limits: bury window edge — a bury exactly 60s old counts, 61s does not', () => {
-  const now = 1000;
-  const fourRecent = [1, 2, 3, 4].map((i) => bury(now - i));
-  const atEdge = limits('u_x', [...fourRecent, bury(now - RAPID_BURY_WINDOW)], 0, false, now);
-  assert.equal(atEdge.coolOff, true);
-  const pastEdge = limits('u_x', [...fourRecent, bury(now - RAPID_BURY_WINDOW - 1)], 0, false, now);
-  assert.equal(pastEdge.coolOff, false);
+  const spam = [1, 2, 3, 4, 5].map((i) => evAt('vote.set', now - i, { payload: { value: 1 } }));
+  const withRecentPost = limits('u_x', [...spam, evAt('post.created', now - 10)], 0, false, now);
+  assert.equal(withRecentPost.canPost, false, 'the post cooldown still bites');
+  assert.equal(withRecentPost.postWaitSec, 290, 'and by exactly its own amount — no lingering penalty');
+  const withRecentComment = limits('u_x', [...spam, evAt('comment.created', now - 10)], 0, false, now);
+  assert.equal(withRecentComment.canComment, false, 'the comment cooldown still bites');
+  assert.equal(withRecentComment.commentWaitSec, 50);
+  // and boosting as fast as you like is not itself limited — it never was
+  assert.equal(limits('u_x', spam, 0, false, now).canPost, true);
+  assert.equal(limits('u_x', spam, 0, false, now).coolOff, undefined,
+    'coolOff is not reported as false — the field is gone, because the concept is');
 });
 
 // ---- 2i gap-closers ----
@@ -225,18 +220,6 @@ test('sortItems: each sort key dispatches to ITS ranking (orders differ from hot
   ];
   assert.deepStrictEqual(sortItems(r, 'hot', now).map((i) => i.id), ['fastOld', 'slowNew']);
   assert.deepStrictEqual(sortItems(r, 'rising', now).map((i) => i.id), ['slowNew', 'fastOld']);
-});
-
-test('limits: only BURIES trip the cool-off — boosts and comments in the window do not', () => {
-  const now = 1000;
-  const noise = [
-    evAt('vote.set', now - 6, { payload: { value: 1 } }),
-    evAt('vote.set', now - 7, { payload: { value: 1 } }),
-    evAt('comment.created', now - 200), // outside nothing — just not a bury
-  ];
-  const fourBuries = [1, 2, 3, 4].map((i) => bury(now - i));
-  const l = limits('u_x', [...noise, ...fourBuries], 0, false, now);
-  assert.equal(l.coolOff, false); // 4 buries + noise stays under the 5-bury trigger
 });
 
 test('humanWait: now / seconds / minutes', () => {

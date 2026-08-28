@@ -96,7 +96,14 @@ export function reduce(state, ev) {
     case 'vote.set': {
       const key = `${p.subjectType}:${p.subjectId}`;
       if (!s.votes[key]) s.votes[key] = {};
-      if (p.value === 0) delete s.votes[key][actor];
+      // A NAMED rule, not the else branch: a stored -1 from before downvotes
+      // were removed (plan 2026-08-27-1) folds to NO VOTE. hydrate() does not
+      // re-validate, so an existing sandbox still loads — and this is what
+      // stops it carrying a vote that nothing can produce and no UI can undo.
+      // Refusing the log outright (the legacyLog precedent) would brick a
+      // sandbox over a value we can safely drop; this log is stale, not
+      // unfoldable.
+      if (p.value === 0 || p.value === -1) delete s.votes[key][actor];
       else s.votes[key][actor] = p.value;
       break;
     }
@@ -213,11 +220,16 @@ function pushNotification(s, userId, n) {
 }
 
 // ---- Derived helpers used by selectors ----
+// No `downs`. It is removed from the shape rather than pinned to 0, because an
+// always-zero field is a question every caller keeps having to ask — and it is
+// precisely what DL-011 tolerated on the lens side before this change made the
+// two populations agree. `score` stays: it is the public number, and keeping
+// the name means callers do not all have to learn that it now equals `ups`.
 export function tally(state, type, id) {
   const v = state.votes[`${type}:${id}`] || {};
-  let ups = 0, downs = 0;
-  for (const val of Object.values(v)) { if (val === 1) ups++; else if (val === -1) downs++; }
-  return { ups, downs, score: ups - downs };
+  let ups = 0;
+  for (const val of Object.values(v)) if (val === 1) ups++;
+  return { ups, score: ups };
 }
 
 export function myVote(state, viewerId, type, id) {

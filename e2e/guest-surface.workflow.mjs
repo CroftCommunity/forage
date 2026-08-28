@@ -58,7 +58,7 @@ const seen = (page) => page.evaluate(() => ({
   ringCardAnywhere: [...document.querySelectorAll('.card')].map((c) => c.innerText.replace(/\n+/g, ' ')).find((t) => /ring/i.test(t)) ?? null,
   favorite: document.querySelectorAll('[data-feed-favorite]').length,
   joinLeave: [...document.querySelectorAll('button')].filter((b) => /^(Join|Leave)$/.test(b.textContent.trim())).length,
-  voteArrows: document.querySelectorAll('.vote.boost, .vote.bury, .cvote').length,
+  voteArrows: document.querySelectorAll('.vote.boost, .cvote').length,
   scores: [...document.querySelectorAll('.votebox')].map((v) => v.textContent.replace(/[▲▼\s]/g, '')).filter(Boolean),
 }));
 

@@ -19,8 +19,8 @@ test('accepts account.registered with no actor (bootstrap exemption)', () => {
   assert.equal(validateEvent(e), true);
 });
 
-test('accepts vote.set at every legal value: -1, 0, 1', () => {
-  for (const value of [-1, 0, 1]) {
+test('accepts vote.set at every legal value: 0, 1', () => {
+  for (const value of [0, 1]) {
     assert.equal(validateEvent(ev('vote.set', { subjectType: 'post', subjectId: 'p1', value })), true);
   }
 });
@@ -54,8 +54,22 @@ test('rejects a null payload when feeds are required', () => {
 
 test('rejects vote.set with an out-of-range value', () => {
   for (const value of [2, -2, 0.5, '1']) {
-    assert.throws(() => validateEvent(ev('vote.set', { subjectType: 'post', subjectId: 'p1', value })), /-1\|0\|1/);
+    assert.throws(() => validateEvent(ev('vote.set', { subjectType: 'post', subjectId: 'p1', value })), /0\|1/);
   }
+});
+
+test('-1 is rejected BY NAME, so the error explains the change rather than the range', () => {
+  // Downvotes are gone (plan 2026-08-27-1). A reader who hits this is almost
+  // certainly replaying an old log or pasting old code, and "value must be 0|1"
+  // alone would send them looking for a typo. The one value that used to be
+  // legal gets its own sentence.
+  assert.throws(
+    () => validateEvent(ev('vote.set', { subjectType: 'post', subjectId: 'p1', value: -1 })),
+    (e) => {
+      assert.match(e.message, /-1/, 'names the value it is refusing');
+      assert.match(e.message, /downvote|bury|no longer/i, 'and says WHY, not just what');
+      return true;
+    });
 });
 
 test('rejects actor: undefined on a non-registration event', () => {

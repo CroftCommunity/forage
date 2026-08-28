@@ -22,10 +22,9 @@
           "value": {
             "type": "integer",
             "enum": [
-              1,
-              -1
+              1
             ],
-            "description": "boost = 1, bury = -1"
+            "description": "boost = 1. Bury (-1) was removed 2026-08-27; retraction is a record delete, not a value."
           },
           "createdAt": {
             "type": "string",
