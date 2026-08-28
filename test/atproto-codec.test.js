@@ -61,7 +61,7 @@ test('vote/save/membership/mod/report/comment records decode to valid events', (
   const feedUri = URI(alice, 'fyi.forage.feed', 'f_orchard');
   const cases = [
     [{ did: alice, collection: 'fyi.forage.comment', rkey: 'c_1', value: { subject: post, bodyMd: 'hi', createdAt: '2026-08-25T00:00:01.000Z' } }, 'comment.created'],
-    [{ did: alice, collection: 'fyi.forage.vote', rkey: 'v1', value: { subject: post, value: -1, createdAt: '2026-08-25T00:00:02.000Z' } }, 'vote.set'],
+    [{ did: alice, collection: 'fyi.forage.vote', rkey: 'v1', value: { subject: post, value: 1, createdAt: '2026-08-25T00:00:02.000Z' } }, 'vote.set'],
     [{ did: alice, collection: 'fyi.forage.save', rkey: 's1', value: { subject: post, createdAt: '2026-08-25T00:00:03.000Z' } }, 'save.set'],
     [{ did: alice, collection: 'fyi.forage.feed', rkey: 'f_orchard', value: { slug: 'orchard', title: 'Orchard', createdAt: '2026-08-25T00:00:04.000Z' } }, 'feed.created'],
     [{ did: alice, collection: 'fyi.forage.membership', rkey: 'm1', value: { feed: feedUri, createdAt: '2026-08-25T00:00:05.000Z' } }, 'feed.joined'],

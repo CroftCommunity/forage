@@ -56,8 +56,15 @@ export function validateEvent(ev) {
       throw new Error(`${ev.type} missing required feed: ${key}`);
     }
   }
-  if (ev.type === 'vote.set' && ![-1, 0, 1].includes(ev.payload.value)) {
-    throw new Error('vote.set value must be -1|0|1');
+  if (ev.type === 'vote.set' && ![0, 1].includes(ev.payload.value)) {
+    // -1 gets its own sentence. It was legal until 2026-08-27 (plan
+    // 2026-08-27-1), so anyone hitting it is replaying an old log or pasting
+    // old code, and a bare range would send them hunting for a typo. An
+    // EXISTING stored log containing -1 still hydrates — hydrate() does not
+    // re-validate — and js/reducers.js folds it to no vote.
+    throw new Error(ev.payload.value === -1
+      ? 'vote.set value -1 (bury) is no longer accepted — downvotes were removed; value must be 0|1'
+      : 'vote.set value must be 0|1');
   }
   return true;
 }

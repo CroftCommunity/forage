@@ -1,5 +1,7 @@
 // Scenario: the comment tree — nesting, edits, auto-collapse below the score
 // threshold, and the depth-10 deferral ("continue this thread").
+// The threshold is set explicitly here rather than relying on the default; see
+// the note beside the events.
 // Covers: comment.created, comment.edited (+ post, votes).
 
 const DAY = 86400;
@@ -14,10 +16,21 @@ const events = [
   { t: 40, actor: 'u_sage', type: 'comment.edited', payload: { commentId: 'c_reply', patch: { bodyMd: 'A reply (edited)' } } },
   { t: 50, actor: 'u_sage', type: 'comment.created', payload: { id: 'c_bad', postId: 'p_tree', bodyMd: 'Bad take', quiet: true } },
 ];
-// five buries push c_bad below the -4 auto-collapse threshold
-for (let i = 0; i < 5; i++) {
-  events.push({ t: 60 + i, actor: `sv_${i}`, type: 'vote.set', payload: { subjectType: 'comment', subjectId: 'c_bad', value: -1 } });
-}
+// Auto-collapse used to be driven by five BURIES pushing c_bad under the
+// default -4 threshold. Downvotes are gone (plan 2026-08-27-1), which has a
+// consequence nobody's description of that change mentioned: a score can no
+// longer be negative, so **the default commentThreshold of -4 can never fire
+// again**. The feature is not dead — the threshold is a user preference, and a
+// POSITIVE one still collapses lightly-boosted comments — but its default
+// makes it inert and its name now means the opposite of what it used to.
+//
+// That is a product question for the owner (see the plan's Review Log), not a
+// call this scenario should make silently. What it does here is keep the
+// feature EXERCISED under its new semantics — collapse below N boosts — so the
+// removal of downvotes does not quietly take auto-collapse's only coverage with
+// it. If the owner retires the feature, this is the scenario that goes.
+events.push({ t: 60, actor: 'u_fern', type: 'prefs.updated', payload: { patch: { commentThreshold: 1 } } });
+events.push({ t: 61, actor: 'sv_0', type: 'vote.set', payload: { subjectType: 'comment', subjectId: 'c_top', value: 1 } });
 // a chain to depth 11: c_d0 (depth 1, under c_top? no — own root chain)
 let parent = null;
 for (let d = 0; d <= 11; d++) {

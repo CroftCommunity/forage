@@ -166,7 +166,10 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
     createdTs, createdSec: Math.floor(createdTs / 1000),
     locked: false, pinned: false, edited: false,
     removed: false, deleted: false, held: false,
-    ups: post.likeCount ?? 0, downs: 0, score: post.likeCount ?? 0, // DL-011: likes-only
+    // Was `downs: 0` under DL-011 ("lens scores are likes-only"). That
+    // tolerance RETIRED 2026-08-27 when the sandbox dropped downvotes too: the
+    // two populations agree now, so there is no divergence to pin a zero for.
+    ups: post.likeCount ?? 0, score: post.likeCount ?? 0,
     myVote: post.viewer?.like ? 1 : 0,
     cid: post.cid ?? null, likeUri: post.viewer?.like ?? null, // 3c: the boost write pair's inputs
     facets: record.facets || [],
@@ -279,7 +282,7 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
     id: p.id, postId: post.id, parentId: null,
     createdTs: p.createdTs, createdSec: p.createdSec, edited: false,
     removed: false, deleted: false,
-    ups: p.ups, downs: 0, score: p.score, myVote: p.myVote, saved: false,
+    ups: p.ups, score: p.score, myVote: p.myVote, saved: false,
     body: p.body, author: p.author, authorId: p.authorId,
     ...(p.maskedRemoved ? { maskedRemoved: true, title: p.title } : { removedReason: '' }),
     depth,

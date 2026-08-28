@@ -3,82 +3,100 @@
 // (window edges, factor thresholds, gates) so single-line mutations die.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { hot, confidence, controversy, rising, sortItems } from '../js/engines/rank.js';
-import {
-  limits, humanWait,
-  REP_FAST_THRESHOLD, RAPID_BURY_COUNT, RAPID_BURY_WINDOW, RAPID_BURY_PENALTY,
-} from '../js/engines/limits.js';
+import { hot, confidence, rising, sortItems } from '../js/engines/rank.js';
+import { limits, humanWait, REP_FAST_THRESHOLD } from '../js/engines/limits.js';
 
 const EPOCH = 1134028003; // reddit epoch, rank.js
 
 // ---- hot ----
 
-test('hot: measured pins — positive, negative, and zero score', () => {
-  assert.equal(hot(10, 2, EPOCH + 45000), 1.90309);  // log10(8) + 45000/45000, round7
-  assert.equal(hot(2, 10, EPOCH), -0.90309);          // sign flips the order term
-  assert.equal(hot(3, 3, EPOCH), 0);                  // zero score -> log10(max(0,1)) = 0
+test('hot: measured pins — the same numbers, one argument fewer', () => {
+  // Deliberately the SAME expectations as the two-sided version produced for
+  // the equivalent net score: hot(10, 2, t) was log10(8) + t, and hot(8, t) is
+  // too. If a simplification moves its own outputs it is a behaviour change,
+  // and this is the line that would catch it.
+  assert.equal(hot(8, EPOCH + 45000), 1.90309);   // log10(8) + 45000/45000, round7
+  assert.equal(hot(0, EPOCH), 0);                 // no boosts -> log10(max(0,1)) = 0
+  assert.equal(hot(1, EPOCH), 0);                 // and one boost is the same order term
+
+  // The NEGATIVE pin is deleted rather than ported, and it is the most
+  // interesting deletion in this phase: `hot(2, 10, EPOCH) === -0.90309`
+  // exercised `sign(s)` flipping the order term for a net-negative score.
+  // Scores cannot be negative now, so that branch is not merely untaken — it is
+  // unreachable, which is why `sign()` is gone from rank.js rather than kept
+  // "just in case".
 });
 
 test('hot: age moves rank even when the score is identical', () => {
-  assert.ok(hot(5, 1, EPOCH + 90000) > hot(5, 1, EPOCH));
+  assert.ok(hot(4, EPOCH + 90000) > hot(4, EPOCH));
 });
 
 // ---- confidence (Wilson lower bound, z = 1.281551565545) ----
 
 test('confidence: measured pins', () => {
   assert.equal(confidence(0, 0), 0); // no votes -> 0, not NaN
-  assert.ok(Math.abs(confidence(1, 0) - 0.37844750322520615) < 1e-12);
-  assert.ok(Math.abs(confidence(100, 0) - 0.9838416366736703) < 1e-12);
-  assert.ok(Math.abs(confidence(3, 1) - 0.4325414503689865) < 1e-12);
+  // Downvotes are gone (plan 2026-08-27-1), so n === ups and p === 1 always.
+  // These are the SAME numbers the two-argument version produced with downs=0 —
+  // deliberately unchanged, because a formula simplification that moves its own
+  // outputs is a behaviour change wearing a refactor's clothes.
+  assert.ok(Math.abs(confidence(1) - 0.37844750322520615) < 1e-12);
+  assert.ok(Math.abs(confidence(100) - 0.9838416366736703) < 1e-12);
+  assert.equal(confidence(0), 0, 'no votes is no confidence, not a division by zero');
 });
 
-test('confidence: more evidence at the same ratio raises the lower bound', () => {
-  assert.ok(confidence(100, 0) > confidence(1, 0));
-  assert.ok(confidence(30, 10) > confidence(3, 1));
+test('confidence: more evidence raises the lower bound', () => {
+  // Was "more evidence AT THE SAME RATIO". There is only one ratio now, which
+  // is why the old second assertion (confidence(30,10) > confidence(3,1)) is
+  // not ported: its subject — two different ratios — no longer exists.
+  assert.ok(confidence(100) > confidence(1));
+  assert.ok(confidence(2) > confidence(1));
 });
 
-// ---- controversy ----
-
-test('controversy: zero when one-sided, magnitude^balance otherwise', () => {
-  assert.equal(controversy(5, 0), 0);
-  assert.equal(controversy(0, 5), 0);
-  assert.equal(controversy(5, 5), 10);                              // 10^1
-  assert.ok(Math.abs(controversy(8, 2) - 1.7782794100389228) < 1e-12); // 10^0.25
-  assert.equal(controversy(2, 8), controversy(8, 2));               // balance is symmetric
-});
+// The `controversy` tests are DELETED, not ported, and the distinction matters:
+// the function is gone, so there is nothing left to assert about. Controversial
+// was the only ranking defined BY the up/down split — every other sort merely
+// consumed it — so it is the only one with no downs-free form. That loss is the
+// owner's decision (*"controversial can go sure"*), recorded here because a
+// deleted test and an abandoned test look identical in a diff.
 
 // ---- rising: both gates at their exact edges ----
 
 test('rising: age gate — exactly 6h passes, one second older is -Infinity', () => {
-  assert.equal(rising(12, 0, EPOCH, EPOCH + 6 * 3600), 2.0010791812); // velocity 2 at 6h
-  assert.equal(rising(12, 0, EPOCH, EPOCH + 6 * 3600 + 1), -Infinity);
+  assert.equal(rising(12, EPOCH, EPOCH + 6 * 3600), 2.0010791812); // velocity 2 at 6h
+  assert.equal(rising(12, EPOCH, EPOCH + 6 * 3600 + 1), -Infinity);
 });
 
 test('rising: velocity gate — exactly 2 votes/hour passes, below is -Infinity', () => {
   const t = EPOCH;
-  assert.ok(Number.isFinite(rising(2, 0, t, t + 3600)));  // velocity 2.0
-  assert.equal(rising(1, 0, t, t + 3600), -Infinity);      // velocity 1.0
+  assert.ok(Number.isFinite(rising(2, t, t + 3600)));  // velocity 2.0
+  assert.equal(rising(1, t, t + 3600), -Infinity);      // velocity 1.0
 });
 
 // ---- sortItems ----
 
-test('sortItems: new is createdSec desc; top is net score desc', () => {
+test('sortItems: new is createdSec desc; top is boosts desc', () => {
   const items = [
-    { id: 'old', ups: 9, downs: 0, createdSec: EPOCH },
-    { id: 'mid', ups: 1, downs: 5, createdSec: EPOCH + 100 },
-    { id: 'new', ups: 3, downs: 1, createdSec: EPOCH + 200 },
+    { id: 'old', ups: 9, createdSec: EPOCH },
+    { id: 'mid', ups: 1, createdSec: EPOCH + 100 },
+    { id: 'new', ups: 3, createdSec: EPOCH + 200 },
   ];
   assert.deepStrictEqual(sortItems(items, 'new').map((i) => i.id), ['new', 'mid', 'old']);
   assert.deepStrictEqual(sortItems(items, 'top').map((i) => i.id), ['old', 'new', 'mid']);
   assert.deepStrictEqual(items.map((i) => i.id), ['old', 'mid', 'new']); // input not mutated
 });
 
-test('sortItems: unknown sort falls back to hot', () => {
+test('sortItems: unknown sort falls back to hot — and `controversial` is now unknown', () => {
   const items = [
-    { id: 'a', ups: 0, downs: 5, createdSec: EPOCH },
-    { id: 'b', ups: 5, downs: 0, createdSec: EPOCH },
+    { id: 'a', ups: 0, createdSec: EPOCH },
+    { id: 'b', ups: 5, createdSec: EPOCH },
   ];
   assert.deepStrictEqual(sortItems(items, 'nonsense').map((i) => i.id), ['b', 'a']);
+  // The edge that matters to a person rather than to the engine: a shared link
+  // carrying `?sort=controversial`, or a stored `defaultSort` from before this
+  // change, must land on a working board instead of stranding someone on a
+  // sort that no longer exists. The fallback already existed; nothing pinned
+  // that THIS name reaches it.
+  assert.deepStrictEqual(sortItems(items, 'controversial').map((i) => i.id), ['b', 'a']);
 });
 
 // ---- limits: factor thresholds ----
@@ -88,7 +106,7 @@ const evAt = (type, sec, extra = {}) => ({ type, actor: 'u_x', ts: sec * 1000, p
 test('limits: logged-out can do nothing, with words (exact shape)', () => {
   assert.deepStrictEqual(limits(null, [], 0, false, 1000), {
     canComment: false, canPost: false, commentWaitSec: 0, postWaitSec: 0,
-    probation: false, reason: 'logged-out', coolOff: false,
+    probation: false, reason: 'logged-out',
   });
 });
 
@@ -136,85 +154,72 @@ test('limits: only own events count against the budget', () => {
   assert.equal(limits('u_x', events, 0, false, 101).canComment, true);
 });
 
-const bury = (sec) => evAt('vote.set', sec, { payload: { value: -1 } });
+// The rapid-bury cool-off is GONE (plan 2026-08-27-1 Phase 3). Three tests
+// covered it — the 5-in-60s trigger, its window edge, and the "only buries
+// count" discrimination — and all three are deleted because the act they
+// measure cannot happen: nothing in the app can produce a `vote.set` of -1 any
+// more. That is different from removing a rule we still want; the rules that
+// remain are asserted below and must NOT have moved.
 
-test('limits: rapid-bury cool-off at exactly 5 buries in the window; 4 does not trip', () => {
+test('limits: removing the bury cool-off NARROWED the rule set, it did not weaken it', () => {
+  // The phase's actual risk. A cool-off removal that also dropped the penalty
+  // arithmetic, or loosened a cooldown, would look identical in a diff to one
+  // that only removed the unreachable rule.
   const now = 1000;
-  const five = [1, 2, 3, 4, 5].map((i) => bury(now - i));
-  // a comment exactly at the normal free point (60s ago) stays blocked by the penalty
-  const events = [evAt('comment.created', now - 60), ...five];
-  // a post exactly at ITS normal free point (300s) is likewise penalty-blocked
-  events.push(evAt('post.created', now - 300));
-  const tripped = limits('u_x', events, 0, false, now);
-  assert.equal(tripped.coolOff, true);
-  assert.equal(tripped.canComment, false);
-  assert.equal(tripped.commentWaitSec, RAPID_BURY_PENALTY); // 60 + 30 - 60
-  assert.equal(tripped.postWaitSec, RAPID_BURY_PENALTY);    // 300 + 30 - 300
-  const four = five.slice(0, RAPID_BURY_COUNT - 1);
-  assert.equal(limits('u_x', four, 0, false, now).coolOff, false);
-});
-
-test('limits: bury window edge — a bury exactly 60s old counts, 61s does not', () => {
-  const now = 1000;
-  const fourRecent = [1, 2, 3, 4].map((i) => bury(now - i));
-  const atEdge = limits('u_x', [...fourRecent, bury(now - RAPID_BURY_WINDOW)], 0, false, now);
-  assert.equal(atEdge.coolOff, true);
-  const pastEdge = limits('u_x', [...fourRecent, bury(now - RAPID_BURY_WINDOW - 1)], 0, false, now);
-  assert.equal(pastEdge.coolOff, false);
+  const spam = [1, 2, 3, 4, 5].map((i) => evAt('vote.set', now - i, { payload: { value: 1 } }));
+  const withRecentPost = limits('u_x', [...spam, evAt('post.created', now - 10)], 0, false, now);
+  assert.equal(withRecentPost.canPost, false, 'the post cooldown still bites');
+  assert.equal(withRecentPost.postWaitSec, 290, 'and by exactly its own amount — no lingering penalty');
+  const withRecentComment = limits('u_x', [...spam, evAt('comment.created', now - 10)], 0, false, now);
+  assert.equal(withRecentComment.canComment, false, 'the comment cooldown still bites');
+  assert.equal(withRecentComment.commentWaitSec, 50);
+  // and boosting as fast as you like is not itself limited — it never was
+  assert.equal(limits('u_x', spam, 0, false, now).canPost, true);
+  assert.equal(limits('u_x', spam, 0, false, now).coolOff, undefined,
+    'coolOff is not reported as false — the field is gone, because the concept is');
 });
 
 // ---- 2i gap-closers ----
 
-test('rising: gates are independent — old-but-fast dies to AGE, downs count toward velocity', () => {
+test('rising: the two gates are independent — old-but-fast dies to AGE alone', () => {
   // 100 votes at 7h would pass the velocity gate (14.3/h): only the age gate kills it.
-  assert.equal(rising(100, 0, EPOCH, EPOCH + 7 * 3600), -Infinity);
-  // votes = ups + downs: 6 up + 6 down at 1h is velocity 12, finite (score 0 changes nothing).
-  assert.ok(Number.isFinite(rising(6, 6, EPOCH, EPOCH + 3600)));
+  assert.equal(rising(100, EPOCH, EPOCH + 7 * 3600), -Infinity);
+  // and young-but-slow dies to VELOCITY alone. The old second half of this test
+  // asserted that DOWNS counted toward velocity, which is not a repair case:
+  // its subject is gone, so it is replaced by the other independence direction
+  // rather than ported.
+  assert.equal(rising(1, EPOCH, EPOCH + 3600), -Infinity);
 });
 
 test('sortItems: each sort key dispatches to ITS ranking (orders differ from hot)', () => {
   const now = EPOCH + 200000;
   // top vs hot: newer low-score beats older high-score on hot, reverses on top
   const t = [
-    { id: 'lowNew', ups: 1, downs: 0, createdSec: EPOCH + 90000 },
-    { id: 'highOld', ups: 100, downs: 0, createdSec: EPOCH },
+    { id: 'lowNew', ups: 1, createdSec: EPOCH + 90000 },
+    { id: 'highOld', ups: 100, createdSec: EPOCH },
   ];
   assert.deepStrictEqual(sortItems(t, 'hot', now).map((i) => i.id), ['lowNew', 'highOld']);
   assert.deepStrictEqual(sortItems(t, 'top', now).map((i) => i.id), ['highOld', 'lowNew']);
-  // controversial vs hot — input order deliberately differs from BOTH outputs,
-  // so a comparator degraded to undefined (stable no-op sort) also dies
-  const c = [
-    { id: 'skewed', ups: 9, downs: 1, createdSec: EPOCH + 45000 }, // controversy ~1.29, hot ~1.9
-    { id: 'split', ups: 5, downs: 5, createdSec: EPOCH },          // controversy 10, hot 0
-  ];
-  assert.deepStrictEqual(sortItems(c, 'hot', now).map((i) => i.id), ['skewed', 'split']);
-  assert.deepStrictEqual(sortItems(c, 'controversial', now).map((i) => i.id), ['split', 'skewed']);
-  // best vs top: Wilson favors volume at the same-ish ratio over a single vote
+  // The controversial-vs-hot pair is gone with the sort. It carried a stated
+  // property worth restating: input order differed from BOTH outputs, so a
+  // comparator degraded to `undefined` (a stable no-op sort) died on it. With
+  // two items and two sorts that disagree, one output must equal input order —
+  // so that guard now comes from the OTHER sort in each pair below, and each
+  // pair is ordered so at least one of them reverses it.
+  // best vs top: Wilson favors volume over a single vote
   const b = [
-    { id: 'one', ups: 1, downs: 0, createdSec: EPOCH },     // confidence .378
-    { id: 'many', ups: 50, downs: 50, createdSec: EPOCH },  // confidence ~.44
+    { id: 'one', ups: 1, createdSec: EPOCH },     // confidence .378
+    { id: 'many', ups: 50, createdSec: EPOCH },   // confidence ~.96
   ];
   assert.deepStrictEqual(sortItems(b, 'best', now).map((i) => i.id), ['many', 'one']);
-  assert.deepStrictEqual(sortItems(b, 'top', now).map((i) => i.id), ['one', 'many']);
+  assert.deepStrictEqual(sortItems(b, 'top', now).map((i) => i.id), ['many', 'one']);
   // rising vs hot: the old high-scorer is age-gated out of rising
   const r = [
-    { id: 'slowNew', ups: 2, downs: 0, createdSec: now - 3600 },
-    { id: 'fastOld', ups: 100, downs: 0, createdSec: now - 7 * 3600 },
+    { id: 'slowNew', ups: 2, createdSec: now - 3600 },
+    { id: 'fastOld', ups: 100, createdSec: now - 7 * 3600 },
   ];
   assert.deepStrictEqual(sortItems(r, 'hot', now).map((i) => i.id), ['fastOld', 'slowNew']);
   assert.deepStrictEqual(sortItems(r, 'rising', now).map((i) => i.id), ['slowNew', 'fastOld']);
-});
-
-test('limits: only BURIES trip the cool-off — boosts and comments in the window do not', () => {
-  const now = 1000;
-  const noise = [
-    evAt('vote.set', now - 6, { payload: { value: 1 } }),
-    evAt('vote.set', now - 7, { payload: { value: 1 } }),
-    evAt('comment.created', now - 200), // outside nothing — just not a bury
-  ];
-  const fourBuries = [1, 2, 3, 4].map((i) => bury(now - i));
-  const l = limits('u_x', [...noise, ...fourBuries], 0, false, now);
-  assert.equal(l.coolOff, false); // 4 buries + noise stays under the 5-bury trigger
 });
 
 test('humanWait: now / seconds / minutes', () => {

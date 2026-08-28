@@ -78,7 +78,7 @@ function shapePost(state, viewerId, post, perms) {
     createdTs: post.createdTs, createdSec: Math.floor(post.createdTs / 1000),
     locked: post.locked, pinned: post.pinned, edited: post.edited,
     removed: post.removed, deleted: post.deleted, held: post.held,
-    ups: t.ups, downs: t.downs, score: t.score,
+    ups: t.ups, score: t.score,
     myVote: myVote(state, viewerId, 'post', post.id),
     saved: isSaved(state, viewerId, 'post', post.id),
     commentCount: countComments(state, post.id),
@@ -98,7 +98,7 @@ function shapeComment(state, viewerId, c, perms) {
     id: c.id, postId: c.postId, parentId: c.parentId, createdTs: c.createdTs,
     createdSec: Math.floor(c.createdTs / 1000), edited: c.edited,
     removed: c.removed, deleted: c.deleted,
-    ups: t.ups, downs: t.downs, score: t.score,
+    ups: t.ups, score: t.score,
     myVote: myVote(state, viewerId, 'comment', c.id),
     saved: isSaved(state, viewerId, 'comment', c.id),
   };
@@ -144,12 +144,16 @@ export function board(state, viewerId, scope, sort = 'hot', timeframe = 'all', n
     return true;
   });
 
-  if (timeframe !== 'all' && (sort === 'top' || sort === 'controversial')) {
+  // `top` alone now — the timeframe window applied to the two score-ranked
+  // sorts, and controversial is gone (plan 2026-08-27-1). Not in that plan's
+  // declared write-set for this phase, but a dead sort name left in a live
+  // condition is precisely the residue the change exists to remove.
+  if (timeframe !== 'all' && sort === 'top') {
     const cutoff = now * 1000 - timeframeMs(timeframe);
     posts = posts.filter((p) => p.createdTs >= cutoff);
   }
 
-  const items = posts.map((p) => ({ ...p, ups: tally(state, 'post', p.id).ups, downs: tally(state, 'post', p.id).downs, createdSec: Math.floor(p.createdTs / 1000) }));
+  const items = posts.map((p) => ({ ...p, ups: tally(state, 'post', p.id).ups, createdSec: Math.floor(p.createdTs / 1000) }));
   const sorted = sortItems(items, sort, now);
   // pinned to the top within a single feed view
   if (scope.startsWith('feed:')) {
@@ -177,7 +181,7 @@ export function thread(state, viewerId, postId, sort = 'best', now) {
 
   function build(parentKey, depth) {
     const kids = (childrenOf[parentKey] || []).map((c) => ({
-      c, ups: tally(state, 'comment', c.id).ups, downs: tally(state, 'comment', c.id).downs,
+      c, ups: tally(state, 'comment', c.id).ups,
       createdSec: Math.floor(c.createdTs / 1000),
     }));
     const sorted = sortItems(kids, sort, now);

@@ -24,7 +24,7 @@ function sampleLog() {
     ev('comment.created', { id: 'c1', postId: 'p1', bodyMd: 'First' }, 'u_b', 150),
     ev('comment.created', { id: 'c2', postId: 'p1', parentId: 'c1', bodyMd: 'Reply' }, 'u_a', 160),
     ev('vote.set', { subjectType: 'post', subjectId: 'p1', value: 1 }, 'u_b', 170),
-    ev('vote.set', { subjectType: 'comment', subjectId: 'c1', value: -1 }, 'u_a', 180),
+    ev('vote.set', { subjectType: 'comment', subjectId: 'c1', value: 1 }, 'u_a', 180),
     ev('save.set', { subjectType: 'post', subjectId: 'p1', saved: true }, 'u_b', 190),
     ev('mod.locked', { subjectType: 'post', subjectId: 'p1' }, 'u_a', 200),
   ];
@@ -49,18 +49,47 @@ test('the fold reads event ts, never the wall clock (log without report resoluti
 
 // ---- derived: tally / myVote / reputation ----
 
-test('tally counts ups, downs, and net score', () => {
+test('tally counts boosts; there is no downs field to be always zero', () => {
+  // `downs` is REMOVED from the shape rather than pinned to 0. An always-zero
+  // field in a derived shape is a question every caller keeps having to ask,
+  // and it is exactly what DL-011 used to tolerate on the lens side.
   const s = fold(sampleLog());
-  assert.deepStrictEqual(tally(s, 'post', 'p1'), { ups: 1, downs: 0, score: 1 });
-  assert.deepStrictEqual(tally(s, 'comment', 'c1'), { ups: 0, downs: 1, score: -1 });
+  assert.deepStrictEqual(tally(s, 'post', 'p1'), { ups: 1, score: 1 });
+  assert.deepStrictEqual(tally(s, 'comment', 'c1'), { ups: 1, score: 1 });
 });
 
 test('a re-vote overwrites; vote 0 retracts', () => {
   const log = sampleLog();
-  log.push(ev('vote.set', { subjectType: 'post', subjectId: 'p1', value: -1 }, 'u_b', 210));
-  assert.deepStrictEqual(tally(fold(log), 'post', 'p1'), { ups: 0, downs: 1, score: -1 });
-  log.push(ev('vote.set', { subjectType: 'post', subjectId: 'p1', value: 0 }, 'u_b', 220));
-  assert.deepStrictEqual(tally(fold(log), 'post', 'p1'), { ups: 0, downs: 0, score: 0 });
+  log.push(ev('vote.set', { subjectType: 'post', subjectId: 'p1', value: 0 }, 'u_b', 210));
+  assert.deepStrictEqual(tally(fold(log), 'post', 'p1'), { ups: 0, score: 0 });
+  log.push(ev('vote.set', { subjectType: 'post', subjectId: 'p1', value: 1 }, 'u_b', 220));
+  assert.deepStrictEqual(tally(fold(log), 'post', 'p1'), { ups: 1, score: 1 });
+});
+
+test('a STORED -1 folds to no vote — the one place this change touches data people have', () => {
+  // hydrate() does not re-validate (js/store.js), so an existing sandbox whose
+  // log contains downvotes still loads. What it must NOT do is carry them:
+  // `tally` would otherwise count a vote nothing can produce and no UI can
+  // undo. Coercing to "no vote" was the recommendation in the plan's open
+  // question — the repo's precedent for an UNFOLDABLE log is to refuse loudly
+  // (legacyLog), but this log is foldable and merely stale, so refusing would
+  // brick a sandbox over a value we can safely drop.
+  //
+  // This is a NAMED rule with a test, not a side effect of the reducer's else
+  // branch — which is what the plan asked for, because a silent coercion is
+  // indistinguishable from a bug until someone counts the votes.
+  const log = sampleLog();
+  log.push(ev('vote.set', { subjectType: 'post', subjectId: 'p1', value: -1 }, 'u_c', 230));
+  const s = fold(log);
+  assert.deepStrictEqual(tally(s, 'post', 'p1'), { ups: 1, score: 1 },
+    'the stale downvote is dropped, not counted, and the boost beside it survives');
+  assert.equal(myVote(s, 'u_c', 'post', 'p1'), 0,
+    'and the person who cast it reads as not having voted, so the UI is consistent with the tally');
+
+  // …and it must not resurrect if they vote again and retract
+  log.push(ev('vote.set', { subjectType: 'post', subjectId: 'p1', value: 1 }, 'u_c', 240));
+  log.push(ev('vote.set', { subjectType: 'post', subjectId: 'p1', value: 0 }, 'u_c', 250));
+  assert.deepStrictEqual(tally(fold(log), 'post', 'p1'), { ups: 1, score: 1 });
 });
 
 test('myVote: the viewer sees their own vote; logged-out sees 0', () => {
@@ -70,11 +99,15 @@ test('myVote: the viewer sees their own vote; logged-out sees 0', () => {
   assert.equal(myVote(s, null, 'post', 'p1'), 0);
 });
 
-test('reputation sums net scores of non-removed content only', () => {
+test('reputation sums scores of non-removed content only', () => {
   const log = sampleLog();
-  // alice: p1 (+1), c2 (no votes); bob: c1 (-1, cast by alice)
+  // alice: p1 (+1), c2 (no votes); bob: c1 (+1, cast by alice).
+  // Was "net scores" and bob's comment was -1. With downvotes gone, reputation
+  // can no longer go DOWN — worth noting rather than just renaming the test,
+  // because "reputation" that only rises measures something different from
+  // reputation that can fall.
   assert.deepStrictEqual(reputation(fold(log), 'u_a'), { post: 1, comment: 0, total: 1 });
-  assert.deepStrictEqual(reputation(fold(log), 'u_b'), { post: 0, comment: -1, total: -1 });
+  assert.deepStrictEqual(reputation(fold(log), 'u_b'), { post: 0, comment: 1, total: 1 });
   log.push(ev('mod.removed', { subjectType: 'post', subjectId: 'p1' }, 'u_a', 230));
   assert.deepStrictEqual(reputation(fold(log), 'u_a'), { post: 0, comment: 0, total: 0 });
 });

@@ -139,7 +139,7 @@ test('search with a session returns lens-shaped posts', async () => {
   const lens = createLens({ session: oauthSession([]), transport: makeTransport([]) });
   const res = await lens.search('gardening');
   assert.equal(res.posts.length, 3);
-  assert.equal(res.posts[0].downs, 0);
+  assert.equal('downs' in res.posts[0], false); // DL-011 retired: no always-zero field
 });
 
 test('2c scan: no app-password path survives anywhere in the lens', () => {

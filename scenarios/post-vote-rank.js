@@ -1,5 +1,11 @@
-// Scenario: posting and boost/bury ranking — tallies derive from the vote
-// log, top and new disagree, an edit patches in place.
+// Scenario: posting and boost ranking — tallies derive from the vote log, top
+// and new disagree, an edit patches in place.
+//
+// Was "boost/bury". Downvotes are gone (plan 2026-08-27-1), so p_b's -1 is
+// removed. The TOP order is unchanged by that removal (p_a 3, p_c 2, p_b 1
+// against p_a 3, p_c 2, p_b 0), which is worth saying out loud: the assertion
+// that top disagrees with new still earns its keep, and it does so for the same
+// reason it always did rather than by luck.
 // Covers: post.created, post.edited, vote.set (+ registrations, feed).
 
 const DAY = 86400;
@@ -21,15 +27,14 @@ export const postVoteRank = {
     { t: 401, actor: 'sv_2', type: 'vote.set', payload: { subjectType: 'post', subjectId: 'p_a', value: 1 } },
     { t: 402, actor: 'sv_3', type: 'vote.set', payload: { subjectType: 'post', subjectId: 'p_a', value: 1 } },
     { t: 410, actor: 'sv_4', type: 'vote.set', payload: { subjectType: 'post', subjectId: 'p_b', value: 1 } },
-    { t: 411, actor: 'sv_5', type: 'vote.set', payload: { subjectType: 'post', subjectId: 'p_b', value: -1 } },
     { t: 420, actor: 'sv_6', type: 'vote.set', payload: { subjectType: 'post', subjectId: 'p_c', value: 1 } },
     { t: 421, actor: 'sv_7', type: 'vote.set', payload: { subjectType: 'post', subjectId: 'p_c', value: 1 } },
     { t: 500, actor: 'u_alder', type: 'post.edited', payload: { postId: 'p_b', patch: { title: 'Bed rotation (fixed)' } } },
   ],
   assertions: [
-    { seat: null, probe: 'tally', args: { type: 'post', id: 'p_a' }, expect: { ups: 3, downs: 0, score: 3 } },
-    { seat: null, probe: 'tally', args: { type: 'post', id: 'p_b' }, expect: { ups: 1, downs: 1, score: 0 } },
-    { seat: null, probe: 'tally', args: { type: 'post', id: 'p_c' }, expect: { ups: 2, downs: 0, score: 2 } },
+    { seat: null, probe: 'tally', args: { type: 'post', id: 'p_a' }, expect: { ups: 3, score: 3 } },
+    { seat: null, probe: 'tally', args: { type: 'post', id: 'p_b' }, expect: { ups: 1, score: 1 } },
+    { seat: null, probe: 'tally', args: { type: 'post', id: 'p_c' }, expect: { ups: 2, score: 2 } },
     { seat: null, probe: 'feedIds', args: { scope: 'feed:meadow', sort: 'top' }, expect: ['p_a', 'p_c', 'p_b'] },
     { seat: null, probe: 'feedIds', args: { scope: 'feed:meadow', sort: 'new' }, expect: ['p_c', 'p_b', 'p_a'] },
     { seat: null, probe: 'postInfo', args: { id: 'p_b', key: 'title' }, expect: 'Bed rotation (fixed)' },
