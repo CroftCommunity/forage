@@ -13,6 +13,7 @@ import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortW
   sortFeeds, filterFeeds, platforms, liveFeeds } from '../substrates/lens.js';
 import { initSession, createAccountRoster, isOAuthCallback } from '../auth/session.js';
 import { hostById, featuredHosts, canCreateAccount } from '../auth/hosts.js';
+import { heroDismissed, dismissHero } from '../hero.js';
 import * as mediaScale from '../media-scale.js';
 import * as lang from '../lang.js';
 import { density, setDensity, DENSITIES } from '../board-density.js';
@@ -152,6 +153,45 @@ function authSheet() {
       'Forage has no accounts of its own. You sign in with an account on an atproto server — Bluesky is one of many, and each sets its own rules.'),
     list, other, form);
   return dialog;
+}
+
+// ---- the emblem hero (plan 2026-08-26-3, Phase D) ------------------------
+// The lens had no front door. The rook-and-wreath emblem with its sign-in call
+// has existed since the first build — in boardView(), in the MEMORY population
+// — while production defaults to the lens, so the one surface a first-time
+// visitor actually lands on was the one surface without it.
+//
+// STACKED on a phone, emblem full width above the copy. The side-by-side
+// variant was built, measured (198px, 32% of the fold against 289px, 42%) and
+// rejected on sight by the owner: at 46% width the rook and the wreath stop
+// reading and the headline wraps into the close control. It is not a smaller
+// version of what was asked for. If this ever has to shrink, cut a line of
+// copy, not the art.
+//
+// Home only, signed out only, dismissible forever.
+function heroCard() {
+  const card = el('div', { class: 'card hero-lens', 'data-hero': '1' });
+  const x = el('button', { type: 'button', class: 'hero-x', 'data-hero-dismiss': '1',
+    'aria-label': 'Hide this' }, '✕');
+  x.addEventListener('click', () => {
+    // The view removes the node; js/hero.js only persists. So a reader in
+    // private mode still gets a ✕ that does something — it hides it for this
+    // visit and forgets — rather than one that silently no-ops.
+    dismissHero();
+    card.remove();
+  });
+  const cta = el('button', { type: 'button', class: 'btn primary', 'data-hero-cta': '1' },
+    'Sign in or create an account');
+  cta.addEventListener('click', () => openAuthSheet());
+  card.append(x,
+    el('img', { class: 'hero-emblem', src: '/assets/logo-wordmark.jpg',
+      alt: 'Forage — a rook in a wreath as the O' }),
+    el('div', { class: 'hero-copy' },
+      el('strong', { class: 'hero-head' }, 'Forage the open web.'),
+      el('p', { class: 'small' },
+        'Your Bluesky as a forum — feeds are boards, threads are threads. Forage has no accounts of its own: you bring one from Bluesky or any other atproto server.'),
+      cta));
+  return card;
 }
 
 export function openAuthSheet() {
@@ -688,6 +728,10 @@ export function lensHomeView() {
       side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()) };
   }
   const main = el('div', {},
+    // The hero comes FIRST and outside the <h1>: it is the front door, and a
+    // door behind the sign is not a door. Home only (owner) — a hero on every
+    // board would be an ad rather than a welcome.
+    !session && !heroDismissed() ? heroCard() : null,
     el('h1', {}, 'The Lens'),
     ringDial(),
     trendingRail(),

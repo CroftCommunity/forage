@@ -10,7 +10,7 @@ landed; a Status line that contradicts itself is worse than none):
 | A Masthead | **DONE and DEPLOYED** — sticky, at the 44px floor, shorter at 320px. One item DROPPED with reasons (`scroll-margin-top`) |
 | B The seam | **DONE and DEPLOYED** — `signIn` options, host registry, LIVE drift check, end of silent callbacks |
 | C The sheet | **DONE** — `<dialog>`, three hosts, any-server handle field, reachable from the sidebar card on every signed-out surface |
-| D The hero | **NOT BUILT.** Unblocked, fully specified, design confirmed against previews |
+| D The hero | **DONE** — stacked on a phone, side-by-side above 560px, dismissal permanent and device-local |
 | E Emblem asset | **NOT BUILT.** Follows D |
 
 All four open questions are RESOLVED (see Open Questions). Nothing is blocked on the owner.
@@ -460,11 +460,11 @@ variant showed it overlapping the headline when space is tight.
 
 **Goal:** The emblem is seen, and the sheet has a front door.
 **Changes:**
-- [ ] `js/ui/lens-views.js` — hero on the signed-out lens **home only**.
-- [ ] `js/hero.js` (NEW) — pure dismissal state, device-local.
-- [ ] `test/hero.test.js` (NEW), `e2e/feed-naming.workflow.mjs` or a new journey.
-- [ ] `css/app.css` — hero layout; stacks under ~560px.
-- [ ] `sw.js` — SHELL + `CACHE`.
+- [x] DONE — `js/ui/lens-views.js`, `heroCard()` on the signed-out lens home only.
+- [x] DONE — `js/hero.js`: persistence only. Removing the node is the VIEW's job, so a reader in private mode gets a ✕ that does something rather than one that silently no-ops.
+- [x] DONE — `test/hero.test.js` (7 tests, RED first) and `e2e/hero.workflow.mjs` (new journey, RED first).
+- [x] DONE — `css/app.css`, stacks under 560px. Every rule SCOPED under `.hero-lens` — see below.
+- [x] DONE — `sw.js`: `/js/hero.js` in SHELL, `CACHE` -> `forage-v43`.
 **Owner decisions:** expanded by default; **dismissal never expires**; **on desktop too**
 (branding, not only funnel); close is a ✕ in the corner, not a button competing with the
 primary action; home only.
@@ -502,7 +502,7 @@ is the lens. No other shared mutable state beyond the write-set and `CACHE`.
 **Changes:**
 - [ ] `assets/` — correctly-sized sources; `<picture>`/`srcset` in the hero.
 - [ ] a byte-ceiling assertion.
-- [ ] `sw.js` — SHELL + `CACHE`.
+- [x] DONE — `sw.js`: `/js/hero.js` in SHELL, `CACHE` -> `forage-v43`.
 **Call chain:** `heroCard()` → `<picture>` → the sized source the viewport selects.
 **Wiring test:** a workflow assertion that at 390px the *selected* source is the small one
 — not merely that a small file exists on disk. Testing the file's existence would pass
@@ -805,3 +805,36 @@ renders a UA colour no skin can reach.
 
 **Gate:** 470 unit / 88 conformance / 13 workflows, 0 failures. Looked at on default,
 forage-dark, usenet and phpbb at 390 and 1280, plus the any-server field expanded.
+
+### Execution: Phase D — 2026-08-27
+**Shipped.** ~41% of a 390px fold, measured, with a 55% ceiling asserted so a later change
+cannot quietly take the rest. "The Lens" and the first board card both still clear the fold.
+
+**Three defects, and only one of them had a test that could have caught it:**
+- **`[hidden]` again, in a new costume** — no; this one was new. A stray `}` left by a
+  scripted splice of `css/app.css` silently swallowed the entire `.hero-lens` rule. The
+  hero still rendered, still stacked, still passed its shape assertions, and the ✕ landed
+  *under the sticky masthead* because its absolutely-positioned box fell back to the
+  viewport. The symptom was a Playwright click timing out with "Sign in intercepts pointer
+  events", which reads like a test problem and was a product one: on a phone the dismiss
+  control was genuinely untappable. A CSS parse error has no error channel — worth knowing
+  that this repo's only detector for one is a workflow that touches the thing.
+- **A CLASS COLLISION ACROSS POPULATIONS.** `.hero-copy` and `.hero-art` already belong to
+  the MEMORY population's hero (`boardView()`, `.hero-gate`). Unscoped,
+  `.hero-copy { padding-right: 36px }` reached across and broke `/popular` at 320px — a
+  surface this phase never touched, in a population it never touched. **W6 caught it**;
+  nothing about the lens did. Every hero rule is now scoped under `.hero-lens`. Two heroes
+  in one class vocabulary is the standing hazard, and the scoping is what contains it.
+- The ✕ needed its corner RESERVED rather than floated, exactly as the rejected
+  side-by-side preview predicted. `padding-right` on the copy, dropped at the stacked
+  breakpoint where there is no headline beside it.
+
+**On the a11y bite test for Phase C's new coverage** (run here because it belongs with the
+sheet): planting an unnamed close button produced **7 violations, one per skin, each
+labelled `(sheet open)`** — the scan genuinely reaches inside the dialog on every skin.
+Worth recording what did NOT bite: removing only the `aria-label` and leaving the `✕`
+glyph passes, because axe accepts visible text as an accessible name. The label is a
+quality choice ("Hide this" vs "multiplication x"), and no gate in this repo enforces it.
+
+**Gate:** 477 unit / 88 conformance / 14 workflows, 0 failures. Looked at on default,
+forage-dark, usenet and phpbb at 390 and 1280.
