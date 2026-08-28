@@ -37,24 +37,26 @@ test('computeMutuals is the pure intersection, order = follows order', () => {
   assert.deepEqual(computeMutuals(['a'], []), []);
 });
 
-test('world and following bypass the graph entirely', async () => {
+test('world has no member list; every other rung is computed from the graph', async () => {
   const { session, calls } = graphSession({});
   const lens = createLens({ session });
   assert.deepEqual(await lens.ringMembers('world'), { members: null });
-  assert.deepEqual(await lens.ringMembers('following'), { members: null });
   assert.equal(calls.length, 0, 'no graph fetches');
 });
 
-test('mutuals: follows ∩ followers across page boundaries', async () => {
+test('the mutuals rung: follows ∩ followers across page boundaries', async () => {
   // the mutual "did:plc:m1" appears on PAGE 2 of followers — pagination must matter
   const { session } = graphSession({
     [`getFollows:${ME}`]: [['did:plc:m0', 'did:plc:m1', 'did:plc:only-follow']],
     [`getFollowers:${ME}`]: [['did:plc:m0', 'did:plc:fan'], ['did:plc:m1']],
   });
   const lens = createLens({ session });
-  const r = await lens.ringMembers('mutuals');
-  assert.deepEqual(r.members, ['did:plc:m0', 'did:plc:m1']);
-  assert.equal(r.overflow, undefined, 'mutuals has no cap');
+  const r = await lens.ringMembers('mut');
+  // ME leads every rung: the ladder is cumulative from 'me' inward-out, so
+  // "my mutuals" is my posts AND theirs. That is the containment property
+  // (test/rings.test.js) showing up in the substrate.
+  assert.deepEqual(r.members, [ME, 'did:plc:m0', 'did:plc:m1']);
+  assert.equal(r.overflow, undefined, 'the mutuals rung has no cap');
 });
 
 test('empty intersection is an empty ring, not an error', async () => {
@@ -62,8 +64,9 @@ test('empty intersection is an empty ring, not an error', async () => {
     [`getFollows:${ME}`]: [['did:plc:a']],
     [`getFollowers:${ME}`]: [['did:plc:b']],
   });
-  const r = await createLens({ session }).ringMembers('mutuals');
-  assert.deepEqual(r.members, []);
+  const r = await createLens({ session }).ringMembers('mut');
+  // No mutuals is not an empty BOARD any more: you are always in your own ring.
+  assert.deepEqual(r.members, [ME], 'the innermost rung is still you');
 });
 
 test('mutuals+1 unions each mutual\'s follows, dedups, and never counts a member twice', async () => {
@@ -73,8 +76,8 @@ test('mutuals+1 unions each mutual\'s follows, dedups, and never counts a member
     'getFollows:did:plc:m0': [['did:plc:m1', 'did:plc:ext0']], // m1 already a mutual → once
     'getFollows:did:plc:m1': [['did:plc:ext0', 'did:plc:ext1']], // ext0 twice → once
   });
-  const r = await createLens({ session }).ringMembers('mutuals+1');
-  assert.deepEqual([...r.members].sort(), ['did:plc:ext0', 'did:plc:ext1', 'did:plc:m0', 'did:plc:m1']);
+  const r = await createLens({ session }).ringMembers('hop');
+  assert.deepEqual([...r.members].sort(), [ME, 'did:plc:ext0', 'did:plc:ext1', 'did:plc:m0', 'did:plc:m1'].sort());
   assert.equal(r.overflow, undefined, 'under the cap: no overflow reported');
 });
 
@@ -84,10 +87,14 @@ test(`cap edges: cap−1 and cap pass untouched; cap+1 reports honest overflow (
     [`getFollowers:${ME}`]: [['did:plc:m0']],
     'getFollows:did:plc:m0': [dids(extras, 'x')],
   });
-  for (const [extras, expectOverflow] of [[RING_CAP - 2, false], [RING_CAP - 1, false], [RING_CAP, true]]) {
+  // Stated as the TOTAL we want to land on rather than as a count of extras:
+  // every rung contains you and your mutual, so a table written in extras
+  // silently moved its own edges when 'me' joined the ladder. cap−1 / cap /
+  // cap+1 is the property; the arithmetic to reach it is not.
+  for (const [total, expectOverflow] of [[RING_CAP - 1, false], [RING_CAP, false], [RING_CAP + 1, true]]) {
+    const extras = total - 2; // me + m0 are already in the set
     const { session } = mk(extras);
-    const r = await createLens({ session }).ringMembers('mutuals+1');
-    const total = 1 + extras; // m0 + extras
+    const r = await createLens({ session }).ringMembers('hop');
     if (expectOverflow) {
       assert.equal(r.members.length, RING_CAP, `capped at ${RING_CAP}`);
       assert.deepEqual(r.overflow, { capped: true, total }, 'true pre-cap count reported');
@@ -102,13 +109,13 @@ test('an unknown ring refuses with words naming the known rings', async () => {
   const { session } = graphSession({});
   await assert.rejects(() => createLens({ session }).ringMembers('galaxy'), (e) => {
     assert.match(e.message, /galaxy/);
-    assert.match(e.message, /mutuals/);
+    assert.match(e.message, /mut/);
     return true;
   });
 });
 
 test('rings need a session, with words', async () => {
-  await assert.rejects(() => createLens({}).ringMembers('mutuals'), /session/);
+  await assert.rejects(() => createLens({}).ringMembers('mut'), /session/);
 });
 
 // ---- 3b: the merged ring board ----
@@ -155,11 +162,11 @@ test('3b: the merged board interleaves by time; TIES break by author DID then ur
     'did:plc:aa': { 0: { items: [mkPost('a1', 'did:plc:aa', '2026-08-25T10:00:00Z'), mkPost('a2', 'did:plc:aa', '2026-08-25T08:00:00Z')] } },
     'did:plc:bb': { 0: { items: [mkPost('b1', 'did:plc:bb', '2026-08-25T10:00:00Z'), mkPost('b2', 'did:plc:bb', '2026-08-25T09:00:00Z')] } },
   } });
-  const board = await createLens({ session }).ringFeed('mutuals');
+  const board = await createLens({ session }).ringFeed('mut');
   const order = board.posts.map((p) => p.id.split('/').pop());
   // 10:00 tie: aa before bb (did order); then 09:00 b2; then 08:00 a2
   assert.deepEqual(order, ['a1', 'b1', 'b2', 'a2']);
-  assert.equal(board.ring, 'mutuals');
+  assert.equal(board.ring, 'mut');
   assert.deepEqual(board.failures, []);
 });
 
@@ -168,7 +175,7 @@ test('3b: one member failing mid-fan-out is a REPORTED failure, not a broken boa
     'did:plc:aa': { 0: { items: [mkPost('a1', 'did:plc:aa', '2026-08-25T10:00:00Z')] } },
     'did:plc:bb': 'FAIL',
   } });
-  const board = await createLens({ session }).ringFeed('mutuals');
+  const board = await createLens({ session }).ringFeed('mut');
   assert.equal(board.posts.length, 1);
   assert.deepEqual(board.failures, ['did:plc:bb']);
 });
@@ -182,23 +189,23 @@ test('3b: cursor round-trip resumes WITHOUT duplicates; exhausted members drop o
     'did:plc:bb': { 0: { items: [mkPost('b1', 'did:plc:bb', '2026-08-25T09:00:00Z')] } }, // exhausted after page 1
   } });
   const lens = createLens({ session });
-  const p1 = await lens.ringFeed('mutuals');
+  const p1 = await lens.ringFeed('mut');
   assert.deepEqual(p1.posts.map((p) => p.id.split('/').pop()), ['a1', 'b1']);
   assert.ok(p1.cursor, 'a member still has more');
-  const p2 = await lens.ringFeed('mutuals', { cursor: p1.cursor });
+  const p2 = await lens.ringFeed('mut', { cursor: p1.cursor });
   assert.deepEqual(p2.posts.map((p) => p.id.split('/').pop()), ['a2'], 'no duplicates, only the resumed member');
   assert.equal(p2.cursor, undefined, 'everyone exhausted');
 });
 
-test('3b: following delegates to the timeline; world refuses with words (its board is the sources)', async () => {
+test('3b: my-follows delegates to the timeline; world has no board yet (V3)', async () => {
   const calls = [];
   const session = { did: 'did:plc:me', handle: 'me.test', fetchHandler: async (path) => {
     calls.push(path);
     return { ok: true, status: 200, json: async () => ({ feed: [] }) };
   } };
-  await createLens({ session }).ringFeed('following');
+  await createLens({ session }).ringFeed('fol');
   assert.ok(calls[0].includes('getTimeline'));
-  await assert.rejects(() => createLens({ session }).ringFeed('world'), /world.*sources|sources.*world/i);
+  await assert.rejects(() => createLens({ session }).ringFeed('world'), /world.*V3|no merged board/i);
 });
 
 test('3b: the overflow rides the board (capped ring reports it through)', async () => {
@@ -209,8 +216,8 @@ test('3b: the overflow rides the board (capped ring reports it through)', async 
   };
   const feeds = Object.fromEntries([['did:plc:m0', { 0: { items: [] } }],
     ...dids(RING_CAP + 4, 'x').map((d) => [d, { 0: { items: [] } }])]);
-  const board = await createLens({ session: boardSession({ graph, authorFeeds: feeds }) }).ringFeed('mutuals+1');
-  assert.deepEqual(board.overflow, { capped: true, total: RING_CAP + 5 });
+  const board = await createLens({ session: boardSession({ graph, authorFeeds: feeds }) }).ringFeed('hop');
+  assert.deepEqual(board.overflow, { capped: true, total: RING_CAP + 6 }); // + me
 });
 
 // ---- 3l: opportunistic painting + per-member timeouts ----
@@ -221,7 +228,7 @@ test('3l: ringFeed paints progressively — onPage fires per member as each land
     'did:plc:aa': { 0: { items: [mkPost('a1', 'did:plc:aa', '2026-08-25T10:00:00Z')] } },
     'did:plc:bb': { 0: { items: [mkPost('b1', 'did:plc:bb', '2026-08-25T11:00:00Z')] } },
   } });
-  const board = await createLens({ session }).ringFeed('mutuals', {
+  const board = await createLens({ session }).ringFeed('mut', {
     onPage: (posts) => seen.push(posts.map((p) => p.id.split('/').pop())),
   });
   assert.equal(seen.length, 2, 'one paint per member, not one at the end');
@@ -239,10 +246,13 @@ test('3l: a member whose feed never answers is timed out and REPORTED; the board
       return json({ [key]: [{ did: 'did:plc:aa' }, { did: 'did:plc:hang' }] });
     }
     if (u.searchParams.get('actor') === 'did:plc:hang') return new Promise(() => {}); // never resolves
+    // 'me' is in every rung now; this test is about a HUNG member, so the
+    // reader's own feed is empty rather than a second copy of the fixture post.
+    if (u.searchParams.get('actor') === 'did:plc:me') return json({ feed: [] });
     return json({ feed: [{ post: mkPost('a1', 'did:plc:aa', '2026-08-25T10:00:00Z') }] });
   } };
   const t0 = Date.now();
-  const board = await createLens({ session }).ringFeed('mutuals', { timeoutMs: 40 });
+  const board = await createLens({ session }).ringFeed('mut', { timeoutMs: 40 });
   assert.ok(Date.now() - t0 < 3000, 'the hung member does not hold the board hostage');
   assert.deepEqual(board.posts.map((p) => p.id.split('/').pop()), ['a1']);
   assert.deepEqual(board.failures, ['did:plc:hang'], 'the timeout is reported, not swallowed');
@@ -266,20 +276,25 @@ test('3x: ringMembers is computed once per ring and reused', async () => {
   };
   const lens = createLens({ session: { did: 'did:plc:me', handle: 'me', fetchHandler } });
 
-  const first = await lens.ringMembers('mutuals');
+  const first = await lens.ringMembers('mut');
   const graphCallsAfterFirst = calls.length;
-  assert.deepEqual(first.members, ['did:plc:a']);
+  assert.deepEqual(first.members, ['did:plc:me', 'did:plc:a']);
 
-  const second = await lens.ringMembers('mutuals');
-  assert.deepEqual(second.members, ['did:plc:a'], 'same answer');
+  const second = await lens.ringMembers('mut');
+  assert.deepEqual(second.members, ['did:plc:me', 'did:plc:a'], 'same answer');
   assert.equal(calls.length, graphCallsAfterFirst, 'and NO new graph calls — the ring is remembered');
 
   // a different ring is a different question, so it is computed
-  const plus = await lens.ringMembers('mutuals+1');
-  assert.ok(calls.length > graphCallsAfterFirst, 'mutuals+1 does its own work');
-  assert.deepEqual(plus.members.sort(), ['did:plc:a', 'did:plc:c']);
+  const plus = await lens.ringMembers('hop');
+  assert.ok(calls.length > graphCallsAfterFirst, 'the hop rung does its own work');
+  // THE COUNTEREXAMPLE, in the substrate. This fixture follows a and b, but
+  // only a follows back, and a follows c. The OLD mutuals+1 was {a, c} — it
+  // dropped b, someone you follow, which is why "one step further out" could
+  // show you less. The hop rung is cumulative, so b is in it.
+  assert.deepEqual(plus.members.sort(),
+    ['did:plc:a', 'did:plc:b', 'did:plc:c', 'did:plc:me'].sort());
   const afterPlus = calls.length;
-  await lens.ringMembers('mutuals+1');
+  await lens.ringMembers('hop');
   assert.equal(calls.length, afterPlus, 'and is then remembered too');
 });
 
@@ -293,7 +308,7 @@ test('3x: two callers racing the same cold ring share ONE computation', async ()
     return json({ follows: [{ did: 'did:plc:a' }] });
   };
   const lens = createLens({ session: { did: 'did:plc:me', handle: 'me', fetchHandler } });
-  const [a, b] = await Promise.all([lens.ringMembers('mutuals'), lens.ringMembers('mutuals')]);
+  const [a, b] = await Promise.all([lens.ringMembers('mut'), lens.ringMembers('mut')]);
   assert.deepEqual(a.members, b.members);
   assert.equal(graphCalls, 2, 'follows + followers, once — not twice over');
 });
@@ -308,9 +323,9 @@ test('3x: a FAILED ring is not cached — the next visit tries again', async () 
     return json({ follows: [{ did: 'did:plc:a' }] });
   };
   const lens = createLens({ session: { did: 'did:plc:me', handle: 'me', fetchHandler } });
-  await assert.rejects(() => lens.ringMembers('mutuals'));
-  const ok = await lens.ringMembers('mutuals');
-  assert.deepEqual(ok.members, ['did:plc:a'], 'a transient failure must not be remembered as an empty ring');
+  await assert.rejects(() => lens.ringMembers('mut'));
+  const ok = await lens.ringMembers('mut');
+  assert.deepEqual(ok.members, ['did:plc:me', 'did:plc:a'], 'a transient failure must not be remembered as an empty ring');
 });
 
 test('3x: forgetRings clears the memory — a new account is a new graph', async () => {
@@ -322,9 +337,9 @@ test('3x: forgetRings clears the memory — a new account is a new graph', async
     return json({ follows: [{ did: 'did:plc:a' }] });
   };
   const lens = createLens({ session: { did: 'did:plc:me', handle: 'me', fetchHandler } });
-  await lens.ringMembers('mutuals');
+  await lens.ringMembers('mut');
   const before = graphCalls;
   lens.forgetRings();
-  await lens.ringMembers('mutuals');
+  await lens.ringMembers('mut');
   assert.ok(graphCalls > before, 'after forgetting, the graph is read again');
 });
