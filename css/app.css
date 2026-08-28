@@ -240,6 +240,11 @@ kbd { background: var(--green-100); border: 1px solid var(--border); border-radi
 .thumb { width: 72px; height: 54px; border-radius: var(--radius-sm); object-fit: cover; background: var(--green-100); }
 .pinned-row { background: color-mix(in srgb, var(--gold-500) 6%, transparent); }
 .removed-stub { color: var(--muted); font-style: italic; }
+/* Ring kind context (plan 2026-08-28-1): the line above a reply naming the
+   comment it answers, and a repost's byline. */
+.reply-context { color: var(--muted); margin-bottom: 2px; }
+.reply-context a { color: var(--link); }
+.repost-context { margin-bottom: 2px; }
 
 /* ---- Sort tabs ---- */
 .tabs { background: var(--nav-fill); display: flex; gap: var(--s1); border-bottom: 1px solid var(--border); margin-bottom: var(--s3); flex-wrap: wrap; }

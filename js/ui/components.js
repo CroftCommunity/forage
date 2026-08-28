@@ -146,6 +146,10 @@ export function postRow(p, viewerCanVote, opts = {}) {
     : el('div', { class: 'posttitle' }, titleLink);
 
   const right = el('div', {},
+    // Context ABOVE the title (plan 2026-08-28-1): the lens hangs a reply's
+    // parent link / a repost's byline here. An explicit node like bodyNode —
+    // the memory tier passes nothing and its rows are untouched.
+    opts.aboveNode || null,
     el('div', { class: 'row wrap', style: 'gap:6px;align-items:center' }, ...postBadges(p)),
     title,
     body, meta,

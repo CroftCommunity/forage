@@ -138,7 +138,9 @@ function boardSession({ graph, authorFeeds }) {
       if (spec === 'FAIL') return { ok: false, status: 500, json: async () => ({}) };
       const page = (spec ?? {})[cursor];
       if (!page) return json({ feed: [] });
-      return json({ feed: page.items.map((p) => ({ post: p })), ...(page.next ? { cursor: page.next } : {}) });
+      // an item may already be an ENVELOPE ({post, reply?, reason?}) — plan
+      // 2026-08-28-1 tests hand those in; bare posts keep the old wrapping
+      return json({ feed: page.items.map((p) => (p.post ? p : { post: p })), ...(page.next ? { cursor: page.next } : {}) });
     }
     return { ok: false, status: 404, json: async () => ({}) };
   };
@@ -219,6 +221,53 @@ test('3b: the overflow rides the board (capped ring reports it through)', async 
     ...dids(RING_CAP + 4, 'x').map((d) => [d, { 0: { items: [] } }])]);
   const board = await createLens({ session: boardSession({ graph, authorFeeds: feeds }) }).ringFeed('hop');
   assert.deepEqual(board.overflow, { capped: true, total: RING_CAP + 6 }); // + me
+});
+
+// ---- plan 2026-08-28-1: the envelope survives the fan-out ----
+// getAuthorFeed items are {post, reply?, reason?}; the board's kind tabs need
+// itemKind/replyTo/repostBy on every shaped post — the final board AND the
+// progressive onPage paint, which shapes items on its own fast path.
+
+test('kind tabs: itemKind rides the board posts and the onPage paint alike', async () => {
+  const parent = mkPost('parent1', 'did:plc:bb', '2026-08-25T08:00:00Z');
+  const session = boardSession({ graph: RING_GRAPH, authorFeeds: {
+    'did:plc:me': { 0: { items: [
+      mkPost('mine1', 'did:plc:me', '2026-08-25T10:00:00Z'),
+      { post: mkPost('myreply', 'did:plc:me', '2026-08-25T09:00:00Z'),
+        reply: { root: parent, parent } },
+      { post: mkPost('theirs1', 'did:plc:aa', '2026-08-25T01:00:00Z'),
+        reason: { $type: 'app.bsky.feed.defs#reasonRepost',
+          by: { did: 'did:plc:me', handle: 'me.test' }, indexedAt: '2026-08-25T11:00:00Z' } },
+    ] } },
+  } });
+  const seen = [];
+  const board = await createLens({ session }).ringFeed('mut', {
+    onPage: (posts) => seen.push(...posts),
+  });
+  const kinds = Object.fromEntries(board.posts.map((p) => [p.id.split('/').pop(), p.itemKind]));
+  assert.deepEqual(kinds, { mine1: 'post', myreply: 'reply', theirs1: 'repost' });
+  const reply = board.posts.find((p) => p.itemKind === 'reply');
+  assert.equal(reply.replyTo.uri, parent.uri, 'the reply links its parent');
+  assert.equal(reply.replyTo.author, 'bb.test');
+  assert.equal(board.posts.find((p) => p.itemKind === 'repost').repostBy, 'me.test');
+  const painted = Object.fromEntries(seen.map((p) => [p.id.split('/').pop(), p.itemKind]));
+  assert.deepEqual(painted, kinds, 'the fast path annotates identically');
+});
+
+test('kind tabs: a repost merges by its REPOST time, never the original post time', async () => {
+  const session = boardSession({ graph: RING_GRAPH, authorFeeds: {
+    'did:plc:aa': { 0: { items: [mkPost('a1', 'did:plc:aa', '2026-08-25T10:00:00Z')] } },
+    'did:plc:me': { 0: { items: [
+      // reposted at 11:00, but the ORIGINAL is months old — sorting by the
+      // post's own indexedAt would sink a fresh repost to the bottom
+      { post: mkPost('old1', 'did:plc:bb', '2026-01-01T00:00:00Z'),
+        reason: { $type: 'app.bsky.feed.defs#reasonRepost',
+          by: { did: 'did:plc:me', handle: 'me.test' }, indexedAt: '2026-08-25T11:00:00Z' } },
+    ] } },
+  } });
+  const board = await createLens({ session }).ringFeed('mut');
+  assert.deepEqual(board.posts.map((p) => p.id.split('/').pop()), ['old1', 'a1'],
+    'the 11:00 repost outranks the 10:00 post');
 });
 
 // ---- 3l: opportunistic painting + per-member timeouts ----

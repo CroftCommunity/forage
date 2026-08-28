@@ -545,6 +545,27 @@ const feedHrefFor = (slug) => {
   return (entry && feedPath({ creator: entry.creator, rkey: entry.slug })) || `/f/${slug}`;
 };
 
+// Plan 2026-08-28-1: what a row IS, said above its title. A reply names and
+// links the comment it answers — `/p?uri=` opens the thread the conversation
+// actually lives in, and the envelope already paid for the author + excerpt. A
+// repost says who repeated it, because the row's byline is the ORIGINAL
+// author's and without this line the repeat reads as their fresh post.
+function kindContext(p) {
+  if (p.itemKind === 'reply' && p.replyTo?.uri) {
+    const who = p.replyTo.author ? `@${p.replyTo.author}` : 'the conversation';
+    const cut = p.replyTo.excerpt.length > 90 ? p.replyTo.excerpt.slice(0, 90) + '…' : p.replyTo.excerpt;
+    return el('div', { class: 'xs reply-context', 'data-reply-context': p.replyTo.uri },
+      '↩ replying to ',
+      el('a', { href: `/p?uri=${encodeURIComponent(p.replyTo.uri)}` },
+        cut ? `${who}: “${cut}”` : who));
+  }
+  if (p.itemKind === 'repost') {
+    return el('div', { class: 'xs muted repost-context', 'data-repost-context': '1' },
+      `⟳ reposted by ${p.repostBy ? '@' + p.repostBy : '[unknown]'}`);
+  }
+  return null;
+}
+
 const lensRow = (p, view = 'card') => {
   const showsMedia = view !== 'compact' && p.media && !p.maskedRemoved;
   // Compact renders no media strip, so a placeholder-titled row takes a tiny
@@ -557,6 +578,7 @@ const lensRow = (p, view = 'card') => {
     : null;
   return postRow(p, !!session, {
     onVote: lensVote(p),
+    aboveNode: kindContext(p),
     // 3i: never duplicate the title — a preview renders only when it adds
     // content. Card mode carries media and tag doorways; compact is dense.
     bodyNode: view === 'compact' ? null
@@ -688,16 +710,50 @@ function sessionCard() {
 // `activeRing` is now the URL (/r/:rung) plus js/last-board.js, so the board
 // you are on is shareable, reloadable, and remembered.
 
+// Plan 2026-08-28-1: the ring board separates what its members WROTE from
+// what they ANSWERED and what they merely REPEATED. Per-page-load view state,
+// like boardSort: a tab is a filter over the loaded window, never a refetch —
+// the fan-out already paid for every kind.
+let ringTab = 'posts';
+const RING_TABS = [['posts', 'Posts'], ['replies', 'Replies'], ['reposts', 'Reposts']];
+const ringTabFor = (p) => p.itemKind === 'repost' ? 'reposts' : p.itemKind === 'reply' ? 'replies' : 'posts';
+
+function ringTabsRow(onChange) {
+  const row = el('div', { class: 'tabs', 'data-ring-tabs': '1' });
+  const paint = () => {
+    for (const b of row.children) {
+      const on = b.dataset.ringTab === ringTab;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-pressed', String(on));
+    }
+  };
+  for (const [id, label] of RING_TABS) {
+    const b = el('button', { type: 'button', class: 'tab', 'data-ring-tab': id }, label);
+    b.addEventListener('click', () => { if (ringTab !== id) { ringTab = id; paint(); onChange(); } });
+    row.append(b);
+  }
+  paint();
+  return row;
+}
+
 function ringBoard(ring, cursor) {
   const holder = el('div', {}, skeleton(6));
   // 3l: paint members as they land — a slow member no longer holds the whole
   // board on a skeleton (owner-reported hang on mutuals+1).
   const live = el('div', { class: 'card', 'data-ring-live': '1' });
+  // ONE tabs row serves both phases; what "repaint" means advances from the
+  // arrival window to the settled board when render() lands.
+  let repaint = () => {};
+  const tabs = ringTabsRow(() => repaint());
+  const arrived = [];
   let painted = 0;
+  repaint = () => live.replaceChildren(
+    ...arrived.filter((p) => ringTabFor(p) === ringTab).map((p) => lensRow(p, boardView())));
   const onPage = (posts) => {
     if (!posts.length) return;
-    if (painted === 0) holder.replaceChildren(el('div', { class: 'xs muted', style: 'padding:4px' }, 'Loading your ring…'), live);
-    for (const p of posts) live.append(lensRow(p, boardView()));
+    if (painted === 0) holder.replaceChildren(tabs, el('div', { class: 'xs muted', style: 'padding:4px' }, 'Loading your ring…'), live);
+    arrived.push(...posts);
+    for (const p of posts) if (ringTabFor(p) === ringTab) live.append(lensRow(p, boardView()));
     painted += posts.length;
   };
   const render = (board, into) => {
@@ -705,14 +761,25 @@ function ringBoard(ring, cursor) {
     if (board.overflow) chips.append(chip(`ring capped: ${board.overflow.total} members → first ${RING_CAP} (DL-016)`, `The ring truly has ${board.overflow.total} members; the board draws the first ${RING_CAP}. Honest overflow, never silent.`));
     if (board.failures.length) chips.append(chip(`${board.failures.length} member feed(s) unreachable`, board.failures.join(', ')));
     const card = el('div', { class: 'card' });
-    for (const p of board.posts) card.append(lensRow(p));
-    for (const a of card.querySelectorAll('a[href*="/p/at:"]')) {
-      const m = a.getAttribute('href').match(/\/p\/(at:.+)$/);
-      if (m) a.setAttribute('href', `/p?uri=${encodeURIComponent(m[1])}&from=${board.feedSlug}`);
-    }
+    const paint = () => {
+      const rows = board.posts.filter((p) => ringTabFor(p) === ringTab);
+      card.replaceChildren(...rows.map((p) => lensRow(p)));
+      for (const a of card.querySelectorAll('a[href*="/p/at:"]')) {
+        const m = a.getAttribute('href').match(/\/p\/(at:.+)$/);
+        if (m) a.setAttribute('href', `/p?uri=${encodeURIComponent(m[1])}&from=${board.feedSlug}`);
+      }
+      // An empty TAB is not an empty ring — say which, and that More widens
+      // the window (same honesty rule as the board sort).
+      if (!rows.length && board.posts.length) {
+        card.replaceChildren(el('div', { class: 'xs muted', style: 'padding:10px', 'data-ring-tab-empty': ringTab },
+          `No ${ringTab} among the loaded posts${board.cursor ? ' — More may reach some' : ''}.`));
+      }
+    };
+    repaint = paint;
+    paint();
     const more = board.cursor ? el('button', { class: 'btn sm' }, 'More') : null;
     if (more) more.addEventListener('click', () => { into.replaceChildren(ringBoard(ring, board.cursor)); });
-    into.replaceChildren(chips, board.posts.length ? card : emptyState('A quiet ring', 'No posts from these members yet.'), more || '');
+    into.replaceChildren(tabs, chips, board.posts.length ? card : emptyState('A quiet ring', 'No posts from these members yet.'), more || '');
   };
   lens.ringFeed(ring, { cursor, onPage }).then((b) => render(b, holder))
     .catch((e) => holder.replaceChildren(emptyState('Ring fetch failed', e.message)));
