@@ -28,8 +28,20 @@ export const HOSTS = Object.freeze([
   Object.freeze({ id: 'bsky', label: 'Bluesky', entryway: 'https://bsky.social', signups: SIGNUP.OPEN }),
   Object.freeze({ id: 'blacksky', label: 'Blacksky', entryway: 'https://blacksky.app', signups: SIGNUP.OPEN }),
   Object.freeze({ id: 'northsky', label: 'Northsky', entryway: 'https://northsky.social', signups: SIGNUP.INVITE }),
-  Object.freeze({ id: 'zio', label: 'zio.blue', entryway: 'https://zio.blue', signups: SIGNUP.INVITE }),
 ]);
+// MEMBERSHIP is the owner's, settled 2026-08-27: two open-signup hosts and ONE
+// invite-only, chosen for reputation rather than for count. The invite-only row
+// is not filler — it is the only place on the front door that shows a newcomer
+// the network is plural and that servers set their own rules, which is the idea
+// Forage is built on. Everything else reaches the same code path through
+// "Another server", which takes a handle on any atproto host.
+//
+// `zio.blue` was probed and is a real, OAuth-speaking PDS; it is out because
+// three names is a small reviewable editorial commitment and four was not
+// better. `mu.social` was considered and REJECTED on fact, not taste: it is a
+// MASTODON server (403 on every atproto endpoint), so it is ActivityPub and
+// this client cannot speak to it at all. `muni.town` is not a PDS either.
+// Recorded so neither is re-proposed.
 
 // The owner settled the SHAPE — capped, with everything else reachable through
 // "Another server", which takes a handle on any atproto host. MEMBERSHIP is

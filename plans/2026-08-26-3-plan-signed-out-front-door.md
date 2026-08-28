@@ -388,6 +388,11 @@ Tests plus the live check plus reading the actual authorize URL produced.
 ---
 
 ### Phase C: The sheet
+**Design CONFIRMED against rendered previews 2026-08-27.** Three hosts. The invite-only
+row's words sit in the CREATE slot so the column stays aligned and the italic explains the
+missing button — confirmed to read correctly at 390px and at desktop width. Decision 4's
+"Use another server →" sits inside the sidebar sign-in card, which renders on every
+signed-out surface.
 
 **Goal:** A visitor can choose a server and an intent, and understands why they are being
 asked.
@@ -439,6 +444,10 @@ breakpoints, plus one real redirect against a throwaway account — never the ow
 ---
 
 ### Phase D: The hero
+**Design CONFIRMED against rendered previews 2026-08-27** (owner picked from built
+alternatives, not from description): stacked on mobile — emblem full width above the
+copy — ~289px. Close control is a ✕ that must RESERVE its corner: the side-by-side
+variant showed it overlapping the headline when space is tight.
 
 **Goal:** The emblem is seen, and the sheet has a front door.
 **Changes:**
@@ -509,15 +518,58 @@ someday-SVG.
 
 ## Open Questions
 
-- `[RECOMMENDED: PHASE-GATED — Phase D]` The hero occupies ~44% of a 390px first screen at
+- ~~`[RECOMMENDED: PHASE-GATED — Phase D]` hero prominence~~ **RESOLVED 2026-08-27 (owner), then CORRECTED by preview.**
+  First answer was "cap the emblem near 200px". Building it showed **the cap is inert on
+  a phone**: the emblem is 1600×576, so at full card width its natural height is 129px —
+  already under any 200px cap. The cap only ever constrains desktop, which was not the
+  problem. The 44%→42% improvement measured after capping came almost entirely from a
+  flex bug in the preview (`flex: 1 1 180px` becomes a HEIGHT once the container is a
+  column, inflating the copy block), not from the cap.
+
+  **FINAL, confirmed against rendered previews: the STACKED hero, ~289px, ~42% of a 390px
+  first screen.** The side-by-side alternative was built and measured — 198px, 32% of
+  fold — and rejected on sight: at 44% width the emblem becomes a thumbnail, the rook and
+  wreath stop reading, and the headline wraps into the close control. It is not a smaller
+  version of what was asked for, it is a different thing, and "getting it seen" does not
+  survive it.
+
+  A prominent emblem on a 390px screen costs about 40% of the fold and no layout avoids
+  that; the only reductions available come from making the art too small to work. The
+  mitigations already chosen carry it: dismissal never expires, so the cost is once per
+  person, and the sticky masthead keeps sign-in on every screen for anyone who dismisses.
+  If it ever needs to shrink, **cut a line of copy, not the art.**
+  ~~Original: CAP the emblem around 200px tall.** The reason the hero was to be prominent
+  was getting sign-in seen; the sticky masthead now does that on every screen, always
+  visible and at a proper tap size. What remains is branding, which 200px does nearly as
+  well — and the 44% the full-size version cost was the visitor's first impression of
+  what Forage HAS on it, which is the other half of why anyone stays. Phase D's layout
+  item is now: emblem capped, first board row reachable on a 390px first screen, asserted.
+  ~~Original: The hero occupies ~44% of a 390px first screen at
   the mocked size. Ship at that prominence, or cap the emblem around 200px tall?
   *Rationale: the owner explicitly asked for prominence, so this is not a defect — but the
   measurement was taken after that decision, and it should be re-confirmed with the sticky
   masthead in place, which changes how much the hero has to carry.*
-- `[RECOMMENDED: PHASE-GATED — Phase C]` Which hosts, and how many, in the capped list?
+- ~~`[RECOMMENDED: PHASE-GATED — Phase C]` which hosts~~ **RESOLVED 2026-08-27 (owner):
+  three — `bsky.social` and `blacksky.app` (both open signups) and `northsky.social`
+  (invite only), chosen for reputation rather than for count.** `zio.blue` is out: real
+  and OAuth-speaking, but three names is a small reviewable editorial commitment and four
+  was not better. **`mu.social` was proposed by the owner and rejected on FACT, not
+  taste** — it is a Mastodon server (403 on every atproto endpoint, Mastodon's own page
+  markup), so it is ActivityPub and this client cannot speak to it at all. `muni.town` is
+  not a PDS either. Both recorded in `js/auth/hosts.js` so neither is re-proposed.
+  Registry updated and re-verified against the network the same day.
+  ~~Original: Which hosts, and how many, in the capped list?
   Currently four (2 open, 2 invite-only). *Rationale: more is more welcoming and more
   scrolling; the cap is settled, the membership is not.*
-- `[RECOMMENDED: ADVISORY]` Should the masthead also open the sheet, or keep going to the
+- ~~`[RECOMMENDED: ADVISORY]` masthead and the sheet~~ **RESOLVED 2026-08-27 (owner):
+  LEAVE the masthead going straight to bsky.social**, preserving the 3i decision
+  (*"launch OAuth DIRECTLY — no local form between you and the authorize screen"*), and
+  give the SIDEBAR sign-in card a quiet "use another server" route into the sheet. The
+  card already renders on every signed-out surface, so a non-Bluesky visitor stops
+  depending on a hero that exists on one page and can be dismissed forever. Fast path
+  stays one tap; the plural path stops being reachable only from home. Reversing an
+  explicit earlier owner decision six phases later needs a stronger reason than this had.
+  ~~Original: Should the masthead also open the sheet, or keep going to the
   sidebar card? *Rationale: once the masthead is sticky it is the primary path, so it
   arguably deserves the richer affordance — but that is a Phase C+ refinement.*
 - `[RECOMMENDED: BLOCKING]` Phase 0 D1 must pass before Phases C and D are executed as
