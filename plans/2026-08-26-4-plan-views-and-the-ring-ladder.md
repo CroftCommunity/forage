@@ -1,6 +1,9 @@
 # Plan: views and the ring ladder — one strip, two halves
 
-**Status:** DRAFTED, NOT STARTED (2026-08-26). **BLOCKED** behind `claude/polish`
+**Status:** **COMPLETE (2026-08-28)** — V1–V5 all landed on `claude/views`; gate green on
+all three tiers (npm test 511/511, conformance 86/86, workflows 16/16). Not yet merged to
+`main`, and the mock's phone masthead still needs **E144** before this ships to a phone.
+~~DRAFTED, NOT STARTED (2026-08-26). BLOCKED behind `claude/polish`~~
 (`worktrees/forage/polish`, claim `CroftC/.coordination/claims/forage--polish.md`,
 session `croftc-b3`): its **Phase 2** rebuilds the signed-out lens front door and its
 **Phase 3** makes the ring dial's four buttons read as gated. This plan deletes those
@@ -320,19 +323,19 @@ mutation-checked and the suite killed the mutation.
    Keying the value by DID would fix it and is more machinery than V1 needs. Raise it at
    V5, where the rule that reads this value lives.
 
-### V2 — the nested ladder, as data
+### V2 — the nested ladder, as data — **DONE 2026-08-28**
 
 RED: a unit test asserting containment — each rung's member set is a superset of the rung
 inside it, over a fixture where mutuals+1 provably does **not** contain follows (the
 counterexample from Problem Statement 3). This test fails against today's ring order and
 is the whole reason the ladder is redefined.
 
-### V3 — the World board
+### V3 — the World board — **DONE 2026-08-28**
 
 RED: a workflow journey selecting World and asserting posts render. Fails today by
 construction: `ringFeed` throws for `world`. This is the rung with no implementation.
 
-### V4 — the sidebar
+### V4 — the sidebar — **DONE 2026-08-28**
 
 RED: a workflow journey — signed out, assert there is **no ring section** and the one-line
 reason is present; signed in, assert the rungs render as links, click one, assert the board
@@ -345,7 +348,7 @@ tab-order are our responsibility and axe cannot see any of them.
 Deletes `ringDial()`. Moves `lensSidebar()`'s Feeds card into the nav; `.side` loses its
 only lens occupant, so the shell goes from three columns to two.
 
-### V5 — the landing rule
+### V5 — the landing rule — **DONE 2026-08-28**
 
 RED: three unit tests over one function, `landingFor(session, lastBoard)` — guest yields
 the directory, a returning reader yields the stored board, a session with no stored board
@@ -390,3 +393,15 @@ best-practice rules) came from the same survey and is filed alongside them.
   had invented: they are one object in `CURATED`, so there is no views-vs-feeds axis and
   everything in the nav is a board. Two mocks, two design errors found, neither by a
   suite. Mocks are in `plans/mocks/`.
+
+- **2026-08-28, building V1–V5 (croftc-40).** Worth recording what found what,
+  because the ratio is the argument for the browser tier. The UNIT tests found the design
+  errors: the containment counterexample (V2) is a unit test, and it is the reason the
+  rungs were redefined rather than reordered. The BROWSER found three defects no unit
+  test could have — auth booting only as a side effect of rendering the sign-in card, the
+  drawer closing itself on any background re-render, and the directory becoming
+  unreachable for exactly the readers who have a nav. All three were mine, all three were
+  invisible to 511 passing unit tests, and the third was caught by an EXISTING workflow
+  rather than the new one. Four workflows were ported rather than loosened; where a
+  property moved surface (a dial becoming nav rows) the assertion followed it instead of
+  being weakened to keep passing.
