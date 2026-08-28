@@ -99,6 +99,22 @@ export async function run() {
     assert.ok(shape.docScrollW <= shape.innerW + 1,
       `no horizontal overflow at 390px (${shape.docScrollW} > ${shape.innerW})`);
 
+    // ---- the phone downloads a phone-sized emblem -------------------------
+    // The assertion is on the SELECTED source, not on a small file existing.
+    // The second would pass while the phone still pulled the 216 KB original,
+    // which is the whole failure this replaces.
+    const picked = await s.page.evaluate(() => {
+      const i = document.querySelector('[data-hero] img');
+      const e = performance.getEntriesByType('resource').find((r) => r.name === i.currentSrc);
+      return { cur: i.currentSrc.split('/').pop(),
+        bytes: e ? (e.encodedBodySize || e.transferSize) : null,
+        rendered: Math.round(i.getBoundingClientRect().width) };
+    });
+    assert.match(picked.cur, /^logo-wordmark-400\.jpg$/,
+      `a 390px 1x viewport rendering the emblem at ${picked.rendered}px must select the 400w source, not ${picked.cur}`);
+    assert.ok(picked.bytes === null || picked.bytes < 30 * 1024,
+      `and it must actually weigh what the ceiling says: ${picked.bytes} bytes`);
+
     // ---- the ✕ reserves its corner ---------------------------------------
     assert.ok(shape.x, 'there is a dismiss control');
     assert.ok(shape.xName && /close|dismiss|hide|✕/i.test(shape.xName),

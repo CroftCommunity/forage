@@ -13,7 +13,7 @@ import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortW
   sortFeeds, filterFeeds, platforms, liveFeeds } from '../substrates/lens.js';
 import { initSession, createAccountRoster, isOAuthCallback } from '../auth/session.js';
 import { hostById, featuredHosts, canCreateAccount } from '../auth/hosts.js';
-import { heroDismissed, dismissHero } from '../hero.js';
+import { heroDismissed, dismissHero, EMBLEM } from '../hero.js';
 import * as mediaScale from '../media-scale.js';
 import * as lang from '../lang.js';
 import { density, setDensity, DENSITIES } from '../board-density.js';
@@ -184,8 +184,9 @@ function heroCard() {
     'Sign in or create an account');
   cta.addEventListener('click', () => openAuthSheet());
   card.append(x,
-    el('img', { class: 'hero-emblem', src: '/assets/logo-wordmark.jpg',
-      alt: 'Forage — a rook in a wreath as the O' }),
+    el('img', { class: 'hero-emblem', src: EMBLEM.src, srcset: EMBLEM.srcset,
+      sizes: EMBLEM.sizes, alt: EMBLEM.alt,
+      width: '1600', height: '576', decoding: 'async' }),
     el('div', { class: 'hero-copy' },
       el('strong', { class: 'hero-head' }, 'Forage the open web.'),
       el('p', { class: 'small' },

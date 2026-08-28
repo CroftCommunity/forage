@@ -7,7 +7,7 @@
 // Bump CACHE whenever you want to force a clean re-cache on the very next load
 // (asset URLs are hashless, so the name is the version).
 
-const CACHE = 'forage-v43';
+const CACHE = 'forage-v44';
 const SHELL = [
   '/', '/404.html', '/skins/bbs.css', '/skins/usenet.css', '/skins/usenet-dark.css', '/skins/forage-dark.css', '/skins/phpbb.css', '/skins/phpbb-dark.css',
   '/vendor/atproto-oauth-client-browser.js', '/js/auth/session.js', '/js/auth/hosts.js', '/js/skins.js',
@@ -24,6 +24,7 @@ const SHELL = [
   '/scenarios/rate-limit-probation.js', '/scenarios/report-resolve-notify.js',
   '/scenarios/save-and-profile.js', '/scenarios/search-visibility.js', '/ledger/divergence.js',
   '/manifest.webmanifest', '/icons/favicon-32.png', '/icons/icon-192.png',
+  '/assets/logo-wordmark-400.jpg', '/assets/logo-wordmark-800.jpg', '/assets/logo-wordmark-1200.jpg',
 ];
 
 self.addEventListener('install', (e) => {

@@ -82,3 +82,56 @@ test('dismissal is device-local and never touches forage.state', () => {
     'the Bluesky population writes nothing to the event log; test/store-modes.test.js is the teeth on that and this is the lens');
   assert.equal(store.dump()['forage.state'], '{"version":2,"events":[]}');
 });
+
+// ---- the emblem asset -----------------------------------------------------
+// The hero is the first thing above the fold on a phone, and it shipped as a
+// single 1600x576 JPEG weighing 216 KB rendered at ~340 CSS px. Testing that a
+// small file EXISTS would pass while the phone still downloaded the big one, so
+// the browser-side half of this lives in e2e/hero.workflow.mjs and asserts the
+// SELECTED source. What belongs here is the part a browser cannot tell you:
+// what the files weigh, and whether the service worker can reach them.
+import { readFileSync, statSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { EMBLEM, emblemSources } from '../js/hero.js';
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const SMALLEST_CEILING = 30 * 1024;
+const ANY_CEILING = 140 * 1024;
+
+test('every emblem source exists and is under its byte ceiling', () => {
+  const sizes = emblemSources().map((u) => [u, statSync(join(root, u.slice(1))).size]);
+  assert.ok(sizes.length >= 2, `srcset offers a choice: ${JSON.stringify(sizes)}`);
+  const smallest = Math.min(...sizes.map(([, n]) => n));
+  assert.ok(smallest <= SMALLEST_CEILING,
+    `the source a phone picks is ${Math.round(smallest / 1024)} KB, ceiling ${SMALLEST_CEILING / 1024} KB`);
+  const over = sizes.filter(([, n]) => n > ANY_CEILING);
+  assert.deepEqual(over, [],
+    `no source the hero can select may exceed ${ANY_CEILING / 1024} KB — the original 216 KB wordmark must not come back in through srcset`);
+});
+
+test('every emblem source is precached, or the hero is the one thing that breaks offline', () => {
+  // SHELL caches by EXACT url. A srcset naming files sw.js has never heard of
+  // means the app shell works offline and the front door does not.
+  const sw = readFileSync(join(root, 'sw.js'), 'utf8');
+  const shell = sw.match(/const SHELL = \[([\s\S]*?)\];/)[1];
+  const missing = [...new Set([EMBLEM.src, ...emblemSources()])].filter((u) => !shell.includes(`'${u}'`));
+  assert.deepEqual(missing, [], `sw.js SHELL is missing ${missing.join(', ')} (add them and bump CACHE)`);
+});
+
+test('the src fallback is a source, not the unresized original', () => {
+  // A browser that ignores srcset (or a copy-paste of the URL) gets `src`.
+  // Pointing it at the 1600px original would quietly undo the whole phase for
+  // exactly the clients least able to afford it.
+  assert.ok(emblemSources().includes(EMBLEM.src),
+    `src must be one of the srcset entries: ${EMBLEM.src} not in ${JSON.stringify(emblemSources())}`);
+  assert.ok(statSync(join(root, EMBLEM.src.slice(1))).size <= SMALLEST_CEILING,
+    'and it must be the small one');
+});
+
+test('sizes describes the layout the hero actually has', () => {
+  // Without `sizes`, the browser assumes 100vw and over-fetches on desktop,
+  // where the emblem is ~350px inside a 1100px shell.
+  assert.match(EMBLEM.sizes, /max-width:\s*560px/,
+    'the breakpoint here and the one in css/app.css are the same number, or the browser picks for a layout that does not exist');
+});

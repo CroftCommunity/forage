@@ -11,7 +11,7 @@ landed; a Status line that contradicts itself is worse than none):
 | B The seam | **DONE and DEPLOYED** — `signIn` options, host registry, LIVE drift check, end of silent callbacks |
 | C The sheet | **DONE** — `<dialog>`, three hosts, any-server handle field, reachable from the sidebar card on every signed-out surface |
 | D The hero | **DONE** — stacked on a phone, side-by-side above 560px, dismissal permanent and device-local |
-| E Emblem asset | **NOT BUILT.** Follows D |
+| E Emblem asset | **DONE** — 400/800/1200w sources, byte ceilings asserted, selected-source pinned. The transparency experiment RAN and is RETIRED |
 
 All four open questions are RESOLVED (see Open Questions). Nothing is blocked on the owner.
 
@@ -500,9 +500,9 @@ is the lens. No other shared mutable state beyond the write-set and `CACHE`.
 
 **Goal:** The front door does not cost 216 KB above the fold.
 **Changes:**
-- [ ] `assets/` — correctly-sized sources; `<picture>`/`srcset` in the hero.
-- [ ] a byte-ceiling assertion.
-- [x] DONE — `sw.js`: `/js/hero.js` in SHELL, `CACHE` -> `forage-v43`.
+- [x] DONE — `assets/logo-wordmark-{400,800,1200}.jpg`; `srcset` + `sizes` on the hero `<img>`. No `<picture>` and no second format: one format is one URL per width, and every one has to be named in SHELL.
+- [x] DONE — `test/hero.test.js`: smallest source <= 30 KB, no source above 140 KB, `src` must BE the small source, `sizes` breakpoint must match the CSS, and every source must be in SHELL.
+- [x] DONE — `sw.js`: three emblem SHELL entries, `CACHE` -> `forage-v44`.
 **Call chain:** `heroCard()` → `<picture>` → the sized source the viewport selects.
 **Wiring test:** a workflow assertion that at 390px the *selected* source is the small one
 — not merely that a small file exists on disk. Testing the file's existence would pass
@@ -838,3 +838,54 @@ quality choice ("Hide this" vs "multiplication x"), and no gate in this repo enf
 
 **Gate:** 477 unit / 88 conformance / 14 workflows, 0 failures. Looked at on default,
 forage-dark, usenet and phpbb at 390 and 1280.
+
+### Execution: Phase E — 2026-08-27
+**Shipped.** The emblem renders at ~340 CSS px and used to cost 216 KB. It now costs
+**18.8 KB** on a 1x phone, with 800w and 1200w above it. The assertion is on
+`img.currentSrc`, not on a small file existing — the second would have passed while the
+phone still pulled the original, which is the entire failure this replaces.
+
+**`height: auto` was load-bearing, and Phase D's fold ceiling is what caught it.** Adding
+`width`/`height` attributes — so the browser reserves the box before the bytes arrive —
+maps them to presentational width/height, and the stacked hero rendered **576px tall, 103%
+of a 390px fold**. That ceiling was written as a guard against future scope creep and
+caught a defect in the phase after it instead.
+
+### The transparency experiment: RAN, and RETIRED — keep the paper plaque
+The retire-by was "better than the plaque on at least three of the four skins, or close the
+question". Rendered against every skin's real `--card`:
+
+```
+default     #FFFFFF   transparent BETTER      — the plaque reads as a pasted rectangle
+usenet      #F5F5F1   transparent better      — marginal; the plaque's warmth is subtle
+phpbb       #FFFFFF   transparent BETTER      — same as default
+forage-dark #31291F   transparent MUCH WORSE  — the wordmark is ILLEGIBLE
+```
+
+**Three of four, and the answer is still no.** The count-based criterion assumed the losses
+would be cosmetic. They are not: the wordmark's letters are dark green, so on the dark skin
+the transparent variant does not look worse — it stops being readable. A wordmark you
+cannot read on one skin in four is not offset by three wins, and no threshold expressed as
+a count can say so. Recording the criterion's limit rather than quietly reinterpreting it,
+because the next retire-by written this way will have the same blind spot.
+
+Two further reasons, either sufficient alone:
+- **Bytes.** A transparent variant must be PNG: 400w PNG is **124 KB against 18.8 KB** for
+  the JPEG — 6.6x, straight through the byte ceiling this phase exists to enforce. The
+  experiment fails the phase's own goal.
+- **The extraction is not clean.** Flood-filling a JPEG's paper ground leaves speckle
+  around the letters. That one is an artifact of MY extraction rather than of a transparent
+  emblem in principle — said plainly so it is not counted as evidence it is not.
+
+**The cause was predicted by this plan's own Reasoning** ("the wordmark letters are dark
+green; making them follow the skin means SVG text taking `currentColor` — a redraw"). The
+experiment confirmed the prediction rather than overturning it. **Question closed, no
+lingering someday-SVG.** If the emblem is ever redrawn as vector art this becomes possible,
+and the reason it was not is written down here.
+
+**Left undone deliberately:** three callers still point at the 216 KB original — the memory
+population's hero, `/signup`, and `README.md`. All three are outside this phase's declared
+write-set, so they are filed in `TODO.md` rather than swept in. Production defaults to the
+lens; the sandbox hero is the only one of the three that costs a visitor real bytes.
+
+**Gate:** 481 unit / 88 conformance / 14 workflows, 0 failures.

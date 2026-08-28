@@ -34,3 +34,39 @@ export function dismissHero() {
   try { localStorage.setItem(HERO_KEY, DISMISSED); }
   catch { /* private mode, quota, blocked storage: the view still hides it */ }
 }
+
+// ---- the emblem asset -----------------------------------------------------
+// The wordmark shipped as ONE 1600x576 JPEG, 216 KB, rendered at ~340 CSS px on
+// a phone — the first thing above the fold and by some margin the heaviest.
+//
+// This lives here rather than in js/ui/lens-views.js so a test can IMPORT it.
+// The same reasoning put js/auth/hosts.js in its own module: lens-views cannot
+// be loaded outside a browser, so anything only it knows has to be checked by
+// scraping source text, and a scrape asserts its own parse rather than the
+// fact. The byte ceilings and the SHELL-membership check in test/hero.test.js
+// are real assertions because this object is reachable.
+//
+// No <picture> and no second format: one format means one URL per width, and
+// every one of them has to be named in sw.js SHELL or the hero becomes the one
+// thing in the app that does not work offline.
+export const EMBLEM = Object.freeze({
+  alt: 'Forage — a rook in a wreath as the O',
+  // Deliberately the SMALL one. `src` is what a client that ignores srcset
+  // gets, and those are the clients least able to afford the big one.
+  src: '/assets/logo-wordmark-400.jpg',
+  srcset: [
+    '/assets/logo-wordmark-400.jpg 400w',
+    '/assets/logo-wordmark-800.jpg 800w',
+    '/assets/logo-wordmark-1200.jpg 1200w',
+  ].join(', '),
+  // 560px is the stacked breakpoint in css/app.css and the two must stay the
+  // same number: `sizes` describes the layout to the browser BEFORE any CSS has
+  // been applied, so a stale copy here makes it choose for a layout that no
+  // longer exists. Below it the emblem is the card's full width (viewport less
+  // the shell and card padding); above it the card is ~350px wide.
+  sizes: '(max-width: 560px) calc(100vw - 48px), 350px',
+});
+
+export function emblemSources() {
+  return EMBLEM.srcset.split(',').map((s) => s.trim().split(/\s+/)[0]);
+}
