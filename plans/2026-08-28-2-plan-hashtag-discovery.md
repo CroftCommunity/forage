@@ -1,7 +1,9 @@
 # Plan: hashtag discovery — search, trending, and what you have read
 
-**Status:** **P1, P2, P3 DONE** (2026-08-28/29), plus the logged-out search fix
-(`4c23f41`). P4 (word cloud) not started. P5 needs owner decisions — see the phase. Phase numbers are order-of-writing,
+**Status:** **P1–P4 DONE** (2026-08-28/29), plus the logged-out search fix
+(`4c23f41`). **P5 is the only phase left and it needs owner decisions** — the
+eighth lens write, and whether a published subscription is read back on another
+device. See the phase. Phase numbers are order-of-writing,
 not priority — P5 is the owner's most recent interest.
 **Serves:** the owner's public-site queue. Follows the left nav landing
 (`2026-08-26-4`, forage `6b1dedf`) and the hashtag subscriptions that shipped
@@ -216,11 +218,28 @@ Open, and not for me to decide: whether a subscription saved to a repo should
 then be READ back on another device — that makes it sync rather than publish,
 and raises what happens when the two disagree.
 
-### P4 — the word cloud
+### P4 — the word cloud — **DONE 2026-08-29**
 
 A representation toggle on Trending, and on Loaded if it earns it. The list
 stays the default and the accessible one; the cloud is bounded so its smallest
 tag is still readable, and axe runs over both modes.
+
+**Landed on Trending only.** Loaded did not earn it: its whole point is sorting
+and filtering a long list, which a cloud cannot do. Adding one there would have
+been symmetry for its own sake.
+
+Three things the accessibility constraint actually forced, all asserted:
+
+- **The floor is 13px, the app's own `--t-xs`.** A cloud may not invent a size
+  smaller than anything else in the app — its small end is exactly where its
+  data hides.
+- **Each tag's accessible name carries its count** (`#harvest, 4 posts`).
+  Font size is the only place a cloud shows magnitude, and for a screen reader
+  font size does not exist. Same information, both ways of reading.
+- **All-equal counts all get the floor.** No spread means no ranking to show,
+  and faking a gradient would be a lie told in font-size.
+
+`/hashtags` joined the a11y sweep in the same commit.
 
 ---
 

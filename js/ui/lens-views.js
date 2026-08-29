@@ -24,7 +24,7 @@ import { POST_LIMITS, IMAGE_LIMITS, graphemes, withTag } from '../compose.js';
 import { MEDIA_SCALE } from '../media-scale.js';
 import { settingsView } from './views.js';
 import { tagSubs, subscribeTag, unsubscribeTag, isSubscribed, normalizeTag, onChange as onTagSubsChange } from '../tagsubs.js';
-import { observeTags, topTags, SORTS, sortLabel } from '../tag-stats.js';
+import { observeTags, topTags, SORTS, sortLabel, cloudSizes } from '../tag-stats.js';
 import { trendingTags, trendingTtl, setTrendingTtl, DEFAULT_TTL_MS } from '../trending-tags.js';
 import { HASHTAG_SECTIONS, SECTION_IDS, sectionLabel, sectionEnabled, setSectionEnabled, enabledSections } from '../hashtag-prefs.js';
 
@@ -1428,6 +1428,7 @@ function feedHeaderCard(info, onChange) {
 // Page-lifetime, like the board sort above it — a chosen ordering is not worth
 // a stored preference until someone asks for it to stick.
 let seenSort = 'count';
+let trendMode = 'list';   // the LIST is the default: it is the one with numbers
 let seenFilter = '';
 let seenShowAll = false;
 const SEEN_PAGE = 12;
@@ -1505,6 +1506,36 @@ export function lensHashtagsView(params = {}) {
     seenList, countLine);
   paintSeen();
 
+  // The cloud is a REPRESENTATION of the list, never a replacement for it. The
+  // list is the default and the one with the numbers in it; the toggle is one
+  // click away in both directions. Sizes are bounded (js/tag-stats.js) so the
+  // rarest tag is still readable — a cloud whose small end is unreadable has
+  // hidden its own data behind a decoration.
+  const cloud = (tags) => {
+    const box = el('div', { class: 'tagcloud', 'data-tagcloud': '1' });
+    for (const t of cloudSizes(tags)) {
+      box.append(el('a', {
+        href: `/h/${encodeURIComponent(t.tag)}`, 'data-browse-tag': t.tag,
+        // The accessible name carries the COUNT, because for a screen reader
+        // the font size — the only place the count is shown here — does not
+        // exist. Same information, both ways of reading.
+        'aria-label': `#${t.tag}, ${plural(t.count, 'post')}`,
+        style: `font-size:${t.size}px`,
+      }, `#${t.tag}`));
+    }
+    return box;
+  };
+  const modeBar = (id, current, onPick) => {
+    const bar = el('div', { class: 'row wrap', style: 'gap:6px', 'data-view-mode': id });
+    for (const [mode, label] of [['list', 'List'], ['cloud', 'Cloud']]) {
+      const b = el('button', { class: 'btn sm' + (current === mode ? ' primary' : ''),
+        'data-mode': mode, 'aria-pressed': String(current === mode) }, label);
+      b.addEventListener('click', () => { onPick(mode); rerender(); });
+      bar.append(b);
+    }
+    return bar;
+  };
+
   // ---- trending: derived, cached, and honest about its sample ----
   const trendList = el('div', {}, skeleton(3));
   const trendNote = el('div', { class: 'xs muted', style: 'margin-top:6px' });
@@ -1515,8 +1546,9 @@ export function lensHashtagsView(params = {}) {
   ttlSel.addEventListener('change', () => { setTrendingTtl(Number(ttlSel.value)); rerender(); });
 
   trendingTags(lens).then((t) => {
+    const slice = full('trending') ? t.tags : t.tags.slice(0, SEEN_PAGE);
     trendList.replaceChildren(t.tags.length
-      ? rows(full('trending') ? t.tags : t.tags.slice(0, SEEN_PAGE), (n) => `${plural(n, 'post')} in the sample`)
+      ? (trendMode === 'cloud' ? cloud(slice) : rows(slice, (n) => `${plural(n, 'post')} in the sample`))
       : el('div', { class: 'xs muted', style: 'padding:6px' },
           'Nothing to read right now — trending was unavailable.'));
     // Say what was actually looked at. "Trending hashtags" would claim a
@@ -1533,6 +1565,7 @@ export function lensHashtagsView(params = {}) {
     el('div', { class: 'xs muted', style: 'margin-bottom:8px' },
       'Bluesky publishes no hashtag ranking, so this reads the tags on posts inside the feeds that are trending. It is a barometer of the network, not a chart of it.'),
     el('div', { class: 'row wrap', style: 'gap:8px;align-items:center;margin-bottom:8px' },
+      modeBar('trending', trendMode, (m) => { trendMode = m; }),
       el('span', { class: 'xs muted' }, 'Refresh'), ttlSel),
     trendList, trendNote);
 

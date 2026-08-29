@@ -598,3 +598,12 @@ dialog.authsheet::backdrop { background: var(--scrim); }
 @media (max-width: 480px) {
   .seccheck input[type="checkbox"] { width: 44px; height: 44px; }
 }
+
+/* The trending word cloud. Sizes come from js/tag-stats.js and are bounded so
+   the rarest tag is still readable — the floor is --t-xs, the app's own
+   smallest text. A cloud whose small end cannot be read has hidden its data
+   behind a decoration. */
+.tagcloud { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline;
+  padding: 6px 2px; line-height: 1.7; }
+.tagcloud a { color: var(--link); text-decoration: none; }
+.tagcloud a:hover { text-decoration: underline; }

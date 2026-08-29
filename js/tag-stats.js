@@ -142,3 +142,34 @@ export function topTags(n, { sort = 'count' } = {}) {
   const limited = Number.isFinite(n) ? all.slice(0, Math.max(0, Math.trunc(n))) : all;
   return limited.map(([tag, v]) => ({ tag, count: v.count, likes: v.likes }));
 }
+
+// ---- the word cloud's sizing ----
+//
+// A cloud sizes text by frequency, which is both the point and the
+// accessibility problem: rare tags become small ones, and a 9px tag is one
+// nobody with low vision can read. This repo blocks its build on axe at
+// serious/critical, and croft-pwa/docs/ACCESSIBILITY.md is explicit that a
+// green scan only counts if it graded the DOM a user actually gets.
+//
+// So the floor is the app's own smallest text token (--t-xs, 13px) rather than
+// zero. A cloud may not invent a size smaller than anything else in the app.
+// And it is a REPRESENTATION of a list that is still there — the toggle keeps
+// the counted list one click away, which is the version with the numbers in it.
+export const CLOUD_MIN_PX = 13;
+export const CLOUD_MAX_PX = 32;
+
+export function cloudSizes(tags) {
+  if (!Array.isArray(tags) || tags.length === 0) return [];
+  const counts = tags.map((t) => Number(t.count) || 0);
+  const lo = Math.min(...counts);
+  const hi = Math.max(...counts);
+  // No spread means no ranking to show. Scaling anyway would divide by zero,
+  // and faking a gradient would be a lie told in font-size.
+  const span = hi - lo;
+  return tags.map((t) => ({
+    ...t,
+    size: span === 0
+      ? CLOUD_MIN_PX
+      : Math.round(CLOUD_MIN_PX + ((Number(t.count) || 0) - lo) / span * (CLOUD_MAX_PX - CLOUD_MIN_PX)),
+  }));
+}

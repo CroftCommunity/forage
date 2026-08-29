@@ -187,3 +187,40 @@ test('asking for every tag returns every tag, not a slice', () => {
     assert.equal(tagStatsCount(), 40);
   });
 });
+
+// ---- the word cloud's sizing ----
+//
+// A cloud sizes text by frequency, which is the whole point and also the
+// accessibility problem: the rare tags become the small ones, and a 9px tag is
+// one nobody with low vision can read. This repo blocks its build on axe at
+// serious/critical. So the mapping is BOUNDED — the floor is the app's own
+// smallest text token, not zero — and the cloud is a representation of a list
+// that is still there, never the only way to read the data.
+import { cloudSizes, CLOUD_MIN_PX, CLOUD_MAX_PX } from '../js/tag-stats.js';
+
+test('the smallest tag in a cloud is never smaller than the app\'s smallest text', () => {
+  const sized = cloudSizes([{ tag: 'a', count: 1 }, { tag: 'b', count: 4000 }]);
+  assert.equal(CLOUD_MIN_PX, 13, 'which is --t-xs; a cloud may not invent a smaller size than the app has');
+  for (const t of sized) {
+    assert.ok(t.size >= CLOUD_MIN_PX, `${t.tag} at ${t.size}px is at or above the floor`);
+    assert.ok(t.size <= CLOUD_MAX_PX, `${t.tag} at ${t.size}px is within the ceiling`);
+  }
+});
+
+test('bigger count means bigger text, and the extremes hit the bounds', () => {
+  const sized = cloudSizes([{ tag: 'lo', count: 1 }, { tag: 'mid', count: 5 }, { tag: 'hi', count: 10 }]);
+  const by = Object.fromEntries(sized.map((t) => [t.tag, t.size]));
+  assert.equal(by.lo, CLOUD_MIN_PX);
+  assert.equal(by.hi, CLOUD_MAX_PX);
+  assert.ok(by.mid > by.lo && by.mid < by.hi, 'and the middle is genuinely between them');
+});
+
+test('all-equal counts do not divide by zero — they all get the floor', () => {
+  const sized = cloudSizes([{ tag: 'a', count: 3 }, { tag: 'b', count: 3 }]);
+  assert.deepEqual(sized.map((t) => t.size), [CLOUD_MIN_PX, CLOUD_MIN_PX],
+    'no spread means no ranking to show; inventing one would be a lie in font-size');
+});
+
+test('an empty cloud is empty, not an exception', () => {
+  assert.deepEqual(cloudSizes([]), []);
+});

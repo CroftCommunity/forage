@@ -208,6 +208,31 @@ export async function run() {
       'search states its own sample — results, a different denominator from your boards');
     assert.match(body, /#baking/,
       'and it surfaces a tag I had never read: it reaches past the local cache');
+    // ---- the cloud is a representation, not a replacement (P4) ----
+    await page.goto(`${s.origin}/hashtags`);
+    await page.waitForSelector('[data-view-mode="trending"]');
+    assert.equal(await page.locator('[data-view-mode="trending"] [data-mode="list"][aria-pressed="true"]').count(), 1,
+      'the LIST is the default — it is the representation with the numbers in it');
+
+    await page.click('[data-view-mode="trending"] [data-mode="cloud"]');
+    await page.waitForSelector('[data-tagcloud="1"]');
+    const cloudTags = await page.$$eval('[data-tagcloud="1"] a', (as) => as.map((a) => ({
+      label: a.getAttribute('aria-label'),
+      px: parseFloat(getComputedStyle(a).fontSize),
+    })));
+    assert.ok(cloudTags.length > 0, 'the cloud has tags in it');
+    for (const t of cloudTags) {
+      // The floor exists because a cloud's small end is where its data hides.
+      assert.ok(t.px >= 13, `no tag below the app's smallest text: saw ${t.px}px`);
+      // For a screen reader the font size does not exist, so the count has to
+      // be somewhere it can be read. Same information, both ways of reading.
+      assert.match(t.label || '', /\d+ posts?/, `each tag names its count: ${t.label}`);
+    }
+
+    await page.click('[data-view-mode="trending"] [data-mode="list"]');
+    await page.waitForSelector('[data-trending-tags="1"] [data-browse-tag]');
+    assert.equal(await page.locator('[data-tagcloud="1"]').count(), 0, 'and back again');
+
     // ---- a section's own page (P2/P3) ----
     await page.goto(`${s.origin}/hashtags`);
     await page.waitForSelector('[data-see-all="trending"]');

@@ -53,7 +53,7 @@ const MEMORY_SWEEP = [
   '/f/gardening', '/h/harvest', '/u/sage', '/search?q=compost',
   '/saved', '/notifications',
 ];
-const LENS_SWEEP = ['/', '/feeds', '/me', '/mode', '/u/sage.bsky.social', '/h/harvest'];
+const LENS_SWEEP = ['/', '/feeds', '/me', '/mode', '/u/sage.bsky.social', '/h/harvest', '/hashtags'];
 
 // 4i: THE FIXTURE IS THE COVERAGE. Expanding the sweep from 3 surfaces to 16
 // found nothing new, and that was not luck — a probe for `a > img` with no text
