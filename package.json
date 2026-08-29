@@ -2,7 +2,7 @@
   "name": "forage",
   "private": true,
   "version": "0.0.0",
-  "description": "Forage — topic-driven aggregation in the Reddit structural family; behavior-scale build",
+  "description": "Forage \u2014 topic-driven aggregation in the Reddit structural family; behavior-scale build",
   "type": "module",
   "engines": {
     "node": ">=22 <23"
@@ -12,7 +12,8 @@
     "conformance": "node conformance/run.js",
     "workflows": "node e2e/run.mjs",
     "preview": "node scripts/preview.mjs",
-    "import-phpbb": "node scripts/import-phpbb-style.mjs"
+    "import-phpbb": "node scripts/import-phpbb-style.mjs",
+    "reference-gate": "node --test tools/lexicon-reference-gate.mjs"
   },
   "devDependencies": {
     "@atproto/lexicon": "^0.7.12",

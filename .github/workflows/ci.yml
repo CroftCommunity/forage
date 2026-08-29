@@ -38,6 +38,25 @@ jobs:
       # (Stryker) but the gate needs none of them, so still no npm ci.
       - run: npm test && npm run conformance
 
+  # The reference gate (LEXICONS.md rule 4): our hand-rolled lexicon validator
+  # cross-checked against @atproto/lexicon, the validator of record. ITS OWN JOB
+  # because it is the one check that needs a dependency — the `gate` job above
+  # deliberately runs no `npm ci`, which is what proves the shipped app has zero
+  # runtime deps and the unit suite is self-contained. That property is worth more
+  # than the convenience of one `npm test`, so the dependency-bearing check moved
+  # out rather than the install moving in.
+  reference-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run reference-gate
+
   # The workflow corpus (plan 2026-08-25-1, 1d): the app as a running system
   # in a real browser — journey files under e2e/, shim-backed and hermetic.
   # LIVE/DOCKER journeys skip-report here by design (credentialed/daemon-bound;

@@ -13,6 +13,16 @@
 // of record" in as many words.
 //
 // devDependency only. It never reaches the browser; js/lexicon.js is what ships.
+//
+// WHY THIS LIVES IN tools/ AND NOT test/. The `gate` CI job runs `npm test &&
+// npm run conformance` with NO `npm ci` — deliberately, because that is what proves
+// the shipped app has zero runtime dependencies and the unit suite is self-contained.
+// This was the first check to need a package, and putting it in test/ broke that
+// property silently: green locally, ERR_MODULE_NOT_FOUND in CI (2026-08-29). Moving
+// the install into the gate would have traded a real property for one command, so the
+// dependency-bearing check moved out instead. It has its own npm script and its own
+// CI job, so a failure here is legible as "the mirror diverged" rather than "the
+// suite broke".
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';

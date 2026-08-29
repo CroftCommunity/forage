@@ -202,6 +202,9 @@ Every task ends with:
    the identical command).
 2. `npm run conformance` — replays the scenario library on two substrates and
    compares observables (86 today). Live; not optional.
+2a. `npm run reference-gate` — the lexicon validator cross-checked against
+   `@atproto/lexicon` (LEXICONS.md rule 4). Separate from `npm test` on purpose: it is
+   the only check needing a devDependency, and the unit gate installs nothing.
 2b. `npm run workflows` — the workflow corpus (`e2e/*.workflow.mjs`): the app as
    a running system in a real browser, shim-backed and hermetic; LIVE=1/DOCKER=1
    unlock the credentialed/daemon-bound journeys locally.
