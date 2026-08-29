@@ -12,16 +12,21 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 
 ## Needs the owner
 
-- **`fyi.forage.tagsub` has never been written to a real PDS.** P5 landed the
-  write, and everything provable against our own substrates is proved — the record
-  shape read off the lexicon, the repo always `session.did`, the whole
-  join → PDS Save → Leave round trip plus the offline refusal
-  (`e2e/tagsub-pds.workflow.mjs`). What no fixture can prove is that a real PDS
-  ACCEPTS a collection it has never seen from this app and lists it back. That
-  costs one real, world-readable write to a real account, which is the owner's
-  call — with a tag they would genuinely want, so it is not litter. Until then
-  "tagsub works" means "against our own fixtures".
-
+- ~~**`fyi.forage.tagsub` has never been written to a real PDS.**~~ — DONE
+  2026-08-29. Probed against bsky.social with the standing test account and
+  codified as `e2e/tagsub-pds-live.workflow.mjs` (W17, LIVE=1), which drives the
+  production lens rather than re-issuing the calls: the record is accepted, lists
+  back with our exact shape, reads world-readable with no auth header at all, and
+  deletes cleanly. Raw record:
+  `test/fixtures/atproto/tagsub-probe-summary.txt`.
+  **One finding changed a justification rather than confirming one:** the PDS does
+  NOT validate our lexicon — a record with neither required field was accepted
+  with a 200 — so `wellFormed()` in `js/tagsubs-pds.js` is load-bearing, and W17
+  asserts the non-validation still holds so we hear about it if that changes.
+  **Still uncovered:** the browser OAuth handshake. W17 builds its session from an
+  app password, so it proves the lens and a real PDS agree; whether
+  `js/auth/session.js` can obtain a DPoP-bound session from bsky.social in a real
+  browser is a separate claim no test in this repo makes.
 
 - ~~**The 216 KB wordmark still ships on three surfaces.**~~ — DONE 2026-08-29:
   all three now point at `logo-wordmark-800.jpg` (63 KB), which was already in the

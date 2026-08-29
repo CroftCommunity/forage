@@ -42,6 +42,13 @@ function readCache(did) {
 
 // A row needs a tag to name and an rkey to delete. Without the rkey its Remove
 // button cannot work, and a control that cannot work is worse than an absent row.
+//
+// THIS FILTER IS LOAD-BEARING, not defensive. Measured against a real PDS on
+// 2026-08-29 (test/fixtures/atproto/tagsub-probe-summary.txt, P4): a
+// fyi.forage.tagsub record carrying NEITHER required field was accepted with a
+// 200. `required` in our lexicon binds Forage and nobody else, so anything may
+// put a malformed record in a repo we then read. W17 asserts that is still true,
+// so if a PDS ever starts validating we find out rather than assume.
 const wellFormed = (r) => !!r && typeof r.tag === 'string' && r.tag !== ''
   && typeof r.rkey === 'string' && r.rkey !== '';
 

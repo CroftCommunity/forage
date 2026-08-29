@@ -311,13 +311,31 @@ reads the schema rather than restating it); the repo addressed is always
 join → PDS Save → Leave round trip against a live in-page repo, including the
 offline refusal (`e2e/tagsub-pds.workflow.mjs`).
 
-**NOT proved: that a real PDS accepts a `fyi.forage.tagsub` record and lists it
-back.** Every substrate in the gate is one we wrote. A shim can prove the shape;
-only the network proves it is accepted, and this is a collection no PDS has ever
-seen from this app. Verifying it costs one real, world-readable write to a real
-account — so it is the owner's call, with a tag they would genuinely want so it
-is not litter. Until that runs, "tagsub works" means "tagsub works against our
-own fixtures".
+**Proved 2026-08-29, against a real PDS.** `e2e/tagsub-pds-live.workflow.mjs`
+(W17, LIVE=1) drives the production lens against bsky.social with the standing
+test account: the record is accepted, lists back with our exact shape, reads
+world-readable with no auth header (which is the claim the account page makes in
+words), and deletes with nothing left behind. Raw record:
+`test/fixtures/atproto/tagsub-probe-summary.txt`. This did not need the owner's
+own account after all — `.claude/TESTBED.md` registers one for exactly this, and
+W17 refuses to run against any other DID.
+
+**The probe changed a justification rather than confirming one.** The PDS does
+NOT validate our lexicon: a `fyi.forage.tagsub` with NEITHER required field was
+accepted with a 200. `required` binds Forage and nobody else, so anything may put
+a malformed record in a repo we then read — which makes `wellFormed()` in
+`js/tagsubs-pds.js` load-bearing rather than defensive. W17 asserts the
+non-validation still holds, so the day that changes is a day we are told rather
+than a day our filter quietly stops being justified. Two smaller confirmations
+landed the same way: deleting an unknown rkey answers 200 rather than 404 (why
+`unpublishTag` treats "already gone" as success), and `describeRepo` lists only
+collections that currently hold records.
+
+**STILL not proved: the browser OAuth handshake.** W17 builds its session from an
+app password, so what it proves is that the lens substrate and a real PDS agree.
+Whether `js/auth/session.js` can obtain a DPoP-bound session from bsky.social in
+a real browser is a separate claim with a separate failure mode, and no test in
+this repo covers it.
 
 ### P4 — the word cloud — **DONE 2026-08-29**
 

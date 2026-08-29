@@ -1,0 +1,25 @@
+Live probe 2026-08-29 — fyi.forage.tagsub against a real PDS (bsky.social),
+standing test account ngvalidation2112.bsky.social / did:plc:xyfhcaweaeyew3zrgk6jaln7.
+Codified as e2e/tagsub-pds-live.workflow.mjs (LIVE=1); this is the raw record.
+
+P1 createSession: 200 in 275ms, did=did:plc:xyfhcaweaeyew3zrgk6jaln7
+P2 createRecord fyi.forage.tagsub: 200 in 130ms uri=at://did:plc:xyfhca…/fyi.forage.tagsub/3muabz52ho626
+P3a authed listRecords: 205ms records=1 value={"tag":"forage","$type":"fyi.forage.tagsub","createdAt":"2026-08-29T16:23:44.588Z"}
+P3b UNAUTH listRecords: 200 in 120ms records=1     ← world-readable, as the UI claims
+P4 createRecord with NEITHER required field: 200   ← the PDS does NOT validate our lexicon
+P5a deleteRecord: 200 in 136ms
+P5c listRecords after delete: records=0            ← absence IS the deletion; no tombstone
+P6 deleteRecord unknown rkey: 200 {}               ← "already gone" is not an error
+P7 describeRepo collections (after cleanup): ["app.arecipe.draft","app.arecipe.interaction",
+   "app.bsky.actor.profile","app.bsky.feed.like","app.bsky.graph.follow","ing.croft.call.grant",
+   "ing.croft.greeting.card","ing.croft.iroh.endpoint"]
+   ← lists collections that currently HOLD records, so ours is absent once swept.
+     Custom namespaces are ordinary here: three of those eight are Croft's.
+
+The finding that changed code justification: P4. `required` in
+lexicons/fyi.forage.tagsub.json binds Forage and nobody else. Anything may put a
+malformed record in a repo we then read, which makes wellFormed() in
+js/tagsubs-pds.js load-bearing rather than defensive. W17 asserts P4 still holds,
+so the day a PDS starts validating is a day we are told.
+
+All probe records were deleted; the account was left as found.
