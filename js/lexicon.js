@@ -48,7 +48,22 @@ const typeName = (v) => (v === null ? 'null' : Array.isArray(v) ? 'array' : type
 
 function checkValue(prop, value, field, errors) {
   const fail = (message) => errors.push({ field, message });
-  if (prop.type === 'unknown') return;   // open by declaration: anything, null included
+  // `unknown` is an arbitrary OBJECT, not an arbitrary value. Caught 2026-08-29 by the
+  // reference gate (test/lexicon-reference-gate.test.js): this mirror accepted a bare
+  // string for fyi.forage.feed's `settings` and @atproto/lexicon refuses it with
+  // "must be an object". Accepting what the reference rejects is the worse direction —
+  // it writes records other clients will not read.
+  //
+  // Arrays pass, because the reference passes them (measured, all seven shapes). That
+  // reads like `typeof v === 'object'` rather than a decision, and it is matched
+  // deliberately anyway: the reference is the validator of record, so interop follows
+  // its behaviour and not our reading of the spec.
+  if (prop.type === 'unknown') {
+    if (value === null || typeof value !== 'object') {
+      return fail(`expected an object, got ${typeName(value)}`);
+    }
+    return;
+  }
 
   switch (prop.type) {
     case 'string':
