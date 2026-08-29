@@ -208,6 +208,34 @@ the sync half is unavailable: nothing is dangled, nothing pops a modal, and the
 reader has a complete feature without an account. Owner's call, and the
 distinction is worth keeping written down because the two look alike.
 
+### Decided 2026-08-29: Forage may define its own record types, with a register
+
+Owner: *"forage is going to need records of its own as we go, no help for it,
+esp with our handling of hashtags, but let's keep it to a minimum and highlight
+every one created and defined for ourselves so we are intentional about it and
+so we can reflect on overlap with the ecosystem."*
+
+So the permission comes with an obligation: **every `fyi.forage.*` record type
+carries a recorded justification, and the justification includes what was
+checked in the ecosystem first.** A rule with no check decays into prose, so
+this one is enforced — `test/lexicons.test.js` already pins the collection set,
+and it gains an assertion that each entry has a rationale.
+
+**The overlap check for `fyi.forage.tagsub`, done 2026-08-29** — the pattern for
+what these entries look like:
+
+| Candidate | What it holds | Why it does not fit |
+|---|---|---|
+| `site.standard.graph.subscription` | a subscription to a **publication**, as an at-uri | a hashtag has no record and therefore no at-uri |
+| `app.bsky.notification.putActivitySubscription` | a subscription to an **actor** | subject is a DID; a hashtag is not an identity |
+| `app.bsky.actor.defs#savedFeedsPrefV2` | `feed \| list \| timeline`, one value each | no hashtag type, and no room to add one |
+| `app.bsky.graph.list` + `listitem` | curated **people** | a list of accounts, not a subject |
+
+**The finding, which is a better justification than "nothing exists":** across
+458 official lexicons, a subscription always points at *a thing that exists* — a
+record or an identity. A hashtag is neither; it is a query. That is the gap, and
+it is why the type has to be ours.
+
 **This is the first thing to take forage's write count from seven to eight.**
 `AGENTS.md` lists every write with a test that counts them, precisely so an
 eighth has to be argued for rather than added. The argument is above; the unit
