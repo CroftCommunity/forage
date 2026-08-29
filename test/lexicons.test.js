@@ -21,6 +21,15 @@ const COLLECTIONS = [
   'fyi.forage.mod',        // the mod.* family, one action record in the steward's repo
   'fyi.forage.report',     // report.filed
   'fyi.forage.roster',     // the scoped tier's membership, in the founding DID's repo (key: self)
+  // DECLARED, NOT YET WRITTEN (2026-08-28, owner). Hashtag subscriptions are
+  // stored on the device today and this schema is what they are stored AS, so
+  // the eventual move to a repo is a loop of createRecord rather than a
+  // reshaping — "start local… and still make that changeover seamless". The
+  // lexicon lands with the local implementation on purpose: a shape agreed
+  // after people already hold records is a migration, and a shape agreed while
+  // it lives in a browser is an edit. test/tagsubs.test.js reads THIS FILE to
+  // assert the local store already satisfies it.
+  'fyi.forage.tagsub',     // a subscribed hashtag; unsubscribe = record delete
 ];
 
 // Event types that DELIBERATELY have no wire collection at this tier.

@@ -1001,7 +1001,7 @@ export function createLens({ session = null, transport = fetch } = {}) {
     // opportunistically instead of waiting for the whole fan-out), and
     // timeoutMs bounds each member — D6 measured a ~20s cold-start stall, and
     // one slow member must never hold the board hostage.
-    async ringFeed(ring, { cursor, onPage, timeoutMs = 8000 } = {}) {
+    async ringFeed(ring, { cursor, onPage, timeoutMs = 8000, tags = [] } = {}) {
       // WHY 'fol' DELEGATES INSTEAD OF FANNING OUT, stated because it is the
       // one place the ladder's set and the board's FETCH differ. js/rings.js
       // defines 'fol' as me ∪ mutuals ∪ everyone I follow. Fanning out over
@@ -1035,15 +1035,22 @@ export function createLens({ session = null, transport = fetch } = {}) {
       if (ring === 'world') {
         if (!session) throw new Error('lens: World is your composition — needs a session');
         const saved = await this.feeds().catch(() => []);
+        // Subscribed hashtags are PASSED IN rather than read here: they live
+        // in device storage (js/tagsubs.js) and a substrate that reaches for
+        // localStorage is a substrate that cannot be replayed or tested
+        // headlessly. The caller knows them; this only knows how to weave.
         const sources = [
           { key: 'timeline', source: { kind: 'timeline' }, title: 'Following' },
           ...saved.filter((f) => f.kind === 'feed')
             .map((f) => ({ key: f.slug || f.id, source: { kind: 'feed', uri: f.id }, title: f.title })),
+          ...tags.map((t) => ({ key: `h:${t}`, stream: { kind: 'hashtag', key: t }, title: `#${t}` })),
         ];
         const failures = [];
         const pages = await Promise.all(sources.map(async (s) => {
           try {
-            const b = await this.feed(s.source, { title: s.title, slug: s.key });
+            const b = s.stream
+              ? await this.stream(s.stream)
+              : await this.feed(s.source, { title: s.title, slug: s.key });
             if (onPage && b.posts.length) onPage(b.posts);
             return b.posts;
           } catch { failures.push(s.key); return []; }

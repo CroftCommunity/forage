@@ -23,6 +23,7 @@ import { density, setDensity, DENSITIES } from '../board-density.js';
 import { POST_LIMITS, IMAGE_LIMITS, graphemes, withTag } from '../compose.js';
 import { MEDIA_SCALE } from '../media-scale.js';
 import { settingsView } from './views.js';
+import { tagSubs, subscribeTag, unsubscribeTag, isSubscribed, onChange as onTagSubsChange } from '../tagsubs.js';
 
 let manager = null;        // null = not booted; 'unavailable' = origin has no OAuth client
 let session = null;        // the lens session shape, set after restore
@@ -692,7 +693,7 @@ function ringBoard(ring, cursor) {
     if (more) more.addEventListener('click', () => { into.replaceChildren(ringBoard(ring, board.cursor)); });
     into.replaceChildren(chips, board.posts.length ? card : emptyState('A quiet ring', 'No posts from these members yet.'), more || '');
   };
-  lens.ringFeed(ring, { cursor, onPage }).then((b) => render(b, holder))
+  lens.ringFeed(ring, { cursor, onPage, tags: tagSubs().map((r) => r.tag) }).then((b) => render(b, holder))
     .catch((e) => holder.replaceChildren(emptyState('Ring fetch failed', e.message)));
   return holder;
 }
@@ -704,11 +705,11 @@ function ringBoard(ring, cursor) {
 export function lensNav(current) {
   const guestFeeds = CURATED.map((c) => ({ slug: c.slug, title: c.title }));
   const host = el('div', { 'data-navhost': '1' },
-    navTree({ el, session, feeds: guestFeeds, tags: [], current }));
+    navTree({ el, session, feeds: guestFeeds, tags: tagSubs().map((r) => r.tag), current }));
   if (session) {
     ensureSavedFeeds().then((feeds) => {
       if (!session) return;
-      host.replaceChildren(navTree({ el, session, current, tags: [],
+      host.replaceChildren(navTree({ el, session, current, tags: tagSubs().map((r) => r.tag),
         feeds: feeds.map((f) => ({ slug: f.slug, title: f.title,
           href: feedPath({ creator: f.creator, rkey: f.slug }) || `/f/${f.slug}` })) }));
     }).catch(() => { /* the nav keeps the curated rows rather than emptying */ });
@@ -1489,6 +1490,26 @@ export function lensFeedsView() {
 
 // 3g: the hashtag board — /h/ in the Bluesky view. Session-gated (search is
 // 403 unauthenticated, probe-verified) — guests get words + the way in.
+// Subscribe / unsubscribe for a hashtag board. Deliberately the same VERB a
+// feed uses (Join / Leave) rather than a new one: a subscribed hashtag is
+// presented and woven in exactly like a feed, so calling it something else
+// would invent a distinction the app does not have.
+function tagSubButton(tag) {
+  const draw = () => {
+    const on = isSubscribed(tag);
+    const b = el('button', { class: 'btn sm' + (on ? '' : ' primary'), 'data-tagsub': tag,
+      'aria-pressed': String(on),
+      title: on ? `Leave #${tag} — it stops appearing in your boards` : `Join #${tag} — it joins your boards and World` },
+      on ? 'Leave' : 'Join');
+    b.addEventListener('click', () => {
+      if (isSubscribed(tag)) unsubscribeTag(tag); else subscribeTag(tag);
+      rerender();
+    });
+    return b;
+  };
+  return draw();
+}
+
 export function lensHashtagView(params) {
   const tag = decodeURIComponent(params.tag);
   if (!session) {
@@ -1496,7 +1517,9 @@ export function lensHashtagView(params) {
       'Hashtag boards ride search, which Bluesky gates behind sign-in (DL-021). Sign in and this becomes a live board.'),
       side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()) };
   }
-  const main = el('div', {}, el('h1', {}, `#${tag}`), skeleton(6));
+  const heading = () => el('div', { class: 'row spread', style: 'align-items:center;gap:8px' },
+    el('h1', { style: 'margin:0' }, `#${tag}`), tagSubButton(tag));
+  const main = el('div', {}, heading(), skeleton(6));
   const card = el('div', { class: 'card', 'data-board': 'hashtag' });
   const note = el('div', { class: 'xs muted', style: 'padding:6px', 'data-whole-corpus': '1' });
   // 4e: the toolbar RE-QUERIES here rather than re-sorting what loaded.
@@ -1508,7 +1531,7 @@ export function lensHashtagView(params) {
     lens.stream({ kind: 'hashtag', key: tag, sort: boardSort, timeframe: boardTimeframe, nowMs: Date.now() })
       .then((board) => {
         if (first) {
-          main.replaceChildren(el('h1', {}, `#${tag}`),
+          main.replaceChildren(heading(),
             affordanceStrip({ kind: 'hashtag', key: tag }),
             boardToolbar(() => load(false)),
             board.posts.length ? card : emptyState('A quiet tag', `No recent posts carry #${tag}.`),

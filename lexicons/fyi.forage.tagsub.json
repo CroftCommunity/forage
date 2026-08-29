@@ -1,0 +1,30 @@
+{
+  "lexicon": 1,
+  "id": "fyi.forage.tagsub",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "A subscribed hashtag, in the subscriber's own repo. Unsubscribing = record deleted.",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": [
+          "tag",
+          "createdAt"
+        ],
+        "properties": {
+          "tag": {
+            "type": "string",
+            "maxLength": 640,
+            "description": "The hashtag, bare and lowercase — no leading '#', which is punctuation rather than part of the name"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime",
+            "description": "Subscribe time. Also the natural ordering — no stored order is kept."
+          }
+        }
+      }
+    }
+  }
+}

@@ -91,3 +91,19 @@ test('a composition of nothing is an empty board with no failures, not an error'
 test('World needs a session, because a composition is yours', async () => {
   await assert.rejects(() => createLens({}).ringFeed('world'), /session/i);
 });
+
+test('World weaves in your subscribed hashtags alongside feeds and the timeline', async () => {
+  const { session, calls } = worldSession({ on: (p) =>
+    (p.includes('searchPosts') ? json({ posts: [mkPost('h1', 'did:plc:hh', '2026-08-28T14:00:00Z')] }) : undefined) });
+  const board = await createLens({ session }).ringFeed('world', { tags: ['harvest'] });
+  assert.deepEqual(board.posts.map((p) => p.id.split('/').pop()), ['h1', 'a1', 't1', 'b1'],
+    'the hashtag post interleaves by time like any other source, not appended in a clump');
+  assert.ok(calls.some((c) => c.includes('tag=harvest')), 'it asked for the tag it was given');
+});
+
+test('a hashtag subscription is not read from storage by the substrate — it is passed in', async () => {
+  const { session, calls } = worldSession();
+  await createLens({ session }).ringFeed('world');   // no tags argument
+  assert.ok(!calls.some((c) => c.includes('searchPosts')),
+    'no tags passed means no hashtag fetch: the substrate has no opinion about what you subscribe to');
+});
