@@ -23,7 +23,8 @@ import { density, setDensity, DENSITIES } from '../board-density.js';
 import { POST_LIMITS, IMAGE_LIMITS, graphemes, withTag } from '../compose.js';
 import { MEDIA_SCALE } from '../media-scale.js';
 import { settingsView } from './views.js';
-import { tagSubs, subscribeTag, unsubscribeTag, isSubscribed, onChange as onTagSubsChange } from '../tagsubs.js';
+import { tagSubs, subscribeTag, unsubscribeTag, isSubscribed, normalizeTag, onChange as onTagSubsChange } from '../tagsubs.js';
+import { observeTags, topTags } from '../tag-stats.js';
 
 let manager = null;        // null = not booted; 'unavailable' = origin has no OAuth client
 let session = null;        // the lens session shape, set after restore
@@ -504,6 +505,12 @@ function applyMediaScale() {
 
 // One board renderer: applies the window sort and the view mode.
 function renderBoard(card, posts, { wholeCorpus = false } = {}) {
+  // Every board a reader actually sees feeds the tag statistics. This is the
+  // choke point rather than lensRow, because writing storage once per BOARD is
+  // cheap where once per ROW is not — and /hashtags has no other material to
+  // rank from: Bluesky exposes no hashtag list (probed 2026-08-28, getTrends
+  // returns feeds).
+  observeTags(posts);
   const view = boardView();
   // 3u: the language filter runs BEFORE the window sort, so "Top" ranks what
   // you can actually read. Nothing is hidden silently — the count says so.
@@ -684,6 +691,7 @@ function ringBoard(ring, cursor) {
     if (board.overflow) chips.append(chip(`ring capped: ${board.overflow.total} members → first ${RING_CAP} (DL-016)`, `The ring truly has ${board.overflow.total} members; the board draws the first ${RING_CAP}. Honest overflow, never silent.`));
     if (board.failures.length) chips.append(chip(`${board.failures.length} member feed(s) unreachable`, board.failures.join(', ')));
     const card = el('div', { class: 'card' });
+    observeTags(board.posts);
     for (const p of board.posts) card.append(lensRow(p));
     for (const a of card.querySelectorAll('a[href*="/p/at:"]')) {
       const m = a.getAttribute('href').match(/\/p\/(at:.+)$/);
@@ -728,6 +736,7 @@ export function currentBoardId(path) {
   if (f) return decodeURIComponent(f[1]);
   if (path === '/feeds') return 'feeds';
   if (path === '/trending') return DIRECTORY;
+  if (path === '/hashtags') return 'hashtags';
   return DIRECTORY;
 }
 
@@ -1300,6 +1309,78 @@ function feedHeaderCard(info, onChange) {
 
 // 3j: feed discovery — /feeds. Popular generators, searchable (unauth-200),
 // each with its own Join.
+// Browse hashtags. Two lists, because there are exactly two honest sources.
+//
+// Bluesky has NO hashtag discovery — probed 2026-08-28: getTrends carries post
+// counts and a hot/cooling status, and every result is a feed generator, with
+// an opaque rkey for a topic. So this cannot say "popular on Bluesky", and it
+// does not pretend to. It offers what you have SEEN (counted locally as boards
+// render) and what a SEARCH turns up (real posts, whose tags are real and in
+// use). The copy says which is which, because a ranked list with no stated
+// sample reads as authoritative.
+export function lensHashtagsView() {
+  const subCount = tagSubs().length;
+  // Each list states its own sample IN ITS OWN TERMS: "3 posts in your boards"
+  // counts posts you read, "on 2 of 30 results" counts a search's hits. Two
+  // different denominators, so one shared phrasing would have flattened them
+  // into a number that means neither.
+  const rows = (tags, label) => {
+    if (!tags.length) return el('div', { class: 'xs muted', style: 'padding:6px' }, 'Nothing yet.');
+    const stack = el('div', { class: 'stack' });
+    for (const { tag, count } of tags) {
+      stack.append(el('div', { class: 'row spread', style: 'align-items:center;gap:8px;padding:4px 0' },
+        el('div', {},
+          el('a', { href: `/h/${encodeURIComponent(tag)}`, 'data-browse-tag': tag }, `#${tag}`),
+          el('span', { class: 'xs muted' }, ` — ${label(count)}`)),
+        tagSubButton(tag)));
+    }
+    return stack;
+  };
+
+  // Top N, matched to how many feeds the nav shows, so the two lists balance.
+  const seen = topTags(Math.max(5, subCount + 5));
+  const seenCard = el('div', { class: 'card' },
+    el('h2', {}, 'Tags you have seen'),
+    el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
+      'Counted as your boards load. This is YOUR reading, not the network — Bluesky publishes no list of popular hashtags.'),
+    rows(seen, (n) => `${plural(n, 'post')} in your boards`));
+
+  const input = el('input', { type: 'text', class: 'form', placeholder: 'Find a hashtag…', 'data-tag-search': '1', 'aria-label': 'Search hashtags' });
+  const out = el('div', {});
+  const go = () => {
+    const q = input.value.trim();
+    if (!q) return;
+    if (!session) { out.replaceChildren(el('div', { class: 'xs muted' }, 'Search needs a session — Bluesky returns 403 to guests (DL-014).')); return; }
+    out.replaceChildren(skeleton(3));
+    lens.search(q).then((board) => {
+      // Harvest the tags off real posts. This is what reaches BEYOND what you
+      // have read: a tag nobody in your boards uses still shows up here if
+      // anyone on the network is using it.
+      const counts = new Map();
+      for (const p of board.posts || []) {
+        const tags = new Set((p.facets || []).flatMap((f) => (f.features || [])
+          .filter((ft) => (ft.$type || '').endsWith('#tag')).map((ft) => normalizeTag(ft.tag)).filter(Boolean)));
+        for (const t of tags) counts.set(t, (counts.get(t) || 0) + 1);
+      }
+      const found = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([tag, count]) => ({ tag, count }));
+      const total = (board.posts || []).length;
+      out.replaceChildren(found.length
+        ? rows(found, (n) => `on ${n} of ${plural(total, 'result')}`)
+        : emptyState('No tags in those results', 'The search matched posts, but none of them carried a hashtag.'));
+    }).catch((e) => out.replaceChildren(emptyState('Search failed', e.message)));
+  };
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+  const btn = el('button', { class: 'btn sm primary' }, 'Search');
+  btn.addEventListener('click', go);
+  const searchCard = el('div', { class: 'card' },
+    el('h2', {}, 'Find a hashtag'),
+    el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
+      'Searches real posts and reports the tags they carry — so this reaches past what you happen to have read.'),
+    el('div', { class: 'row', style: 'gap:6px' }, input, btn), out);
+
+  return { main: el('div', {}, el('h1', {}, 'Hashtags'), seenCard, searchCard), side: null };
+}
+
 export function lensFeedsView() {
   const results = el('div', { class: 'stack' }, skeleton(4));
   const controls = el('div', { class: 'row wrap', style: 'gap:6px;margin-top:8px', 'data-feed-controls': '1' });

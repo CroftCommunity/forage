@@ -42,12 +42,16 @@ export function navTree({ el, session, feeds, tags, current }) {
 
   if (session && (tags || []).length) {
     section('Hashtags');
-    for (const t of tags) item(`tag-${t}`, `#${t}`, '#', `/h/${encodeURIComponent(t)}`);
+    // The '#' is the ROW ICON, so the label is the bare tag. Rendering both
+    // gave "# #harvest" — the glyph and the label were each carrying the
+    // punctuation, and neither knew about the other.
+    for (const t of tags) item(`tag-${t}`, t, '#', `/h/${encodeURIComponent(t)}`);
   }
 
   nav.append(el('hr', { class: 'navrule' }));
   item('directory', 'Trending', '✧', '/trending');
   item('feeds', 'Browse all feeds', '☷', '/feeds');
+  item('hashtags', 'Browse hashtags', '#', '/hashtags');
 
   if (!session) {
     nav.append(el('div', { class: 'navnote' },

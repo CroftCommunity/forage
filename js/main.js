@@ -208,6 +208,7 @@ router.route('/h/:tag', byMode(lensViews.lensHashtagView, views.tagStreamView));
 router.route('/p', blueskyOnly(lensViews.lensThreadView));
 router.route('/me', blueskyOnly(lensViews.lensProfileView));
 router.route('/feeds', blueskyOnly(lensViews.lensFeedsView));
+router.route('/hashtags', blueskyOnly(lensViews.lensHashtagsView));
 router.route('/u/:handle', byMode(lensViews.lensUserView, views.profileView));
 router.route('/about', views.aboutView);
 router.route('/signup', memoryOnly(views.signupView));
