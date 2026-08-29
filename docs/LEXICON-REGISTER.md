@@ -27,6 +27,36 @@ procedures — which matters more than it sounds, because a namespace can look l
 perfect fit and contain nothing you can put in a repo. The one command that settles it:
 `defs.main.type == 'record'`.
 
+**Which namespace to reach for, in order (owner, 2026-08-29).** The preference is for
+community standards; the nuance is that Forage exists partly to mirror Bluesky as an alt
+view, and mirroring imposes a visibility requirement no shared namespace can satisfy:
+
+1. **`app.bsky.*`** when the thing must be **visible in the Bluesky client**. Only official
+   collections are read by official clients, so this outranks everything else for content a
+   Bluesky user should see. `fyi.forage.vote` is the worked example: the lens writes a real
+   `app.bsky.feed.like` for a boost, and that is the requirement met rather than a
+   compromise.
+2. **`community.lexicon.*`** otherwise — *"when possible, I do prefer to use community
+   standard lexicons"*. Preferred over minting even when minting would be easy.
+3. **`fyi.forage.*`** only when neither fits, with an entry on this page saying which of the
+   two was ruled out and why.
+
+**A community type is still not automatically right**: `community.lexicon.bookmarks.bookmark`
+matches our save field-for-field and publishes to the repo, where Bluesky's equivalent is
+private and server-side. Rule 2 is a preference between *candidates that fit*, not a reason
+to skip asking whether one does.
+
+**Read every entry below with this in mind: nine of these ten types have never been written
+to a real PDS.** `fyi.forage.tagsub` is the only one any code sends over a network. The other
+nine are the declared wire shape for the **memory tier** — the sandbox population, which
+persists to `forage.state` in localStorage and has no repo at all. That is why a reader can
+work on this app for weeks without encountering `fyi.forage.mod`: it models stewards
+removing posts and banning users in a population that lives in one browser.
+
+The register still applies to them — a shape agreed before anyone holds records is an edit,
+and after is a migration — but an entry saying "adoptable" is a claim about a **future**
+write, never a description of one happening today.
+
 **Two of the nine turned up real candidates and are recorded as adoptable rather than
 justified**, and the one I expected to be adoptable was refuted outright. A register that
 never finds anything is not doing its job.
@@ -90,8 +120,20 @@ exactly `[1]`. Since bury was removed on 2026-08-27 it carries no information �
 field whose only legal value is a constant. It is a vestige, and it is one of the two things
 making our record differ in shape from the community one.
 
-**Retire by:** the memory tier gains real cids (then adopt), or the vestigial `value` is
-dropped so the divergence is one field wide instead of two.
+**And a constraint that outranks the cid, supplied by the owner 2026-08-29:** *"I want the
+likes to show the same in bsky client as on forage."* **Only `app.bsky.feed.like` appears in
+the Bluesky client.** A `community.lexicon.interaction.like` is invisible there — no official
+client reads that collection — so adopting it for lens content would silently stop boosts
+showing up in Bluesky, which is the opposite of the requirement.
+
+That settles it in the direction the lens already goes: a boost on Bluesky content **is** a
+real `app.bsky.feed.like`, and that is not a compromise but the requirement met. The
+community type would only ever be a candidate for memory-tier content, which does not exist
+on Bluesky and therefore cannot show there whatever we write.
+
+**Retire by:** nothing, for lens content — the current answer is correct. If the memory tier
+ever gains real records, revisit then. The vestigial `value` is worth dropping on its own
+merits either way.
 
 ## fyi.forage.save
 
@@ -106,13 +148,29 @@ dropped so the divergence is one field wide instead of two.
 | `app.bsky.bookmark.*` | `createBookmark` / `deleteBookmark` / `getBookmarks` | **not a record type at all** — bookmarks on Bluesky are server-side XRPC, so there is nothing to put in a repo. The name misleads; the `defs.main.type` does not |
 | `community.lexicon.bookmarks.bookmark` | `subject` (uri) + `createdAt`, optional `tags` | **a strict superset of ours** |
 
-**The finding:** ours is `subject` (at-uri) + `createdAt`; theirs is `subject` (uri) +
-`createdAt` + an optional `tags` array. An at-uri is a uri, so every record we already write
-is a valid one of theirs. There is no field we have that they lack, and no semantic
-difference — a save is a bookmark.
+**The shapes match. The BEHAVIOUR does not, and the first version of this entry missed it**
+(owner, 2026-08-29: *"I thought saves in bsky app were actually handled separately from the
+PDS and private"*). They are, and the lexicons say so in as many words:
 
-**Retire by:** pointing the save writer at `community.lexicon.bookmarks.bookmark`. Pre-1.0,
-so no migration path is owed. Filed in `TODO.md`.
+| | Bluesky's bookmarks | `community.lexicon.bookmarks.bookmark` | ours today |
+|---|---|---|---|
+| Where it lives | the **service** — `createBookmark` / `deleteBookmark` are procedures, and there is no record | **your repo**, `key: tid` | the memory tier's local store |
+| Who can read it | **you only** — "Creates a **private** bookmark"; `getBookmarks` requires auth | **anyone**, like a follow | nobody but this browser |
+| Enumerable by another client | no | yes | n/a |
+
+So adopting the community type would not be a schema cleanup — **it would publish everything
+anyone has ever saved.** Bluesky deliberately keeps saves off the repo; the community type
+deliberately puts them on it. Two coherent designs with opposite privacy postures, and the
+field lists are identical either way.
+
+**Corrected verdict:** the shape is a strict superset and that remains true; adopting it is a
+**product decision about publicity**, not a cleanup, and it is the owner's. The nearest thing
+to a free win is the tagsub precedent — local by default, published per item on purpose —
+which is the same question this app already answered once.
+
+*Recorded as a correction rather than edited away, because the failure is instructive: I
+compared field lists and called it an ecosystem check. Two types can match field-for-field
+and mean opposite things, and nothing in the schema says which.*
 
 ## fyi.forage.feed
 
@@ -153,6 +211,13 @@ family in one collection with an `action` enum.
 
 **Why ours:** the record lives in the repo of the person who acted, which is what makes it
 auditable without a service.
+
+**What it actually is today, because the name promises more than it delivers:** the wire
+shape for the memory tier's `mod.*` events — `removed`, `approved`, `locked`, `unlocked`,
+`pinned`, `unpinned`, `banned`, `unbanned`, `stewardAdded`, `stewardRemoved`
+(`js/schema.js`). The lens references it **zero times**; there is no moderation on the
+Bluesky population, whose moderation is Bluesky's. Nothing has ever written one of these to a
+repo.
 
 **Ecosystem check (2026-08-29):** **the candidate I expected to win does not exist as a
 record.**
