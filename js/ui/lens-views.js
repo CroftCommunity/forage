@@ -23,7 +23,12 @@ import { density, setDensity, DENSITIES } from '../board-density.js';
 import { POST_LIMITS, IMAGE_LIMITS, graphemes, withTag } from '../compose.js';
 import { MEDIA_SCALE } from '../media-scale.js';
 import { settingsView } from './views.js';
-import { tagSubs, subscribeTag, unsubscribeTag, isSubscribed, normalizeTag, onChange as onTagSubsChange } from '../tagsubs.js';
+import { tagSubs, subscribeTag, normalizeTag } from '../tagsubs.js';
+// P5: the published half. Where a subscription is STORED is that module's
+// business — every surface below asks the same question ("am I subscribed?")
+// and gets one answer whether the tag lives on this device or in the repo.
+import { cachedPublished, refreshPublished, publishTag, unpublishTag,
+         effectiveTags, isEffectivelySubscribed, unsubscribeEverywhere } from '../tagsubs-pds.js';
 import { observeTags, topTags, SORTS, sortLabel, cloudSizes } from '../tag-stats.js';
 import { trendingTags, trendingTtl, setTrendingTtl, DEFAULT_TTL_MS } from '../trending-tags.js';
 import { HASHTAG_SECTIONS, SECTION_IDS, sectionLabel, sectionEnabled, setSectionEnabled, enabledSections } from '../hashtag-prefs.js';
@@ -808,7 +813,7 @@ function ringBoard(ring, cursor) {
     if (more) more.addEventListener('click', () => { into.replaceChildren(ringBoard(ring, board.cursor)); });
     into.replaceChildren(tabs, chips, board.posts.length ? card : emptyState('A quiet ring', 'No posts from these members yet.'), more || '');
   };
-  lens.ringFeed(ring, { cursor, onPage, tags: tagSubs().map((r) => r.tag) }).then((b) => render(b, holder))
+  lens.ringFeed(ring, { cursor, onPage, tags: effectiveTags(session?.did) }).then((b) => render(b, holder))
     .catch((e) => holder.replaceChildren(emptyState('Ring fetch failed', e.message)));
   return holder;
 }
@@ -820,11 +825,11 @@ function ringBoard(ring, cursor) {
 export function lensNav(current) {
   const guestFeeds = CURATED.map((c) => ({ slug: c.slug, title: c.title }));
   const host = el('div', { 'data-navhost': '1' },
-    navTree({ el, session, feeds: guestFeeds, tags: tagSubs().map((r) => r.tag), current }));
+    navTree({ el, session, feeds: guestFeeds, tags: effectiveTags(session?.did), current }));
   if (session) {
     ensureSavedFeeds().then((feeds) => {
       if (!session) return;
-      host.replaceChildren(navTree({ el, session, current, tags: tagSubs().map((r) => r.tag),
+      host.replaceChildren(navTree({ el, session, current, tags: effectiveTags(session?.did),
         feeds: feeds.map((f) => ({ slug: f.slug, title: f.title,
           href: feedPath({ creator: f.creator, rkey: f.slug }) || `/f/${f.slug}` })) }));
     }).catch(() => { /* the nav keeps the curated rows rather than emptying */ });
@@ -1440,7 +1445,7 @@ const SEEN_PAGE = 12;
 export function lensHashtagsView(params = {}) {
   const section = SECTION_IDS.includes(params.section) ? params.section : null;
   const full = (id) => section === id;
-  const subCount = tagSubs().length;
+  const subCount = effectiveTags(session?.did).length;
   // Each list states its own sample IN ITS OWN TERMS: "3 posts in your boards"
   // counts posts you read, "on 2 of 30 results" counts a search's hits. Two
   // different denominators, so one shared phrasing would have flattened them
@@ -1853,13 +1858,21 @@ export function lensFeedsView() {
 // would invent a distinction the app does not have.
 function tagSubButton(tag) {
   const draw = () => {
-    const on = isSubscribed(tag);
+    // P5: "subscribed" now has two homes, and the button must not care. A tag
+    // published from another device is genuinely subscribed here, so offering
+    // to Join it again would be a lie the reader can see.
+    const on = isEffectivelySubscribed(session?.did, tag);
     const b = el('button', { class: 'btn sm' + (on ? '' : ' primary'), 'data-tagsub': tag,
       'aria-pressed': String(on),
       title: on ? `Leave #${tag} — it stops appearing in your boards` : `Join #${tag} — it joins your boards and World` },
       on ? 'Leave' : 'Join');
-    b.addEventListener('click', () => {
-      if (isSubscribed(tag)) unsubscribeTag(tag); else subscribeTag(tag);
+    b.addEventListener('click', async () => {
+      // Joining is always LOCAL first: local is a destination, not a waiting
+      // room, and the reader chooses publicity separately on their account page.
+      if (!isEffectivelySubscribed(session?.did, tag)) { subscribeTag(tag); rerender(); return; }
+      b.disabled = true;
+      try { await unsubscribeEverywhere(lens, session?.did, tag); }
+      catch (e) { b.disabled = false; toast(e.message, 'err'); return; }
       rerender();
     });
     return b;
@@ -1971,6 +1984,93 @@ function languagePanel(onChange) {
     clearBtn);
 }
 
+
+// P5: hashtag subscriptions, and the choice of where each one lives.
+//
+// The owner's reading (2026-08-29) reframed what local storage IS here: "I'm
+// actually starting to think this local prefs thing is a nice privacy option to
+// have." Local is a DESTINATION. It offers something a repo structurally cannot
+// — nobody can see what you follow — and this box is where a reader trades that
+// away deliberately, one tag at a time, rather than by signing in.
+//
+// So the publicness is stated ONCE, in words, right where the decision is made.
+// "PDS Save" does not carry "public" on its own; the line under the heading is
+// the difference between a feature and a leak.
+function hashtagSubsPanel() {
+  const did = session?.did || null;
+  const host = el('div', { class: 'card', 'data-tagsub-panel': '1' });
+
+  const paint = ({ records = [], stale = false, fetchedAt = null, loading = false } = {}) => {
+    const local = tagSubs().map((r) => ({ tag: r.tag, where: 'local' }));
+    const pub = records.map((r) => ({ tag: r.tag, where: 'pds' }));
+    const rows = [...local, ...pub].sort((a, b) => a.tag.localeCompare(b.tag));
+
+    // Writes are OFF while the published set is stale. A cache is a display
+    // fallback; aiming a create or a delete at an account Forage cannot
+    // currently read is exactly the thing the plan refused to paper over.
+    const frozen = !!did && (stale || loading);
+
+    const act = async (fn, btn) => {
+      btn.disabled = true;
+      try { const res = await fn(); paint({ ...res, loading: false }); }
+      catch (e) { btn.disabled = false; toast(e.message, 'err'); }
+    };
+
+    const rowNode = ({ tag, where }) => {
+      const published = where === 'pds';
+      const btn = el('button', { class: 'btn sm', 'data-pds': published ? 'remove' : 'save', 'data-tag': tag },
+        published ? 'Remove from PDS' : 'PDS Save');
+      if (!did) {
+        btn.disabled = true;
+        btn.title = 'Saving a hashtag to your account needs a session — sign in first. Joining hashtags works without one.';
+      } else if (frozen) {
+        btn.disabled = true;
+        btn.title = "Forage can't reach your account right now.";
+      } else {
+        btn.addEventListener('click', () => act(
+          () => (published ? unpublishTag(lens, did, tag) : publishTag(lens, did, tag)), btn));
+      }
+      return el('div', { class: 'row spread', 'data-tagsub-row': tag,
+        style: 'align-items:center;gap:8px;padding:4px 0' },
+        el('div', { class: 'row', style: 'gap:8px;align-items:center' },
+          el('a', { href: `/h/${encodeURIComponent(tag)}` }, `#${tag}`),
+          el('span', { class: 'chip', 'data-where': where },
+            published ? 'Saved to PDS' : 'Local only')),
+        btn);
+    };
+
+    // replaceChildren is not el(): it stringifies a null child into the text
+    // "null" rather than dropping it. Filter before handing it the list.
+    host.replaceChildren(...[
+      el('h2', { style: 'margin:0 0 4px' }, 'Hashtag subscriptions'),
+      // The one sentence this whole section exists to make sure nobody misses.
+      el('p', { class: 'xs muted', style: 'margin:0 0 8px' },
+        'PDS-saved tags are visible to anyone, like your follows, and every Forage client you sign into sees them. '
+        + 'Tags kept local stay on this device and never leave it.'),
+      loading ? el('div', { class: 'xs muted' }, 'Reading your account\u2026') : null,
+      stale && did && !loading
+        ? el('div', { class: 'xs muted', 'data-tagsub-stale': '1', style: 'margin-bottom:6px' },
+            fetchedAt
+              ? `Showing the last set Forage read from your account, ${timeAgo(Date.parse(fetchedAt))} ago. Saving and removing are off until it can reach your account again.`
+              : "Forage hasn't been able to read your account, so only this device's tags are listed. Saving and removing are off until it can.")
+        : null,
+      rows.length
+        ? el('div', { class: 'stack' }, ...rows.map(rowNode))
+        : el('div', { class: 'xs muted', style: 'padding:6px 0' },
+            'No hashtag subscriptions yet. Join one from Browse hashtags and it shows up here.'),
+      !did ? el('div', { class: 'xs muted', style: 'margin-top:6px' },
+        'Joining hashtags works signed out — it is device storage and asks nothing of the network. Signing in adds the option to save one to your account.') : null,
+    ].filter(Boolean));
+  };
+
+  const cache = cachedPublished(did);
+  // A first-ever load with a session has no cache, so it says it is reading
+  // rather than flashing an empty list and then a stale warning.
+  paint(did && !cache.fetchedAt ? { loading: true } : { records: cache.records, stale: !!did, fetchedAt: cache.fetchedAt });
+  if (did) refreshPublished(lens, did).then((r) => { if (session) paint(r); });
+  return host;
+}
+
 export function lensProfileView() {
   // E144: this page absorbed Preferences. It already carried the account
   // switcher, content languages and the moderation mirror — three "what do I
@@ -2007,15 +2107,15 @@ export function lensProfileView() {
   if (!session) {
     return { main: el('div', {}, el('h1', {}, 'Your account'),
       el('p', { class: 'muted small' }, 'Sign in and this page carries your session and your moderation mirror.'),
-      sessionCard(), prefs()), side: null };
+      sessionCard(), hashtagSubsPanel(), prefs()), side: null };
   }
   // capture the handle NOW: an in-flight profile fetch must not read a
   // session that sign-out has since cleared (the journey caught this).
   const handle = session.handle;
-  const main = el('div', {}, skeleton(3), accountMenu(), languagePanel(), moderationPanel(), prefs());
+  const main = el('div', {}, skeleton(3), accountMenu(), languagePanel(), hashtagSubsPanel(), moderationPanel(), prefs());
   lens.profile(handle)
-    .then((p) => { if (session) main.replaceChildren(profileHeader(p), accountMenu(), languagePanel(), moderationPanel(), prefs()); })
-    .catch(() => { if (session) main.replaceChildren(el('h1', {}, `@${handle}`), accountMenu(), languagePanel(), moderationPanel(), prefs()); });
+    .then((p) => { if (session) main.replaceChildren(profileHeader(p), accountMenu(), languagePanel(), hashtagSubsPanel(), moderationPanel(), prefs()); })
+    .catch(() => { if (session) main.replaceChildren(el('h1', {}, `@${handle}`), accountMenu(), languagePanel(), hashtagSubsPanel(), moderationPanel(), prefs()); });
   return { main, side: null };
 }
 

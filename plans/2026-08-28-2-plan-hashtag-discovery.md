@@ -1,10 +1,12 @@
 # Plan: hashtag discovery — search, trending, and what you have read
 
-**Status:** **P1–P4 DONE** (2026-08-28/29), plus the logged-out search fix
-(`4c23f41`). **P5 is the only phase left and it needs owner decisions** — the
-eighth lens write, and whether a published subscription is read back on another
-device. See the phase. Phase numbers are order-of-writing,
-not priority — P5 is the owner's most recent interest.
+**Status:** **ALL PHASES DONE** (2026-08-28/29), plus the logged-out search fix
+(`4c23f41`). P5 landed with the eighth and ninth lens writes, the lexicon
+register, and the two-set model. Phase numbers are order-of-writing, not
+priority. **One thing is still owed and is NOT part of this plan:** the
+`fyi.forage.tagsub` round trip has been proved against a live in-page repo in a
+workflow, never against a real PDS — see "What is proved, and what is not" at the
+foot of P5.
 **Serves:** the owner's public-site queue. Follows the left nav landing
 (`2026-08-26-4`, forage `6b1dedf`) and the hashtag subscriptions that shipped
 with it (`34a5fea`, `17df1c5`, `0f5d420`).
@@ -178,7 +180,7 @@ worth keeping:
   is the setting overreaching. The preference composes the OVERVIEW, not the
   address space.
 
-### P5 — local-only as a privacy choice, and per-subscription sync — **UNBLOCKED 2026-08-29**
+### P5 — local-only as a privacy choice, and per-subscription sync — **DONE 2026-08-29**
 
 **This reframes what P1's storage decision WAS.** The tagsub work shipped local
 storage as a waiting room — somewhere subscriptions sit until they graduate to
@@ -275,6 +277,47 @@ anyone, like your follows.* The publicness belongs where the decision is made.
 **Still open, deliberately deferred to the code:** what Unpublish does — fall
 back to local-only on the device that pressed it, or vanish entirely. Friendlier
 versus more honest about what one button did. Decide with it on screen.
+
+### P5 as landed — three things the code decided that the plan left open
+
+**"Unpublish" falls back to local-only, and that answer came from the code
+rather than from more argument.** The plan deferred it — "friendlier versus more
+honest about what one button did. Decide with it on screen." Once the two sets
+were made DISJOINT BY MOVING, the question dissolved: a button that says *Remove
+from PDS* deletes the record and does nothing else, so the subscription lands
+back where it was before it was published. The friendly answer and the honest one
+turned out to be the same answer, because the button's name was already exact.
+
+The consequence worth writing down: on OTHER devices, removing a published tag
+makes it vanish entirely, because they never held a local copy. That is the
+honest meaning of a shared set losing a member, and it is not softened.
+
+**Joining is always local first.** The board's Join button writes to the device,
+never to the repo. Publicity is a separate act on a separate page, so no reader
+publishes a subscription by pressing the button that says Join.
+
+**Leave had to reach the network, and the decision of whether it does is taken
+from the LOCAL set, not from the cache.** The two sets are disjoint by
+construction, so "this tag is local" is a fact the device already holds — which
+means a local-only Leave touches no network at all (the privacy the local set
+exists for), and a published Leave deletes the record rather than quietly
+dropping a copy that was never there.
+
+### What is proved, and what is not — read this before calling tagsub verified
+
+**Proved:** the record shape against the lexicon file (`test/lens-writes.test.js`
+reads the schema rather than restating it); the repo addressed is always
+`session.did` (`test/invariants.test.js`, per occurrence); the full
+join → PDS Save → Leave round trip against a live in-page repo, including the
+offline refusal (`e2e/tagsub-pds.workflow.mjs`).
+
+**NOT proved: that a real PDS accepts a `fyi.forage.tagsub` record and lists it
+back.** Every substrate in the gate is one we wrote. A shim can prove the shape;
+only the network proves it is accepted, and this is a collection no PDS has ever
+seen from this app. Verifying it costs one real, world-readable write to a real
+account — so it is the owner's call, with a tag they would genuinely want so it
+is not litter. Until that runs, "tagsub works" means "tagsub works against our
+own fixtures".
 
 ### P4 — the word cloud — **DONE 2026-08-29**
 

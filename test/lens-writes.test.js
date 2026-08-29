@@ -255,3 +255,81 @@ test('3.2: publish carries images through to the record', async () => {
   assert.deepEqual(rec.embed.images[0].image, b);
   assert.equal(rec.embed.images[0].alt, 'a description');
 });
+
+// ── P5: the EIGHTH lens write — fyi.forage.tagsub ────────────────────────────
+// The first record Forage defines for itself that the lens actually writes.
+// AGENTS.md lists every write and test/invariants.test.js counts them precisely
+// so an eighth has to be argued for; the argument is in
+// docs/LEXICON-REGISTER.md § fyi.forage.tagsub, and it is that across the
+// official lexicons a subscription always points at a thing that EXISTS — a
+// record or an identity — and a hashtag is neither.
+//
+// Everything the like pair proved has to hold here too: our repo and no other,
+// a shape read off the lexicon rather than restated, and a delete bound to one
+// exact rkey.
+import { readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+const TAGSUB_LEX = JSON.parse(readFileSync(
+  join(dirname(fileURLToPath(import.meta.url)), '..', 'lexicons', 'fyi.forage.tagsub.json'), 'utf8'));
+
+function repoSession({ records = [], failWith = null } = {}) {
+  const calls = [];
+  const fetchHandler = async (path, init = {}) => {
+    calls.push({ path, method: init.method || 'GET', body: init.body ? JSON.parse(init.body) : null });
+    if (failWith) return { ok: false, status: failWith, json: async () => ({ error: 'Boom' }) };
+    if (path.includes('listRecords')) {
+      return { ok: true, status: 200, json: async () => ({ records }) };
+    }
+    return { ok: true, status: 200,
+      json: async () => ({ uri: 'at://did:plc:me/fyi.forage.tagsub/3tag1', cid: 'tagcid' }) };
+  };
+  return { session: { did: 'did:plc:me', handle: 'me.test', fetchHandler }, calls };
+}
+
+test('saveTagSub writes a record that satisfies the lexicon, into MY repo', async () => {
+  const { session, calls } = repoSession();
+  const res = await createLens({ session }).saveTagSub('harvest');
+  assert.equal(calls.length, 1);
+  assert.ok(calls[0].path.startsWith('/xrpc/com.atproto.repo.createRecord'));
+  const b = calls[0].body;
+  assert.equal(b.repo, 'did:plc:me');
+  assert.equal(b.collection, 'fyi.forage.tagsub');
+  assert.equal(b.record.$type, 'fyi.forage.tagsub');
+  // read the schema, do not restate it — a copy of a schema is a second schema
+  for (const req of TAGSUB_LEX.defs.main.record.required) {
+    assert.ok(b.record[req] !== undefined, `record carries the required ${req}`);
+  }
+  assert.equal(b.record.tag, 'harvest');
+  assert.match(b.record.createdAt, /^\d{4}-\d\d-\d\dT/);
+  assert.equal(res.rkey, '3tag1', 'the rkey comes back, because Remove needs it');
+});
+
+test('tagSubs lists MY repo and returns tag+rkey pairs', async () => {
+  const { session, calls } = repoSession({ records: [
+    { uri: 'at://did:plc:me/fyi.forage.tagsub/3aa', value: { tag: 'harvest', createdAt: '2026-08-01T00:00:00.000Z' } },
+    { uri: 'at://did:plc:me/fyi.forage.tagsub/3bb', value: { tag: 'mycology', createdAt: '2026-08-02T00:00:00.000Z' } },
+  ] });
+  const out = await createLens({ session }).tagSubs();
+  assert.ok(calls[0].path.startsWith('/xrpc/com.atproto.repo.listRecords'));
+  assert.match(calls[0].path, /repo=did%3Aplc%3Ame/, 'the list addresses my repo, not a handle or a guess');
+  assert.match(calls[0].path, /collection=fyi\.forage\.tagsub/);
+  assert.deepEqual(out, [
+    { tag: 'harvest', rkey: '3aa', createdAt: '2026-08-01T00:00:00.000Z' },
+    { tag: 'mycology', rkey: '3bb', createdAt: '2026-08-02T00:00:00.000Z' },
+  ]);
+});
+
+test('removeTagSub deletes the EXACT rkey from my tagsub collection', async () => {
+  const { session, calls } = repoSession();
+  await createLens({ session }).removeTagSub('3aa');
+  assert.ok(calls[0].path.startsWith('/xrpc/com.atproto.repo.deleteRecord'));
+  assert.deepEqual(calls[0].body, { repo: 'did:plc:me', collection: 'fyi.forage.tagsub', rkey: '3aa' });
+});
+
+test('every tagsub write needs a session, and says so rather than failing at the network', async () => {
+  const lens = createLens({ session: null });
+  await assert.rejects(() => lens.saveTagSub('harvest'), /sign in/i);
+  await assert.rejects(() => lens.removeTagSub('3aa'), /sign in/i);
+  await assert.rejects(() => lens.tagSubs(), /sign in/i);
+});

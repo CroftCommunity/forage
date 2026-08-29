@@ -262,13 +262,33 @@ forum contract — membership, gatekeeping, posting into a place — becomes rea
 **Joining a hashtag is a local act, and that is a feature rather than a
 shortfall.** Bluesky has nowhere to put it — there is no hashtag primitive, and
 `savedFeed` stores a feed, a list or your timeline and nothing else. So a
-subscription lives on the device, in exactly the shape of the
-`fyi.forage.tagsub` record it would become
-(`lexicons/fyi.forage.tagsub.json`, declared and not yet written), which makes
-the eventual move a loop of `createRecord` rather than a reshaping. It also
-means **nobody can see what you follow**, because it never left your machine —
-a record in a repo is world-readable, exactly like a follow. Publishing it will
-be an opt-in choice per subscription, not the default.
+subscription lives on the device, and **nobody can see what you follow**,
+because it never left your machine.
+
+**Publishing one is a separate, per-subscription choice.** Your account page
+lists every subscription with where it lives and one control:
+
+```
+#harvest     Local only     [ PDS Save ]
+#mycology    Saved to PDS   [ Remove from PDS ]
+```
+
+PDS Save writes a `fyi.forage.tagsub` record into your own repo
+(`lexicons/fyi.forage.tagsub.json`). That makes the tag **visible to anyone,
+exactly like a follow**, and the box says so above the buttons — "PDS Save" does
+not carry "public" on its own. In exchange, every Forage client you sign into
+sees the same set.
+
+The two are **disjoint sets, not one list with a flag**: PDS Save *moves* a tag
+off the device, and Remove from PDS moves it back to local-only on the device
+that pressed it. Moving is what makes each row's status a single unambiguous
+word, and it is why nothing here needs tombstones — a deleted record's absence
+*is* the deletion. The one cost is stated rather than hidden: published tags need
+the network, so offline the page shows the last set it read, says that is what it
+is showing, and turns the buttons off rather than aiming a write at a set it
+cannot currently see.
+
+Local is a destination, not a waiting room. Neither half is the "real" one.
 
 ## Browsing hashtags
 

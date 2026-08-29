@@ -63,6 +63,10 @@ export async function run() {
     responses: {
       'resolveHandle': { did: 'did:plc:x' },
       'describeRepo': { did: 'did:plc:w2test', handle: 'wtest.bsky.social', didDoc: {}, collections: [] },
+      // P5: the account page reads your published hashtag subscriptions
+      // (fyi.forage.tagsub). This journey visits /me signed in, so the read is
+      // declared here rather than left as a shim miss.
+      'listRecords': { records: [] },
       // 3x: signing in warms the mutuals ring in the background, so the graph
       // is read here now — the journey declares it rather than hiding it.
       'getFollows': { follows: [] },

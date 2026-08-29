@@ -817,6 +817,14 @@ const LIKE_COLLECTION = 'app.bsky.feed.like';
 // the count so a third kind cannot appear unnoticed.
 const POST_COLLECTION = 'app.bsky.feed.post';
 
+// P5: THE EIGHTH WRITE, and the first record type Forage defined for itself
+// that actually reaches a repo. It is argued for in docs/LEXICON-REGISTER.md
+// § fyi.forage.tagsub: across the official lexicons a subscription always
+// points at a thing that EXISTS — a record or an identity — and a hashtag is
+// neither, it is a query. Deliberately narrow, like the two above it: our own
+// repo, this one collection, create and delete only — it edits nothing.
+const TAGSUB_COLLECTION = 'fyi.forage.tagsub';
+
 export function createLens({ session = null, transport = fetch } = {}) {
   let posture = EMPTY_POSTURE;
   // 3x: rings are expensive — mutuals+1 is one getFollows per mutual, so a
@@ -1206,6 +1214,47 @@ export function createLens({ session = null, transport = fetch } = {}) {
       return post('com.atproto.repo.deleteRecord', {
         repo: session?.did, collection: LIKE_COLLECTION, rkey,
       }, 'unlike');
+    },
+
+    // P5: your published hashtag subscriptions. The repo IS the set — that is
+    // what makes "published means synced" true across every Forage client, and
+    // it is why js/tagsubs-pds.js treats its own cache as display only.
+    // Paginated, because a reader with a hundred subscriptions is a reader we
+    // would otherwise silently truncate.
+    async tagSubs() {
+      if (!session) throw new Error('lens: reading your saved hashtags needs a session — sign in first');
+      const out = [];
+      let cursor;
+      do {
+        const data = await get('com.atproto.repo.listRecords', {
+          repo: session.did, collection: TAGSUB_COLLECTION, limit: 100, cursor,
+        });
+        for (const r of data.records || []) {
+          out.push({ tag: r.value?.tag, rkey: String(r.uri || '').split('/').pop(), createdAt: r.value?.createdAt });
+        }
+        cursor = data.cursor;
+      } while (cursor);
+      return out;
+    },
+
+    // Publish one subscription. The rkey comes back because Remove needs it and
+    // a refetch to learn your own write is a round trip for nothing.
+    async saveTagSub(tag) {
+      if (!session) throw new Error('lens: saving a hashtag needs a session — sign in first');
+      const data = await post('com.atproto.repo.createRecord', {
+        repo: session.did, collection: TAGSUB_COLLECTION,
+        record: { $type: TAGSUB_COLLECTION, tag, createdAt: new Date().toISOString() },
+      }, 'save hashtag');
+      return { uri: data.uri, rkey: String(data.uri || '').split('/').pop() };
+    },
+
+    // Unpublish one subscription. Its ABSENCE is the deletion — there is no
+    // tombstone, because no client keeps a merged list to reconcile against.
+    async removeTagSub(rkey) {
+      if (!session) throw new Error('lens: removing a hashtag needs a session — sign in first');
+      return post('com.atproto.repo.deleteRecord', {
+        repo: session.did, collection: TAGSUB_COLLECTION, rkey,
+      }, 'remove hashtag');
     },
 
     // 3g: content streams — one abstraction, two keys. 'feed' opens any

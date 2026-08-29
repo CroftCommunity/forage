@@ -67,16 +67,27 @@ test('the lens exception holds: writes are records-none, likes-one-pair, prefere
   //   • ONE deleteRecord, still bound to the like collection — publishing
   //     gained no power to delete anything
   //   • still no putRecord: the lens creates and unlikes; it never edits
-  assert.equal((src.match(/createRecord/g) || []).length, 2, 'exactly two createRecord (the like, the post)');
+  // P5: the EIGHTH write. fyi.forage.tagsub is the first record type Forage
+  // defined for itself that the lens actually writes, and the argument for it
+  // is docs/LEXICON-REGISTER.md § fyi.forage.tagsub — across the official
+  // lexicons a subscription always points at a thing that EXISTS, a record or
+  // an identity, and a hashtag is neither. Raising these counts is the step
+  // that is supposed to cost something; it is not raised by accident.
+  assert.equal((src.match(/createRecord/g) || []).length, 3, 'exactly three createRecord (the like, the post, the tagsub)');
   // Phase 2 widens this to two deletes — unlike, and remove-your-own-post.
   // The count alone is weak, so every occurrence is inspected: the OLD version
   // of this check read src.indexOf('deleteRecord'), which with two deletes
   // would have silently examined only the first (caught in Pass 2 review).
-  assert.equal((src.match(/deleteRecord/g) || []).length, 2, 'exactly two deleteRecord (the unlike, the post delete)');
+  assert.equal((src.match(/deleteRecord/g) || []).length, 3, 'exactly three deleteRecord (the unlike, the post delete, the tagsub delete)');
   assert.match(src, /LIKE_COLLECTION = 'app\.bsky\.feed\.like'/, 'the like collection is a named constant');
   assert.match(src, /POST_COLLECTION = 'app\.bsky\.feed\.post'/, 'so is the post collection');
   assert.equal((src.match(/collection: LIKE_COLLECTION/g) || []).length, 2, 'the like pair binds to its constant');
   assert.equal((src.match(/collection: POST_COLLECTION/g) || []).length, 2, 'publish and delete bind to theirs');
+  assert.match(src, /TAGSUB_COLLECTION = 'fyi\.forage\.tagsub'/, 'and the tagsub collection is a named constant too');
+  // three, not two: list + create + delete. The LIST is the one that makes
+  // "published means synced" true, and it is bound to the same constant so a
+  // read cannot drift to a collection the writes do not use.
+  assert.equal((src.match(/collection: TAGSUB_COLLECTION/g) || []).length, 3, 'list, save and remove all bind to theirs');
 
   // every write names its repo, and every one of them names the SESSION's repo.
   // This is the assertion that actually matters: a write that can address

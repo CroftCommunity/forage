@@ -12,7 +12,7 @@
 import assert from 'node:assert/strict';
 import { scenario } from './harness/scenario.mjs';
 
-const FAKE_SIGNED_IN = `(() => {
+export const FAKE_SIGNED_IN = `(() => {
   const mkSession = () => ({
     did: 'did:plc:me',
     signOut: async () => {},
@@ -42,7 +42,7 @@ const post = (rkey, did, ts, tags = []) => ({
   replyCount: 0, repostCount: 0, likeCount: 3,
 });
 
-const RESPONSES = {
+export const RESPONSES = {
   describeRepo: { handle: 'me.test' },
   getPreferences: { preferences: [] },
   getFollows: { follows: [] },

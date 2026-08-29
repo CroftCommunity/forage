@@ -89,3 +89,52 @@ test('roster is a self-keyed singleton', () => {
   const doc = JSON.parse(readFileSync(join(root, 'lexicons', 'fyi.forage.roster.json'), 'utf8'));
   assert.equal(doc.defs.main.key, 'literal:self');
 });
+
+// ── The register (P5, 2026-08-29) ────────────────────────────────────────────
+// Owner: "let's keep it to a minimum and highlight every one created and
+// defined for ourselves so we are intentional about it and so we can reflect on
+// overlap with the ecosystem." So the permission to define our own types comes
+// with an obligation, and an obligation with no check decays into prose. Every
+// pinned collection needs an entry in docs/LEXICON-REGISTER.md that says what it
+// holds, why it is ours, and WHAT WAS CHECKED IN THE ECOSYSTEM FIRST.
+//
+// Nine types predate the rule. Rather than back-fill nine ecosystem checks I
+// have not actually done — which would make the register a fiction on the day it
+// was created — they are listed here as owed. The list may only shrink; a new
+// type may never join it.
+const PRE_REGISTER = new Set([
+  'fyi.forage.post', 'fyi.forage.comment', 'fyi.forage.vote', 'fyi.forage.save',
+  'fyi.forage.feed', 'fyi.forage.membership', 'fyi.forage.mod', 'fyi.forage.report',
+  'fyi.forage.roster',
+]);
+
+test('every fyi.forage.* type has a register entry saying what it holds and why it is ours', () => {
+  const md = readFileSync(join(root, 'docs', 'LEXICON-REGISTER.md'), 'utf8');
+  const sections = new Map();
+  const parts = md.split(/^## /m).slice(1);
+  for (const part of parts) sections.set(part.split('\n')[0].trim(), part);
+  for (const id of COLLECTIONS) {
+    const sec = sections.get(id);
+    assert.ok(sec, `${id}: no "## ${id}" section in docs/LEXICON-REGISTER.md`);
+    assert.match(sec, /\*\*Holds:\*\*\s*\S/, `${id}: register entry says nothing about what it holds`);
+    assert.match(sec, /\*\*Why ours:\*\*\s*\S/, `${id}: register entry does not justify defining our own type`);
+    assert.match(sec, /\*\*Ecosystem check[^*]*:\*\*\s*\S/, `${id}: register entry records no ecosystem check`);
+  }
+  assert.deepStrictEqual([...sections.keys()].sort(), [...COLLECTIONS].sort(),
+    'the register and the pinned collection set are the same list');
+});
+
+test('an ecosystem check may only be owed by a type that predates the register', () => {
+  const md = readFileSync(join(root, 'docs', 'LEXICON-REGISTER.md'), 'utf8');
+  for (const part of md.split(/^## /m).slice(1)) {
+    const id = part.split('\n')[0].trim();
+    const check = part.match(/\*\*Ecosystem check[^*]*:\*\*(.*)/)?.[1] || '';
+    if (/NOT DONE/.test(check)) {
+      assert.ok(PRE_REGISTER.has(id),
+        `${id} owes an ecosystem check, but only types predating the register (2026-08-29) may`);
+    }
+  }
+  // fyi.forage.tagsub is the first type defined UNDER the rule, so it is the
+  // one that proves the rule does something.
+  assert.equal(PRE_REGISTER.has('fyi.forage.tagsub'), false);
+});

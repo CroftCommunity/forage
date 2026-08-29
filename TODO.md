@@ -12,6 +12,17 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 
 ## Needs the owner
 
+- **`fyi.forage.tagsub` has never been written to a real PDS.** P5 landed the
+  write, and everything provable against our own substrates is proved — the record
+  shape read off the lexicon, the repo always `session.did`, the whole
+  join → PDS Save → Leave round trip plus the offline refusal
+  (`e2e/tagsub-pds.workflow.mjs`). What no fixture can prove is that a real PDS
+  ACCEPTS a collection it has never seen from this app and lists it back. That
+  costs one real, world-readable write to a real account, which is the owner's
+  call — with a tag they would genuinely want, so it is not litter. Until then
+  "tagsub works" means "against our own fixtures".
+
+
 - ~~**The 216 KB wordmark still ships on three surfaces.**~~ — DONE 2026-08-29:
   all three now point at `logo-wordmark-800.jpg` (63 KB), which was already in the
   service worker SHELL, so no precache entry was owed. The 1600x576 original is kept
@@ -141,3 +152,22 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 - **Naming note:** bsky.app uses the `#` glyph for FEEDS in its nav even though
   hashtags exist. Our split is the honest one (DL-025): `/f/` feeds are not
   targetable, `/h/` hashtags are.
+
+## Owed by the lexicon register
+
+`docs/LEXICON-REGISTER.md` (added 2026-08-29 with P5) requires every
+`fyi.forage.*` type to record what it holds, why it is ours, and **what was
+checked in the ecosystem first**. Nine types predate the rule and their third
+field reads `NOT DONE`. `test/lexicons.test.js` pins the list of types allowed to
+say that; it may only shrink, and a new type may never join it.
+
+Closing one is small, bounded work: search the official lexicons for a type that
+already holds this, then replace the line with what you found (the
+`fyi.forage.tagsub` entry is the worked example — four candidates read, each
+rejected with a reason, and the shared pattern between them stated). The two
+worth doing first, because they have real candidates rather than none:
+
+- **`fyi.forage.mod`** vs `tools.ozone.moderation.*` — the strongest chance on
+  the page that an official type is genuinely adoptable.
+- **`fyi.forage.save`** vs Bluesky's bookmark concept, which did not exist when
+  the type was defined.

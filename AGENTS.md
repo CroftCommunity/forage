@@ -21,9 +21,13 @@ Sources of truth, in order: `js/schema.js`, `scenarios/`, `js/config/routing.js`
 meaning: `js/rings.js` defines what a RUNG is (cumulative unions ordered by real
 containment — the shipped rings did not nest, and `test/rings.test.js` keeps the
 counterexample runnable), and `lexicons/fyi.forage.*` defines what a record IS,
-including `tagsub`, which is **declared and not yet written**: hashtag
-subscriptions live on the device today in exactly that record's shape, so the
-move to a repo is a loop of `createRecord` rather than a reshaping. Modes are named routing tables (`MODES` there) with a
+including `tagsub`. Hashtag subscriptions are **two disjoint sets**: local
+(`js/tagsubs.js`, this device, never leaves it — a destination, not a waiting
+room) and published (`fyi.forage.tagsub` records, the repo is the truth, every
+Forage client sees the same set). `js/tagsubs-pds.js` owns the boundary, and PDS
+Save *moves* a tag rather than copying it — which is why a row's status is one
+unambiguous word and why there are no tombstones to reconcile. Why each of our
+own types exists: `docs/LEXICON-REGISTER.md`. Modes are named routing tables (`MODES` there) with a
 store-side lifecycle: network modes are RAM-only and `forage.state` is written by
 the memory mode alone (`test/store-modes.test.js` is the teeth). When these disagree
 with any document **including this one**, they win; fix the document.
@@ -168,6 +172,15 @@ adding another means arguing for it there first:
 | `uploadBlob` | image bytes into your repo, referenced by the post | phase 3 |
 | `putPreferences` (savedFeedsPrefV2) | join / leave a feed | 3j |
 | `putPreferences` (savedFeedsPrefV2) | favorite / unfavorite (pin) | 3s |
+| `createRecord` → `fyi.forage.tagsub` | save a hashtag subscription to your repo | P5 |
+| `deleteRecord` → `fyi.forage.tagsub` | remove one from your repo | P5 |
+
+The eighth and ninth are the first records **Forage defined for itself** that
+reach a repo. That step is argued for in `docs/LEXICON-REGISTER.md`, which every
+`fyi.forage.*` type now needs an entry in: what it holds, why it is ours, and
+what was checked in the ecosystem first (`test/lexicons.test.js` enforces all
+three). A `fyi.forage.*` type that duplicates an official lexicon is a fork of
+the network wearing a namespace.
 
 No `putRecord` anywhere: the lens creates and deletes, and never edits a
 record — changing a post means deleting it and writing another, which is what
