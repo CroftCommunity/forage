@@ -182,5 +182,42 @@ export async function run() {
       'search states its own sample — results, a different denominator from your boards');
     assert.match(body, /#baking/,
       'and it surfaces a tag I had never read: it reaches past the local cache');
+    // ---- Advanced: the reader composes the page ----
+    await page.goto(`${s.origin}/me`);
+    await page.waitForSelector('[data-advanced="1"]');
+    // Collapsed by default: a setting most readers never need must not cost
+    // every reader attention on the page they came to for their skin.
+    assert.equal(await page.locator('[data-advanced="1"]').evaluate((d) => d.open), false,
+      'Advanced starts closed');
+    assert.equal(await page.locator('[data-section="trending"]:visible').count(), 0,
+      'and its contents are genuinely hidden, not merely styled small');
+
+    await page.click('[data-advanced="1"] summary');
+    await page.waitForSelector('[data-section="trending"]:visible');
+    assert.equal(await page.locator('[data-section="trending"]').isChecked(), true, 'all on by default');
+
+    await page.uncheck('[data-section="trending"]');
+    await page.goto(`${s.origin}/hashtags`);
+    await page.waitForSelector('[data-loaded-tags="1"]');
+    assert.equal(await page.locator('[data-trending-tags="1"]').count(), 0,
+      'the section is gone from the page, not just collapsed on it');
+
+    // Unchecking every one is allowed, and the page explains itself rather than
+    // the setting refusing the last click.
+    await page.goto(`${s.origin}/me`);
+    await page.click('[data-advanced="1"] summary');
+    await page.uncheck('[data-section="search"]');
+    await page.uncheck('[data-section="loaded"]');
+    await page.goto(`${s.origin}/hashtags`);
+    await page.waitForSelector('a[href="/me"]:has-text("Open settings")');
+    assert.match(await page.locator('body').innerText(), /Every section is switched off/i,
+      'an empty page a reader chose says so, and offers the way back');
+
+    // And it comes back.
+    await page.goto(`${s.origin}/me`);
+    await page.click('[data-advanced="1"] summary');
+    await page.check('[data-section="trending"]');
+    await page.goto(`${s.origin}/hashtags`);
+    await page.waitForSelector('[data-trending-tags="1"]');
   } finally { await s.close(); }
 }

@@ -26,6 +26,7 @@ import { settingsView } from './views.js';
 import { tagSubs, subscribeTag, unsubscribeTag, isSubscribed, normalizeTag, onChange as onTagSubsChange } from '../tagsubs.js';
 import { observeTags, topTags, SORTS, sortLabel } from '../tag-stats.js';
 import { trendingTags, trendingTtl, setTrendingTtl, DEFAULT_TTL_MS } from '../trending-tags.js';
+import { HASHTAG_SECTIONS, sectionEnabled, setSectionEnabled, enabledSections } from '../hashtag-prefs.js';
 
 let manager = null;        // null = not booted; 'unavailable' = origin has no OAuth client
 let session = null;        // the lens session shape, set after restore
@@ -1464,7 +1465,18 @@ export function lensHashtagsView() {
 
   // Owner's ordering (2026-08-28): search, then trending, then what you have
   // loaded. P2 makes them three equal slices with their own full pages.
-  return { main: el('div', {}, el('h1', {}, 'Hashtags'), searchCard, trendCard, seenCard), side: null };
+  const cards = { search: searchCard, trending: trendCard, loaded: seenCard };
+  const on = enabledSections();
+  const main = el('div', {}, el('h1', {}, 'Hashtags'));
+  // Hiding all three is allowed — the SETTING does not refuse the last
+  // unchecking, because a control that silently declines to do what it says is
+  // worse than an empty page. The page explains itself and offers the way back.
+  if (!on.length) {
+    main.append(emptyState('Every section is switched off',
+      'Turn one back on under Advanced on your account page.'),
+      el('a', { class: 'btn sm', href: '/me' }, 'Open settings'));
+  } else for (const id of on) main.append(cards[id]);
+  return { main, side: null };
 }
 
 export function lensFeedsView() {
@@ -1788,7 +1800,32 @@ export function lensProfileView() {
   // for rather than a new idea. It is embedded by CALLING settingsView rather
   // than by copying its markup: two copies of a skin picker is exactly how the
   // density dial drifted before (js/board-density.js says so in its header).
-  const prefs = () => el('div', { 'data-prefs': '1' }, settingsView().main);
+  // ADVANCED, collapsed by default (owner, 2026-08-28). `<details>` is used
+  // rather than a hand-built toggle because it is keyboard- and
+  // screen-reader-correct for free, and this is a disclosure and nothing more.
+  const advanced = () => {
+    const box = el('div', { class: 'stack' });
+    for (const [id, label] of HASHTAG_SECTIONS) {
+      const cb = el('input', { type: 'checkbox', id: `sec-${id}`, 'data-section': id,
+        checked: sectionEnabled(id) || false });
+      cb.addEventListener('change', () => { setSectionEnabled(id, cb.checked); });
+      // NOT class="row": `.row` sets display:flex, which OVERRIDES the UA rule
+      // that hides a closed <details>'s children — so the checkboxes rendered
+      // (and were tappable) while the disclosure looked shut. Caught by the
+      // touch-floor gate finding three inputs on a page that should have had
+      // none visible.
+      box.append(el('label', { class: 'seccheck', for: `sec-${id}` },
+        cb, el('span', {}, label)));
+    }
+    return el('details', { class: 'card', 'data-advanced': '1' },
+      el('summary', { style: 'cursor:pointer;min-height:44px;display:flex;align-items:center' }, 'Advanced'),
+      el('div', { style: 'margin-top:8px' },
+        el('h3', { style: 'font-size:var(--t-md);margin:0 0 4px' }, 'Browse Hashtags'),
+        el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
+          'Which sections appear on the Hashtags page. Unchecking all of them leaves it empty, which is allowed.'),
+        box));
+  };
+  const prefs = () => el('div', { 'data-prefs': '1' }, settingsView().main, advanced());
   if (!session) {
     return { main: el('div', {}, el('h1', {}, 'Your account'),
       el('p', { class: 'muted small' }, 'Sign in and this page carries your session and your moderation mirror.'),

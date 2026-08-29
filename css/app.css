@@ -577,3 +577,15 @@ dialog.authsheet::backdrop { background: var(--scrim); }
   background: var(--brand-fill); color: var(--on-brand); font-size: var(--t-xs);
   font-weight: 600; text-decoration: none; letter-spacing: .02em; flex: none; }
 .accountbtn:hover { background: var(--brand-fill-hover); text-decoration: none; }
+
+/* The Advanced section toggles. Deliberately NOT `.row`: that sets display:flex
+   on a direct child of a closed <details>, which overrides the UA rule hiding
+   it — the controls then render inside a disclosure that looks shut. */
+.seccheck { display: flex; gap: 8px; align-items: center; min-height: 44px; cursor: pointer; }
+/* The touch floor applies to TOUCH, per the judgement recorded in
+   e2e/mobile-fit.workflow.mjs: at a desktop pointer the AA sibling is 24, and a
+   44px checkbox there is a thumb-sized control for a mouse. */
+.seccheck input[type="checkbox"] { width: 20px; height: 20px; flex: none; }
+@media (max-width: 480px) {
+  .seccheck input[type="checkbox"] { width: 44px; height: 44px; }
+}
