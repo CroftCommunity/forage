@@ -18,109 +18,180 @@ wearing a namespace.
 in that file are asserted to be the same list, and every entry must carry all
 three fields. A missing entry fails the gate.
 
-**Nine types predate the rule.** Their ecosystem check reads `NOT DONE`, which is
-the honest state and not a placeholder — back-filling nine checks I had not
-actually performed would have made the register a fiction on the day it was
-written. The test pins the list of types allowed to say that, it may only shrink,
-and a new type may never join it. Closing one is a small piece of real work:
-search the official lexicons for a type that already holds this, then replace the
-line with what you found.
+**The nine pre-register checks were done on 2026-08-29, and the exemption list is now
+empty** — it could only shrink, and it reached zero. They were checked against the real
+corpora rather than from memory: **26 record types** among the 435 official lexicons
+(`bluesky-social/atproto@main`) and **9** in `community.lexicon.*`
+(`lexicon-community/lexicon@main`). Everything else in both repos is XRPC — queries and
+procedures — which matters more than it sounds, because a namespace can look like a
+perfect fit and contain nothing you can put in a repo. The one command that settles it:
+`defs.main.type == 'record'`.
+
+**Two of the nine turned up real candidates and are recorded as adoptable rather than
+justified**, and the one I expected to be adoptable was refuted outright. A register that
+never finds anything is not doing its job.
 
 ---
 
 ## fyi.forage.post
 
-**Holds:** a top-level post in a Forage feed — title, body, the feed it belongs
-to. Edits ride an `editedAt`; deletion is the record deleted.
+**Holds:** a top-level post in a Forage feed — title, body, the feed it belongs to. Edits
+ride an `editedAt`; deletion is the record deleted.
 
-**Why ours:** a Forage post is addressed to a *board*, and its identity includes
-that board. `app.bsky.feed.post` has no such field and no room for one, so a
-Forage post stored as a Bluesky post would lose the thing that makes it a forum
-post rather than a skeet.
+**Why ours:** a Forage post is addressed to a **board**, and its identity includes that
+board. The two candidates that carry a container both carry the wrong kind of one.
 
-**Ecosystem check:** NOT DONE — predates the register (2026-08-29). Owed.
+**Ecosystem check (2026-08-29):**
+
+| Candidate | What it holds | Why it does not fit |
+|---|---|---|
+| `app.bsky.feed.post` | text, facets, langs, reply refs, embeds | no container at all — a skeet belongs to its author and nothing else, and there is no field to add one to without forking the type |
+| `site.standard.document` | **the near miss.** `site` (required uri), `title`, `publishedAt`, `path`, `contributors`, `coverImage`, `textContent` | it has a container, and the container is a **publication** — a blog or website with a `url`, one publishing surface. A forum post is written *by a member into a shared place* with membership and moderators. It also models an article, which is a different artifact |
+| `app.bsky.feed.generator` | — | a generator is a query, and you cannot post *into* a query |
+
+**The distinction worth keeping:** `site.standard.*` models **publishing** — one voice, many
+readers. A forum models **posting into a commons** — many voices, one shared place,
+moderators. They look adjacent, and the difference is the whole product.
 
 ## fyi.forage.comment
 
 **Holds:** a reply beneath a post or another comment, in the commenter's repo.
 
-**Why ours:** threading in a forum is a tree with a stable parent, which is the
-same shape `app.bsky.feed.post`'s `reply` carries — the gap is the same one
-`fyi.forage.post` has, not a separate one.
+**Why ours:** its parent is a `fyi.forage.post`, which is ours. **This gap is inherited, not
+independent** — said plainly rather than restating the post argument as if it were a second
+finding.
 
-**Ecosystem check:** NOT DONE — predates the register (2026-08-29). Owed.
+**Ecosystem check (2026-08-29):** `app.bsky.feed.post`'s `reply` (root + parent strongRefs)
+is a good threading model and we are not improving on it — our comment uses the same shape.
+Nothing else among the 26 record types threads at all. **If `fyi.forage.post` is ever retired
+for an official type, this type retires with it, and not before.**
 
 ## fyi.forage.vote
 
-**Holds:** one boost of one post or comment. Boost-only since 2026-08-27;
-retraction is the record deleted.
+**Holds:** one boost of a post or comment. Boost-only since 2026-08-27; retraction is the
+record deleted.
 
-**Why ours:** the memory tier needs a vote it can count without a like-index, and
-the subject is a `fyi.forage.post` uri rather than a Bluesky post uri.
+**Why ours:** **WEAKER THAN IT WAS** — a real candidate now exists.
 
-**Ecosystem check:** NOT DONE — predates the register (2026-08-29). Owed.
-Note the near-neighbour: the *lens* substrate does not use this type at all — a
-boost there is a real `app.bsky.feed.like`, which is the register's rule working
-in the direction it is supposed to.
+**Ecosystem check (2026-08-29):**
+
+| Candidate | What it holds | Verdict |
+|---|---|---|
+| `app.bsky.feed.like` | `subject` strongRef + `createdAt` | for Bluesky content, and the lens already uses the real thing — a boost there **is** an `app.bsky.feed.like`. It cannot address a `fyi.forage.post` |
+| `community.lexicon.interaction.like` | `subject` **strongRef** + `createdAt` — "a like interaction with **another AT Protocol record**" | **the candidate.** Deliberately generic, which is exactly our gap |
+
+**What blocks adoption today, stated so it can be checked rather than believed:** its
+`subject` is a `com.atproto.repo.strongRef` — a uri **and a cid**. Ours is a bare at-uri, and
+the memory tier synthesises records rather than committing them, so there is no cid to put
+there. A real obstacle, not a preference.
+
+**And a finding about our own type, produced by the comparison:** `value` is an enum of
+exactly `[1]`. Since bury was removed on 2026-08-27 it carries no information — a required
+field whose only legal value is a constant. It is a vestige, and it is one of the two things
+making our record differ in shape from the community one.
+
+**Retire by:** the memory tier gains real cids (then adopt), or the vestigial `value` is
+dropped so the divergence is one field wide instead of two.
 
 ## fyi.forage.save
 
 **Holds:** a saved post, one record per save; unsaving is the record deleted.
 
-**Why ours:** the same subject problem as `fyi.forage.vote`.
+**Why ours:** **NO LONGER JUSTIFIED — this type should be retired.**
 
-**Ecosystem check:** NOT DONE — predates the register (2026-08-29). Owed. Bluesky
-has since grown a bookmark concept; whether it fits here is exactly the question
-this line is owed for.
+**Ecosystem check (2026-08-29):**
+
+| Candidate | What it holds | Verdict |
+|---|---|---|
+| `app.bsky.bookmark.*` | `createBookmark` / `deleteBookmark` / `getBookmarks` | **not a record type at all** — bookmarks on Bluesky are server-side XRPC, so there is nothing to put in a repo. The name misleads; the `defs.main.type` does not |
+| `community.lexicon.bookmarks.bookmark` | `subject` (uri) + `createdAt`, optional `tags` | **a strict superset of ours** |
+
+**The finding:** ours is `subject` (at-uri) + `createdAt`; theirs is `subject` (uri) +
+`createdAt` + an optional `tags` array. An at-uri is a uri, so every record we already write
+is a valid one of theirs. There is no field we have that they lack, and no semantic
+difference — a save is a bookmark.
+
+**Retire by:** pointing the save writer at `community.lexicon.bookmarks.bookmark`. Pre-1.0,
+so no migration path is owed. Filed in `TODO.md`.
 
 ## fyi.forage.feed
 
 **Holds:** a board — its name, description, and settings — in its founder's repo.
 
-**Why ours:** `app.bsky.feed.generator` is a *query* run by a service, not a place
-with members and moderators. A Forage feed is the place.
+**Why ours:** a Forage feed is a **place with members and moderators**. Every candidate is
+either a query or a website.
 
-**Ecosystem check:** NOT DONE — predates the register (2026-08-29). Owed.
+**Ecosystem check (2026-08-29):**
+
+| Candidate | What it holds | Why it does not fit |
+|---|---|---|
+| `app.bsky.feed.generator` | `did` of the service that runs it, `displayName`, `description` | a generator is a **query executed by a service**, and the required `did` is that service's. A place nobody queries for cannot be expressed |
+| `site.standard.publication` | required `url` + `name`, theme, preferences | a website. The required `url` is the tell — a publication is somewhere on the web; a board is somewhere in the app |
+| `app.bsky.graph.list` | a curated list of actors | lists people, not a place they post into |
 
 ## fyi.forage.membership
 
-**Holds:** joining a board, one record per membership; leaving is the record
-deleted.
+**Holds:** joining a board, one record per membership; leaving is the record deleted.
 
-**Why ours:** the subject is a `fyi.forage.feed`, which is ours.
+**Why ours:** its subject is a `fyi.forage.feed` — but the sharper reason is **who writes
+it**, and that one survives even if the feed type is ever replaced.
 
-**Ecosystem check:** NOT DONE — predates the register (2026-08-29). Owed.
+**Ecosystem check (2026-08-29):**
+
+| Candidate | What it holds | Why it does not fit |
+|---|---|---|
+| `site.standard.graph.subscription` | `publication` (required at-uri) + `createdAt` | the closest shape in the ecosystem, and it fails on its subject: a publication, which a board is not (see `fyi.forage.feed`) |
+| `app.bsky.graph.listitem` | `subject` (did) + `list` (at-uri) + `createdAt` | **inverted authorship.** A listitem is written by the list's OWNER, to put someone on a list. A membership is written by the JOINER, to put themselves in a place. Same fields, opposite direction |
+
+**The distinction worth keeping:** curation and membership have identical shapes and opposite
+meanings. A model that conflates them lets a board acquire members who never joined.
 
 ## fyi.forage.mod
 
-**Holds:** one moderation action taken by a steward, in the steward's own repo —
-the whole `mod.*` family in one collection with an `action` enum.
+**Holds:** one moderation action by a steward, in the steward's own repo — the whole `mod.*`
+family in one collection with an `action` enum.
 
-**Why ours:** moderation here is *in* the repo of the person who acted, which is
-what makes it auditable without a service.
+**Why ours:** the record lives in the repo of the person who acted, which is what makes it
+auditable without a service.
 
-**Ecosystem check:** NOT DONE — predates the register (2026-08-29). Owed. The
-obvious neighbour is `tools.ozone.moderation.*`, and it is the strongest
-candidate on this page for actually being adoptable.
+**Ecosystem check (2026-08-29):** **the candidate I expected to win does not exist as a
+record.**
+`tools.ozone.moderation.*` is twenty-odd lexicons and **not one is a record type**; they are
+queries and procedures against an Ozone instance (`emitEvent`, `getEvent`, `queryStatuses`).
+`chat.bsky.moderation.*` is the same. The ecosystem's moderation model is **service-side by
+construction**: actions live in a service's database, not in anyone's repo.
+
+**This was flagged as the most likely adoption on the page and it is the least.** Recorded
+that way because the expectation was reasonable and wrong, and because the fact that settles
+it takes one command to re-check.
 
 ## fyi.forage.report
 
 **Holds:** a filed report, in the reporter's repo.
 
-**Why ours:** same reason as `fyi.forage.mod` — the record lives where the act
-happened.
+**Why ours:** the same reason as `fyi.forage.mod`, confirmed by the same measurement.
 
-**Ecosystem check:** NOT DONE — predates the register (2026-08-29). Owed.
-`com.atproto.moderation.createReport` is the neighbour to weigh.
+**Ecosystem check (2026-08-29):** `com.atproto.moderation.createReport` is a **procedure** —
+a report is something you send to a service, which then owns it. There is no report record
+among the 26. Keeping ours in the reporter's repo is a deliberately different posture: the
+reporter keeps their own copy of what they said.
 
 ## fyi.forage.roster
 
 **Holds:** the scoped tier's membership, keyed `self` in the founding DID's repo.
 
-**Why ours:** a singleton list belonging to one repo, which is a shape atproto
-supports and nobody else's lexicon holds for us.
+**Why ours:** **ADOPTABLE WITH RESHAPING** — recorded honestly rather than defended.
 
-**Ecosystem check:** NOT DONE — predates the register (2026-08-29). Owed.
+**Ecosystem check (2026-08-29):**
+
+| Candidate | What it holds | Verdict |
+|---|---|---|
+| `app.bsky.graph.list` + `listitem` | a list record plus one record per member | **this could hold it.** The cost is shape, not capability: one record per member instead of a singleton, and `key=tid` instead of `literal:self` |
+| `app.bsky.graph.starterpack` | a list plus feeds, for onboarding | a different purpose wearing a similar shape |
+
+**No blocker was found, so none is claimed.** The singleton is a convenience — one read gets
+the whole roster — and convenience is a reason, not a justification. If the scoped tier
+outgrows a toy, `list` + `listitem` is the interoperable answer and this type should go.
 
 ## fyi.forage.tagsub
 
@@ -140,6 +211,26 @@ pattern they share is the actual justification:
 | `app.bsky.notification.putActivitySubscription` | a subscription to an **actor** | its subject is a DID; a hashtag is not an identity |
 | `app.bsky.actor.defs#savedFeedsPrefV2` | `feed \| list \| timeline`, one value each | no hashtag type, and no room to add one |
 | `app.bsky.graph.list` + `listitem` | curated **people** | a list of accounts, not a subject |
+
+**Amended 2026-08-29 — the original check searched one corpus and read as if it had
+searched the field.** It named four official types and never looked at
+`community.lexicon.*`, the ecosystem's shared namespace, in a workspace whose `discovery`
+repo had been contributing `community.lexicon.attest.*` drafts for weeks. Re-run against
+`lexicon-community/lexicon@main`, whose **nine** record types are:
+
+`app.entry` · `app.profile` · `app.profileLocalization` · `bookmarks.bookmark` ·
+`calendar.event` · `calendar.rsvp` · `interaction.like` · `payments.webMonetization` ·
+`preference.ai`
+
+**The conclusion survives, and now it has actually been tested.** None subscribes to
+anything. The nearest, `bookmarks.bookmark`, points at a `uri` — a thing that exists, the
+same pattern the four official candidates showed. One detail worth carrying: it has an
+optional `tags` array, so the ecosystem models *tags on a saved thing* and still not *a
+subscription to a tag*. The distinction this type exists for holds across both corpora.
+
+*Recorded rather than quietly fixed, because a check whose stated scope is wider than its
+actual scope is the failure this register exists to prevent — and it happened in the first
+entry written under the rule.*
 
 **First write under the rule.** This is the type that took Forage's lens write
 count from seven to eight, which `AGENTS.md` and `test/invariants.test.js` make

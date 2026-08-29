@@ -197,37 +197,47 @@ reason to weaken the rule; each is work.
   nameserver → DID → PDS → served schemas, compared canonically against disk) rather than
   confirming that a record was typed.
 
-- **`js/lexicon.js` is a hand-rolled mirror and is not gated against the reference.**
-  Rule 4: `@atproto/lexicon` is the validator of record; a hand-rolled one is legitimate
-  here (browser runtime, no build step) but must be gated against the official one on the
-  same fixtures, so a divergence is a test failure rather than a surprise at a repo we do
-  not own. The pattern already exists in this workspace —
-  `discovery/alpha/experiments/lexicon-community/scripts/gate.mjs` runs the official
-  validator beside a Rust mirror. Add `@atproto/lexicon` as a devDependency and cross-check
-  every lexicon file plus the adversarial records; it never ships to the browser.
-- **The `fyi.forage.tagsub` register entry checked four official types and not
-  `community.lexicon.*`.** Rule 1 wants three places searched, and the third is the one
-  most likely to make a type unnecessary — while a sibling repo
-  (`discovery/alpha/experiments/lexicon-community/`) had been contributing to that very
-  namespace. The conclusion may well stand (there is no subscription-to-a-query type
-  there either), but the entry currently claims a search it did not do. Re-run it and
-  amend the row.
+- ~~**`js/lexicon.js` is a hand-rolled mirror and is not gated against the reference.**~~ —
+  DONE 2026-08-29, `test/lexicon-reference-gate.test.js`. `@atproto/lexicon` as a
+  devDependency; the corpus is GENERATED from the schemas (124 cases today) so a lexicon
+  added tomorrow is covered without anyone extending the file. **It found a real divergence
+  on its first run**, in the direction that matters: the mirror accepted a bare string for
+  `fyi.forage.feed`'s `settings`, which the reference refuses — `unknown` means an arbitrary
+  OBJECT, not an arbitrary value. An existing test had asserted the opposite in as many
+  words, which is the argument for gating against something we did not write.
 
-## Owed by the lexicon register
+- ~~**The `fyi.forage.tagsub` register entry checked four official types and not
+  `community.lexicon.*`.**~~ — DONE 2026-08-29. Re-run against `lexicon-community@main`;
+  its nine record types are listed in the amended entry. The conclusion survives and has now
+  actually been tested: none subscribes to anything, and the nearest — `bookmarks.bookmark` —
+  points at a uri, the same pattern the official candidates showed. It carries an optional
+  `tags` array, so the ecosystem models tags on a saved thing and still not a subscription
+  to a tag.
 
-`docs/LEXICON-REGISTER.md` (added 2026-08-29 with P5) requires every
-`fyi.forage.*` type to record what it holds, why it is ours, and **what was
-checked in the ecosystem first**. Nine types predate the rule and their third
-field reads `NOT DONE`. `test/lexicons.test.js` pins the list of types allowed to
-say that; it may only shrink, and a new type may never join it.
+## Found by the nine ecosystem checks (2026-08-29)
 
-Closing one is small, bounded work: search the official lexicons for a type that
-already holds this, then replace the line with what you found (the
-`fyi.forage.tagsub` entry is the worked example — four candidates read, each
-rejected with a reason, and the shared pattern between them stated). The two
-worth doing first, because they have real candidates rather than none:
+The register's exemption list is empty — all nine pre-register checks were done against the
+real corpora (26 record types among the 435 official lexicons, 9 in `community.lexicon.*`),
+and `test/lexicons.test.js` now allows no type to say `NOT DONE`. Two of the nine turned up
+real candidates, which is the register working in the direction it was built for.
 
-- **`fyi.forage.mod`** vs `tools.ozone.moderation.*` — the strongest chance on
-  the page that an official type is genuinely adoptable.
-- **`fyi.forage.save`** vs Bluesky's bookmark concept, which did not exist when
-  the type was defined.
+- **Retire `fyi.forage.save` for `community.lexicon.bookmarks.bookmark`.** Theirs is a
+  **strict superset**: `subject` (uri) + `createdAt` + an optional `tags` array, against our
+  `subject` (at-uri) + `createdAt`. An at-uri is a uri, so every record we already write is a
+  valid one of theirs; there is no field we have that they lack, and no semantic difference —
+  a save is a bookmark. Pre-1.0, so no migration path is owed. Note the near-miss worth not
+  repeating: `app.bsky.bookmark.*` looks like the obvious candidate and is **not a record
+  type at all** — it is server-side XRPC, so there is nothing to put in a repo.
+
+- **`fyi.forage.vote` has a candidate it cannot yet take, plus a vestigial field.**
+  `community.lexicon.interaction.like` is a deliberately generic like for *any* atproto
+  record, which is exactly our gap. What blocks it: its `subject` is a
+  `com.atproto.repo.strongRef` (uri **and cid**), ours is a bare at-uri, and the memory tier
+  synthesises records rather than committing them so there is no cid to supply. Separately,
+  the comparison surfaced that our `value` is an enum of exactly `[1]` — since bury was
+  removed on 2026-08-27 it is a required field whose only legal value is a constant. Dropping
+  it narrows the divergence from two fields to one whether or not we ever adopt.
+
+- **`fyi.forage.roster` is adoptable with reshaping and no blocker was found.** `list` +
+  `listitem` could hold it; the cost is one record per member instead of a `literal:self`
+  singleton. Recorded as convenience rather than justification, because that is what it is.

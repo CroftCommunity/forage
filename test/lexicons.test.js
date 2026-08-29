@@ -102,11 +102,12 @@ test('roster is a self-keyed singleton', () => {
 // have not actually done — which would make the register a fiction on the day it
 // was created — they are listed here as owed. The list may only shrink; a new
 // type may never join it.
-const PRE_REGISTER = new Set([
-  'fyi.forage.post', 'fyi.forage.comment', 'fyi.forage.vote', 'fyi.forage.save',
-  'fyi.forage.feed', 'fyi.forage.membership', 'fyi.forage.mod', 'fyi.forage.report',
-  'fyi.forage.roster',
-]);
+// EMPTY, and that is the point. Nine types predated the register and their ecosystem
+// checks were done on 2026-08-29 against the real corpora — 26 record types among the 435
+// official lexicons, 9 in community.lexicon.* — so the list reached zero the way it was
+// designed to: by shrinking. It may never grow. A new type that cannot say what it checked
+// does not get an exemption; it gets the check.
+const PRE_REGISTER = new Set([])
 
 test('every fyi.forage.* type has a register entry saying what it holds and why it is ours', () => {
   const md = readFileSync(join(root, 'docs', 'LEXICON-REGISTER.md'), 'utf8');
