@@ -24,6 +24,10 @@ export const HASHTAG_SECTIONS = Object.freeze([
   ['loaded', 'Hashtags loaded'],
 ]);
 const IDS = HASHTAG_SECTIONS.map(([id]) => id);
+// Exported so the router and the views agree about what a section IS, rather
+// than each carrying its own list of three strings.
+export const SECTION_IDS = IDS;
+export const sectionLabel = (id) => (HASHTAG_SECTIONS.find(([s]) => s === id) || [])[1] || 'Hashtags';
 export const SECTION_PREFS_KEY = 'forage.hashtagsections';
 
 function readHidden() {

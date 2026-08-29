@@ -1449,9 +1449,9 @@ export function createLens({ session = null, transport = fetch } = {}) {
       };
     },
 
-    async search(q) {
+    async search(q, { limit = 30 } = {}) {
       if (!session) throw new Error('lens: search needs a session (403 unauth — probe-verified)');
-      const data = await get('app.bsky.feed.searchPosts', { q, limit: 30 });
+      const data = await get('app.bsky.feed.searchPosts', { q, limit });
       const src = { feedId: 'lens:search', feedSlug: 'search', feedTitle: `Search: ${q}` };
       return { posts: (data.posts || [])
         .filter((p) => !posture.blockedDids.has(p.author?.did))

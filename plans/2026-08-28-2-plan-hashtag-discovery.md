@@ -1,7 +1,7 @@
 # Plan: hashtag discovery — search, trending, and what you have read
 
-**Status:** **PHASE 1 DONE** (2026-08-28), plus the logged-out search fix (`4c23f41`,
-2026-08-29). Phases 2–5 planned, not started. Phase numbers are order-of-writing,
+**Status:** **P1, P2, P3 DONE** (2026-08-28/29), plus the logged-out search fix
+(`4c23f41`). P4 (word cloud) not started. P5 needs owner decisions — see the phase. Phase numbers are order-of-writing,
 not priority — P5 is the owner's most recent interest.
 **Serves:** the owner's public-site queue. Follows the left nav landing
 (`2026-08-26-4`, forage `6b1dedf`) and the hashtag subscriptions that shipped
@@ -152,17 +152,29 @@ trending is checked to be absent from `forage.tagstats`.
    added there are three lists, and the filter belongs to one. Scoped to
    `[data-loaded-tags]` rather than loosened.
 
-### P2 — the three-section page
+### P2 — the three-section page — **DONE 2026-08-29**
 
 `/hashtags` becomes Search · Trending · Loaded, each a slice of ~12 with a full
 page beneath. Ordering is the owner's: search at the top, trending in the
 middle, loaded at the bottom.
 
-### P3 — the full pages
+### P3 — the full pages — **DONE 2026-08-29**
 
 One page per dimension, each loading deeper than its slice (~100 for search) and
 carrying that dimension's own controls. Back and forth between a slice and its
 page must not lose the reader's sort or filter.
+
+**Landed as `/hashtags/:section`.** One view builds both shapes, because a full
+page that drifted from its slice would be two answers to one question — and the
+slice is what people see first, so the drift would be invisible. Two decisions
+worth keeping:
+
+- **"See all" is absent on the page it leads to.** A link to where you already
+  are is noise pretending to be navigation.
+- **A section's own page ignores the Advanced preference.** You arrived by
+  asking for it by name; refusing a direct request because of a display setting
+  is the setting overreaching. The preference composes the OVERVIEW, not the
+  address space.
 
 ### P5 — local-only as a privacy choice, and per-subscription sync
 

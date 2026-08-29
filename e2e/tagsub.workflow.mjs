@@ -208,6 +208,33 @@ export async function run() {
       'search states its own sample — results, a different denominator from your boards');
     assert.match(body, /#baking/,
       'and it surfaces a tag I had never read: it reaches past the local cache');
+    // ---- a section's own page (P2/P3) ----
+    await page.goto(`${s.origin}/hashtags`);
+    await page.waitForSelector('[data-see-all="trending"]');
+    await page.click('[data-see-all="trending"]');
+    await page.waitForSelector('[data-back-to-hashtags="1"]');
+    assert.ok(page.url().endsWith('/hashtags/trending'), 'a section has its own address');
+    assert.equal(await page.locator('[data-loaded-tags="1"]').count(), 0,
+      'and shows ONE section — the other two are not on it');
+    assert.equal(await page.locator('[data-see-all="trending"]').count(), 0,
+      'no "see all" on the page that already shows all — that links to where you are');
+    await page.click('[data-back-to-hashtags="1"]');
+    await page.waitForSelector('[data-loaded-tags="1"]');
+
+    // A direct request for a section beats the display preference: you asked
+    // for it by name, and the setting decides the OVERVIEW, not the address.
+    await page.goto(`${s.origin}/me`);
+    await page.click('[data-advanced="1"] summary');
+    await page.uncheck('[data-section="trending"]');
+    await page.goto(`${s.origin}/hashtags`);
+    await page.waitForSelector('[data-loaded-tags="1"]');
+    assert.equal(await page.locator('[data-trending-tags="1"]').count(), 0, 'gone from the overview');
+    await page.goto(`${s.origin}/hashtags/trending`);
+    await page.waitForSelector('[data-trending-tags="1"]');
+    await page.goto(`${s.origin}/me`);
+    await page.click('[data-advanced="1"] summary');
+    await page.check('[data-section="trending"]');
+
     // ---- Advanced: the reader composes the page ----
     await page.goto(`${s.origin}/me`);
     await page.waitForSelector('[data-advanced="1"]');

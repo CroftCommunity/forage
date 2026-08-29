@@ -26,7 +26,7 @@ import { settingsView } from './views.js';
 import { tagSubs, subscribeTag, unsubscribeTag, isSubscribed, normalizeTag, onChange as onTagSubsChange } from '../tagsubs.js';
 import { observeTags, topTags, SORTS, sortLabel } from '../tag-stats.js';
 import { trendingTags, trendingTtl, setTrendingTtl, DEFAULT_TTL_MS } from '../trending-tags.js';
-import { HASHTAG_SECTIONS, sectionEnabled, setSectionEnabled, enabledSections } from '../hashtag-prefs.js';
+import { HASHTAG_SECTIONS, SECTION_IDS, sectionLabel, sectionEnabled, setSectionEnabled, enabledSections } from '../hashtag-prefs.js';
 
 let manager = null;        // null = not booted; 'unavailable' = origin has no OAuth client
 let session = null;        // the lens session shape, set after restore
@@ -843,7 +843,7 @@ export function currentBoardId(path) {
   if (f) return decodeURIComponent(f[1]);
   if (path === '/feeds') return 'feeds';
   if (path === '/trending') return DIRECTORY;
-  if (path === '/hashtags') return 'hashtags';
+  if (path.startsWith('/hashtags')) return 'hashtags';
   return DIRECTORY;
 }
 
@@ -1432,7 +1432,13 @@ let seenFilter = '';
 let seenShowAll = false;
 const SEEN_PAGE = 12;
 
-export function lensHashtagsView() {
+// One view, two shapes. `/hashtags` is three SLICES; `/hashtags/:section` is
+// one of them at full depth. Same code builds both, because a full page that
+// drifted from its slice would be two answers to one question — and the slice
+// is the one people see first, so the drift would be invisible.
+export function lensHashtagsView(params = {}) {
+  const section = SECTION_IDS.includes(params.section) ? params.section : null;
+  const full = (id) => section === id;
   const subCount = tagSubs().length;
   // Each list states its own sample IN ITS OWN TERMS: "3 posts in your boards"
   // counts posts you read, "on 2 of 30 results" counts a search's hits. Two
@@ -1461,7 +1467,7 @@ export function lensHashtagsView() {
     const all = topTags(Infinity, { sort: seenSort });
     const q = seenFilter.trim().toLowerCase();
     const matching = q ? all.filter((t) => t.tag.includes(q)) : all;
-    const shown = seenShowAll ? matching : matching.slice(0, SEEN_PAGE);
+    const shown = (seenShowAll || full('loaded')) ? matching : matching.slice(0, SEEN_PAGE);
     seenList.replaceChildren(rows(shown,
       (n, r) => `${plural(n, 'post')} · ${plural(r.likes || 0, 'like')}`));
     const rest = matching.length - shown.length;
@@ -1510,7 +1516,7 @@ export function lensHashtagsView() {
 
   trendingTags(lens).then((t) => {
     trendList.replaceChildren(t.tags.length
-      ? rows(t.tags.slice(0, SEEN_PAGE), (n) => `${plural(n, 'post')} in the sample`)
+      ? rows(full('trending') ? t.tags : t.tags.slice(0, SEEN_PAGE), (n) => `${plural(n, 'post')} in the sample`)
       : el('div', { class: 'xs muted', style: 'padding:6px' },
           'Nothing to read right now — trending was unavailable.'));
     // Say what was actually looked at. "Trending hashtags" would claim a
@@ -1537,7 +1543,7 @@ export function lensHashtagsView() {
     if (!q) return;
     if (!session) { out.replaceChildren(el('div', { class: 'xs muted' }, 'Search needs a session — Bluesky returns 403 to guests (DL-014).')); return; }
     out.replaceChildren(skeleton(3));
-    lens.search(q).then((board) => {
+    lens.search(q, { limit: full('search') ? 100 : 30 }).then((board) => {
       // Harvest the tags off real posts. This is what reaches BEYOND what you
       // have read: a tag nobody in your boards uses still shows up here if
       // anyone on the network is using it.
@@ -1584,7 +1590,27 @@ export function lensHashtagsView() {
 
   // Owner's ordering (2026-08-28): search, then trending, then what you have
   // loaded. P2 makes them three equal slices with their own full pages.
+  // The way into a section's own page, and back out of it. Present on a slice,
+  // absent on the page it leads to — a "see all" on the page that already
+  // shows all is a link to where you are.
+  const seeAll = (id, label) => full(id) || section
+    ? null
+    : el('div', { style: 'margin-top:8px' },
+        el('a', { class: 'small', href: `/hashtags/${id}`, 'data-see-all': id }, `${label} →`));
+  searchCard.append(seeAll('search', 'Search on its own page') || '');
+  trendCard.append(seeAll('trending', 'All trending tags') || '');
+  seenCard.append(seeAll('loaded', 'Every hashtag you have loaded') || '');
+
   const cards = { search: searchCard, trending: trendCard, loaded: seenCard };
+  // A section's own page shows that section WHETHER OR NOT it is switched on in
+  // Advanced: you got here by asking for it by name, and refusing a direct
+  // request because of a display preference would be the setting overreaching.
+  if (section) {
+    return { main: el('div', {},
+      el('div', { class: 'row', style: 'gap:8px;align-items:center;margin-bottom:4px' },
+        el('a', { class: 'small', href: '/hashtags', 'data-back-to-hashtags': '1' }, '← Hashtags')),
+      el('h1', {}, sectionLabel(section)), cards[section]), side: null };
+  }
   const on = enabledSections();
   const main = el('div', {}, el('h1', {}, 'Hashtags'));
   // Hiding all three is allowed — the SETTING does not refuse the last
