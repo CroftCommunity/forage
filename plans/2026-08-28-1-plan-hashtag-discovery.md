@@ -1,0 +1,147 @@
+# Plan: hashtag discovery — search, trending, and what you have read
+
+**Status:** PHASE 1 IN FLIGHT (2026-08-28). Phases 2–4 planned, not started.
+**Serves:** the owner's public-site queue. Follows the left nav landing
+(`2026-08-26-4`, forage `6b1dedf`) and the hashtag subscriptions that shipped
+with it (`34a5fea`, `17df1c5`, `0f5d420`).
+**Branch:** `main` directly — small, sequential, and no peer holds a claim
+(`CroftC/.coordination/claims/` is empty but for its README).
+
+---
+
+## Problem Statement
+
+Hashtags became joinable, so `/hashtags` exists to help you decide what to
+join. It currently offers two lists and neither is what a browser of a forum
+would expect first.
+
+**The hard constraint, established by probe and not by reading docs:
+Bluesky publishes no hashtag ranking.** `app.bsky.unspecced.getTrends` looks
+exactly like the answer — it carries `postCount`, a `startedAt`, and a
+hot/cooling `status` — and every result is a **feed generator**:
+
+```
+'Coyote vs. Acme releases'  postCount=2439
+   link  = /profile/did:plc:qrz3…/feed/cff9e7d5f6b8
+   topic = 'cff9e7d5f6b8'      ← an opaque record key, not a tag
+```
+
+There is no endpoint that lists hashtags, at any window, ranked any way. So
+every hashtag-discovery surface in this app must be **derived**, and the only
+question is from what.
+
+Three sources exist, and they answer three different questions:
+
+| Section | Question | Source |
+|---|---|---|
+| Search | "does a tag about X exist, and is anyone using it?" | `searchPosts`, tags harvested off real results |
+| Trending | "what is the network doing right now?" | trending FEEDS, tags harvested off their posts |
+| Loaded | "what do the people I already read talk about?" | posts rendered on boards you opened |
+
+The owner's framing (2026-08-28): three equal sections, each showing a slice
+with its own full page beneath it, and trending "always there as a barometer".
+
+## Approach
+
+**Derive trending, and say so.** Fetch the trend list, fetch the top N trending
+feeds, harvest tag facets off their posts, count. That is a real barometer of
+the network. The section says *"tags on posts in what's trending right now"* —
+never *"trending hashtags"*, which would claim a ranking nobody publishes.
+
+**Keep the three sources from colliding, which they already do not.** Background
+trending fetches must never feed the "loaded" statistics: one list is *what the
+network is doing*, the other is *what I read*, and merging them makes both
+meaningless. This needs no special-casing — `observeTags` is called from
+`renderBoard`, so only a board a reader actually opened counts. Opening a
+trending tag's board therefore DOES count, which is correct: you read it.
+Search results already work this way for the same reason. **The rule is
+"rendering counts, fetching does not", and it is worth a test rather than a
+comment, because the next person adding a background fetch will not know.**
+
+**Refresh on a dial, hourly by default** (owner). Six requests per refresh is
+cheap once an hour and rude every page view, and a list that reshuffles on every
+visit is not a barometer. Device-local, beside skin and density.
+
+**The word cloud is one representation and the reader picks** (owner). The
+counted list is the other, and it is the accessible one — see Reasoning.
+
+## Reasoning
+
+**Why trending is worth deriving rather than skipping.** The two lists that
+exist today are both about *you*: what you searched for, and what you have read.
+A reader deciding what to join has no way to see past their own bubble, which is
+the exact thing a discovery surface is for. Trending is the only source that
+answers "what is happening that I am not already looking at".
+
+**Why the honesty about the source is not pedantry.** A section headed
+"Trending hashtags" claims a network-wide ranking of tags. What we have is tags
+appearing on posts inside five feeds an algorithm picked. Those are different
+claims, and the second one is defensible. This repo has the habit already —
+the ring's capped board states its true pre-cap total, the loaded list states
+its sample — and the reason is the same: a ranked list with no stated
+denominator reads as authoritative.
+
+**Why the word cloud cannot be the only representation.** Sizing text by
+frequency makes the rare tags small, and a 9px tag is one nobody with low vision
+can read. This repo blocks its build on axe at serious/critical, and
+`croft-pwa/docs/ACCESSIBILITY.md` is explicit that a green scan only counts if
+it graded the DOM a user gets. So: the list is the default and the cloud is a
+toggle, the cloud's font range is bounded so its smallest is still legible, and
+the cloud carries the same links with the same accessible names. A cloud that
+is decoration over a real list is fine; a cloud that is the only way to read the
+data is not.
+
+---
+
+## Phases
+
+Each phase lands on its own, RED first, and every phase shipping user-visible
+behaviour extends `e2e/tagsub.workflow.mjs` or adds a sibling (invariant 6b).
+
+### P1 — trending hashtags, derived and cached  *(in flight)*
+
+RED: a unit test that the trending list is harvested from the trending feeds'
+posts, and a second that a background refresh does **not** touch the loaded
+statistics — the collision rule, made executable.
+
+- `js/trending-tags.js`: fetch the trend list, take the top N feeds, harvest and
+  count their tags. Cached device-local with a timestamp.
+- The refresh interval is a setting (default hourly) on `/me`, beside the other
+  device-local preferences.
+- `/hashtags` gains the section, headed with what it actually sampled.
+
+### P2 — the three-section page
+
+`/hashtags` becomes Search · Trending · Loaded, each a slice of ~12 with a full
+page beneath. Ordering is the owner's: search at the top, trending in the
+middle, loaded at the bottom.
+
+### P3 — the full pages
+
+One page per dimension, each loading deeper than its slice (~100 for search) and
+carrying that dimension's own controls. Back and forth between a slice and its
+page must not lose the reader's sort or filter.
+
+### P4 — the word cloud
+
+A representation toggle on Trending, and on Loaded if it earns it. The list
+stays the default and the accessible one; the cloud is bounded so its smallest
+tag is still readable, and axe runs over both modes.
+
+---
+
+## Not doing
+
+- **A windowed count** ("most posts in the last thirty days"). `js/tag-stats.js`
+  keeps one running total per tag, so a window would have to be invented. Doing
+  it honestly means per-window buckets — a storage decision, and its own plan.
+- **Claiming a network hashtag ranking.** There is not one to claim.
+
+## Review Log
+
+- **2026-08-28, design with the owner.** The three-section shape and the
+  collision rule are the owner's; the derivation is forced by the probe. Worth
+  recording that the owner described the workaround before knowing it was one —
+  *"we could do a few fetches in the background of like trending results"* is
+  exactly what deriving trending requires, because the endpoint that sounds like
+  it does this returns feeds.
