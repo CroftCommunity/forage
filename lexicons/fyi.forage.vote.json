@@ -4,13 +4,12 @@
   "defs": {
     "main": {
       "type": "record",
-      "description": "A boost or bury. Retraction = record deleted; re-vote = putRecord.",
+      "description": "A boost. Presence IS the vote: retraction is the record deleted, so there is no value to carry. (Bury was removed 2026-08-27; the vestigial value:1 field went 2026-08-29.)",
       "key": "tid",
       "record": {
         "type": "object",
         "required": [
           "subject",
-          "value",
           "createdAt"
         ],
         "properties": {
@@ -18,13 +17,6 @@
             "type": "string",
             "format": "at-uri",
             "description": "The post or comment voted on"
-          },
-          "value": {
-            "type": "integer",
-            "enum": [
-              1
-            ],
-            "description": "boost = 1. Bury (-1) was removed 2026-08-27; retraction is a record delete, not a value."
           },
           "createdAt": {
             "type": "string",

@@ -61,7 +61,7 @@ test('vote/save/membership/mod/report/comment records decode to valid events', (
   const feedUri = URI(alice, 'fyi.forage.feed', 'f_orchard');
   const cases = [
     [{ did: alice, collection: 'fyi.forage.comment', rkey: 'c_1', value: { subject: post, bodyMd: 'hi', createdAt: '2026-08-25T00:00:01.000Z' } }, 'comment.created'],
-    [{ did: alice, collection: 'fyi.forage.vote', rkey: 'v1', value: { subject: post, value: 1, createdAt: '2026-08-25T00:00:02.000Z' } }, 'vote.set'],
+    [{ did: alice, collection: 'fyi.forage.vote', rkey: 'v1', value: { subject: post, createdAt: '2026-08-25T00:00:02.000Z' } }, 'vote.set'],
     [{ did: alice, collection: 'fyi.forage.save', rkey: 's1', value: { subject: post, createdAt: '2026-08-25T00:00:03.000Z' } }, 'save.set'],
     [{ did: alice, collection: 'fyi.forage.feed', rkey: 'f_orchard', value: { slug: 'orchard', title: 'Orchard', createdAt: '2026-08-25T00:00:04.000Z' } }, 'feed.created'],
     [{ did: alice, collection: 'fyi.forage.membership', rkey: 'm1', value: { feed: feedUri, createdAt: '2026-08-25T00:00:05.000Z' } }, 'feed.joined'],
@@ -144,4 +144,37 @@ test('decode(encode(events)) folds to the same observable state (spot check)', a
   assert.deepStrictEqual(tally(b, 'post', 'p_1'), tally(a, 'post', 'p_1')); // retraction-as-absence == vote.set(0)
   assert.deepStrictEqual(b.users, a.users);           // locals pass through
   assert.ok(b.feeds.f_g.members.has('did:plc:bob'));
+});
+
+// The vote record carries no `value`, and the reason is the whole retraction model.
+//
+// At the EVENT layer `value` is load-bearing: 0 means retract, 1 means boost, and
+// js/reducers.js branches on it. At the RECORD layer it never varies — a retraction
+// is the record DELETED (this file's header says so, and the encoder does it), so a
+// vote record that exists is a boost and a vote record with value 0 cannot occur.
+// It was a required field whose only legal value was a constant, and the last thing
+// that made it look meaningful — bury, value -1 — was removed 2026-08-27.
+test('a vote record carries no value: presence IS the boost, absence IS the retraction', () => {
+  const bob = 'did:plc:bob';
+  const { records } = encodeEvents([
+    ev('feed.created', { id: 'f_1', slug: 'orchard', title: 'Orchard' }, bob, 500),
+    ev('post.created', { id: 'p_1', feedId: 'f_1', title: 'T', bodyMd: 'b' }, bob, 1000),
+    ev('vote.set', { subjectType: 'post', subjectId: 'p_1', value: 1 }, bob, 2000),
+  ]);
+  const vote = records.find((r) => r.collection === 'fyi.forage.vote');
+  assert.ok(vote, 'the vote was encoded');
+  assert.deepStrictEqual(Object.keys(vote.value).sort(), ['$type', 'createdAt', 'subject'],
+    'no `value` field — the record is the vote');
+});
+
+test('a vote record decodes to value 1, because only a boost can be written', () => {
+  const alice = 'did:plc:alice';
+  const [event] = recordToEvents({
+    did: alice, collection: 'fyi.forage.vote', rkey: 'v1',
+    value: { subject: URI(alice, 'fyi.forage.post', 'p_a'), createdAt: '2026-08-25T00:00:02.000Z' },
+  });
+  assert.equal(event.type, 'vote.set');
+  assert.equal(event.payload.value, 1,
+    'the event layer still needs a value; the record layer supplies the only one it can mean');
+  assert.equal(validateEvent(event), true, 'and the derived event is valid');
 });

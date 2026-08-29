@@ -241,9 +241,11 @@ tier's wire shape, and it persists to `forage.state` in localStorage.
   2026-08-29: likes must show the same in the Bluesky client as in Forage, and **only
   `app.bsky.feed.like` appears there**. `community.lexicon.interaction.like` is invisible to
   every official client, so adopting it would silently stop boosts showing up in Bluesky. The
-  lens already writes real likes — the requirement met, not a compromise. Separately and
-  regardless: `value` is an enum of exactly `[1]`, a required field whose only legal value is
-  a constant since bury was removed on 2026-08-27. Worth dropping.
+  lens already writes real likes — the requirement met, not a compromise. ~~Separately and
+  regardless: `value` is an enum of exactly `[1]`…~~ — **DONE 2026-08-29**: dropped from the
+  lexicon and from both encoder paths; the decoder supplies the one value a present record
+  can mean. The divergence from the community type is now exactly one field — their
+  strongRef against our at-uri.
 
 - **`fyi.forage.roster` is adoptable with reshaping and no blocker was found.** `list` +
   `listitem` could hold it; the cost is one record per member instead of a `literal:self`

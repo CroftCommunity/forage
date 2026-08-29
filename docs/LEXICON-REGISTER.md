@@ -115,10 +115,15 @@ record deleted.
 the memory tier synthesises records rather than committing them, so there is no cid to put
 there. A real obstacle, not a preference.
 
-**And a finding about our own type, produced by the comparison:** `value` is an enum of
-exactly `[1]`. Since bury was removed on 2026-08-27 it carries no information — a required
-field whose only legal value is a constant. It is a vestige, and it is one of the two things
-making our record differ in shape from the community one.
+**~~And a finding about our own type~~ — DONE 2026-08-29: `value` is gone.** It was an enum
+of exactly `[1]`, a required field whose only legal value was a constant once bury was
+removed on 2026-08-27. **Presence IS the vote:** a retraction is the record deleted, so a
+vote record that exists can only mean a boost. The event layer keeps its `value` (0 retracts,
+1 boosts, and `js/reducers.js` branches on it) — the two layers model retraction differently
+on purpose, and only the record layer had a constant.
+
+That narrows the divergence from `community.lexicon.interaction.like` to exactly one field:
+its `subject` is a strongRef (uri **and** cid) where ours is a bare at-uri.
 
 **And a constraint that outranks the cid, supplied by the owner 2026-08-29:** *"I want the
 likes to show the same in bsky client as on forage."* **Only `app.bsky.feed.like` appears in

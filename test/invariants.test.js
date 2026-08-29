@@ -114,6 +114,26 @@ test('the lens exception holds: writes are records-none, likes-one-pair, prefere
     'the size gate precedes the upload, not the record');
 });
 
+// A source file containing a raw NUL byte is BINARY to git, and the consequences are
+// all silent: `git diff` prints "Binary files differ" and no hunks, `grep` matches
+// nothing without saying why, and every change to that file is invisible in review.
+//
+// js/substrates/atproto.js carried two, committed, for as long as it has existed —
+// deliberate NUL separators in a composite map key, written as literal bytes instead
+// of the `\0` escape. Identical at runtime, and the difference is whether anyone can
+// read the file's history. Found 2026-08-29 only because a diff of it would not apply;
+// before that it had quietly swallowed three greps in one session.
+test('no source file contains a raw NUL byte — it makes the file binary to git', () => {
+  const offenders = [];
+  for (const file of ALL_JS) {
+    const bytes = readFileSync(join(root, file));
+    const n = bytes.filter((b) => b === 0).length;
+    if (n) offenders.push(`${file} (${n})`);
+  }
+  assert.deepStrictEqual(offenders, [],
+    `raw NUL bytes make these files undiffable and ungreppable; write \\0 as an escape:\n      ${offenders.join('\n      ')}`);
+});
+
 // 3n: clean paths mean relative asset URLs resolve against the ROUTE, so
 // './icons/x.png' becomes '/f/icons/x.png' on a deep link. Every runtime asset
 // reference must be absolute. (A journey caught exactly this; the scan keeps
