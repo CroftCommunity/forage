@@ -12,7 +12,12 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 
 ## Needs the owner
 
-- **The 216 KB wordmark still ships on three surfaces.** Phase E of plan
+- ~~**The 216 KB wordmark still ships on three surfaces.**~~ — DONE 2026-08-29:
+  all three now point at `logo-wordmark-800.jpg` (63 KB), which was already in the
+  service worker SHELL, so no precache entry was owed. The 1600x576 original is kept
+  in `assets/` as the SOURCE the variants are generated from — unreferenced by the
+  app, and deleting it would throw away the master to save a file nobody downloads.
+  Original note: Phase E of plan
   2026-08-26-3 sized the emblem for the LENS hero (400/800/1200w, byte ceilings
   asserted, `js/hero.js` § EMBLEM). Three callers still point at the original
   1600x576 JPEG: the MEMORY population's hero (`js/ui/views.js:65`), the

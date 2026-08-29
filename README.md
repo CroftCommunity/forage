@@ -1,12 +1,15 @@
 # Forage
 
-<img src="assets/logo-wordmark.jpg" alt="Forage — wordmark with a rook in a wreath as the O" width="640">
+<img src="assets/logo-wordmark-800.jpg" alt="Forage — wordmark with a rook in a wreath as the O" width="640">
 
 **Forage the open web.**
 
-Forage is a topic-driven aggregation site in the Reddit structural family — three-column
-layout, community-scoped posting, universal boost/bury rating, hot ranking with time
-decay, deeply nested collapsible comments, volunteer stewards with a public audit log.
+Forage is a topic-driven aggregation site in the Reddit structural family — a left nav
+of boards beside one column of posts, community-scoped posting, boost-only rating
+(there is no downvote — DL-011 retired 2026-08-27, because Bluesky has likes and no
+dislikes and two populations disagreeing about that was worse than losing the arrow),
+hot ranking with time decay, deeply nested collapsible comments, volunteer stewards
+with a public audit log.
 
 It is **one of two things at a time** — a live lens over Bluesky (the domain
 default) or a local sandbox — and which one is a device-local choice at `/mode`. The
@@ -243,7 +246,7 @@ differ in exactly one place, the strip at the top:
 | Who decides what appears | the tag itself | a program you cannot inspect |
 | Can you get in on purpose | **yes** — include the tag | **not knowably** |
 | Rules published | n/a (the tag IS the rule) | **no** — verified 2026-08-26 |
-| Join | nothing to join | subscribe (writes your Bluesky saved feeds) |
+| Join | **yes, but only on your device** | subscribe (writes your Bluesky saved feeds) |
 
 Feeds publish no machine-readable criteria: the `app.bsky.feed.generator`
 record carries only name/description/avatar, `describeFeedGenerator` returns a
@@ -255,6 +258,43 @@ feed" button (`ledger/divergence.js` DL-025).
 Neither is a subreddit: a hashtag has no membership or moderators, a feed
 cannot be posted into. The BBS mode (phase 5) is the surface where the full
 forum contract — membership, gatekeeping, posting into a place — becomes real.
+
+**Joining a hashtag is a local act, and that is a feature rather than a
+shortfall.** Bluesky has nowhere to put it — there is no hashtag primitive, and
+`savedFeed` stores a feed, a list or your timeline and nothing else. So a
+subscription lives on the device, in exactly the shape of the
+`fyi.forage.tagsub` record it would become
+(`lexicons/fyi.forage.tagsub.json`, declared and not yet written), which makes
+the eventual move a loop of `createRecord` rather than a reshaping. It also
+means **nobody can see what you follow**, because it never left your machine —
+a record in a repo is world-readable, exactly like a follow. Publishing it will
+be an opt-in choice per subscription, not the default.
+
+## Browsing hashtags
+
+`/hashtags` has three sections, because there are exactly three honest sources
+and they answer different questions:
+
+| Section | Question | Works logged out |
+|---|---|---|
+| **Find a hashtag** | does a tag about X exist, and is anyone using it? | no — `searchPosts` is 403 without a session |
+| **Trending now** | what is the network doing right now? | **yes** |
+| **Hashtags loaded** | what do the boards I read talk about? | **yes** — any board you open feeds it |
+
+**Bluesky publishes no hashtag ranking.** `app.bsky.unspecced.getTrends` looks
+exactly like the endpoint that would — it carries a `postCount`, a `startedAt`
+and a hot/cooling `status` — and every result is a *feed generator* with an
+opaque record key where a tag would be (probed 2026-08-28). So "trending" here
+means: fetch the trending feeds, harvest the tag facets off their posts, count.
+The section says what it sampled, and calls itself a barometer of the network
+rather than a chart of it. It refreshes on a dial, hourly by default.
+
+"Hashtags loaded" counts every post on a board you opened — including below the
+fold, and only what your language settings let through. **Not scrolling,
+loading.** Background trending fetches never feed it: one list is what the
+network is doing, the other is what you read, and merging them would make both
+meaningless. Two tests pin that rule, because the next person adding a
+background fetch will not read the comment.
 
 ## The front door, and the two populations
 
@@ -326,6 +366,13 @@ because feeds do not publish their criteria.
 
 Real paths, not hash fragments: `forage.fyi/h/gardening`,
 `forage.fyi/f/@bsky.app/whats-hot`, `forage.fyi/u/alice.test`.
+
+**`/` is a rule, not a page.** Logged out it falls through to the directory; a
+returning reader is sent to the board they left; a first sign-in lands on
+`/r/fol`. Which is why the directory has its own address at `/trending` — a page
+reachable only from `/` would be unreachable for exactly the readers `/`
+redirects. Rings are addresses too, one per rung (`/r/mut`, `/r/world`), so a
+ring board can be reloaded and linked like anything else.
 
 GitHub Pages has no rewrite rules, so `404.html` is a copy of `index.html` (a test
 asserts they stay identical) and serves every deep link; the service worker answers

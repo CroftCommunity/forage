@@ -63,7 +63,7 @@ export function boardView(scope, title, query) {
   // Logged-out banner with the primary tagline (acceptance §12).
   if (!V()) {
     main.append(el('div', { class: 'notice gate hero-gate' },
-      el('img', { class: 'hero-art', src: '/assets/logo-wordmark.jpg', alt: 'Forage — a rook in a wreath as the O' }),
+      el('img', { class: 'hero-art', src: '/assets/logo-wordmark-800.jpg', alt: 'Forage — a rook in a wreath as the O' }),
       el('div', { class: 'hero-copy' },
         el('strong', { style: 'font-family:var(--font-display);font-size:18px' }, 'Forage the open web.'),
         el('div', { class: 'xs muted' }, 'You are browsing logged out. Join a Feed to start posting.')),
@@ -718,7 +718,7 @@ export function signupView() {
   const handle = el('input', { type: 'text', placeholder: 'handle' });
   const email = el('input', { type: 'email', placeholder: 'email (optional)' });
   return { main: el('div', {},
-    el('img', { class: 'signup-art', src: '/assets/logo-wordmark.jpg', alt: 'Forage — a rook in a wreath as the O' }),
+    el('img', { class: 'signup-art', src: '/assets/logo-wordmark-800.jpg', alt: 'Forage — a rook in a wreath as the O' }),
     el('h1', {}, 'Join Forage'),
     el('p', { class: 'muted' }, 'Forage the open web.'),
     el('div', { class: 'card' },

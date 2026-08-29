@@ -17,7 +17,13 @@ in the workspace). One behavioral contract, substrates per capability, scope as 
 tier dial. This page is the law agents execute against; it is deliberately short.
 
 Sources of truth, in order: `js/schema.js`, `scenarios/`, `js/config/routing.js`,
-`ledger/divergence.js`. Modes are named routing tables (`MODES` there) with a
+`ledger/divergence.js`. For the lens specifically, two more own their own
+meaning: `js/rings.js` defines what a RUNG is (cumulative unions ordered by real
+containment — the shipped rings did not nest, and `test/rings.test.js` keeps the
+counterexample runnable), and `lexicons/fyi.forage.*` defines what a record IS,
+including `tagsub`, which is **declared and not yet written**: hashtag
+subscriptions live on the device today in exactly that record's shape, so the
+move to a repo is a loop of `createRecord` rather than a reshaping. Modes are named routing tables (`MODES` there) with a
 store-side lifecycle: network modes are RAM-only and `forage.state` is written by
 the memory mode alone (`test/store-modes.test.js` is the teeth). When these disagree
 with any document **including this one**, they win; fix the document.
@@ -113,11 +119,30 @@ start.
 Clean paths (3n) — no `#` fragments; `404.html` mirrors `index.html` for Pages
 deep links and the service worker upgrades them to 200s. One route namespace,
 resolved by the active presentation mode (`js/mode.js`):
-`/` home · `/f/@creator/:rkey` feed board (the SHAREABLE form) · `/f/:slug` the
-same board in-session · `/h/:tag` hashtag board · `/p?uri=` thread ·
-`/u/:handle` profile · `/me` your session + accounts + moderation mirror ·
-`/feeds` discovery · `/mode` · `/settings` · `/frontiers` (the divergence ledger,
-rendered). Cross-population routes gate with words. One MODAL surface rides the
+`/` **the landing rule, not a page** — a logged-out reader falls through to the
+directory; a returning one is `replaceState`d onto the board they left; a first
+sign-in lands on `/r/fol` (`js/last-board.js`, plan 2026-08-26-4 V5) ·
+`/trending` the directory itself, which needs its own address precisely BECAUSE
+`/` redirects away from it · `/r/:rung` a ring board, one address per rung
+(`js/rings.js`) · `/f/@creator/:rkey` feed board (the SHAREABLE form) ·
+`/f/:slug` the same board in-session · `/h/:tag` hashtag board · `/hashtags`
+browse hashtags · `/p?uri=` thread · `/u/:handle` profile · `/me` your session,
+accounts, moderation mirror **and Preferences** (E144 — `/settings` redirects
+here in the lens; the memory population keeps its own) · `/feeds` discovery ·
+`/mode` · `/frontiers` (the divergence ledger, rendered). Cross-population
+routes gate with words.
+
+**Navigation is a left nav, not a masthead** (plan 2026-08-26-4 V4). Every board
+is a row with exactly one job — the two-half strip it replaced died of a control
+that was a tab AND a menu opener, so switching always opened a menu. On a phone
+the nav is a drawer, which costs no vertical space until opened. The masthead
+carries a hamburger, the skin toggle and ONE account control: a 44px stand-in
+avatar, because the bar fits a single row at 320px only just.
+
+**Everything in the nav is a BOARD**, and boards differ only in where the posts
+come from: a feed generator, a hashtag, or your own graph at some reach. There
+is no views-vs-feeds axis — `CURATED[0]` is `{slug:'whats-hot', title:'Discover'}`,
+one object, so "Discover" is a feed with a good name rather than a category. One MODAL surface rides the
 signed-out lens: the host sheet (`<dialog>`, opened from the sidebar sign-in card), which
 is absent — not hidden — signed in. A feed link must carry its
 CREATOR to survive being pasted: an rkey has no DID, and nothing resolves one
@@ -159,7 +184,7 @@ Every task ends with:
 1. `npm test` — the whole gate (characterization, purity, invariant scans; CI runs
    the identical command).
 2. `npm run conformance` — replays the scenario library on two substrates and
-   compares observables (88 today). Live; not optional.
+   compares observables (86 today). Live; not optional.
 2b. `npm run workflows` — the workflow corpus (`e2e/*.workflow.mjs`): the app as
    a running system in a real browser, shim-backed and hermetic; LIVE=1/DOCKER=1
    unlock the credentialed/daemon-bound journeys locally.
