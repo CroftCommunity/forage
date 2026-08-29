@@ -58,6 +58,32 @@ const RESPONSES = {
 };
 
 export async function run() {
+  // ---- logged out: the search CONTROL is absent, not refusing ----
+  //
+  // searchPosts is 403 to a logged-out reader (DL-014, re-probed 2026-08-29,
+  // plain and with tag=). Offering an input that takes a query and only THEN
+  // says it cannot help is the shape the owner rejected for the ring dial:
+  // "putting a bunch of pop up landmines, even if it's our own pop up, is a
+  // bad plan." So the control goes and the explanation stays — the same
+  // treatment ringDial got in 49cf873.
+  const out = await scenario('first-visit', { mode: 'bluesky', responses: RESPONSES });
+  try {
+    await out.page.goto(`${out.origin}/hashtags`);
+    await out.page.waitForSelector('[data-trending-tags="1"]');
+    assert.equal(await out.page.locator('[data-tag-search="1"]').count(), 0,
+      'no search box to type into when the answer is always 403');
+    assert.equal(await out.page.locator('button:has-text("Search")').count(), 0,
+      'and no button to press');
+    const copy = await out.page.locator('body').innerText();
+    assert.match(copy, /Find a hashtag/i, 'the capability is still named, so a reader knows it exists');
+    assert.match(copy, /account/i, 'and what unlocks it is said once, in words');
+    // Trending and Loaded are PUBLIC and must not be collateral damage.
+    assert.ok(await out.page.locator('[data-trending-tags="1"]').count() > 0,
+      'trending works logged out — verified against the live API 2026-08-29');
+    assert.ok(await out.page.locator('[data-loaded-tags="1"]').count() > 0,
+      'and so does what you have loaded: feed boards are public');
+  } finally { await out.close(); }
+
   const s = await scenario('first-visit', { mode: 'bluesky', initScripts: [FAKE_SIGNED_IN], responses: RESPONSES });
   try {
     const { page } = s;

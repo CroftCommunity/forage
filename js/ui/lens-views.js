@@ -1557,11 +1557,30 @@ export function lensHashtagsView() {
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
   const btn = el('button', { class: 'btn sm primary' }, 'Search');
   btn.addEventListener('click', go);
-  const searchCard = el('div', { class: 'card' },
-    el('h2', {}, 'Find a hashtag'),
-    el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
-      'Searches real posts and reports the tags they carry — so this reaches past what you happen to have read.'),
-    el('div', { class: 'row', style: 'gap:6px' }, input, btn), out);
+  // LOGGED OUT the control is absent, not disabled and not waiting to refuse.
+  // searchPosts answers 403 to everyone without a session (DL-014, re-probed
+  // 2026-08-29 — plain and with tag=), so an input here would take a query and
+  // only then admit it could never help. That is the shape the owner rejected
+  // for the ring dial: "putting a bunch of pop up landmines, even if it's our
+  // own pop up, is a bad plan." Same treatment as ringDial got in 49cf873 —
+  // the capability is still NAMED, so a reader learns it exists, and what
+  // unlocks it is said once in words.
+  //
+  // The other two sections stay: trending and loaded are both public, verified
+  // against the live API on 2026-08-29. Hiding them alongside this one would
+  // be punishing a reader for a limit that is not theirs.
+  const searchCard = session
+    ? el('div', { class: 'card' },
+        el('h2', {}, 'Find a hashtag'),
+        el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
+          'Searches real posts and reports the tags they carry — so this reaches past what you happen to have read.'),
+        el('div', { class: 'row', style: 'gap:6px' }, input, btn), out)
+    : el('div', { class: 'card', 'data-search-gated': '1' },
+        el('h2', {}, 'Find a hashtag'),
+        el('div', { class: 'small' },
+          'With an account you can search the network for hashtags — which is how you find corners nobody you follow has posted in yet.'),
+        el('div', { class: 'xs muted', style: 'margin-top:4px' },
+          'Bluesky answers search only for signed-in readers, so there is nothing to show here until then. Trending and your loaded tags below work either way.'));
 
   // Owner's ordering (2026-08-28): search, then trending, then what you have
   // loaded. P2 makes them three equal slices with their own full pages.
