@@ -1,6 +1,8 @@
 # Plan: hashtag discovery — search, trending, and what you have read
 
-**Status:** **PHASE 1 DONE** (2026-08-28). Phases 2–4 planned, not started.
+**Status:** **PHASE 1 DONE** (2026-08-28), plus the logged-out search fix (`4c23f41`,
+2026-08-29). Phases 2–5 planned, not started. Phase numbers are order-of-writing,
+not priority — P5 is the owner's most recent interest.
 **Serves:** the owner's public-site queue. Follows the left nav landing
 (`2026-08-26-4`, forage `6b1dedf`) and the hashtag subscriptions that shipped
 with it (`34a5fea`, `17df1c5`, `0f5d420`).
@@ -40,6 +42,27 @@ Three sources exist, and they answer three different questions:
 
 The owner's framing (2026-08-28): three equal sections, each showing a slice
 with its own full page beneath it, and trending "always there as a barometer".
+
+## What works logged out — measured 2026-08-29, after two wrong claims
+
+Recorded as a table because I asserted this twice from memory and was wrong
+twice; the owner corrected both. Re-probe before trusting it again.
+
+| Surface | Logged out | Why |
+|---|---|---|
+| Trending now | **works** | `getTrendingTopics` and `getFeed` both 200 unauthenticated |
+| Hashtags loaded | **works** | feed boards are public — one board logged out gave 30 rows, 12 tags |
+| Find a hashtag | **403** | `searchPosts` refuses without a session (DL-014, re-probed plain and with `tag=`) |
+| Joining a tag | **works** | it is device storage; nothing is asked of the network |
+| `/h/:tag` board | **403** | same `searchPosts` gate (DL-021) |
+
+Only search and the `/h/` boards are gated, and both for one reason. **The
+other sections stay visible logged out** — hiding them alongside search would
+punish a reader for a limit that is not theirs.
+
+The search section is therefore ABSENT logged out rather than present and
+refusing (landed `4c23f41`). It had shipped as a box that took a query and only
+then admitted 403, which is the shape `49cf873` already rejected once.
 
 ## Approach
 
@@ -140,6 +163,46 @@ middle, loaded at the bottom.
 One page per dimension, each loading deeper than its slice (~100 for search) and
 carrying that dimension's own controls. Back and forth between a slice and its
 page must not lose the reader's sort or filter.
+
+### P5 — local-only as a privacy choice, and per-subscription sync
+
+**This reframes what P1's storage decision WAS.** The tagsub work shipped local
+storage as a waiting room — somewhere subscriptions sit until they graduate to
+a repo. The owner's reading (2026-08-29) is better: *"I'm actually starting to
+think this local prefs thing is a nice privacy option to have."* Local is a
+**destination**, and it offers something the atproto version structurally
+cannot — nobody can see what you follow, because it never left the device. A
+`fyi.forage.tagsub` record in a repo is world-readable, exactly like a follow.
+
+So syncing is per-subscription and opt-in, shown in the account page:
+
+```
+#harvest     Local only     [ Save to PDS ]
+#foraging    Local only     [ Save to PDS ]
+#mycology    Saved to PDS   [ Remove from PDS ]
+```
+
+**"Save to PDS" must read as PUBLISH, in the box, in words.** It sounds like
+backup and it means the world can read it. Saying so once beside the control is
+the difference between a feature and a leak.
+
+**The disabled button logged out is consistent with the ring decision, not
+against it.** What `49cf873` rejected was a control whose only behaviour was to
+summon a login, on a dial where hiding three of four settings left one option
+and a box that read as broken. Here the row is fully working locally and only
+the sync half is unavailable: nothing is dangled, nothing pops a modal, and the
+reader has a complete feature without an account. Owner's call, and the
+distinction is worth keeping written down because the two look alike.
+
+**This is the first thing to take forage's write count from seven to eight.**
+`AGENTS.md` lists every write with a test that counts them, precisely so an
+eighth has to be argued for rather than added. The argument is above; the unit
+lands with the table updated and `test/invariants.test.js` extended in the same
+commit.
+
+Open, and not for me to decide: whether a subscription saved to a repo should
+then be READ back on another device — that makes it sync rather than publish,
+and raises what happens when the two disagree.
 
 ### P4 — the word cloud
 
