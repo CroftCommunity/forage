@@ -166,7 +166,12 @@ reason to weaken the rule; each is work.
 - **`fyi.forage.*` is unpublished, so nobody else can resolve it.** Rule 2: the namespace
   must reverse a domain we control (forage.fyi ✓) AND that domain must publish a
   `_lexicon` TXT record pointing at a repo holding `com.atproto.lexicon.schema` records.
-  `dig @1.1.1.1 TXT _lexicon.forage.fyi` returns nothing. Until it does, `fyi.forage.*` is
+  `_lexicon.forage.fyi` has nothing at all — checked against Porkbun's authoritative
+  nameservers, and forage.fyi carries no parking wildcard, so the action is simply to
+  create the TXT. (Its sibling domain differs: croft.ing answers every undefined name from
+  a wildcard, which reads like a blocking CNAME and is not one — see
+  `CroftC/.claude/LEXICONS.md` § 2. Same action, different diagnosis, and the wrong
+  diagnosis sends you to delete zone-wide parking.) Until the TXT exists, `fyi.forage.*` is
   a private format that happens to be shaped like an NSID. The worked example to copy is
   `recipe.exchange`, verified end to end the same day: TXT → `did:plc:4cx7…` → four
   `com.atproto.lexicon.schema` records whose rkeys are the NSIDs.
