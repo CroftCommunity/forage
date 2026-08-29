@@ -92,7 +92,12 @@ test('enum, integer, boolean, array and unknown all behave as declared', () => {
   assert.equal(validateRecord(def, { ...base, flag: 'yes' }).ok, false);
   assert.equal(validateRecord(def, { ...base, items: 'x' }).ok, false, 'a string is not an array of one');
   assert.equal(validateRecord(def, { ...base, items: ['x', 2] }).ok, false, 'array items are typed too');
-  assert.equal(validateRecord(def, { ...base, blob: null }).ok, true, 'unknown accepts anything, including null');
+  // `unknown` is an arbitrary OBJECT, not an arbitrary value — this line asserted the
+  // opposite until the reference gate measured it (@atproto/lexicon: "must be an
+  // object"). The old assertion was my reading of the word, not the spec's meaning.
+  assert.equal(validateRecord(def, { ...base, blob: null }).ok, false, 'null is not an object');
+  assert.equal(validateRecord(def, { ...base, blob: 'a string' }).ok, false, 'nor is a string');
+  assert.equal(validateRecord(def, { ...base, blob: [1] }).ok, true, 'arrays pass, matching the reference');
 });
 
 test('every record in our own lexicon tree validates its own example shape', () => {
