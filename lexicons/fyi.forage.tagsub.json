@@ -15,8 +15,9 @@
         "properties": {
           "tag": {
             "type": "string",
+            "minLength": 1,
             "maxLength": 640,
-            "description": "The hashtag, bare and lowercase — no leading '#', which is punctuation rather than part of the name"
+            "description": "The hashtag, bare and lowercase — no leading '#', which is punctuation rather than part of the name. Never empty: an empty tag is not a tag, and the rule lives here rather than in a hand-rolled check so one schema stays the only schema."
           },
           "createdAt": {
             "type": "string",

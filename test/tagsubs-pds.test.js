@@ -155,6 +155,11 @@ test('a malformed record in the repo is ignored rather than rendered as a broken
       { tag: '', rkey: '3bb', createdAt: '2026-08-01T00:00:00.000Z' },
       { rkey: '3cc', createdAt: '2026-08-01T00:00:00.000Z' },
       { tag: 'baking', rkey: '', createdAt: '2026-08-01T00:00:00.000Z' },
+      // Shape-checking "is it a non-empty string" would have PASSED this one.
+      // Validating against the schema does not: createdAt is the only ordering
+      // these rows have, so a present-but-unparseable one produces a WRONG list
+      // rather than a short one — the worse of the two failures.
+      { tag: 'ferns', rkey: '3dd', createdAt: 'whenever' },
     ] });
     const res = await refreshPublished(lens, ME);
     assert.deepEqual(res.records.map((r) => r.tag), ['harvest'],

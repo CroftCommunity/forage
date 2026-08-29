@@ -23,6 +23,8 @@
 // Forage read, labelled as such, and Remove refuses in words rather than aiming
 // a delete at an rkey it has not just confirmed.
 import { normalizeTag, subscribeTag, unsubscribeTag, isSubscribed, tagSubs } from './tagsubs.js';
+import { validateRecord } from './lexicon.js';
+import { TAGSUB_RECORD } from './lexicons.js';
 
 export const PDS_CACHE_KEY = 'forage.tagsubs.pds';
 
@@ -46,11 +48,18 @@ function readCache(did) {
 // THIS FILTER IS LOAD-BEARING, not defensive. Measured against a real PDS on
 // 2026-08-29 (test/fixtures/atproto/tagsub-probe-summary.txt, P4): a
 // fyi.forage.tagsub record carrying NEITHER required field was accepted with a
-// 200. `required` in our lexicon binds Forage and nobody else, so anything may
-// put a malformed record in a repo we then read. W17 asserts that is still true,
-// so if a PDS ever starts validating we find out rather than assume.
-const wellFormed = (r) => !!r && typeof r.tag === 'string' && r.tag !== ''
-  && typeof r.rkey === 'string' && r.rkey !== '';
+// 200. A lexicon is a CONVENTION — `required` binds Forage and nobody else — so
+// a malformed record is an ordinary thing to find in a repo you read, not an
+// exotic one. W17 asserts the non-validation still holds, so if a PDS ever
+// starts checking we are told rather than left with a filter whose reason has
+// quietly expired.
+//
+// The shape rules are the SCHEMA's, checked by js/lexicon.js against the pinned
+// copy of the lexicon file — not restated here. The rkey check is separate on
+// purpose: an rkey is the record's ADDRESS, not a field of the record, so no
+// lexicon can have an opinion about it.
+const wellFormed = (r) => !!r && typeof r.rkey === 'string' && r.rkey !== ''
+  && validateRecord(TAGSUB_RECORD, r).ok;
 
 const byTag = (a, b) => String(a.tag).localeCompare(String(b.tag));
 

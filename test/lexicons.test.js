@@ -138,3 +138,19 @@ test('an ecosystem check may only be owed by a type that predates the register',
   // one that proves the rule does something.
   assert.equal(PRE_REGISTER.has('fyi.forage.tagsub'), false);
 });
+
+// The runtime cannot read files, so js/lexicons.js carries a pinned copy of the
+// schemas a browser has to validate against. A copy of a schema is a second
+// schema unless something holds them together; this is that something.
+test('every runtime schema copy in js/lexicons.js is identical to its file', async () => {
+  const runtime = await import('../js/lexicons.js');
+  const pairs = [['TAGSUB_RECORD', 'fyi.forage.tagsub']];
+  for (const [exportName, id] of pairs) {
+    const fromFile = JSON.parse(readFileSync(join(root, 'lexicons', `${id}.json`), 'utf8')).defs.main.record;
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(runtime[exportName])), fromFile,
+      `js/lexicons.js ${exportName} has drifted from lexicons/${id}.json`);
+  }
+  // And nothing is exported that is not pinned here — an unpinned copy is the
+  // one that drifts.
+  assert.deepStrictEqual(Object.keys(runtime).sort(), pairs.map(([n]) => n).sort());
+});

@@ -27,7 +27,11 @@ room) and published (`fyi.forage.tagsub` records, the repo is the truth, every
 Forage client sees the same set). `js/tagsubs-pds.js` owns the boundary, and PDS
 Save *moves* a tag rather than copying it — which is why a row's status is one
 unambiguous word and why there are no tombstones to reconcile. Why each of our
-own types exists: `docs/LEXICON-REGISTER.md`. Modes are named routing tables (`MODES` there) with a
+own types exists: `docs/LEXICON-REGISTER.md`. **A lexicon is a convention, not an
+enforcement** — measured 2026-08-29 (W17 P4): a real PDS accepted a
+`fyi.forage.tagsub` with neither required field, 200. So records are validated on
+the way IN, by `js/lexicon.js` against the schema, and a constraint a lexicon
+declares but the validator ignores fails `test/lexicon-validate.test.js`. Modes are named routing tables (`MODES` there) with a
 store-side lifecycle: network modes are RAM-only and `forage.state` is written by
 the memory mode alone (`test/store-modes.test.js` is the teeth). When these disagree
 with any document **including this one**, they win; fix the document.
