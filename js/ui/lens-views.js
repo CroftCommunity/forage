@@ -25,6 +25,7 @@ import { MEDIA_SCALE } from '../media-scale.js';
 import { settingsView } from './views.js';
 import { tagSubs, subscribeTag, unsubscribeTag, isSubscribed, normalizeTag, onChange as onTagSubsChange } from '../tagsubs.js';
 import { observeTags, topTags, SORTS, sortLabel } from '../tag-stats.js';
+import { trendingTags, trendingTtl, setTrendingTtl, DEFAULT_TTL_MS } from '../trending-tags.js';
 
 let manager = null;        // null = not booted; 'unavailable' = origin has no OAuth client
 let session = null;        // the lens session shape, set after restore
@@ -1353,7 +1354,7 @@ export function lensHashtagsView() {
   // The default slice is small enough to scan; "Show all" exists because a
   // browse surface that only ever shows a top-N cannot answer "what else is in
   // there", which is the question someone browsing is actually asking.
-  const seenList = el('div', {});
+  const seenList = el('div', { 'data-loaded-tags': '1' });
   const countLine = el('div', { class: 'xs muted', style: 'margin-top:6px' });
   const paintSeen = () => {
     const all = topTags(Infinity, { sort: seenSort });
@@ -1397,6 +1398,37 @@ export function lensHashtagsView() {
     seenList, countLine);
   paintSeen();
 
+  // ---- trending: derived, cached, and honest about its sample ----
+  const trendList = el('div', {}, skeleton(3));
+  const trendNote = el('div', { class: 'xs muted', style: 'margin-top:6px' });
+  const INTERVALS = [[15 * 60 * 1000, 'every 15 minutes'], [DEFAULT_TTL_MS, 'hourly'],
+    [6 * 60 * 60 * 1000, 'every 6 hours'], [24 * 60 * 60 * 1000, 'daily']];
+  const ttlSel = el('select', { class: 'form', 'data-trend-ttl': '1', 'aria-label': 'How often to refresh trending' },
+    ...INTERVALS.map(([ms, label]) => el('option', { value: String(ms), selected: trendingTtl() === ms || false }, label)));
+  ttlSel.addEventListener('change', () => { setTrendingTtl(Number(ttlSel.value)); rerender(); });
+
+  trendingTags(lens).then((t) => {
+    trendList.replaceChildren(t.tags.length
+      ? rows(t.tags.slice(0, SEEN_PAGE), (n) => `${plural(n, 'post')} in the sample`)
+      : el('div', { class: 'xs muted', style: 'padding:6px' },
+          'Nothing to read right now — trending was unavailable.'));
+    // Say what was actually looked at. "Trending hashtags" would claim a
+    // ranking Bluesky does not publish; this says which posts were counted.
+    trendNote.replaceChildren(t.sampled.feeds
+      ? `Tags on ${plural(t.sampled.posts, 'post')} across ${plural(t.sampled.feeds, 'trending feed')}${t.stale ? ' — last read a while ago; the network is not answering now' : ''}.`
+      : 'No sample yet.');
+  }).catch((e) => {
+    trendList.replaceChildren(emptyState('Trending unavailable', e.message));
+  });
+
+  const trendCard = el('div', { class: 'card', 'data-trending-tags': '1' },
+    el('h2', {}, 'Trending now'),
+    el('div', { class: 'xs muted', style: 'margin-bottom:8px' },
+      'Bluesky publishes no hashtag ranking, so this reads the tags on posts inside the feeds that are trending. It is a barometer of the network, not a chart of it.'),
+    el('div', { class: 'row wrap', style: 'gap:8px;align-items:center;margin-bottom:8px' },
+      el('span', { class: 'xs muted' }, 'Refresh'), ttlSel),
+    trendList, trendNote);
+
   const input = el('input', { type: 'text', class: 'form', placeholder: 'Find a hashtag…', 'data-tag-search': '1', 'aria-label': 'Search hashtags' });
   const out = el('div', {});
   const go = () => {
@@ -1430,7 +1462,9 @@ export function lensHashtagsView() {
       'Searches real posts and reports the tags they carry — so this reaches past what you happen to have read.'),
     el('div', { class: 'row', style: 'gap:6px' }, input, btn), out);
 
-  return { main: el('div', {}, el('h1', {}, 'Hashtags'), seenCard, searchCard), side: null };
+  // Owner's ordering (2026-08-28): search, then trending, then what you have
+  // loaded. P2 makes them three equal slices with their own full pages.
+  return { main: el('div', {}, el('h1', {}, 'Hashtags'), searchCard, trendCard, seenCard), side: null };
 }
 
 export function lensFeedsView() {

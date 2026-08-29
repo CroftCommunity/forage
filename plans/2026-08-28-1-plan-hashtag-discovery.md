@@ -1,6 +1,6 @@
 # Plan: hashtag discovery — search, trending, and what you have read
 
-**Status:** PHASE 1 IN FLIGHT (2026-08-28). Phases 2–4 planned, not started.
+**Status:** **PHASE 1 DONE** (2026-08-28). Phases 2–4 planned, not started.
 **Serves:** the owner's public-site queue. Follows the left nav landing
 (`2026-08-26-4`, forage `6b1dedf`) and the hashtag subscriptions that shipped
 with it (`34a5fea`, `17df1c5`, `0f5d420`).
@@ -98,7 +98,7 @@ data is not.
 Each phase lands on its own, RED first, and every phase shipping user-visible
 behaviour extends `e2e/tagsub.workflow.mjs` or adds a sibling (invariant 6b).
 
-### P1 — trending hashtags, derived and cached  *(in flight)*
+### P1 — trending hashtags, derived and cached — **DONE 2026-08-28**
 
 RED: a unit test that the trending list is harvested from the trending feeds'
 posts, and a second that a background refresh does **not** touch the loaded
@@ -109,6 +109,25 @@ statistics — the collision rule, made executable.
 - The refresh interval is a setting (default hourly) on `/me`, beside the other
   device-local preferences.
 - `/hashtags` gains the section, headed with what it actually sampled.
+
+**Landed as:** `js/trending-tags.js` + `test/trending-tags.test.js` (9 tests),
+the section on `/hashtags` with a refresh dial (15m / hourly / 6h / daily,
+hourly by default), and the collision rule asserted twice — once as a unit test
+and once end-to-end in `e2e/tagsub.workflow.mjs`, where a tag that is only
+trending is checked to be absent from `forage.tagstats`.
+
+**Two things the tests caught, both mine:**
+
+1. **The async storage helper tore down its own fixture.** `try { return
+   fn(store) } finally { restore() }` restores the moment an async body returns
+   its PROMISE, so every assertion after the first `await` read the real
+   environment. It fails as an empty store, which looks exactly like "the code
+   wrote nothing" — three tests failed that way before the pattern gave it
+   away. The helper awaits now, and says why in a comment.
+2. **A workflow assertion written when the page had one list.** The filter
+   check demanded that EVERY tag on the page match the filter; with trending
+   added there are three lists, and the filter belongs to one. Scoped to
+   `[data-loaded-tags]` rather than loosened.
 
 ### P2 — the three-section page
 

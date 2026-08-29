@@ -50,7 +50,10 @@ const RESPONSES = {
   getAuthorFeed: { feed: [] },
   getTimeline: { feed: [{ post: post('t1', 'did:plc:tl', '2026-08-28T09:00:00Z') }] },
   searchPosts: { posts: [post('h1', 'did:plc:hh', '2026-08-28T15:00:00Z', ['harvest', 'baking'])] },
-  getTrendingTopics: { topics: [] },
+  getTrendingTopics: { topics: [
+    { topic: 'x1', displayName: 'A trend', link: '/profile/did:plc:gen/feed/one' },
+  ] },
+  'getFeed?': { feed: [{ post: post('tr1', 'did:plc:tt', '2026-08-28T16:00:00Z', ['mycology']) }] },
   getFeedGenerators: { feeds: [] },
 };
 
@@ -111,7 +114,7 @@ export async function run() {
     await page.waitForSelector('.postrow');
     await page.goto(`${s.origin}/hashtags`);
     await page.waitForSelector('[data-browse-tag]');
-    const seenTags = await page.$$eval('[data-browse-tag]', (a) => a.map((e) => e.getAttribute('data-browse-tag')));
+    const seenTags = await page.$$eval('[data-loaded-tags="1"] [data-browse-tag]', (a) => a.map((e) => e.getAttribute('data-browse-tag')));
     assert.ok(seenTags.includes('harvest'),
       `a tag carried by a post I just read shows up as seen: ${JSON.stringify(seenTags)}`);
 
@@ -122,17 +125,38 @@ export async function run() {
     assert.match(copy, /Not scrolling — loading/i,
       'and says precisely what "loaded" counts, since "seen" was the confusing word');
 
+    // TRENDING is derived from the trending FEEDS — Bluesky publishes no
+    // hashtag ranking — and the section says what it sampled rather than
+    // implying a chart.
+    await page.waitForSelector('[data-trending-tags="1"]');
+    const trendText = await page.locator('[data-trending-tags="1"]').innerText();
+    assert.match(trendText, /barometer of the network, not a chart/i,
+      'the claim is bounded in the copy');
+    assert.match(trendText, /across \d+ trending feed/i,
+      'and the sample is stated: which posts, from how many feeds');
+    assert.match(trendText, /mycology/,
+      'a tag from a trending feed appears, and it is one I have never read');
+
+    // THE COLLISION RULE, end to end: polling did not add it to MY statistics.
+    const loadedTags = await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('forage.tagstats') || '{}')));
+    assert.ok(!loadedTags.includes('mycology'),
+      'a tag that is only trending has not entered "hashtags loaded" — one list is what I read, the other is what is happening');
+
     // Filtering narrows the list without changing what is stored.
+    // Scoped to the LOADED list: the page carries three now, and the filter
+    // belongs to one of them. The unscoped version demanded that trending's
+    // tags match a filter that was never applied to them.
     await page.fill('[data-tag-filter="1"]', 'harv');
     await page.waitForFunction(() =>
-      [...document.querySelectorAll('[data-browse-tag]')].every((e) => e.getAttribute('data-browse-tag').includes('harv')));
+      [...document.querySelectorAll('[data-loaded-tags="1"] [data-browse-tag]')]
+        .every((e) => e.getAttribute('data-browse-tag').includes('harv')));
     assert.match(await page.locator('body').innerText(), /of \d+ hashtags? match/i,
       'and says how many of how many, rather than silently hiding the rest');
     await page.fill('[data-tag-filter="1"]', '');
-    await page.waitForFunction(() => document.querySelectorAll('[data-browse-tag]').length > 0);
+    await page.waitForFunction(() => document.querySelectorAll('[data-loaded-tags="1"] [data-browse-tag]').length > 0);
 
     // The sort bar reorders the list rather than just lighting up.
-    const order = () => page.$$eval('[data-browse-tag]', (a) => a.map((e) => e.getAttribute('data-browse-tag')));
+    const order = () => page.$$eval('[data-loaded-tags="1"] [data-browse-tag]', (a) => a.map((e) => e.getAttribute('data-browse-tag')));
     await page.waitForSelector('[data-tag-sort="1"] [data-sort="alpha"]');
     const byCount = await order();
     await page.click('[data-tag-sort="1"] [data-sort="alpha"]');
