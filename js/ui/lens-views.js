@@ -24,7 +24,7 @@ import { POST_LIMITS, IMAGE_LIMITS, graphemes, withTag } from '../compose.js';
 import { MEDIA_SCALE } from '../media-scale.js';
 import { settingsView } from './views.js';
 import { tagSubs, subscribeTag, unsubscribeTag, isSubscribed, normalizeTag, onChange as onTagSubsChange } from '../tagsubs.js';
-import { observeTags, topTags } from '../tag-stats.js';
+import { observeTags, topTags, SORTS, sortLabel } from '../tag-stats.js';
 
 let manager = null;        // null = not booted; 'unavailable' = origin has no OAuth client
 let session = null;        // the lens session shape, set after restore
@@ -505,12 +505,6 @@ function applyMediaScale() {
 
 // One board renderer: applies the window sort and the view mode.
 function renderBoard(card, posts, { wholeCorpus = false } = {}) {
-  // Every board a reader actually sees feeds the tag statistics. This is the
-  // choke point rather than lensRow, because writing storage once per BOARD is
-  // cheap where once per ROW is not — and /hashtags has no other material to
-  // rank from: Bluesky exposes no hashtag list (probed 2026-08-28, getTrends
-  // returns feeds).
-  observeTags(posts);
   const view = boardView();
   // 3u: the language filter runs BEFORE the window sort, so "Top" ranks what
   // you can actually read. Nothing is hidden silently — the count says so.
@@ -519,6 +513,17 @@ function renderBoard(card, posts, { wholeCorpus = false } = {}) {
   const prefs = lang.active();
   const visible = prefs.length ? posts.filter((p) => lang.matches(p, prefs)) : posts;
   const hidden = posts.length - visible.length;
+  // Count what the reader was SHOWN, which is `visible` and not `posts`. The
+  // first version observed before this filter ran, so a post hidden by the
+  // language preference still fed the browse list — statistics about reading
+  // that included things nobody could read. (Owner asked what "seen" counts;
+  // answering it precisely is what found this.)
+  //
+  // "Seen" still means LOADED ONTO A BOARD YOU OPENED, including below the
+  // fold — not scrolled past. Doing it by viewport would need an
+  // IntersectionObserver per row, and the copy on /hashtags says "as your
+  // boards load" rather than implying otherwise.
+  observeTags(visible);
   // 4e: when the SERVER ranked the whole corpus (a /h/ board), the posts arrive
   // already ordered — re-sorting locally would shuffle a ranking we did not
   // compute, and the window has already been applied at the query.
@@ -1318,6 +1323,13 @@ function feedHeaderCard(info, onChange) {
 // render) and what a SEARCH turns up (real posts, whose tags are real and in
 // use). The copy says which is which, because a ranked list with no stated
 // sample reads as authoritative.
+// Page-lifetime, like the board sort above it — a chosen ordering is not worth
+// a stored preference until someone asks for it to stick.
+let seenSort = 'count';
+let seenFilter = '';
+let seenShowAll = false;
+const SEEN_PAGE = 12;
+
 export function lensHashtagsView() {
   const subCount = tagSubs().length;
   // Each list states its own sample IN ITS OWN TERMS: "3 posts in your boards"
@@ -1327,23 +1339,63 @@ export function lensHashtagsView() {
   const rows = (tags, label) => {
     if (!tags.length) return el('div', { class: 'xs muted', style: 'padding:6px' }, 'Nothing yet.');
     const stack = el('div', { class: 'stack' });
-    for (const { tag, count } of tags) {
+    for (const row of tags) {
+      const { tag, count } = row;
       stack.append(el('div', { class: 'row spread', style: 'align-items:center;gap:8px;padding:4px 0' },
         el('div', {},
           el('a', { href: `/h/${encodeURIComponent(tag)}`, 'data-browse-tag': tag }, `#${tag}`),
-          el('span', { class: 'xs muted' }, ` — ${label(count)}`)),
+          el('span', { class: 'xs muted' }, ` — ${label(count, row)}`)),
         tagSubButton(tag)));
     }
     return stack;
   };
 
-  // Top N, matched to how many feeds the nav shows, so the two lists balance.
-  const seen = topTags(Math.max(5, subCount + 5));
+  // The default slice is small enough to scan; "Show all" exists because a
+  // browse surface that only ever shows a top-N cannot answer "what else is in
+  // there", which is the question someone browsing is actually asking.
+  const seenList = el('div', {});
+  const countLine = el('div', { class: 'xs muted', style: 'margin-top:6px' });
+  const paintSeen = () => {
+    const all = topTags(Infinity, { sort: seenSort });
+    const q = seenFilter.trim().toLowerCase();
+    const matching = q ? all.filter((t) => t.tag.includes(q)) : all;
+    const shown = seenShowAll ? matching : matching.slice(0, SEEN_PAGE);
+    seenList.replaceChildren(rows(shown,
+      (n, r) => `${plural(n, 'post')} · ${plural(r.likes || 0, 'like')}`));
+    const rest = matching.length - shown.length;
+    countLine.replaceChildren(
+      matching.length === all.length
+        ? `${plural(all.length, 'hashtag')} loaded so far.`
+        : `${matching.length} of ${plural(all.length, 'hashtag')} match "${seenFilter.trim()}".`);
+    if (rest > 0) {
+      const more = el('button', { class: 'btn sm', style: 'margin-left:8px', 'data-show-all': '1' }, `Show all ${matching.length}`);
+      more.addEventListener('click', () => { seenShowAll = true; rerender(); });
+      countLine.append(more);
+    } else if (seenShowAll && matching.length > SEEN_PAGE) {
+      const less = el('button', { class: 'btn sm', style: 'margin-left:8px', 'data-show-all': '0' }, 'Show fewer');
+      less.addEventListener('click', () => { seenShowAll = false; rerender(); });
+      countLine.append(less);
+    }
+  };
+
+  const sortBar = el('div', { class: 'row wrap', style: 'gap:6px', 'data-tag-sort': '1' });
+  for (const id of SORTS) {
+    const b = el('button', { class: 'btn sm' + (seenSort === id ? ' primary' : ''),
+      'data-sort': id, 'aria-pressed': String(seenSort === id) }, sortLabel(id));
+    b.addEventListener('click', () => { seenSort = id; rerender(); });
+    sortBar.append(b);
+  }
+  const filterInput = el('input', { type: 'text', class: 'form', value: seenFilter,
+    placeholder: 'Filter…', 'data-tag-filter': '1', 'aria-label': 'Filter loaded hashtags' });
+  filterInput.addEventListener('input', () => { seenFilter = filterInput.value; paintSeen(); });
+
   const seenCard = el('div', { class: 'card' },
-    el('h2', {}, 'Tags you have seen'),
-    el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
-      'Counted as your boards load. This is YOUR reading, not the network — Bluesky publishes no list of popular hashtags.'),
-    rows(seen, (n) => `${plural(n, 'post')} in your boards`));
+    el('h2', {}, 'Hashtags loaded'),
+    el('div', { class: 'xs muted', style: 'margin-bottom:8px' },
+      'Every post on a board you opened, including below the fold, and only what your language settings let through. Not scrolling — loading. This is YOUR reading, not the network: Bluesky publishes no list of popular hashtags.'),
+    el('div', { class: 'row wrap', style: 'gap:8px;align-items:center;margin-bottom:8px' }, sortBar, filterInput),
+    seenList, countLine);
+  paintSeen();
 
   const input = el('input', { type: 'text', class: 'form', placeholder: 'Find a hashtag…', 'data-tag-search': '1', 'aria-label': 'Search hashtags' });
   const out = el('div', {});

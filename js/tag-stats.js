@@ -52,7 +52,12 @@ function readMap() {
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
     const out = {};
     for (const [tag, v] of Object.entries(parsed)) {
-      if (v && typeof v.count === 'number' && typeof v.seen === 'number') out[tag] = v;
+      // `likes` is optional on read: entries written before it was tracked are
+      // readable as zero rather than discarded. Throwing away a reader's whole
+      // cache to add a field is a worse trade than a few tags reading 0.
+      if (v && typeof v.count === 'number' && typeof v.seen === 'number') {
+        out[tag] = { count: v.count, seen: v.seen, likes: typeof v.likes === 'number' ? v.likes : 0 };
+      }
     }
     return out;
   } catch { return {}; }
@@ -87,9 +92,13 @@ export function observeTags(posts) {
     seen.add(id);
     if (!tags.length) continue;
     const at = nextSeq();
+    // Likes are summed from the SAME posts the count counts, so both sorts
+    // share one denominator — a second sample would make "most liked" and
+    // "most posts" answer about different material.
+    const likes = Number(p.likes) || 0;
     for (const tag of tags) {
-      const prev = map[tag] || { count: 0, seen: 0 };
-      map[tag] = { count: prev.count + 1, seen: at };
+      const prev = map[tag] || { count: 0, seen: 0, likes: 0 };
+      map[tag] = { count: prev.count + 1, seen: at, likes: prev.likes + likes };
       touched = true;
     }
   }
@@ -105,9 +114,31 @@ export function observeTags(posts) {
   } catch { /* private mode: the browse list is simply thinner */ }
 }
 
-export function topTags(n) {
-  return Object.entries(readMap())
-    .sort((a, b) => (b[1].count - a[1].count) || (b[1].seen - a[1].seen))
-    .slice(0, Math.max(0, n | 0))
-    .map(([tag, v]) => ({ tag, count: v.count }));
+// The orderings honestly available from what is stored. A fourth the owner
+// asked about — "most posts in the last thirty days" — is NOT offered, and the
+// omission is the point: this keeps ONE running total per tag, so a windowed
+// count would have to be invented. Doing it properly means per-window buckets,
+// which is a different storage shape and a deliberate decision rather than a
+// tweak.
+export const SORTS = Object.freeze(['count', 'likes', 'recent', 'alpha']);
+const SORT_LABELS = { count: 'Most posts', likes: 'Most liked', recent: 'Recently loaded', alpha: 'A–Z' };
+export const sortLabel = (id) => SORT_LABELS[id] || null;
+
+const COMPARE = {
+  count: (a, b) => (b[1].count - a[1].count) || (b[1].seen - a[1].seen),
+  likes: (a, b) => (b[1].likes - a[1].likes) || (b[1].count - a[1].count),
+  recent: (a, b) => (b[1].seen - a[1].seen) || (b[1].count - a[1].count),
+  alpha: (a, b) => a[0].localeCompare(b[0]),
+};
+
+export function topTags(n, { sort = 'count' } = {}) {
+  // An unknown sort falls back rather than returning nothing: a bad value in
+  // storage or a stale link should cost you an ordering, not the whole list.
+  const cmp = COMPARE[sort] || COMPARE.count;
+  const all = Object.entries(readMap()).sort(cmp);
+  // A non-finite or absent n means EVERY tag. `n | 0` would have turned
+  // Infinity into 0 and silently returned nothing, which is the worst possible
+  // reading of "show me all of them".
+  const limited = Number.isFinite(n) ? all.slice(0, Math.max(0, Math.trunc(n))) : all;
+  return limited.map(([tag, v]) => ({ tag, count: v.count, likes: v.likes }));
 }

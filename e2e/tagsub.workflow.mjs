@@ -119,6 +119,29 @@ export async function run() {
     const copy = await page.locator('body').innerText();
     assert.match(copy, /your reading, not the network/i,
       'the sample is stated — a ranked list with no stated sample reads as authoritative');
+    assert.match(copy, /Not scrolling — loading/i,
+      'and says precisely what "loaded" counts, since "seen" was the confusing word');
+
+    // Filtering narrows the list without changing what is stored.
+    await page.fill('[data-tag-filter="1"]', 'harv');
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll('[data-browse-tag]')].every((e) => e.getAttribute('data-browse-tag').includes('harv')));
+    assert.match(await page.locator('body').innerText(), /of \d+ hashtags? match/i,
+      'and says how many of how many, rather than silently hiding the rest');
+    await page.fill('[data-tag-filter="1"]', '');
+    await page.waitForFunction(() => document.querySelectorAll('[data-browse-tag]').length > 0);
+
+    // The sort bar reorders the list rather than just lighting up.
+    const order = () => page.$$eval('[data-browse-tag]', (a) => a.map((e) => e.getAttribute('data-browse-tag')));
+    await page.waitForSelector('[data-tag-sort="1"] [data-sort="alpha"]');
+    const byCount = await order();
+    await page.click('[data-tag-sort="1"] [data-sort="alpha"]');
+    await page.waitForSelector('[data-sort="alpha"][aria-pressed="true"]');
+    const byAlpha = await order();
+    assert.deepEqual(byAlpha, [...byAlpha].sort(), 'A–Z actually sorts alphabetically');
+    assert.ok(byAlpha.length === byCount.length, 'and shows the same tags, reordered');
+    await page.click('[data-tag-sort="1"] [data-sort="count"]');
+    await page.waitForSelector('[data-sort="count"][aria-pressed="true"]');
 
     // Joining works from here too, not only from the board.
     await page.click('[data-tagsub="harvest"]');
