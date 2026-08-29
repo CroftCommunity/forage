@@ -219,24 +219,31 @@ reason to weaken the rule; each is work.
 The register's exemption list is empty — all nine pre-register checks were done against the
 real corpora (26 record types among the 435 official lexicons, 9 in `community.lexicon.*`),
 and `test/lexicons.test.js` now allows no type to say `NOT DONE`. Two of the nine turned up
-real candidates, which is the register working in the direction it was built for.
+candidates. **Both were then narrowed by facts the schemas do not carry** — one a privacy
+posture, one an owner requirement about what the Bluesky client shows — which is worth
+saying because a field-list comparison looked conclusive and was not.
 
-- **Retire `fyi.forage.save` for `community.lexicon.bookmarks.bookmark`.** Theirs is a
-  **strict superset**: `subject` (uri) + `createdAt` + an optional `tags` array, against our
-  `subject` (at-uri) + `createdAt`. An at-uri is a uri, so every record we already write is a
-  valid one of theirs; there is no field we have that they lack, and no semantic difference —
-  a save is a bookmark. Pre-1.0, so no migration path is owed. Note the near-miss worth not
-  repeating: `app.bsky.bookmark.*` looks like the obvious candidate and is **not a record
-  type at all** — it is server-side XRPC, so there is nothing to put in a repo.
+Context for all of it: **nine of the ten `fyi.forage.*` types have never been written to a
+real PDS.** `tagsub` is the only one any code sends over a network; the rest are the memory
+tier's wire shape, and it persists to `forage.state` in localStorage.
 
-- **`fyi.forage.vote` has a candidate it cannot yet take, plus a vestigial field.**
-  `community.lexicon.interaction.like` is a deliberately generic like for *any* atproto
-  record, which is exactly our gap. What blocks it: its `subject` is a
-  `com.atproto.repo.strongRef` (uri **and cid**), ours is a bare at-uri, and the memory tier
-  synthesises records rather than committing them so there is no cid to supply. Separately,
-  the comparison surfaced that our `value` is an enum of exactly `[1]` — since bury was
-  removed on 2026-08-27 it is a required field whose only legal value is a constant. Dropping
-  it narrows the divergence from two fields to one whether or not we ever adopt.
+- **`fyi.forage.save` vs `community.lexicon.bookmarks.bookmark` is a PRIVACY decision, not a
+  cleanup — owner's call.** The shapes match (theirs is a strict superset: `subject` uri +
+  `createdAt` + optional `tags`), and my first write-up stopped there and recommended
+  retiring ours. **The behaviours are opposite.** Bluesky's bookmarks are explicitly
+  *private and server-side* — `createBookmark`/`deleteBookmark` are procedures, there is no
+  record, and the lexicon says "Creates a **private** bookmark". The community type is a repo
+  record, world-readable like a follow. Adopting it would publish everything anyone ever
+  saved. The tagsub precedent is the nearest good answer if we do want it: local by default,
+  published per item on purpose.
+
+- **`fyi.forage.vote` — no change for lens content; drop the vestigial `value`.** Owner
+  2026-08-29: likes must show the same in the Bluesky client as in Forage, and **only
+  `app.bsky.feed.like` appears there**. `community.lexicon.interaction.like` is invisible to
+  every official client, so adopting it would silently stop boosts showing up in Bluesky. The
+  lens already writes real likes — the requirement met, not a compromise. Separately and
+  regardless: `value` is an enum of exactly `[1]`, a required field whose only legal value is
+  a constant since bury was removed on 2026-08-27. Worth dropping.
 
 - **`fyi.forage.roster` is adoptable with reshaping and no blocker was found.** `list` +
   `listitem` could hold it; the cost is one record per member instead of a `literal:self`
