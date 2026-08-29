@@ -178,7 +178,7 @@ worth keeping:
   is the setting overreaching. The preference composes the OVERVIEW, not the
   address space.
 
-### P5 — local-only as a privacy choice, and per-subscription sync
+### P5 — local-only as a privacy choice, and per-subscription sync — **UNBLOCKED 2026-08-29**
 
 **This reframes what P1's storage decision WAS.** The tagsub work shipped local
 storage as a waiting room — somewhere subscriptions sit until they graduate to
@@ -242,9 +242,39 @@ eighth has to be argued for rather than added. The argument is above; the unit
 lands with the table updated and `test/invariants.test.js` extended in the same
 commit.
 
-Open, and not for me to decide: whether a subscription saved to a repo should
-then be READ back on another device — that makes it sync rather than publish,
-and raises what happens when the two disagree.
+### Settled 2026-08-29 — all three questions answered
+
+**Q2, published means SYNCED.** Owner: *"if you publish to pds it should be
+picked up by each instance of forage the same from the PDS across clients for
+forage."* And *"when local it's local to the device, no mystery, full
+admission."*
+
+That is simpler than the reconciliation problem I raised, and it is simpler
+because of a design consequence worth stating: **these are TWO SETS, not one
+merged list.**
+
+- **local** — `js/tagsubs.js`, this device, never leaves it, row says so
+- **published** — `fyi.forage.tagsub` records, listed from the repo with
+  `com.atproto.repo.listRecords`, identical in every Forage client
+
+Kept separate, the tombstone problem disappears. Unsubscribing from a published
+tag deletes the record, and **its absence IS the deletion** — there is nothing
+to reconcile because the repo is simply the truth for that set. Tombstones were
+only needed if a device merged the two into one cached list and then had to work
+out whether a missing entry meant "deleted" or "not yet seen".
+
+**The one cost, and it must not be papered over:** published tags need the
+network. A cache is a fallback for DISPLAY only — show the last known set, say
+that is what it is, and never write based on a stale copy.
+
+**Q3, the button says "PDS Save".** Owner's wording, chosen over "Publish". It
+does not carry "public" on its own, so the visibility line sits under the
+section heading rather than in a help page: *PDS-saved tags are visible to
+anyone, like your follows.* The publicness belongs where the decision is made.
+
+**Still open, deliberately deferred to the code:** what Unpublish does — fall
+back to local-only on the device that pressed it, or vanish entirely. Friendlier
+versus more honest about what one button did. Decide with it on screen.
 
 ### P4 — the word cloud — **DONE 2026-08-29**
 
