@@ -163,18 +163,40 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 Three gaps, all measured 2026-08-29 while the dimension was being written. None is a
 reason to weaken the rule; each is work.
 
-- **`fyi.forage.*` is unpublished, so nobody else can resolve it.** Rule 2: the namespace
-  must reverse a domain we control (forage.fyi ✓) AND that domain must publish a
-  `_lexicon` TXT record pointing at a repo holding `com.atproto.lexicon.schema` records.
-  `_lexicon.forage.fyi` has nothing at all — checked against Porkbun's authoritative
-  nameservers, and forage.fyi carries no parking wildcard, so the action is simply to
-  create the TXT. (Its sibling domain differs: croft.ing answers every undefined name from
-  a wildcard, which reads like a blocking CNAME and is not one — see
-  `CroftC/.claude/LEXICONS.md` § 2. Same action, different diagnosis, and the wrong
-  diagnosis sends you to delete zone-wide parking.) Until the TXT exists, `fyi.forage.*` is
-  a private format that happens to be shaped like an NSID. The worked example to copy is
-  `recipe.exchange`, verified end to end the same day: TXT → `did:plc:4cx7…` → four
-  `com.atproto.lexicon.schema` records whose rkeys are the NSIDs.
+- **`fyi.forage.*` is unpublished, so nobody else can resolve it — NEEDS THE OWNER.**
+  Rule 2 of `CroftC/.claude/LEXICONS.md`. Two steps, both owner-console; everything either
+  side of them is built and proven.
+
+  1. **An account whose handle is `forage.fyi`.** Owner decision 2026-08-29: one account
+     per domain, so namespace authority reads as the project rather than a person and
+     survives anyone changing personal accounts. `recipe.exchange` is the live example —
+     its `_atproto` and `_lexicon` records name the same DID. bsky.social needs no invite
+     code (checked via `describeServer`); it needs an email the owner can receive at.
+  2. **Two TXT records at Porkbun**, values printed by the publisher in step 1 below:
+
+     ```
+     _atproto.forage.fyi   TXT   did=<the DID>     # makes the handle the domain
+     _lexicon.forage.fyi   TXT   did=<the DID>     # makes the namespace resolvable
+     ```
+
+     Nothing is deleted. Neither name touches the apex, so Pages keeps serving —
+     `forage.fyi` A records are 185.199.x and are not involved. `_lexicon.forage.fyi` is
+     genuinely empty today, with no parking wildcard on this zone (unlike croft.ing; the
+     difference and why it matters is in `CroftC/.claude/LEXICONS.md` § 2).
+
+  What is already done, so this is not a research task:
+
+  ```
+  node CroftC/.claude/bin/publish-lexicons.mjs --repo forage --as <handle>   # writes the 10 schemas, prints the TXT
+  node CroftC/.claude/bin/publish-lexicons.mjs --verify forage.fyi --repo forage   # after the 600s TTL
+  ```
+
+  The publisher was proven end to end 2026-08-29: all ten schemas written to the standing
+  test account, read back **unauthenticated**, then removed — so what is unproven here is
+  the DNS, not the mechanism. `--verify` walks the chain a consumer walks (authoritative
+  nameserver → DID → PDS → served schemas, compared canonically against disk) rather than
+  confirming that a record was typed.
+
 - **`js/lexicon.js` is a hand-rolled mirror and is not gated against the reference.**
   Rule 4: `@atproto/lexicon` is the validator of record; a hand-rolled one is legitimate
   here (browser runtime, no build step) but must be gated against the official one on the
