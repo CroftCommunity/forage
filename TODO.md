@@ -158,6 +158,34 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
   hashtags exist. Our split is the honest one (DL-025): `/f/` feeds are not
   targetable, `/h/` hashtags are.
 
+## Owed by the lexicon dimension (`CroftC/.claude/LEXICONS.md`)
+
+Three gaps, all measured 2026-08-29 while the dimension was being written. None is a
+reason to weaken the rule; each is work.
+
+- **`fyi.forage.*` is unpublished, so nobody else can resolve it.** Rule 2: the namespace
+  must reverse a domain we control (forage.fyi ✓) AND that domain must publish a
+  `_lexicon` TXT record pointing at a repo holding `com.atproto.lexicon.schema` records.
+  `dig @1.1.1.1 TXT _lexicon.forage.fyi` returns nothing. Until it does, `fyi.forage.*` is
+  a private format that happens to be shaped like an NSID. The worked example to copy is
+  `recipe.exchange`, verified end to end the same day: TXT → `did:plc:4cx7…` → four
+  `com.atproto.lexicon.schema` records whose rkeys are the NSIDs.
+- **`js/lexicon.js` is a hand-rolled mirror and is not gated against the reference.**
+  Rule 4: `@atproto/lexicon` is the validator of record; a hand-rolled one is legitimate
+  here (browser runtime, no build step) but must be gated against the official one on the
+  same fixtures, so a divergence is a test failure rather than a surprise at a repo we do
+  not own. The pattern already exists in this workspace —
+  `discovery/alpha/experiments/lexicon-community/scripts/gate.mjs` runs the official
+  validator beside a Rust mirror. Add `@atproto/lexicon` as a devDependency and cross-check
+  every lexicon file plus the adversarial records; it never ships to the browser.
+- **The `fyi.forage.tagsub` register entry checked four official types and not
+  `community.lexicon.*`.** Rule 1 wants three places searched, and the third is the one
+  most likely to make a type unnecessary — while a sibling repo
+  (`discovery/alpha/experiments/lexicon-community/`) had been contributing to that very
+  namespace. The conclusion may well stand (there is no subscription-to-a-query type
+  there either), but the entry currently claims a search it did not do. Re-run it and
+  amend the row.
+
 ## Owed by the lexicon register
 
 `docs/LEXICON-REGISTER.md` (added 2026-08-29 with P5) requires every
