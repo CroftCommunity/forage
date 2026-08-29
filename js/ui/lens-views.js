@@ -560,18 +560,62 @@ const feedHrefFor = (slug) => {
   return (entry && feedPath({ creator: entry.creator, rkey: entry.slug })) || `/f/${slug}`;
 };
 
-const lensRow = (p, view = 'card') => postRow(p, !!session, {
-  onVote: lensVote(p),
-  // 3i: never duplicate the title — a preview renders only when it adds
-  // content. Card mode carries media and tag doorways; compact is dense.
-  bodyNode: view === 'compact' ? null
-    : (p.media && !p.maskedRemoved) ? el('div', {}, mediaNode(p), tagChips(p) || '')
-    : p.preview ? facetedBody({ ...p, body: p.preview }) : tagChips(p),
-  authorBadge: verifiedBadge(p),
-  metaExtra: langChip(p),
-  feedHref: feedHrefFor(p.feedSlug),
-  compact: view === 'compact',
-});
+// Plan 2026-08-28-1: what a row IS, said above its title. A reply names and
+// links the comment it answers — `/p?uri=` opens the thread the conversation
+// actually lives in, and the envelope already paid for the author + excerpt. A
+// repost says who repeated it, because the row's byline is the ORIGINAL
+// author's and without this line the repeat reads as their fresh post.
+function kindContext(p) {
+  if (p.itemKind === 'reply' && p.replyTo?.uri) {
+    const who = p.replyTo.author ? `@${p.replyTo.author}` : 'the conversation';
+    const cut = p.replyTo.excerpt.length > 90 ? p.replyTo.excerpt.slice(0, 90) + '…' : p.replyTo.excerpt;
+    return el('div', { class: 'xs reply-context', 'data-reply-context': p.replyTo.uri },
+      '↩ replying to ',
+      el('a', { href: `/p?uri=${encodeURIComponent(p.replyTo.uri)}` },
+        cut ? `${who}: “${cut}”` : who));
+  }
+  if (p.itemKind === 'repost') {
+    return el('div', { class: 'xs muted repost-context', 'data-repost-context': '1' },
+      `⟳ reposted by ${p.repostBy ? '@' + p.repostBy : '[unknown]'}`);
+  }
+  return null;
+}
+
+const lensRow = (p, view = 'card') => {
+  const showsMedia = view !== 'compact' && p.media && !p.maskedRemoved;
+  // Compact renders no media strip, so a placeholder-titled row takes a tiny
+  // thumbnail as its handle instead of the literal '[image]' — the same link
+  // to the same thread, showing a sliver of the thing rather than naming its
+  // absence. A video with no thumbnail keeps the text placeholder: the handle
+  // must render something.
+  const thumb = view === 'compact' && p.placeholderTitle && !p.maskedRemoved
+    ? (p.media?.kind === 'images' ? p.media.items?.[0]?.thumb : p.media?.thumb)
+    : null;
+  return postRow(p, !!session, {
+    onVote: lensVote(p),
+    aboveNode: kindContext(p),
+    // 3i: never duplicate the title — a preview renders only when it adds
+    // content. Card mode carries media and tag doorways; compact is dense.
+    bodyNode: view === 'compact' ? null
+      : showsMedia ? el('div', {}, mediaNode(p), tagChips(p) || '')
+      : p.preview ? facetedBody({ ...p, body: p.preview }) : tagChips(p),
+    // A placeholder title ('[image]', '[video]') exists so a row is never
+    // blank. A card row showing the media IS the content, so the placeholder
+    // drops there outright; a compact row swaps it for the thumb above.
+    ...(showsMedia && p.placeholderTitle ? { titleNode: null } : {}),
+    ...(thumb ? { titleNode: el('div', { class: 'posttitle' },
+      // Same href shape postRow builds — renderBoard rewrites it to /p?uri=.
+      // The img stays decorative inside a NAMED link: the label says what the
+      // link does, and invents no description of an undescribed picture.
+      el('a', { href: `/f/${p.feedSlug}/p/${p.id}`,
+        'aria-label': p.media.kind === 'video' ? 'Video post — open thread' : 'Image post — open thread' },
+        el('img', { class: 'title-thumb', src: thumb, alt: '', loading: 'lazy' }))) } : {}),
+    authorBadge: verifiedBadge(p),
+    metaExtra: langChip(p),
+    feedHref: feedHrefFor(p.feedSlug),
+    compact: view === 'compact',
+  });
+};
 
 // 3u: name the language when the post declared one you do not read. With no
 // preference stored the browser's language stands in, so a mixed board is
@@ -681,16 +725,50 @@ function sessionCard() {
 // `activeRing` is now the URL (/r/:rung) plus js/last-board.js, so the board
 // you are on is shareable, reloadable, and remembered.
 
+// Plan 2026-08-28-1: the ring board separates what its members WROTE from
+// what they ANSWERED and what they merely REPEATED. Per-page-load view state,
+// like boardSort: a tab is a filter over the loaded window, never a refetch —
+// the fan-out already paid for every kind.
+let ringTab = 'posts';
+const RING_TABS = [['posts', 'Posts'], ['replies', 'Replies'], ['reposts', 'Reposts']];
+const ringTabFor = (p) => p.itemKind === 'repost' ? 'reposts' : p.itemKind === 'reply' ? 'replies' : 'posts';
+
+function ringTabsRow(onChange) {
+  const row = el('div', { class: 'tabs', 'data-ring-tabs': '1' });
+  const paint = () => {
+    for (const b of row.children) {
+      const on = b.dataset.ringTab === ringTab;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-pressed', String(on));
+    }
+  };
+  for (const [id, label] of RING_TABS) {
+    const b = el('button', { type: 'button', class: 'tab', 'data-ring-tab': id }, label);
+    b.addEventListener('click', () => { if (ringTab !== id) { ringTab = id; paint(); onChange(); } });
+    row.append(b);
+  }
+  paint();
+  return row;
+}
+
 function ringBoard(ring, cursor) {
   const holder = el('div', {}, skeleton(6));
   // 3l: paint members as they land — a slow member no longer holds the whole
   // board on a skeleton (owner-reported hang on mutuals+1).
   const live = el('div', { class: 'card', 'data-ring-live': '1' });
+  // ONE tabs row serves both phases; what "repaint" means advances from the
+  // arrival window to the settled board when render() lands.
+  let repaint = () => {};
+  const tabs = ringTabsRow(() => repaint());
+  const arrived = [];
   let painted = 0;
+  repaint = () => live.replaceChildren(
+    ...arrived.filter((p) => ringTabFor(p) === ringTab).map((p) => lensRow(p, boardView())));
   const onPage = (posts) => {
     if (!posts.length) return;
-    if (painted === 0) holder.replaceChildren(el('div', { class: 'xs muted', style: 'padding:4px' }, 'Loading your ring…'), live);
-    for (const p of posts) live.append(lensRow(p, boardView()));
+    if (painted === 0) holder.replaceChildren(tabs, el('div', { class: 'xs muted', style: 'padding:4px' }, 'Loading your ring…'), live);
+    arrived.push(...posts);
+    for (const p of posts) if (ringTabFor(p) === ringTab) live.append(lensRow(p, boardView()));
     painted += posts.length;
   };
   const render = (board, into) => {
@@ -698,15 +776,37 @@ function ringBoard(ring, cursor) {
     if (board.overflow) chips.append(chip(`ring capped: ${board.overflow.total} members → first ${RING_CAP} (DL-016)`, `The ring truly has ${board.overflow.total} members; the board draws the first ${RING_CAP}. Honest overflow, never silent.`));
     if (board.failures.length) chips.append(chip(`${board.failures.length} member feed(s) unreachable`, board.failures.join(', ')));
     const card = el('div', { class: 'card' });
+    // Observed ONCE, on the whole board, and deliberately outside paint():
+    //
+    // - outside, because paint() re-runs on every tab switch. observeTags
+    //   de-duplicates by post id so it would be harmless, but "count when the
+    //   board loads" is the rule and running it per repaint states a different
+    //   one.
+    // - the WHOLE board, not the active tab's rows. The language filter case is
+    //   different and stays different: a post the language filter drops can
+    //   never be seen, where a post on another tab is one click away and needed
+    //   no fetch. Counting per-tab would also make the same board yield
+    //   different statistics depending on which tab you happened to land on.
     observeTags(board.posts);
-    for (const p of board.posts) card.append(lensRow(p));
-    for (const a of card.querySelectorAll('a[href*="/p/at:"]')) {
-      const m = a.getAttribute('href').match(/\/p\/(at:.+)$/);
-      if (m) a.setAttribute('href', `/p?uri=${encodeURIComponent(m[1])}&from=${board.feedSlug}`);
-    }
+    const paint = () => {
+      const rows = board.posts.filter((p) => ringTabFor(p) === ringTab);
+      card.replaceChildren(...rows.map((p) => lensRow(p)));
+      for (const a of card.querySelectorAll('a[href*="/p/at:"]')) {
+        const m = a.getAttribute('href').match(/\/p\/(at:.+)$/);
+        if (m) a.setAttribute('href', `/p?uri=${encodeURIComponent(m[1])}&from=${board.feedSlug}`);
+      }
+      // An empty TAB is not an empty ring — say which, and that More widens
+      // the window (same honesty rule as the board sort).
+      if (!rows.length && board.posts.length) {
+        card.replaceChildren(el('div', { class: 'xs muted', style: 'padding:10px', 'data-ring-tab-empty': ringTab },
+          `No ${ringTab} among the loaded posts${board.cursor ? ' — More may reach some' : ''}.`));
+      }
+    };
+    repaint = paint;
+    paint();
     const more = board.cursor ? el('button', { class: 'btn sm' }, 'More') : null;
     if (more) more.addEventListener('click', () => { into.replaceChildren(ringBoard(ring, board.cursor)); });
-    into.replaceChildren(chips, board.posts.length ? card : emptyState('A quiet ring', 'No posts from these members yet.'), more || '');
+    into.replaceChildren(tabs, chips, board.posts.length ? card : emptyState('A quiet ring', 'No posts from these members yet.'), more || '');
   };
   lens.ringFeed(ring, { cursor, onPage, tags: tagSubs().map((r) => r.tag) }).then((b) => render(b, holder))
     .catch((e) => holder.replaceChildren(emptyState('Ring fetch failed', e.message)));
@@ -1874,10 +1974,16 @@ export function lensThreadView(params, query) {
       el('div', { class: 'row wrap', style: 'gap:6px' },
         el('a', { href: `/f/${src.feedSlug}`, class: 'xs' }, `f/${src.feedSlug}`),
         p.nsfw ? el('span', { class: 'chip badge-nsfw' }, 'NSFW') : null),
-      el('h1', {}, p.title.slice(0, 300)),
+      // The placeholder heading ('[image]', '[video]') drops when the media
+      // renders below — the picture is the thing the heading stood in for.
+      // A real title (text or alt-derived) keeps its heading above the media.
+      p.placeholderTitle && p.media ? null : el('h1', {}, p.title.slice(0, 300)),
       el('div', { class: 'postmeta' },
         p.author ? el('a', { href: `/u/${encodeURIComponent(p.author)}` }, p.author) : '[muted]',
         ` · ${plural(p.likes, 'like')} · ${timeAgo(p.createdTs)} ago · ${plural(p.commentCount, 'reply', 'replies')}`),
+      // The post's own media, at full board size — until 2026-08-28 an image
+      // post's thread page rendered no image at all.
+      p.media && !p.maskedRemoved ? mediaNode(p) : null,
       // 3i: the poster's own 1/3-2/3-3/3 chain reads as the post body
       ...(t.selfThread || []).map((part) => el('div', { class: 'small', style: 'margin-top:8px' },
         ...facetSegments(part.text, part.facets).map((seg) => {

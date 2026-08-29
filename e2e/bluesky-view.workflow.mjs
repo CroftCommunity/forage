@@ -100,7 +100,26 @@ export async function run() {
           record: { text: '', createdAt: '2026-08-25T15:30:00Z' },
           embed: { $type: 'app.bsky.embed.images#view', images: [
             { thumb: 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==', fullsize: 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==', alt: 'a test image post' } ] } } },
+        // an image-only post whose author wrote NO alt: its title is the
+        // '[image]' placeholder, which no surface prints where it can show
+        // the image instead — card renders the media, compact a title-thumb
+        // (live on forage.fyi 2026-08-28)
+        { post: { ...post('tp4', 'did:plc:cc', '2026-08-25T15:40:00Z').post,
+          record: { text: '', createdAt: '2026-08-25T15:40:00Z' },
+          embed: { $type: 'app.bsky.embed.images#view', images: [
+            { thumb: 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==', fullsize: 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==', alt: '' } ] } } },
       ] },
+      // the no-alt image post opened as a THREAD: the head renders the media
+      // itself, so the '[image]' placeholder heading must not print there
+      // either (first-match-wins: specific keys precede the generic ones)
+      'getPostThread?uri=at%3A%2F%2Fdid%3Aplc%3Acc%2Fapp.bsky.feed.post%2Ftp4': { thread: {
+        post: { ...post('tp4', 'did:plc:cc', '2026-08-25T15:40:00Z').post,
+          record: { text: '', createdAt: '2026-08-25T15:40:00Z' },
+          embed: { $type: 'app.bsky.embed.images#view', images: [
+            { thumb: 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==', fullsize: 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==', alt: '' } ] } },
+        replies: [],
+      } },
+      'getQuotes?uri=at%3A%2F%2Fdid%3Aplc%3Acc%2Fapp.bsky.feed.post%2Ftp4': { posts: [] },
       // 3r: the cascade fixture. Routing is first-match-wins by substring, so
       // quote1's own thread/quotes must be declared BEFORE the generic keys.
       'getPostThread?uri=at%3A%2F%2Fdid%3Aplc%3Acc%2Fapp.bsky.feed.post%2Fquote1': { thread: {
@@ -555,11 +574,35 @@ export async function run() {
   // 3i segment: media renders in Card; image-only titles from alt; Compact drops it
   await page.waitForSelector('.media-strip img');
   await page.waitForSelector('text=a test image post');
+  // The no-alt image post (tp4): its media renders, so the '[image]'
+  // placeholder title must NOT print above it — the image is the content.
+  assert.ok(await page.locator('.media-strip img').count() >= 2,
+    'the no-alt image post still renders its image in card mode');
+  assert.equal(await page.locator('.posttitle', { hasText: '[image]' }).count(), 0,
+    'card mode never prints the literal [image] placeholder above a rendered image');
   await page.locator('[data-board-toolbar] select').nth(2).selectOption('compact');
   await page.waitForFunction(() => !document.querySelector('.media-strip'));
   assert.ok(await page.locator('.postrow.compact').count() > 0, 'compact rows are compact');
+  // Compact renders no media strip, but a placeholder-titled row still needs a
+  // handle — a tiny thumbnail linking to the thread, not the literal '[image]'.
+  assert.equal(await page.locator('.posttitle', { hasText: '[image]' }).count(), 0,
+    'compact never prints the literal [image] either — the thumb is the handle');
+  assert.ok(await page.locator('.posttitle img.title-thumb').count() > 0,
+    'the no-alt image post shows a small thumbnail as its compact handle');
+  assert.ok(await page.locator('.posttitle a:has(img.title-thumb)').first()
+    .getAttribute('aria-label'), 'the thumb link carries an accessible name');
   await page.locator('[data-board-toolbar] select').nth(2).selectOption('card');
   await page.waitForSelector('.media-strip img');
+  assert.equal(await page.locator('img.title-thumb').count(), 0,
+    'card rows render the real media, never the compact thumb');
+
+  // The same post opened as a THREAD: the head shows the image itself (until
+  // now an image post's thread page rendered no image at all), and with the
+  // media on the page the placeholder heading drops.
+  await page.goto(`${s.origin}/p?uri=${encodeURIComponent('at://did:plc:cc/app.bsky.feed.post/tp4')}`);
+  await page.waitForSelector('.media-strip img');
+  assert.equal(await page.locator('h1', { hasText: '[image]' }).count(), 0,
+    'the thread head never prints the literal [image] above the rendered image');
 
   // 3v: a SHARED feed link, opened COLD — a fresh navigation with no prior
   // in-app state, exactly like pasting the URL to someone else. The failure

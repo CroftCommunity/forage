@@ -13,7 +13,7 @@
 // now" is defensible; "trending hashtags" would claim a ranking nobody
 // publishes.
 //
-// THE COLLISION RULE (plan 2026-08-28-1). Nothing here touches
+// THE COLLISION RULE (plan 2026-08-28-2). Nothing here touches
 // js/tag-stats.js. That module counts what a reader was SHOWN, via
 // renderBoard; this one polls. Merging them would make one list "what I read"
 // and the other "what I read plus whatever we fetched in the background", and

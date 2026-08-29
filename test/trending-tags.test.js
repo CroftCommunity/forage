@@ -8,7 +8,7 @@
 // the sample travels with the result rather than being reconstructed by the
 // view.
 //
-// THE COLLISION RULE (plan 2026-08-28-1) is tested here rather than commented,
+// THE COLLISION RULE (plan 2026-08-28-2) is tested here rather than commented,
 // because the next person adding a background fetch will not read the comment:
 // rendering counts toward "hashtags loaded", fetching does not. A refresh that
 // quietly fed the loaded statistics would make one list "what I read" and the

@@ -417,6 +417,32 @@ test('3i: image-only with NO alt falls back to a named placeholder title', () =>
     record: { text: '', createdAt: '2026-08-26T00:00:00Z' },
     embed: { $type: 'app.bsky.embed.images#view', images: [{ thumb: 't', fullsize: 'f', alt: '' }] } }), QSRC);
   assert.equal(p.title, '[image]');
+  // The placeholder is a FALLBACK name, not content — surfaces that render the
+  // media itself (the card board) need to know they may drop it, and surfaces
+  // that do not (compact, the thread head) that they must keep it. The shaper
+  // says which it is; a view comparing strings to '[image]' would re-derive.
+  assert.equal(p.placeholderTitle, true, 'the shaper marks a placeholder title');
+});
+
+test('3i: a real title — text or alt — is never marked as a placeholder', () => {
+  const fromAlt = shapeLensPost(qPost('img3', 'did:plc:a', '2026-08-26T00:00:00Z', {
+    record: { text: '', createdAt: '2026-08-26T00:00:00Z' },
+    embed: { $type: 'app.bsky.embed.images#view', images: [{ thumb: 't', fullsize: 'f', alt: 'a heron' }] } }), QSRC);
+  assert.equal(fromAlt.title, 'a heron');
+  assert.equal(fromAlt.placeholderTitle, undefined, 'an alt-derived title is real');
+
+  const fromText = shapeLensPost(qPost('t1', 'did:plc:a', '2026-08-26T00:00:00Z', {
+    record: { text: 'words', createdAt: '2026-08-26T00:00:00Z' },
+    embed: { $type: 'app.bsky.embed.images#view', images: [{ thumb: 't', fullsize: 'f', alt: '' }] } }), QSRC);
+  assert.equal(fromText.placeholderTitle, undefined, 'a text title is real');
+});
+
+test('3i: video-only with no thumb text gets the placeholder mark too', () => {
+  const p = shapeLensPost(qPost('v2', 'did:plc:a', '2026-08-26T00:00:00Z', {
+    record: { text: '', createdAt: '2026-08-26T00:00:00Z' },
+    embed: { $type: 'app.bsky.embed.video#view', thumbnail: 'https://cdn/vt.jpg', playlist: 'https://cdn/pl.m3u8' } }), QSRC);
+  assert.equal(p.title, '[video]');
+  assert.equal(p.placeholderTitle, true);
 });
 
 test('3i: video and recordWithMedia surface their media; external thumbs ride along', () => {

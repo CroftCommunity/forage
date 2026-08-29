@@ -228,9 +228,16 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
         ? { kind: 'external', thumb: mediaEmb.external.thumb, uri: mediaEmb.external.uri,
             title: mediaEmb.external.title || null }
         : undefined;
-  // an image/video-only post titles from its alt text, never renders blank
+  // an image/video-only post titles from its alt text, never renders blank.
+  // When even the alt is missing the title is a PLACEHOLDER — a name for
+  // surfaces that cannot show the media (compact rows, the thread head) —
+  // and the shaper says so, because a surface that renders the media itself
+  // shows "[image]" above the actual image otherwise (live 2026-08-28).
+  const altTitle = media?.items?.find((i) => i.alt)?.alt;
+  const placeholder = !text && !altTitle
+    && (media?.kind === 'images' || media?.kind === 'video');
   const displayTitle = text
-    || media?.items?.find((i) => i.alt)?.alt
+    || altTitle
     || (media?.kind === 'images' ? '[image]' : media?.kind === 'video' ? '[video]' : text);
   return {
     ...base,
@@ -241,6 +248,7 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
     // their title (300/300). Thread/comment rendering keeps using body.
     preview: text && external?.uri ? text : '',
     ...(media ? { media } : {}),
+    ...(placeholder ? { placeholderTitle: true } : {}),
     ...(quoted ? { quoted } : {}),
     ...(disp?.mode === 'warn' ? { warnLabels: disp.labels } : {}),
   };
@@ -359,11 +367,38 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
     selfThread, quoteCount: root.post.quoteCount ?? 0 };
 }
 
+// Plan 2026-08-28-1: an author-feed/timeline item is an ENVELOPE —
+// { post, reply?, reason? } — and reading only item.post is how a reply
+// rendered as a post with its conversation unreachable, and a repost rendered
+// as a post BY its original author. Pure classification; the view only draws.
+// replyTo carries what the envelope already paid for: the parent arrives as a
+// full postView (author + text for the context line) or as a
+// notFoundPost/blockedPost (uri alone — still enough to link the thread). A
+// bare post whose RECORD carries reply refs (search-style wrapping hands us
+// {post} only) still classifies, linking by uri alone.
+export function feedItemMeta(item) {
+  if ((item.reason?.$type || '').endsWith('#reasonRepost')) {
+    return { itemKind: 'repost', repostBy: item.reason.by?.handle || null };
+  }
+  const parent = item.reply?.parent;
+  if (parent?.uri) {
+    const full = !!parent.record; // postView; notFound/blocked carry no record
+    return { itemKind: 'reply', replyTo: { uri: parent.uri,
+      author: full ? (parent.author?.handle || null) : null,
+      excerpt: full ? (parent.record.text || '').slice(0, 200) : '' } };
+  }
+  const recParent = item.post?.record?.reply?.parent;
+  if (recParent?.uri) {
+    return { itemKind: 'reply', replyTo: { uri: recParent.uri, author: null, excerpt: '' } };
+  }
+  return { itemKind: 'post' };
+}
+
 // One bsky feed page -> our feed result shape.
 export function shapeLensFeed(feedResponse, src, { sort = 'lens', timeframe = 'all' } = {}, posture = EMPTY_POSTURE) {
   const posts = (feedResponse.feed || [])
     .filter((item) => !posture.blockedDids.has(item.post?.author?.did)) // blocked: never renders
-    .map((item) => shapeLensPost(item.post, src, posture))
+    .map((item) => ({ ...shapeLensPost(item.post, src, posture), ...feedItemMeta(item) }))
     .filter((p) => !p.hidden); // label-hidden: dropped from lists
   return {
     scope: `lens:${src.feedSlug}`, sort, timeframe,
@@ -1080,13 +1115,18 @@ export function createLens({ session = null, transport = fetch } = {}) {
         const items = data.feed || [];
         // paint this member's posts NOW — the caller renders as they arrive
         if (onPage && items.length) {
-          onPage(items.map((i) => shapeLensPost(i.post, src0, posture)).filter((p) => !p.hidden));
+          onPage(items.map((i) => ({ ...shapeLensPost(i.post, src0, posture), ...feedItemMeta(i) }))
+            .filter((p) => !p.hidden));
         }
         return { did, items, next: data.cursor };
       }));
       const items = pages.flatMap((p) => p.items);
+      // A repost merges at its REPOST time (reason.indexedAt) — the network's
+      // own author-feed order — never the original post's, which would sink a
+      // fresh repost of an old post to the bottom of the board (plan 2026-08-28-1).
+      const mergeTs = (i) => i.reason?.indexedAt || i.post.indexedAt;
       items.sort((x, y) => {
-        const t = String(y.post.indexedAt).localeCompare(String(x.post.indexedAt));
+        const t = String(mergeTs(y)).localeCompare(String(mergeTs(x)));
         if (t) return t;
         const a = String(x.post.author?.did).localeCompare(String(y.post.author?.did));
         if (a) return a;

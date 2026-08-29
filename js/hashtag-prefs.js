@@ -1,7 +1,7 @@
 // Which sections of /hashtags a reader wants to see. Device-local, all on by
 // default, and the control lives behind an ADVANCED disclosure.
 //
-// The three sections answer three different questions (plan 2026-08-28-1), and
+// The three sections answer three different questions (plan 2026-08-28-2), and
 // not everyone wants all three: a reader who never looks past their own
 // reading has no use for a network barometer, and one using Forage to find new
 // corners may not care what they already loaded. So the page is composable.
