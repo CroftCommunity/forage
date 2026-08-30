@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forage Post &amp; Thread Proposals v19</title>
-<meta name="mock-version" content="19">
-<meta name="mock-baseline" content="forage@bc4ca96">
-<meta name="mock-proposal" content="forage@7259905">
+<title>Forage Post &amp; Thread Proposals v20</title>
+<meta name="mock-version" content="20">
+<meta name="mock-baseline" content="forage@c85eebe">
+<meta name="mock-proposal" content="forage@6208fb6">
 <style>
 :root{
   --page-bg:#EFE9DE; --page-card:#F8F4EC; --page-ink:#2B251C; --page-muted:#6B6252;
@@ -309,6 +309,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
     <div class="eyebrow">Revisions</div>
     <div class="tablewrap"><table>
       <tr><th style="width:36px">v</th><th>What changed</th><th>Commit</th></tr>
+      <tr><td>20</td><td><b>The captures pass (owner-approved, 2026-08-30).</b> A, B, D, E and F get captured frames beside their sketches — Current from main (<code>forage@c85eebe</code>), Proposed from the branch (<code>forage@6208fb6</code>) where the branch changed something. Two things found and fixed: a board row's byline wrapped under a real handle (A); a deep link lost its focused comment when the quote cascade repainted (F). C's pair re-captured at the same shas</td><td><i>this</i></td></tr>
       <tr><td>19</td><td><b>Approved by the owner, 2026-08-30</b> — the captured Proposed frames in C (forage@7259905) are the decision; nothing else changed</td><td><i>this</i></td></tr>
       <tr><td>18</td><td><b>Alignment.</b> C's frames are captures of the engine, Current beside Proposed, from the mock-thread fixture; decision 1 amended to the owner's in-code change; the title, version, baselines and this table agree again (v17 said v12 in its title, and named three baselines — <code>f374bc7</code>, <code>9eb0074</code>, <code>0e20a32</code> — for one set of pixels)</td><td><code>e1d7f3c</code></td></tr>
       <tr><td>17</td><td>Baseline <code>f374bc7</code> after branch E (deep links)</td><td><code>9c086ee</code></td></tr>
@@ -342,6 +343,21 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
   <section id="a">
     <div class="eyebrow">Proposal A</div>
     <h2>The header line: avatar · name · time, and ⋯ in the corner</h2>
+    <div class="callout"><h3>v20 — captured: the board row's header line</h3>
+      <p>Real pixels of the lens board against <code>e2e/harness/mock-board.mjs</code> (a 30-character handle, a reply row, a repost row, pictures), signed out.
+        <b>Found:</b> on the phone the row's byline wrapped under the long handle and the ⋯ dropped to a second line — the same wrap C fixed on comments, not on rows;
+        fixed on the branch (<code>e2e/mock-board.workflow.mjs</code> claim A holds it). <b>Matches:</b> avatar · name · bare time · ⋯ in the corner on every row and the reply and repost context lines above the header.
+        <b>Superseded, not drift:</b> this sketch put the board name at the head of a feed row; board-cards (locked later) moved it under the action row, and that is what shipped.</p></div>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · board-lens · CURRENT (forage@c85eebe)</div>
+        <img class="shot" src="snaps/board-lens.phone.current.png" alt="Lens board today on a 390px phone: the long handle wraps the row byline and the ⋯ drops a line" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · board-lens · PROPOSED (forage@6208fb6)</div>
+        <img class="shot" src="snaps/board-lens.phone.proposed.png" alt="Lens board on the branch on a 390px phone: the handle ellipsizes and the ⋯ stays on the line" width="390"></div>
+    </div>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Desktop · board-lens · CURRENT (forage@c85eebe)</div>
+        <img class="shot" src="snaps/board-lens.desktop.current.png" alt="Lens board today on desktop"></div>
+    </div>
     <p class="sub">Every post and every comment opens the same way: a 32px avatar, the author, a dot, how long ago. On a feed row
       the board (<code>f/gardening</code>) leads the line instead, because that is what you scan a mixed feed by. The ⋯ sits
       top-right on the feed row <b>and</b> on the read view, so it is one gesture in both places. Vote moves off the left rail
@@ -462,6 +478,14 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
   <section id="b">
     <div class="eyebrow">Proposal B</div>
     <h2>The ⋯ menu: Bluesky's list, Forage's items</h2>
+    <div class="callout"><h3>v20 — captured: the menu open on a reply</h3>
+      <p>Shipped as drawn: a bottom sheet titled Options with a close button on the phone, a popover under the ⋯ on desktop; three groups by thin rules (post · thread · account), Save present, Report last and red. Identical on main and the branch, so one column.</p></div>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · menu-lens · CURRENT (forage@c85eebe)</div>
+        <img class="shot" src="snaps/menu-lens.phone.current.png" alt="The ⋯ menu on a phone: a bottom sheet titled Options" width="390"></div>
+      <div class="device desk"><div class="device-label">Desktop · menu-lens · CURRENT (forage@c85eebe)</div>
+        <img class="shot" src="snaps/menu-lens.desktop.current.png" alt="The ⋯ menu on desktop: a popover under the ⋯"></div>
+    </div>
     <p class="sub">Bluesky's shape: <b>one flat list</b>, label left, icon right, destructive last. The thin separators are the only
       grouping — three groups (post · thread · account), no headings and no submenus. Open it above: a popover under the ⋯ on
       desktop, a bottom sheet on the phone (Reddit's “Options” sheet, with Bluesky's rows). What goes in it is the decision;
@@ -489,6 +513,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
   <section id="c">
     <div class="eyebrow">Proposal C</div>
     <h2>Threading: a rail only where there is a branch</h2>
+    <div class="callout"><h3>v20 note</h3><p>The frames below were re-captured for v20 at <code>forage@c85eebe</code> / <code>forage@6208fb6</code>. The v18 gap (the byline wrap, the missing Reply) landed in <code>c85eebe</code>, so both columns now agree here; the v18 pair that showed the gap is in git at <code>e1d7f3c</code>.</p></div>
     <div class="callout"><h3>v18 — as built, captured: Current beside Proposed</h3>
       <p>Real pixels, both columns, from <code>scripts/mock-snaps.mjs</code> against <code>e2e/harness/mock-thread.mjs</code> — the Bluesky-view thread,
         signed in, with handles at the lengths Bluesky hands us, a quote with a reply under it, a chain four deep and a zero-like leaf.
@@ -497,15 +522,15 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
         Every claim the Proposed frame makes is held by <code>e2e/mock-thread.workflow.mjs</code> (claims A byline · B stack · C Reply), so approving
         this frame approves what the gate runs. The drawn frames further down are the v11 sketch the decisions were made on — kept for the record, not for approval.</p></div>
     <div class="stage">
-      <div class="device phone"><div class="device-label">Phone · lens thread · CURRENT (forage@bc4ca96)</div>
+      <div class="device phone"><div class="device-label">Phone · lens thread · CURRENT (forage@c85eebe)</div>
         <img class="shot" src="snaps/thread-lens.phone.current.png" alt="Forage lens thread today on a 390px phone: the long handle wraps the byline, the ⋯ drops to a second line, and the action row has no Reply" width="390"></div>
-      <div class="device phone"><div class="device-label">Phone · lens thread · PROPOSED (forage@7259905)</div>
+      <div class="device phone"><div class="device-label">Phone · lens thread · PROPOSED (forage@6208fb6)</div>
         <img class="shot" src="snaps/thread-lens.phone.proposed.png" alt="Forage lens thread on the branch on a 390px phone: the handle ellipsizes on one line with the ⋯ in the corner, and ↩ Reply sits on every action row" width="390"></div>
     </div>
     <div class="stage">
-      <div class="device desk"><div class="device-label">Desktop · lens thread · CURRENT (forage@bc4ca96)</div>
+      <div class="device desk"><div class="device-label">Desktop · lens thread · CURRENT (forage@c85eebe)</div>
         <img class="shot" src="snaps/thread-lens.desktop.current.png" alt="Forage lens thread today on desktop"></div>
-      <div class="device desk"><div class="device-label">Desktop · lens thread · PROPOSED (forage@7259905)</div>
+      <div class="device desk"><div class="device-label">Desktop · lens thread · PROPOSED (forage@6208fb6)</div>
         <img class="shot" src="snaps/thread-lens.desktop.proposed.png" alt="Forage lens thread on the branch on desktop: ↩ Reply on every node"></div>
     </div>
     <div class="callout"><h3>What the captures found that the drawing could not</h3>
@@ -764,6 +789,16 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
   <section id="d">
     <div class="eyebrow">Proposal D</div>
     <h2>The like control: one target, arrow and count together — and it buzzes</h2>
+    <div class="callout"><h3>v20 — captured: the pill on a row and the stack on a reply</h3>
+      <p>Shipped as decided: the post's like is a pill (arrow · count) on the action row, the guest's pill a door with a person glyph (board-cards decision 1); a reply's like is the count-over-arrow stack in the avatar column at the vertical middle (decision 1 as amended, C above). Haptics cannot show in a still; <code>e2e/no-downvote</code> presses both ways. Identical on main and the branch.</p></div>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · board-lens-in · CURRENT (forage@c85eebe)</div>
+        <img class="shot" src="snaps/board-lens-in.phone.current.png" alt="Lens board signed in on a phone: the like pill with the arrow" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · board-lens · CURRENT (forage@c85eebe)</div>
+        <img class="shot" src="snaps/board-lens.phone.current.png" alt="Lens board signed out on a phone: the guest pill with a person glyph" width="390"></div>
+      <div class="device desk"><div class="device-label">Desktop · thread-lens · CURRENT (forage@c85eebe)</div>
+        <img class="shot" src="snaps/thread-lens.desktop.current.png" alt="Lens thread on desktop: the stack in the avatar column of every reply"></div>
+    </div>
     <p class="sub">On a post, Reddit's pill (arrow · count in one 44px target) replaces our detached ▲ over a number; on a
       comment, the outlined arrow with the count beside it and <b>Reply</b> spelled out, as in the screenshots. Pressed state is
       the brand green with the arrow filled, not just a colour change on a 13px glyph. Try the buttons above.</p>
@@ -791,6 +826,14 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
   <section id="e">
     <div class="eyebrow">Proposal E</div>
     <h2>Sort: one control bar, on boards and threads — and what Best means</h2>
+    <div class="callout"><h3>v20 — captured: the bar on a thread and on a board</h3>
+      <p>Shipped: one bar of select pills on both. On the thread it reads Hot · All time (decision 9: Best redefined as Hot). On a lens <em>feed</em> it reads Feed order · Card · Size — not Sort · Hot as this sketch drew — because a feed's ranking is the feed's own (ledger DL-010, the dashed chip at the top of the board says so). That is a recorded divergence, not drift. Identical on main and the branch.</p></div>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · thread-lens · CURRENT (forage@c85eebe)</div>
+        <img class="shot" src="snaps/thread-lens.phone.current.png" alt="Lens thread on a phone: the sort bar reads Hot and All time" width="390"></div>
+      <div class="device desk"><div class="device-label">Desktop · board-lens · CURRENT (forage@c85eebe)</div>
+        <img class="shot" src="snaps/board-lens.desktop.current.png" alt="Lens board on desktop: the bar reads Feed order, Card, Size"></div>
+    </div>
     <p class="sub">Today there are two mechanisms: the memory tier draws <b>tabs</b> (Hot · New · Top · Rising on a board, Best · Top · New
       on a thread, in <code>views.js</code>), and the lens draws a <b>toolbar of selects</b> (Feed order · New · Top, a timeframe under
       Top, density, preview size — <code>boardToolbar</code> in <code>lens-views.js</code>). The proposal adapts the toolbar into one bar
@@ -853,6 +896,14 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
   <section id="f">
     <div class="eyebrow">Proposal F</div>
     <h2>Deep links: every comment has an address</h2>
+    <div class="callout"><h3>v20 — captured: a deep link landing, Current beside Proposed</h3>
+      <p><b>Found:</b> on main the bar says “Viewing one comment” but no comment is focused and the page sits at the top — the first paint focused it, then the quote cascade repainted the list as a fresh tree and the focus went with the old one. <code>e2e/deep-link</code> never saw it because its fixture has no quotes. Fixed on the branch: the focus is re-applied after the cascade lands (<code>e2e/mock-thread.workflow.mjs</code> claim F). The Proposed frame is the resting state, after the 2s tint has faded.</p></div>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · focus-lens · CURRENT (forage@c85eebe)</div>
+        <img class="shot" src="snaps/focus-lens.phone.current.png" alt="A deep link on main: the bar says Viewing one comment, but the page is at the top and nothing is focused" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · focus-lens · PROPOSED (forage@6208fb6)</div>
+        <img class="shot" src="snaps/focus-lens.phone.proposed.png" alt="A deep link on the branch: the page has landed on the third-level reply" width="390"></div>
+    </div>
     <p class="sub">The share glyph on a comment (D, bottom-right, quiet) is only worth having if what it copies lands somewhere. Today
       it would not: the memory tier's continue-stub writes <code>?focus=&lt;id&gt;</code> but <code>threadView</code> never reads it,
       and on the lens <code>/p?uri=</code> is built for a post — a board row's “replying to” link opens the <b>parent</b>, and the

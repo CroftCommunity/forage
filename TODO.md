@@ -120,6 +120,18 @@ none needs code before the run, and each may need code after it. Claim `testbed-
   a like buzzes once on the flip to on, never on off; Settings → Buzz on like stops it.
   `navigator.vibrate` is stubbed in `e2e/no-downvote`; the buzz itself was never felt.
 
+## Mock captures — post-and-thread v20, board-cards v9 (2026-08-30)
+
+Found by capturing the shipped board and thread beside every sketch (both mocks'
+"captured" callouts). Decided shape, not yet built:
+
+- **The kind label truncates before the name does at 390px on a quote node.** With a
+  30-character handle, "⟳ quoted this" clips to "⟳ quoted" (`snaps/focus-lens.phone.proposed.png`,
+  the misterhooperspecial node). The byline rule lets the name yield first; a second rule
+  should let the label yield only after the name is at its floor (`min-width` on `.who`).
+- **Every mock section is now captured.** The remaining sketches in post-and-thread (A–F)
+  and board-cards are the record the decisions were made on; nothing further is owed there.
+
 ## Mock alignment — post-and-thread v18 (2026-08-30)
 
 Found by capturing the engine beside the drawing (`plans/mocks/post-and-thread.html` v18
