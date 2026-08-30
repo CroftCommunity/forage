@@ -52,7 +52,7 @@ export const GUEST_FLOOR = Object.freeze(new Set([
 
 export const EMPTY_POSTURE = Object.freeze({
   mutedWords: [], labelPrefs: new Map(), adultEnabled: false,
-  mutedDids: new Set(), blockedDids: new Set(), hideBadges: false,
+  mutedDids: new Set(), blockedDids: new Set(), blockUriByDid: new Map(), hideBadges: false,
   // OQ5: the guest posture IS the floor. A session replaces this wholesale.
   floor: GUEST_FLOOR,
 });
@@ -73,6 +73,9 @@ export function buildPosture({ preferences = [], mutes = [], blocks = [], listMu
     adultEnabled: adult ? !!adult.enabled : false,
     mutedDids: new Set(mutes.map((u) => u.did)),
     blockedDids: new Set(blocks.map((u) => u.did)),
+    // Phase 4a: unblock deletes a RECORD, so the menu needs each block's uri —
+    // getBlocks carries it as viewer.blocking (D2-verified).
+    blockUriByDid: new Map(blocks.filter((u) => u.viewer?.blocking).map((u) => [u.did, u.viewer.blocking])),
     hideBadges: !!verifPref?.hideBadges,
     // OQ5: a signed-in account carries NO floor — its own settings govern.
     floor: null,
@@ -181,8 +184,13 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
     verified: posture.hideBadges ? null
       : post.author?.verification?.verifiedStatus === 'valid' ? 'valid'
       : post.author?.verification?.trustedVerifierStatus === 'valid' ? 'trusted' : null,
-    saved: false, // bookmarks are not public API surface yet — frontier
+    // Phase 4a (plan 2026-08-29 post-and-thread): Save IS Bluesky's private
+    // bookmark — viewer.bookmarked on the way in, the createBookmark /
+    // deleteBookmark procedures on the way out (D1-verified).
+    saved: !!post.viewer?.bookmarked,
     commentCount: post.replyCount ?? 0,
+    repostCount: post.repostCount ?? 0,
+    repostUri: post.viewer?.repost ?? null, // 4a-iii: the unrepost input, like likeUri
     // Decision 8 (plan 2026-08-29 post-and-thread): the byline draws the
     // author's PICTURE; null (never undefined) when the account has none, so
     // the component falls back to initials on one check.
@@ -828,6 +836,12 @@ const POST_COLLECTION = 'app.bsky.feed.post';
 // neither, it is a query. Deliberately narrow, like the two above it: our own
 // repo, this one collection, create and delete only — it edits nothing.
 const TAGSUB_COLLECTION = 'fyi.forage.tagsub';
+// Phase 4a (plan 2026-08-29 post-and-thread, decision 3): the ⋯ menu's writes.
+// A block is a RECORD — public, visible to the blocked account, which is why
+// the menu item's copy says so — where a mute is a private procedure.
+const BLOCK_COLLECTION = 'app.bsky.graph.block';
+// 4a-iii (O6): the ⟳ on a quote is a real repost, the like pair's shape.
+const REPOST_COLLECTION = 'app.bsky.feed.repost';
 
 export function createLens({ session = null, transport = fetch } = {}) {
   let posture = EMPTY_POSTURE;
@@ -848,6 +862,17 @@ export function createLens({ session = null, transport = fetch } = {}) {
     });
     if (!res.ok) throw new Error(`lens: ${verb} failed HTTP ${res.status}`);
     return res.json();
+  }
+
+  // A write PROCEDURE: a 200 with an empty body is success (bookmarks and
+  // mutes answer exactly that — D1/D2-verified), so unlike post() this never
+  // parses a body. test/invariants.test.js pins every caller by name.
+  async function call(path, body, verb) {
+    if (!session) throw new Error(`lens: ${verb} needs a session — sign in first`);
+    const res = await session.fetchHandler(`/xrpc/${path}`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`lens: ${verb} failed HTTP ${res.status}`);
   }
 
   async function get(path, params = {}) {
@@ -1152,6 +1177,57 @@ export function createLens({ session = null, transport = fetch } = {}) {
         ...(ringInfo.overflow ? { overflow: ringInfo.overflow } : {}),
         cursor: Object.keys(nextMap).length ? btoa(JSON.stringify({ m: nextMap })) : undefined,
       };
+    },
+
+    // ---- Phase 4a: the ⋯ menu's writes (plan 2026-08-29 post-and-thread) ----
+    // Save = Bluesky's private, server-side bookmark. No record, no repo write;
+    // getBookmarks is the only reader and it needs auth.
+    async bookmark(uri, cid, on) {
+      if (on) await call('app.bsky.bookmark.createBookmark', { uri, cid }, 'bookmark');
+      else await call('app.bsky.bookmark.deleteBookmark', { uri }, 'unbookmark');
+    },
+    async muteActor(did, on) {
+      if (on) await call('app.bsky.graph.muteActor', { actor: did }, 'mute');
+      else await call('app.bsky.graph.unmuteActor', { actor: did }, 'unmute');
+    },
+    async muteThread(rootUri, on) {
+      if (on) await call('app.bsky.graph.muteThread', { root: rootUri }, 'mute thread');
+      else await call('app.bsky.graph.unmuteThread', { root: rootUri }, 'unmute thread');
+    },
+    // A block is a record in MY repo. Refused before any request when the
+    // subject is me — the guard holds when block() is called directly, the
+    // deletePost pattern.
+    async block(did) {
+      if (!session) throw new Error('lens: blocking needs a session — sign in first');
+      if (did === session.did) throw new Error('lens: you cannot block yourself');
+      const data = await post('com.atproto.repo.createRecord', {
+        repo: session.did, collection: BLOCK_COLLECTION,
+        record: { $type: BLOCK_COLLECTION, subject: did, createdAt: new Date().toISOString() },
+      }, 'block');
+      return { blockUri: data.uri };
+    },
+    async unblock(blockUri) {
+      if (!session) throw new Error('lens: unblocking needs a session — sign in first');
+      const m = /^at:\/\/(did:[^/]+)\/app\.bsky\.graph\.block\/([^/]+)$/.exec(String(blockUri || ''));
+      if (!m || m[1] !== session.did) throw new Error('lens: that block record is outside your repo');
+      const parsed = { did: m[1], rkey: m[2] };
+      await post('com.atproto.repo.deleteRecord', {
+        repo: session.did, collection: BLOCK_COLLECTION, rkey: parsed.rkey,
+      }, 'unblock');
+    },
+    // 4a-iii (O6): repost — the like pair's shape on app.bsky.feed.repost.
+    async repost(uri, cid) {
+      const data = await post('com.atproto.repo.createRecord', {
+        repo: session?.did, collection: REPOST_COLLECTION,
+        record: { $type: REPOST_COLLECTION, subject: { uri, cid }, createdAt: new Date().toISOString() },
+      }, 'repost');
+      return { repostUri: data.uri };
+    },
+    async unrepost(repostUri) {
+      const rkey = repostUri.split('/').pop();
+      await post('com.atproto.repo.deleteRecord', {
+        repo: session?.did, collection: REPOST_COLLECTION, rkey,
+      }, 'unrepost');
     },
 
     // boost: create MY like of the post (D1-pinned shape). Returns the like's

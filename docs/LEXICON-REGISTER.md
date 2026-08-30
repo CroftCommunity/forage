@@ -150,7 +150,7 @@ merits either way.
 
 | Candidate | What it holds | Verdict |
 |---|---|---|
-| `app.bsky.bookmark.*` | `createBookmark` / `deleteBookmark` / `getBookmarks` | **not a record type at all** — bookmarks on Bluesky are server-side XRPC, so there is nothing to put in a repo. The name misleads; the `defs.main.type` does not |
+| `app.bsky.bookmark.*` | `createBookmark` / `deleteBookmark` / `getBookmarks` | **not a record type at all** — bookmarks on Bluesky are server-side XRPC, so there is nothing to put in a repo. The name misleads; the `defs.main.type` does not. **In use via XRPC since plan 2026-08-29 post-and-thread, Phase 4a** — the ⋯ menu's Save; probed live 2026-08-29 (`test/fixtures/atproto/bookmarks.json`): 200 with an empty body, `viewer.bookmarked` on the way back |
 | `community.lexicon.bookmarks.bookmark` | `subject` (uri) + `createdAt`, optional `tags` | **a strict superset of ours** |
 
 **The shapes match. The BEHAVIOUR does not, and the first version of this entry missed it**
