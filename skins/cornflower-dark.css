@@ -1,0 +1,67 @@
+/* Cornflower (midnight) — sibling of `cornflower`. Hand-authored (ADR-003),
+   not a recolour of phpbb-dark: that one keeps the board's squares and bevel,
+   this one keeps the warm set's rounded, shadowed cards on a navy ground.
+
+   CONTRAST (measured by test/skins.test.js):
+     text        #E2E9F2  on bg               #151C26   14.01:1  body
+     text        #E2E9F2  on card             #1D2633   12.47:1  body
+     text        #E2E9F2  on row-even         #222D3B   11.40:1  body
+     text        #E2E9F2  on row-head         #2B3A4D    9.46:1  body
+     text        #E2E9F2  on nav-fill         #1A2230   13.05:1  body
+     muted       #A3B2C4  on bg               #151C26    7.93:1  body
+     link        #8BBCF0  on card             #1D2633    7.66:1  body
+     link        #8BBCF0  on nav-fill         #1A2230    8.02:1  body
+     link-hover  #B4D3F8  on card             #1D2633    9.88:1  body
+     brand-ink   #8BBCF0  on tint             #2A3B52    5.72:1  body
+     band-ink    #F1F6FC  on band-fill        #274D7D    7.91:1  large/UI
+     band-link   #D6E6F8  on band-fill        #274D7D    6.77:1  large/UI
+     on-brand    #FFFFFF  on brand-fill       #3A78BC    4.57:1  body
+     on-brand    #FFFFFF  on brand-fill-hover #2F6BAE    5.48:1  body
+     danger-ink  #F0938A  on danger-tint      #3E2A2E    5.87:1  body
+     tag chip: --gold-strong on mix(gold 18%, card)=#3e3e38  5.95
+     unread pill: white on --clay-600 #A24D2C  5.78
+*/
+:root {
+  --bg:          #151C26;
+  --card:        #1D2633;
+  --card-2:      #243040;
+  --text:        #E2E9F2;
+  --muted:       #A3B2C4;
+  --border:      #34435A;
+
+  --link:        #8BBCF0;
+  --link-hover:  #B4D3F8;
+  --brand-ink:   #8BBCF0;
+  --brand-fill:  #3A78BC;
+  --brand-fill-hover: #2F6BAE;
+  --on-brand:    #FFFFFF;
+
+  --band-fill:   #274D7D;
+  --band-ink:    #F1F6FC;
+  --band-link:   #D6E6F8;
+  --band-brand:  #F1F6FC;
+  --nav-fill:    #1A2230;
+  --panel:       #1D2633;
+  --row-odd:     #1D2633;
+  --row-even:    #222D3B;
+  --row-head:    #2B3A4D;
+
+  --boost:       #8BBCF0;
+  --bury:        #F0A886;
+  --tint:        #2A3B52;
+
+  --gold-500:    #D4A94E;
+  --gold-strong: #E2BC64;
+  --danger:      #F0938A;
+  --danger-ink:  #F0938A;
+  --danger-tint: #3E2A2E;
+  --clay-600:    #A24D2C;
+  --stripe:      rgba(255,255,255,.04);
+
+  --font-body:   Verdana, Helvetica, Arial, sans-serif;
+  --font-display: "Trebuchet MS", Verdana, Helvetica, Arial, sans-serif;
+  --radius-card:  7px;
+  --radius-sm:    4px;
+  --card-shadow:  0 1px 3px rgba(0, 0, 0, .35);
+  --color-scheme: dark;
+}

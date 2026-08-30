@@ -688,13 +688,16 @@ test('the tag chip clears AA in every skin — the floor applies to the ROLE, no
 // purple and orange prosilver recolours, the coffee styles, the mint-and-white
 // ones — under our own names and values. Every existing family was cool or
 // neutral (the amber terminal is the one warm thing, and it is dark-only).
+// Cornflower joined the same day (owner: keep the blue phpBB pair as well, and
+// have a blue family showcase the phpBB blue along these lines): prosilver's
+// blues on the same grammar, beside the untouched phpBB family, not instead of it.
 // ---------------------------------------------------------------------------
 
-const WARM_SET = ['rosewater', 'lavender', 'apricot', 'seaglass'];
+const NEW_SET = ['rosewater', 'lavender', 'apricot', 'seaglass', 'cornflower'];
 
-test('warm set: rosewater, lavender, apricot and seaglass each ship a light AND a dark skin', () => {
+test('the new set: rosewater, lavender, apricot, seaglass and cornflower each ship a light AND a dark skin', () => {
   const rows = families();
-  for (const fam of WARM_SET) {
+  for (const fam of NEW_SET) {
     assert.ok(FAMILIES[fam], `family ${fam} is registered`);
     const row = rows.find((r) => r.id === fam);
     assert.ok(row, `${fam} appears in the picker`);
@@ -704,6 +707,11 @@ test('warm set: rosewater, lavender, apricot and seaglass each ship a light AND 
     assert.equal(row.dark, `${fam}-dark`, `${fam}: its dark skin is <family>-dark`);
     assert.equal(row.sole, false, `${fam} has both sides, so the ☾/☀ toggle is live`);
   }
+  // The blue family was ADDED beside the classic board, not written over it.
+  assert.equal(SKINS.phpbb.file, 'skins/phpbb.css');
+  assert.equal(SKINS['phpbb-dark'].file, 'skins/phpbb-dark.css');
+  assert.equal(FAMILIES.phpbb.prefersDensity, 'compact', 'the phpBB board still prefers compact rows; cornflower has no preference');
+  assert.equal(FAMILIES.cornflower.prefersDensity, undefined, 'cornflower expresses no density preference');
 });
 
 // The floor applies to the ROLE (the tag-chip test above says why). Until now

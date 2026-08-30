@@ -40,10 +40,13 @@ registry. Bad family data is otherwise silent breakage: a toggle that lands
 nowhere, or bounces between two skins of the same tone.
 
 Shipping families, 2026-08-30: Forage, Classic BBS (dark only), Usenet gray,
-phpBB, and the warm set — Rosewater, Lavender, Apricot, Seaglass — each of the
-last four with both sides (`plans/2026-08-30-plan-warm-skins.md`). The warm set
-is **inspired by** the classic era's colour variants, not imported: no value in
-those eight files was measured from a real style, and their headers say so.
+phpBB, the warm set — Rosewater, Lavender, Apricot, Seaglass — and Cornflower,
+each of the last five with both sides (`plans/2026-08-30-plan-warm-skins.md`).
+The warm set is **inspired by** the classic era's colour variants, not imported:
+no value in those eight files was measured from a real style, and their headers
+say so. Cornflower is the phpBB blue (prosilver's measured band and navbar) on
+the warm set's grammar; the phpBB family itself is the classic board and stays
+as it is.
 
 The file must be `skins/<id>.css`. The pre-paint boot script in `index.html` and
 `404.html` derives the href from the id by that convention (it cannot import the

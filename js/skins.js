@@ -69,6 +69,11 @@ export const FAMILIES = Object.freeze({
   lavender: { label: 'Lavender' },
   apricot: { label: 'Apricot' },
   seaglass: { label: 'Seaglass' },
+  // The blue family (owner, 2026-08-30: keep the phpBB pair as well, and have a
+  // blue family showcase the phpBB blue along the warm set's lines). The phpBB
+  // family above stays exactly as it is — this is prosilver's blues on the
+  // warm set's grammar, not a replacement for the classic board.
+  cornflower: { label: 'Cornflower' },
 });
 
 export const SKINS = Object.freeze({
@@ -93,6 +98,8 @@ export const SKINS = Object.freeze({
   'apricot-dark': { label: 'Apricot (espresso)', file: 'skins/apricot-dark.css', palette: 'dark', family: 'apricot' },
   seaglass: { label: 'Seaglass (foam)', file: 'skins/seaglass.css', palette: 'light', family: 'seaglass' },
   'seaglass-dark': { label: 'Seaglass (deep water)', file: 'skins/seaglass-dark.css', palette: 'dark', family: 'seaglass' },
+  cornflower: { label: 'Cornflower (sky)', file: 'skins/cornflower.css', palette: 'light', family: 'cornflower' },
+  'cornflower-dark': { label: 'Cornflower (midnight)', file: 'skins/cornflower-dark.css', palette: 'dark', family: 'cornflower' },
 });
 
 // ---- families -------------------------------------------------------------

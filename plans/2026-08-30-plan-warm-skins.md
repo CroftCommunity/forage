@@ -1,4 +1,4 @@
-# Plan: the warm set — four skin families with a lighter and a darker side
+# Plan: the warm set — five skin families with a lighter and a darker side
 
 date: 2026-08-30
 status: BUILT on `claude/warm-skins` (worktree `worktrees/warm-skins/forage`); landing via PR — the owner merges. Unit gate 646/646; skins workflow green; captures in `plans/mocks/warm-skins.html`.
@@ -47,6 +47,7 @@ real style, and every file's header says so in those words, so that a reader who
 | Lavender | lilac paper, aubergine ink, violet band, Trebuchet | violet-black ground, lilac links | the purple recolours; the night-sky subsilver2 styles (Milky Way) |
 | Apricot | cream, terracotta band, rust links, Georgia display | cocoa ground, apricot links, burnt-orange band | the coffee styles (Latte) and subsilver2's orange hover made primary |
 | Seaglass | sea-foam paper, teal band, coral hover, 10px corners | deep teal ground, seaglass links, coral hover | the white-and-mint prosilver descendants (Artodia Air, Aero) |
+| Cornflower | sky-tinted paper, prosilver's measured band `#4688CE` and navbar `#C9DEE8`, white cards, 7px corners, Trebuchet headings | navy ground, sky links | prosilver itself — the phpBB blue on the warm set's grammar (added on review, see decision 7) |
 
 All four keep the prosilver grammar the phpBB skin already proved the tokens can carry:
 a filled masthead band (`--band-fill`), a pale tab strip (`--nav-fill`), white cards on a
@@ -116,7 +117,9 @@ and MOCKS.md's "the page says which skin" rule needs the manifest to know.
 | 3 | No `prefersDensity` on any of the four | none of the lineages was a dense board; the reader's dial stands |
 | 4 | Seaglass is cool | diversity, stated in the ask; three warm + one mint reads as a set |
 | 5 | `usenet-dark` gets `--danger*` in this landing | found by this plan's test; leaving a known 1.93:1 for a separate PR helps nobody |
-| 6 | SW `CACHE` bumped v62 → v63 | eight new shell URLs; a clean re-cache on next load |
+| 6 | SW `CACHE` bumped v62 → v63 | ten new shell URLs; a clean re-cache on next load |
+| 7 | Cornflower is a fifth family, and the phpBB pair is untouched | owner on review (2026-08-30): "I do like them all, but want to keep my phpbb forum ones as well and refine along these lines … the blue one I mean", then "if you want to keep it as a blue family and just have the blue family showcase the phpbb blue that's great". The phpBB skin is a recorded choice (OQ5: subSilver gray, squares, bevel) and it prefers compact rows; a blue family beside it costs one registry row and rewrites nothing |
+| 8 | Mock decisions 1–5 locked as proposed | same review: "I do like them all" — names, Seaglass, the serif display, the two radii, Apricot's band all stand |
 
 ## Owed
 
