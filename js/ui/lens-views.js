@@ -2105,13 +2105,19 @@ function trendingRail() {
 // verified against app.bsky.actor.defs, where no such def exists. The official
 // app's setting is app-local. So this one is ours, it lives on this device
 // only, and the panel says so rather than implying it syncs. (DL-026)
-const LANG_CHOICES = [
-  ['en', 'English'], ['ja', '日本語'], ['pt', 'Português'], ['es', 'Español'],
-  ['de', 'Deutsch'], ['fr', 'Français'], ['ko', '한국어'], ['uk', 'Українська'],
-];
+// The choice list lives in js/lang.js, which seeds the browser default from
+// it (2026-08-30) — the panel and the seed must agree on what can be shown.
+const LANG_CHOICES = lang.LANG_CHOICES;
 
 function languagePanel(onChange) {
   const current = new Set(lang.active());
+  const chosen = lang.stored() !== null;
+  const label = (code) => LANG_CHOICES.find(([c]) => c === code)?.[1] ?? code;
+  const seed = lang.browserDefault();
+  const defaultNote = chosen ? null
+    : seed.length
+      ? `Until you choose, this follows your browser's languages — right now ${seed.map(label).join(', ')}. Ticking or clearing a box makes it your choice.`
+      : 'Your browser asks for languages Forage cannot list, so nothing is filtered until you choose.';
   const boxes = LANG_CHOICES.map(([code, label]) => {
     const box = el('input', { type: 'checkbox', value: code });
     box.checked = current.has(code);
@@ -2138,6 +2144,7 @@ function languagePanel(onChange) {
     el('div', { class: 'row wrap', style: 'gap:10px' }, ...boxes),
     el('p', { class: 'xs muted', style: 'margin:8px 0 4px' },
       'With nothing selected, every language shows. A post that declares no language is never hidden.'),
+    defaultNote ? el('p', { class: 'xs muted', 'data-lang-default': '1', style: 'margin:0 0 8px' }, defaultNote) : null,
     clearBtn);
 }
 

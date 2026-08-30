@@ -197,10 +197,16 @@ export async function run() {
   await page.waitForSelector('[data-lang-panel]');
   const langText = await page.locator('[data-lang-panel]').innerText();
   assert.match(langText, /Forage only|this device/i, 'the limitation is stated, not papered over');
+  // 2026-08-30: until you choose, the panel shows the browser's languages
+  // checked (this runner reads en-US) and says so in words.
+  assert.match(langText, /browser/i, 'the browser default is named, not silent');
+  assert.equal(await page.locator('[data-lang-panel] input[value="en"]').isChecked(), true, 'the browser language starts checked');
+  assert.equal(await page.locator('[data-lang-panel] input:checked').count(), 1);
   await page.locator('[data-lang-panel] input[value="ja"]').check();
-  await page.waitForFunction(() => localStorage.getItem('forage.langs') === 'ja');
+  await page.waitForFunction(() => localStorage.getItem('forage.langs') === 'en,ja');
   await page.locator('[data-lang-panel] button:has-text("Show every language")').click();
-  await page.waitForFunction(() => localStorage.getItem('forage.langs') === null);
+  await page.waitForFunction(() => localStorage.getItem('forage.langs') === '');
+  assert.equal(await page.locator('[data-lang-panel] input:checked').count(), 0, 'every language = no box checked, and it stays that way');
   await page.waitForSelector('text=Muted words');
   // 3k: the account menu — this account listed active, add + sign out present
   await page.waitForSelector('[data-account-menu]');

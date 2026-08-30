@@ -626,19 +626,22 @@ export async function run() {
   // (the Side panel switch itself is guest-surface's: a trending board is not
   // restorable by URL, so leaving it for /settings cannot come back)
 
-  // 3u: a post declaring a language you do not read is ANNOTATED, not hidden,
-  // until you say otherwise. Then the filter hides it and SAYS it did — a
-  // silent filter is a lie.
-  await page.waitForSelector('text=宇宙の力に立ち向かう');
-  await page.waitForSelector('[data-lang-chip="ja"]');
-  assert.equal(await page.locator('[data-lang-chip]').count(), 1, 'only the foreign post is annotated');
-  await page.evaluate(() => localStorage.setItem('forage.langs', 'en'));
-  await page.locator('[data-board-toolbar] select').first().selectOption('new');
+  // 3u, revised 2026-08-30 (owner: "default to the browser language"): with
+  // nothing chosen the filter follows the browser — this runner reads en-US —
+  // so the Japanese post is hidden, and the board SAYS it hid one. A silent
+  // filter is a lie. Choosing "every language" is a choice that sticks: the
+  // post comes back, ANNOTATED, and a reload does not re-seed the browser.
+  assert.equal(await page.evaluate(() => localStorage.getItem('forage.langs')), null, 'nothing chosen yet');
   await page.waitForSelector('text=宇宙の力に立ち向かう', { state: 'detached' });
   await page.waitForSelector('[data-lang-hidden]');
   assert.match(await page.locator('[data-lang-hidden]').innerText(), /1 post/,
-    'the board says what the language filter removed');
-  await page.evaluate(() => localStorage.removeItem('forage.langs'));
+    'the board says what the browser-default filter removed');
+  await page.evaluate(() => localStorage.setItem('forage.langs', ''));
+  await page.locator('[data-board-toolbar] select').first().selectOption('new');
+  await page.waitForSelector('text=宇宙の力に立ち向かう');
+  await page.waitForSelector('[data-lang-chip="ja"]');
+  assert.equal(await page.locator('[data-lang-chip]').count(), 1, 'only the foreign post is annotated');
+  assert.equal(await page.locator('[data-lang-hidden]').count(), 0, 'and nothing is hidden');
   await page.locator('[data-board-toolbar] select').first().selectOption('feed');
   await page.waitForSelector('text=宇宙の力に立ち向かう');
 

@@ -9,10 +9,26 @@
 //     app's "content languages" lives in that app, not in the account, so
 //     Forage can neither read nor honour it. Ours is ours. (DL-026)
 //
-// Empty list = no filter, which is the default: Forage never quietly narrows
-// what you see.
+// Three states in one key (owner, 2026-08-30: "default to the browser
+// language"):
+//   absent  — never chosen: follow the browser, limited to LANG_CHOICES
+//   ''      — chosen "every language": no filter, and NOT re-seeded on reload
+//   'en,ja' — chosen languages
+// The middle state is why clear() writes '' rather than removing the key: a
+// removed key would fall back to the browser and "show every language" would
+// quietly undo itself on the next visit. Whatever the filter is doing, the
+// board says what it hid (data-lang-hidden) — a silent filter is a lie.
 
 const KEY = 'forage.langs';
+
+// The languages the settings panel can show a checkbox for. A browser
+// preference outside this list is never seeded: a filter the panel cannot
+// display is one the reader cannot see or undo.
+export const LANG_CHOICES = Object.freeze([
+  ['en', 'English'], ['ja', '日本語'], ['pt', 'Português'], ['es', 'Español'],
+  ['de', 'Deutsch'], ['fr', 'Français'], ['ko', '한국어'], ['uk', 'Українська'],
+]);
+const OFFERED = new Set(LANG_CHOICES.map(([code]) => code));
 
 // 'pt-BR' and 'pt' are the same language for filtering purposes; the region is
 // a refinement nobody chooses a feed by.
@@ -27,32 +43,36 @@ const normalize = (tags) => {
   return out;
 };
 
+// null = never chosen; [] = chose every language; else the chosen list.
 export function stored() {
   let raw = null;
   try { raw = localStorage.getItem(KEY); } catch { return null; }
   if (raw === null) return null;
-  const list = normalize(raw.split(','));
-  return list.length ? list : null;
+  return normalize(raw.split(','));
 }
 
-export function active() { return stored() ?? []; }
+// What the browser would choose: its ordered list, as base tags, de-duped,
+// limited to what the panel offers. navLangs is a parameter so a test can be a
+// browser in Portuguese without pretending to be one.
+export function browserDefault(navLangs = globalThis.navigator?.languages ?? []) {
+  return normalize([...navLangs].map(base)).filter((l) => OFFERED.has(l));
+}
 
-// The language a board is "in" for annotation purposes. No preference means no
-// primary — the caller may fall back to the browser, but this never guesses.
-export function primary() { return stored()?.[0] ?? null; }
+export function active(navLangs) { return stored() ?? browserDefault(navLangs); }
+
+// The language a board is "in" for annotation purposes; null when every
+// language is chosen (or the browser offers none Forage lists).
+export function primary(navLangs) { return active(navLangs)[0] ?? null; }
 
 export function set(tags) {
   if (!Array.isArray(tags)) throw new Error(`content languages must be an array of tags, got ${typeof tags}`);
-  const list = normalize(tags);
-  try {
-    if (list.length) localStorage.setItem(KEY, list.join(','));
-    else localStorage.removeItem(KEY);
-  } catch { /* private mode: the board still works, just unremembered */ }
+  try { localStorage.setItem(KEY, normalize(tags).join(',')); }
+  catch { /* private mode: the board still works, just unremembered */ }
 }
 
-export function clear() {
-  try { localStorage.removeItem(KEY); } catch { /* nothing to forget */ }
-}
+// "Show every language" — an explicit choice, stored as one (see the key's
+// three states above).
+export function clear() { set([]); }
 
 // A post survives the filter unless it DECLARED a language and none of them
 // are yours. langs is optional in the lexicon, and a post that never said is
