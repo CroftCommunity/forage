@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forage Post &amp; Thread Proposals</title>
+<style>
+:root{
+  --page-bg:#EFE9DE; --page-card:#F8F4EC; --page-ink:#2B251C; --page-muted:#6B6252;
+  --page-line:#DED5C4; --page-accent:#33623A; --page-accent-soft:#EAEFDF;
+  --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-display:ui-serif,Georgia,"Times New Roman",serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --page-bg:#1C1813; --page-card:#262019; --page-ink:#EFE7D9; --page-muted:#B5A88F;
+  --page-line:#3D3527; --page-accent:#A5CD98; --page-accent-soft:#31291F;
+}}
+:root[data-theme="dark"]{
+  --page-bg:#1C1813; --page-card:#262019; --page-ink:#EFE7D9; --page-muted:#B5A88F;
+  --page-line:#3D3527; --page-accent:#A5CD98; --page-accent-soft:#31291F;
+}
+*{box-sizing:border-box}
+body{background:var(--page-bg);color:var(--page-ink);font-family:var(--f-body);
+  line-height:1.55;margin:0;padding:32px 20px 72px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:30px}
+h1{font-family:var(--f-display);font-size:30px;font-weight:600;margin:0;text-wrap:balance;letter-spacing:-.01em}
+h2{font-family:var(--f-display);font-size:22px;font-weight:600;margin:0}
+.sub{color:var(--page-muted);font-size:15px;max-width:66ch;margin:0}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+.note{border-left:2px solid var(--page-accent);padding-left:14px;color:var(--page-muted);font-size:14px;max-width:72ch}
+.note b{color:var(--page-ink);font-weight:600}
+section{display:flex;flex-direction:column;gap:14px}
+.controls{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-end;
+  background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:14px 18px;
+  position:sticky;top:0;z-index:20}
+.cgroup{display:flex;flex-direction:column;gap:7px}
+.seg{display:flex;border:1px solid var(--page-line);border-radius:6px;overflow:hidden}
+.seg button{font:inherit;font-size:13px;padding:8px 14px;min-height:40px;background:transparent;
+  color:var(--page-ink);border:0;border-right:1px solid var(--page-line);cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--page-accent);color:#fff}
+:root[data-theme="dark"] .seg button[aria-pressed="true"]{color:#14251A}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .seg button[aria-pressed="true"]{color:#14251A}}
+.stage{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap}
+.device{display:flex;flex-direction:column;gap:9px;min-width:0}
+.device-label{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+.screen{border:1px solid var(--page-line);border-radius:10px;overflow:hidden;
+  box-shadow:0 1px 3px rgba(0,0,0,.10),0 8px 24px rgba(0,0,0,.06)}
+.phone .screen{width:390px}
+.desk{flex:1;min-width:460px}
+.desk .screen{min-height:200px}
+.shot{max-width:100%;display:block;border:1px solid var(--page-line);border-radius:8px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.callout{background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:16px 18px}
+.callout h3{font-family:var(--f-display);font-size:17px;margin:0 0 7px;font-weight:600}
+.callout p,.callout li{margin:0;font-size:14px;color:var(--page-muted)}
+.callout ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+.callout b,.callout code{color:var(--page-ink);font-weight:600}
+code{font-family:ui-monospace,Menlo,monospace;font-size:.92em;font-weight:400}
+table{border-collapse:collapse;font-size:14px;width:100%}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--page-line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page-muted)}
+.tablewrap{overflow-x:auto;background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:6px 8px}
+
+/* ---- FORAGE tokens, from css/tokens.css and skins/forage-dark.css ---- */
+.app{
+  --bg:#F8F4EC;--card:#FFFFFF;--card-2:#F2EDE2;--text:#2B251C;--muted:#68604F;
+  --border:#E3DCCD;--link:#38683F;--brand-ink:#33623A;--brand-fill:#41724A;
+  --on-brand:#FFFFFF;--tint:#EAEFDF;--boost:#41724A;--gold-strong:#7A6110;--gold-500:#C99A3C;
+  --danger:#9E2F26;
+  --t-xs:13px;--t-sm:14px;--t-md:16px;--t-lg:20px;--radius-card:6px;--radius-sm:4px;
+  background:var(--bg);color:var(--text);font-size:var(--t-md);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.45}
+.app[data-skin="dark"]{
+  --bg:#262019;--card:#31291F;--card-2:#3B3226;--text:#EFE7D9;--muted:#B5A88F;
+  --border:#4C4232;--link:#A5CD98;--brand-ink:#A5CD98;--brand-fill:#41724A;
+  --tint:#3A392A;--boost:#8FC48A;--gold-strong:#E2BC64;--gold-500:#D4A94E;--danger:#F0938A}
+.app a{color:var(--link);text-decoration:none}
+.masthead{display:flex;align-items:center;gap:12px;padding:8px 12px;
+  background:var(--card);border-bottom:1px solid var(--border);min-height:52px}
+.wordmark{font-family:ui-serif,Georgia,serif;font-size:var(--t-lg);color:var(--brand-ink);font-weight:700;display:flex;align-items:center;gap:8px}
+.glyph{width:26px;height:26px;border-radius:50%;background:var(--tint);display:grid;place-items:center;font-size:14px}
+.back{margin-left:auto;font-size:var(--t-sm);color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-card);margin:10px;padding:12px;position:relative}
+.icon{display:inline-block;width:1.15em;height:1.15em;vertical-align:-.2em;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* avatars */
+.av{width:32px;height:32px;border-radius:50%;flex:none;display:grid;place-items:center;font-size:12px;font-weight:600;color:#fff;background:var(--brand-fill)}
+.av.sm{width:24px;height:24px;font-size:10px}
+.av.c1{background:#7A5B3E}.av.c2{background:#578A61}.av.c3{background:#A24D2C}.av.c4{background:#4C6E8A}.av.c5{background:#8A6A1E}
+
+/* ---- header line (Proposal A) ---- */
+.byline{display:flex;align-items:center;gap:8px;font-size:var(--t-xs);color:var(--muted);min-width:0}
+.byline .who{color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.byline .dot::before{content:"·"}
+.byline .board{color:var(--link)}
+.kebab{margin-left:auto;flex:none;width:36px;height:36px;border-radius:50%;border:0;background:none;color:var(--muted);
+  font-size:20px;line-height:1;cursor:pointer;display:grid;place-items:center;letter-spacing:1px}
+.kebab:hover,.kebab[aria-expanded="true"]{background:var(--card-2);color:var(--text)}
+
+/* ---- current post row, mirrors app.css ---- */
+.postrow{display:grid;grid-template-columns:40px 1fr;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.postrow:last-child{border-bottom:0}
+.votebox{display:flex;flex-direction:column;align-items:center;gap:2px}
+.vote{border:none;background:none;color:var(--muted);font-size:18px;line-height:1;padding:2px 4px;cursor:pointer}
+.score{font-size:var(--t-sm);font-weight:600}
+.posttitle{font-size:var(--t-md);font-weight:600;line-height:1.3}
+.posttitle a{color:var(--text)}
+.postmeta{color:var(--muted);font-size:var(--t-xs);display:flex;flex-wrap:wrap;gap:8px;margin-top:2px}
+.repost-context,.reply-context{font-size:var(--t-xs);color:var(--muted);margin-bottom:2px}
+
+/* ---- proposed post row (Proposal A + D) ---- */
+.post{padding:12px 12px 10px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:6px}
+.post:last-child{border-bottom:0}
+.post .posttitle{font-size:17px}
+.post .blurb{font-size:var(--t-sm);color:var(--muted)}
+.post .context{font-size:var(--t-xs);color:var(--muted);display:flex;align-items:center;gap:6px}
+.post .context a{color:var(--link)}
+.actions{display:flex;gap:8px;align-items:center;margin-top:4px;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border-radius:999px;
+  border:1px solid var(--border);background:var(--card-2);color:var(--text);font:inherit;font-size:var(--t-sm);cursor:pointer;
+  font-variant-numeric:tabular-nums}
+.pill .icon{width:1.25em;height:1.25em}
+.pill.like[aria-pressed="true"]{color:var(--boost);border-color:var(--boost);background:color-mix(in srgb,var(--boost) 14%,var(--card))}
+.pill.like[aria-pressed="true"] .icon{fill:currentColor}
+.pill.quiet{background:none}
+.app[data-phone] .pill{min-height:44px;padding:0 14px}
+.app[data-phone] .pill.share{margin-left:auto}
+
+/* ---- the ⋯ menu (Proposal B) ---- */
+.menu{position:absolute;right:10px;top:44px;width:270px;background:var(--card);border:1px solid var(--border);
+  border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.18);z-index:6;padding:6px;font-size:var(--t-sm)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:12px;width:100%;text-align:left;font:inherit;font-size:var(--t-sm);
+  background:none;border:0;color:var(--text);padding:0 10px;min-height:42px;border-radius:8px;cursor:pointer}
+.mi:hover{background:var(--card-2)}
+.mi .icon{margin-left:auto;color:var(--muted);width:1.3em;height:1.3em}
+.mi.danger{color:var(--danger)}.mi.danger .icon{color:var(--danger)}
+.msep{height:1px;background:var(--border);margin:5px 4px}
+.mhead{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding:6px 10px 2px}
+/* phone: bottom sheet */
+.app[data-phone] .sheetwrap{position:relative}
+.app[data-phone] .menu{position:absolute;left:0;right:0;top:auto;bottom:0;width:auto;border-radius:16px 16px 0 0;
+  padding:10px 10px 14px;box-shadow:0 -8px 28px rgba(0,0,0,.25)}
+.app[data-phone] .mi{min-height:48px;font-size:var(--t-md)}
+.sheet-title{display:flex;align-items:center;justify-content:space-between;padding:4px 10px 8px;font-weight:600}
+.sheet-close{width:36px;height:36px;border-radius:50%;border:0;background:var(--card-2);color:var(--text);font-size:16px;cursor:pointer}
+.scrim{position:absolute;inset:0;background:rgba(0,0,0,.35);z-index:5}
+.scrim[hidden]{display:none}
+
+/* ---- thread page head ---- */
+.threadhead{display:flex;flex-direction:column;gap:6px}
+.threadhead h1{font-family:ui-serif,Georgia,serif;font-size:22px;font-weight:600;margin:2px 0;line-height:1.25;color:var(--text)}
+.threadhead .body{font-size:var(--t-sm)}
+
+/* ---- comments: CURRENT (mirrors app.css) ---- */
+.cur .comment{position:relative}
+.cur .comment-body{padding:8px 0 8px 30px}
+.cur .comment-meta{font-size:var(--t-xs);color:var(--muted);display:flex;gap:8px}
+.cur .comment-meta a{color:var(--link)}
+.cur .comment-text{font-size:var(--t-sm);margin:4px 0}
+.cur .comment-actions{display:flex;gap:12px;font-size:var(--t-xs);color:var(--muted);align-items:center}
+.cur .cvote{border:none;background:none;color:var(--muted);font-size:13px;padding:0 2px}
+.cur .children{margin-left:24px}
+.cur .gutter{position:absolute;left:0;top:0;bottom:0;width:24px;display:flex;justify-content:center}
+.cur .gutter::before{content:"";width:2px;height:100%;background:var(--border)}
+.cur .quote-node{border-left:3px solid var(--brand-ink);padding:8px 0 8px 12px;margin:8px 0;background:var(--card-2);border-radius:0 6px 6px 0}
+.cur .quote-meta{font-size:var(--t-xs);color:var(--muted)}
+.cur .quote-body{font-size:var(--t-sm);margin:4px 0}
+
+/* ---- comments: PROPOSED ---- */
+.c{display:grid;grid-template-columns:32px 1fr;column-gap:10px;padding:10px 0 4px;position:relative}
+.c .av{grid-row:1 / span 3}
+.c .byline{grid-column:2}
+.c .ctext{grid-column:2;font-size:var(--t-sm);margin:3px 0 6px}
+.c .cact{grid-column:2;display:flex;align-items:center;gap:6px;color:var(--muted);font-size:var(--t-xs)}
+.c .kids{grid-column:1 / span 2;position:relative;padding-left:22px}
+.c .kids .c{padding-top:8px}
+.app[data-phone] .c .kids{padding-left:16px}
+/* the connector: only drawn when there ARE children, and never a hit target */
+.c .kids::before{content:"";position:absolute;left:15px;top:-6px;bottom:22px;width:2px;background:var(--border);pointer-events:none}
+.c.leaf .kids::before{display:none}
+.c .kids > .c::before{content:"";position:absolute;left:-7px;top:0;width:7px;height:26px;border-left:2px solid var(--border);
+  border-bottom:2px solid var(--border);border-radius:0 0 0 10px;pointer-events:none}
+.c .kids > .c:last-child::after{content:"";position:absolute;left:-7px;top:26px;bottom:0;width:4px;background:var(--card);pointer-events:none}
+/* comment action buttons — readable, 36px hit, no visible chrome at rest */
+.cbtn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 8px;border-radius:999px;border:0;
+  background:none;color:var(--muted);font:inherit;font-size:var(--t-xs);font-weight:600;cursor:pointer;
+  font-variant-numeric:tabular-nums}
+.cbtn .icon{width:1.35em;height:1.35em}
+.cbtn:hover{background:var(--card-2);color:var(--text)}
+.cbtn.like[aria-pressed="true"]{color:var(--boost)}
+.cbtn.like[aria-pressed="true"] .icon{fill:currentColor}
+.cbtn.more{margin-left:auto;padding:0 10px;font-size:16px;letter-spacing:1px}
+.app[data-phone] .cbtn{min-height:44px}
+/* collapse: on the actions row, like the ⊖ — one control, not a whole rail */
+.fold{white-space:nowrap;display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 8px;border-radius:999px;border:0;
+  background:none;color:var(--muted);font:inherit;font-size:var(--t-xs);cursor:pointer}
+.fold .icon{width:1.25em;height:1.25em}
+.c.collapsed .kids,.c.collapsed .ctext{display:none}
+.c.collapsed .fold .lbl::after{content:" more"}
+.more-replies{grid-column:2;font-size:var(--t-xs);color:var(--muted);display:inline-flex;align-items:center;gap:6px;
+  min-height:36px;padding:0 8px;border:0;background:none;font:inherit;cursor:pointer;border-radius:999px;margin-left:-8px}
+.more-replies:hover{background:var(--card-2)}
+
+/* quote / repost-with-content node, calmer */
+.c.quote{grid-template-columns:32px 1fr}
+.c.quote .qwall{grid-column:2;border-left:3px solid var(--brand-ink);padding:6px 10px;margin:2px 0 6px;border-radius:0 6px 6px 0;
+  background:var(--card-2);font-size:var(--t-sm)}
+.app[data-phone] .c.quote .qwall{background:none;padding:2px 10px}
+.c.quote .qwall .open{display:block;margin-top:6px;font-size:var(--t-xs)}
+.kind{display:inline-flex;align-items:center;gap:4px;color:var(--muted)}
+.kind .icon{width:1.1em;height:1.1em}
+
+/* variant switches for the thread demo */
+.app[data-variant="current"] .proposed,.app[data-variant="proposed"] .cur{display:none}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin:4px 0 6px;font-size:var(--t-sm)}
+.tab{padding:6px 12px;color:var(--muted);border-bottom:2px solid transparent}
+.tab.active{color:var(--brand-ink);border-bottom-color:var(--brand-ink);font-weight:600}
+.h2s{font-family:ui-serif,Georgia,serif;font-size:var(--t-md);font-weight:700;margin:0 0 4px}
+.toast{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:var(--text);color:var(--bg);
+  font-size:var(--t-xs);padding:6px 12px;border-radius:999px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
+.toast.show{opacity:1}
+@media (max-width:900px){.desk{min-width:0;width:100%}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 4l7 8h-4v8H9v-8H5z"/></symbol>
+  <symbol id="i-reply" viewBox="0 0 24 24"><path d="M21 12c0 4-4 7-9 7-1.2 0-2.3-.2-3.3-.5L4 20l1.4-3.6C4.5 15.2 3 13.7 3 12c0-4 4-7 9-7s9 3 9 7z"/></symbol>
+  <symbol id="i-repost" viewBox="0 0 24 24"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></symbol>
+  <symbol id="i-save" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></symbol>
+  <symbol id="i-mute" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M22 3L3 22"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></symbol>
+  <symbol id="i-hide" viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/><path d="M9.9 5.1A10 10 0 0 1 12 5c5 0 9 4 10 7-.4 1.1-1.2 2.3-2.3 3.4"/><path d="M6.6 6.6C4.3 8 2.7 10 2 12c1 3 5 7 10 7 1.5 0 2.9-.3 4.1-.9"/></symbol>
+  <symbol id="i-block" viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 11-5.7"/><path d="M16 16l5 5"/><path d="M21 16l-5 5"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4"/><path d="M5 4h13l-2 4 2 4H5"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3l10 18H2z"/><path d="M12 10v4"/><path d="M12 17.5v.5"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/><path d="M12 8v8"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 14h10l1-14"/></symbol>
+</svg>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Forage · mock · 2026-08-29</div>
+    <h1>Posts, threads, and the ⋯ menu</h1>
+    <p class="sub">Four proposals to talk through, studied from the Reddit and Bluesky screenshots in
+      <code>~/Downloads/new/Photos-1-001</code> and Forage as it renders today. Everything below is a
+      drawing, not code — the “Current” panels mirror <code>css/app.css</code> and
+      <code>js/ui/components.js</code> as of <code>d256817</code>.</p>
+  </header>
+
+  <div class="controls">
+    <div class="cgroup"><span class="eyebrow">Skin</span>
+      <div class="seg" data-ctl="skin"><button aria-pressed="true" data-v="light">Light</button><button aria-pressed="false" data-v="dark">Dark</button></div></div>
+    <div class="cgroup"><span class="eyebrow">Thread</span>
+      <div class="seg" data-ctl="variant"><button aria-pressed="false" data-v="current">Current</button><button aria-pressed="true" data-v="proposed">Proposed</button></div></div>
+    <div class="cgroup"><span class="eyebrow">Haptics on like</span>
+      <div class="seg" data-ctl="haptic"><button aria-pressed="true" data-v="on">On (default)</button><button aria-pressed="false" data-v="off">Off</button></div></div>
+    <p class="sub" style="font-size:13px;max-width:34ch">Buttons are live: ⋯ opens the menu, ▲ toggles a like (and buzzes on Android), ⊖ folds a comment.</p>
+  </div>
+
+  <!-- ================================================================ -->
+  <section id="a">
+    <div class="eyebrow">Proposal A</div>
+    <h2>The header line: avatar · name · time, and ⋯ in the corner</h2>
+    <p class="sub">Every post and every comment opens the same way: a 32px avatar, the author, a dot, how long ago. On a feed row
+      the board (<code>f/gardening</code>) leads the line instead, because that is what you scan a mixed feed by. The ⋯ sits
+      top-right on the feed row <b>and</b> on the read view, so it is one gesture in both places. Vote moves off the left rail
+      and into the action row (Proposal D), which is what frees the left column for the avatar.</p>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · feed row</div>
+        <div class="screen app" data-phone data-skin="light">
+          <div class="masthead"><span class="wordmark"><span class="glyph">🐦‍⬛</span>Forage</span><span class="back">Popular</span></div>
+          <div class="sheetwrap">
+          <div class="post">
+            <div class="byline"><span class="av c2">g</span><a class="board who" href="#">f/gardening</a><span class="dot"></span><span>fern</span><span class="dot"></span><span>1d</span>
+              <button class="kebab" aria-label="Post options" aria-expanded="false" data-menu="m1">⋯</button></div>
+            <div class="posttitle"><a href="#">What is everyone planting this week?</a></div>
+            <div class="blurb">Garlic went in yesterday; the frost warning has me second-guessing the last of the brassicas.</div>
+            <div class="actions">
+              <button class="pill like" aria-pressed="false" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">35</span></button>
+              <button class="pill"><svg class="icon"><use href="#i-reply"/></svg>40</button>
+              <button class="pill quiet"><svg class="icon"><use href="#i-repost"/></svg>3</button>
+              <button class="pill quiet share" aria-label="Share"><svg class="icon"><use href="#i-share"/></svg></button>
+            </div>
+          </div>
+          <div class="post">
+            <div class="byline"><span class="av c4">w</span><a class="board who" href="#">f/orchard</a><span class="dot"></span><span>wren.bsky.social</span><span class="dot"></span><span>3h</span>
+              <button class="kebab" aria-label="Post options">⋯</button></div>
+            <div class="context"><span class="kind"><svg class="icon"><use href="#i-repost"/></svg>reposted by @juniper</span></div>
+            <div class="posttitle"><a href="#">The rye loaf finally held its shape</a></div>
+            <div class="actions">
+              <button class="pill like" aria-pressed="true" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">31</span></button>
+              <button class="pill"><svg class="icon"><use href="#i-reply"/></svg>7</button>
+              <button class="pill quiet"><svg class="icon"><use href="#i-repost"/></svg>1</button>
+              <button class="pill quiet share" aria-label="Share"><svg class="icon"><use href="#i-share"/></svg></button>
+            </div>
+          </div>
+          <div class="scrim" hidden data-scrim="m1"></div>
+          <div class="menu" id="m1" hidden role="menu">
+            <div class="sheet-title">Options <button class="sheet-close" aria-label="Close" data-close="m1">✕</button></div>
+            <button class="mi">Copy post text<svg class="icon"><use href="#i-copy"/></svg></button>
+            <button class="mi">Copy link<svg class="icon"><use href="#i-link"/></svg></button>
+            <button class="mi">Open on bsky.app<svg class="icon"><use href="#i-ext"/></svg></button>
+            <button class="mi">Save<svg class="icon"><use href="#i-save"/></svg></button>
+            <div class="msep"></div>
+            <button class="mi">Mute thread<svg class="icon"><use href="#i-mute"/></svg></button>
+            <button class="mi">Mute words &amp; tags<svg class="icon"><use href="#i-filter"/></svg></button>
+            <div class="msep"></div>
+            <button class="mi">Hide for me<svg class="icon"><use href="#i-hide"/></svg></button>
+            <div class="msep"></div>
+            <button class="mi">Mute account<svg class="icon"><use href="#i-mute"/></svg></button>
+            <button class="mi">Block account<svg class="icon"><use href="#i-block"/></svg></button>
+            <button class="mi danger">Report post<svg class="icon"><use href="#i-warn"/></svg></button>
+          </div>
+          </div>
+          <div class="toast" data-toast></div>
+        </div>
+      </div>
+      <div class="device desk"><div class="device-label">Desktop · feed row, current vs proposed</div>
+        <div class="screen app" data-skin="light">
+          <div class="card">
+            <p class="h2s">Current</p>
+            <div class="postrow"><div class="votebox"><button class="vote">▲</button><span class="score">35</span></div>
+              <div><div class="posttitle"><a href="#">What is everyone planting this week?</a></div>
+                <div class="postmeta"><a href="#">f/gardening</a><span>by fern</span><span>1d ago</span><a href="#">40 comments</a></div></div></div>
+            <div class="postrow"><div class="votebox"><button class="vote">▲</button><span class="score">31</span></div>
+              <div><div class="repost-context">⟳ reposted by @juniper</div>
+                <div class="posttitle"><a href="#">The rye loaf finally held its shape</a></div>
+                <div class="postmeta"><a href="#">f/orchard</a><span>by wren.bsky.social</span><span>3h ago</span><a href="#">7 comments</a></div></div></div>
+          </div>
+          <div class="card">
+            <p class="h2s">Proposed</p>
+            <div class="post">
+              <div class="byline"><span class="av c2">g</span><a class="board who" href="#">f/gardening</a><span class="dot"></span><span>fern</span><span class="dot"></span><span>1d</span>
+                <button class="kebab" aria-label="Post options" aria-expanded="false" data-menu="m2">⋯</button></div>
+              <div class="posttitle"><a href="#">What is everyone planting this week?</a></div>
+              <div class="blurb">Garlic went in yesterday; the frost warning has me second-guessing the last of the brassicas.</div>
+              <div class="actions">
+                <button class="pill like" aria-pressed="false" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">35</span></button>
+                <button class="pill"><svg class="icon"><use href="#i-reply"/></svg>40</button>
+                <button class="pill quiet"><svg class="icon"><use href="#i-repost"/></svg>3</button>
+                <button class="pill quiet" aria-label="Share"><svg class="icon"><use href="#i-share"/></svg></button>
+              </div>
+            </div>
+            <div class="post">
+              <div class="byline"><span class="av c4">w</span><a class="board who" href="#">f/orchard</a><span class="dot"></span><span>wren.bsky.social</span><span class="dot"></span><span>3h</span>
+                <button class="kebab" aria-label="Post options">⋯</button></div>
+              <div class="context"><span class="kind"><svg class="icon"><use href="#i-repost"/></svg>reposted by @juniper</span></div>
+              <div class="posttitle"><a href="#">The rye loaf finally held its shape</a></div>
+              <div class="actions">
+                <button class="pill like" aria-pressed="true" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">31</span></button>
+                <button class="pill"><svg class="icon"><use href="#i-reply"/></svg>7</button>
+                <button class="pill quiet"><svg class="icon"><use href="#i-repost"/></svg>1</button>
+                <button class="pill quiet" aria-label="Share"><svg class="icon"><use href="#i-share"/></svg></button>
+              </div>
+            </div>
+            <div class="menu" id="m2" hidden role="menu">
+              <button class="mi">Copy post text<svg class="icon"><use href="#i-copy"/></svg></button>
+              <button class="mi">Copy link<svg class="icon"><use href="#i-link"/></svg></button>
+              <button class="mi">Open on bsky.app<svg class="icon"><use href="#i-ext"/></svg></button>
+              <button class="mi">Save<svg class="icon"><use href="#i-save"/></svg></button>
+              <div class="msep"></div>
+              <button class="mi">Mute thread<svg class="icon"><use href="#i-mute"/></svg></button>
+              <button class="mi">Mute words &amp; tags<svg class="icon"><use href="#i-filter"/></svg></button>
+              <div class="msep"></div>
+              <button class="mi">Hide for me<svg class="icon"><use href="#i-hide"/></svg></button>
+              <div class="msep"></div>
+              <button class="mi">Mute account<svg class="icon"><use href="#i-mute"/></svg></button>
+              <button class="mi">Block account<svg class="icon"><use href="#i-block"/></svg></button>
+              <button class="mi danger">Report post<svg class="icon"><use href="#i-warn"/></svg></button>
+            </div>
+          </div>
+          <div class="toast" data-toast></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================ -->
+  <section id="b">
+    <div class="eyebrow">Proposal B</div>
+    <h2>The ⋯ menu: Bluesky's list, Forage's items</h2>
+    <p class="sub">Bluesky's shape — label left, icon right, thin separators grouping “about this post / about this thread /
+      about this account”, destructive last — rather than Reddit's two-item popover. Open it above: a popover on desktop, a bottom
+      sheet on the phone. What goes in it is the decision; the list here is a starting proposal.</p>
+    <div class="cols">
+      <div class="callout"><h3>About this post</h3>
+        <ul><li><b>Copy post text</b> — as on Bluesky.</li>
+            <li><b>Copy link</b> — the shareable <code>/p?uri=</code> form (3v already builds it for board rows).</li>
+            <li><b>Open on bsky.app</b> — the lens is a lens; say so with a door.</li>
+            <li><b>Save</b> — today a bare text button in the actions row; it belongs here, not in the row.</li></ul></div>
+      <div class="callout"><h3>About this thread</h3>
+        <ul><li><b>Mute thread</b> · <b>Mute words &amp; tags</b> — real atproto preferences, and the second is the doorway to the hashtag-prefs work (plan 2026-08-28-2).</li>
+            <li><b>Hide for me</b> — local, reversible.</li></ul></div>
+      <div class="callout"><h3>About this account · then the red one</h3>
+        <ul><li><b>Mute account</b> · <b>Block account</b> — both are records on Bluesky; the copy should say which one is visible to them.</li>
+            <li><b>Report post</b> — last, and the only red item. Today report is a <code>prompt()</code>; it wants a sheet of its own.</li>
+            <li><b>Steward items</b> (remove / approve / pin / lock) appear as a fourth group only when you can moderate — never a second menu.</li>
+            <li><b>Delete</b> replaces Report when the post is yours (phase 2 two-click arming stays).</li></ul></div>
+    </div>
+    <p class="note"><b>Not in the menu:</b> Translate (Bluesky has it; we have no translator) and Award (Reddit's). Like, reply and
+      repost stay in the action row because they are the things you do to most posts; the menu is for the things you do to few.</p>
+  </section>
+
+  <!-- ================================================================ -->
+  <section id="c">
+    <div class="eyebrow">Proposal C</div>
+    <h2>Threading: a rail only where there is a branch</h2>
+    <p class="sub">Today every comment carries the collapse gutter — a direct reply to the post looks “nested” under nothing, and
+      on a phone the whole left edge is a hit target (Current tab, and the screenshots below). Reddit's model reads correctly:
+      a top-level comment sits flush; a connector is drawn only from a comment to <b>its own</b> replies, elbowing into each
+      child's avatar. The connector is paint, not a button. Collapse is a single ⊖ on the actions row; the count of hidden
+      replies lives on the ⊕ that replaces it. A repost-with-content (quote) keeps its wall — it is a different thing — but it
+      gets the same avatar header as everything else, loses its tint on the phone, and only the explicit “open its thread ↳”
+      is a link.</p>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · thread page</div>
+        <div class="screen app" data-phone data-skin="light" data-variant="proposed" data-thread>
+          <div class="masthead"><span class="wordmark"><span class="glyph">🐦‍⬛</span>Forage</span><span class="back">‹ f/gardening</span></div>
+          <div class="card threadhead">
+            <div class="byline"><span class="av c2">f</span><span class="who">fern</span><span class="dot"></span><span>1d</span><span class="dot"></span><a class="board" href="#">f/gardening</a>
+              <button class="kebab" aria-label="Post options">⋯</button></div>
+            <h1>What is everyone planting this week?</h1>
+            <div class="body">Garlic went in yesterday; the frost warning has me second-guessing the last of the brassicas.</div>
+            <div class="actions">
+              <button class="pill like" aria-pressed="false" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">35</span></button>
+              <button class="pill"><svg class="icon"><use href="#i-reply"/></svg>40</button>
+              <button class="pill quiet"><svg class="icon"><use href="#i-repost"/></svg>3</button>
+              <button class="pill quiet share" aria-label="Share"><svg class="icon"><use href="#i-share"/></svg></button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="tabs"><span class="tab active">Best</span><span class="tab">Top</span><span class="tab">New</span></div>
+            <!-- CURRENT -->
+            <div class="cur">
+              <div class="comment"><div class="gutter"></div><div class="comment-body">
+                <div class="comment-meta"><a href="#">briar</a><span>21 likes</span><span>1d ago</span></div>
+                <div class="comment-text">Broad beans and a late row of spinach. The garlic can take a frost; the beans are the gamble.</div>
+                <div class="comment-actions"><button class="cvote">▲</button><span>21</span><button class="cvote" style="padding:0">reply</button><span>save</span></div></div>
+                <div class="children">
+                  <div class="comment"><div class="gutter"></div><div class="comment-body">
+                    <div class="comment-meta"><a href="#">sage</a><span>4 likes</span><span>5h ago</span></div>
+                    <div class="comment-text">Fleece over the beans and they will be fine.</div>
+                    <div class="comment-actions"><button class="cvote">▲</button><span>4</span><span>reply</span><span>save</span></div></div></div>
+                </div></div>
+              <div class="comment quote-node"><div class="quote-meta">❝ <a href="#">juniper</a> quoted this · 6h ago · 9 likes</div>
+                <div class="quote-body">Same question, one valley over — nobody here trusts the forecast either.</div>
+                <div class="quote-meta"><a href="#">open its thread ↳</a></div></div>
+              <div class="comment"><div class="gutter"></div><div class="comment-body">
+                <div class="comment-meta"><a href="#">moss</a><span>0 likes</span><span>1d ago</span></div>
+                <div class="comment-text">Nothing. It is a bog out there.</div>
+                <div class="comment-actions"><button class="cvote">▲</button><span>0</span><span>reply</span><span>save</span></div></div></div>
+            </div>
+            <!-- PROPOSED -->
+            <div class="proposed">
+              <div class="c" data-c>
+                <span class="av c1">b</span>
+                <div class="byline"><span class="who">briar</span><span class="dot"></span><span>1d</span></div>
+                <div class="ctext">Broad beans and a late row of spinach. The garlic can take a frost; the beans are the gamble.</div>
+                <div class="cact">
+                  <button class="fold" data-fold aria-label="Collapse"><svg class="icon"><use href="#i-minus"/></svg></button>
+                  <button class="cbtn like" aria-pressed="true" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">21</span></button>
+                  <button class="cbtn"><svg class="icon"><use href="#i-reply"/></svg>Reply</button>
+                  <button class="cbtn more" aria-label="Comment options">⋯</button></div>
+                <div class="kids">
+                  <div class="c leaf">
+                    <span class="av c5">s</span>
+                    <div class="byline"><span class="who">sage</span><span class="dot"></span><span>5h</span></div>
+                    <div class="ctext">Fleece over the beans and they will be fine.</div>
+                    <div class="cact">
+                      <button class="cbtn like" aria-pressed="false" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">4</span></button>
+                      <button class="cbtn"><svg class="icon"><use href="#i-reply"/></svg>Reply</button>
+                      <button class="cbtn more" aria-label="Comment options">⋯</button></div>
+                    <div class="kids"></div>
+                  </div>
+                  <button class="more-replies"><svg class="icon"><use href="#i-plus"/></svg>2 more replies</button>
+                </div>
+              </div>
+              <div class="c quote leaf">
+                <span class="av c2">j</span>
+                <div class="byline"><span class="who">juniper</span><span class="dot"></span><span class="kind"><svg class="icon"><use href="#i-repost"/></svg>quoted this</span><span class="dot"></span><span>6h</span></div>
+                <div class="qwall">Same question, one valley over — nobody here trusts the forecast either.
+                  <a class="open" href="#">open its thread ↳</a></div>
+                <div class="cact">
+                  <button class="cbtn like" aria-pressed="false" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">9</span></button>
+                  <button class="cbtn more" aria-label="Options">⋯</button></div>
+                <div class="kids"></div>
+              </div>
+              <div class="c leaf">
+                <span class="av c4">m</span>
+                <div class="byline"><span class="who">moss</span><span class="dot"></span><span>1d</span></div>
+                <div class="ctext">Nothing. It is a bog out there.</div>
+                <div class="cact">
+                  <button class="cbtn like" aria-pressed="false" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">0</span></button>
+                  <button class="cbtn"><svg class="icon"><use href="#i-reply"/></svg>Reply</button>
+                  <button class="cbtn more" aria-label="Comment options">⋯</button></div>
+                <div class="kids"></div>
+              </div>
+            </div>
+          </div>
+          <div class="toast" data-toast></div>
+        </div>
+      </div>
+      <div class="device desk"><div class="device-label">Desktop · thread page</div>
+        <div class="screen app" data-skin="light" data-variant="proposed" data-thread>
+          <div class="card threadhead">
+            <div class="byline"><span class="av c2">f</span><span class="who">fern</span><span class="dot"></span><span>1d</span><span class="dot"></span><a class="board" href="#">f/gardening</a>
+              <button class="kebab" aria-label="Post options">⋯</button></div>
+            <h1>What is everyone planting this week?</h1>
+            <div class="body">Garlic went in yesterday; the frost warning has me second-guessing the last of the brassicas.</div>
+            <div class="actions">
+              <button class="pill like" aria-pressed="false" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">35</span></button>
+              <button class="pill"><svg class="icon"><use href="#i-reply"/></svg>40</button>
+              <button class="pill quiet"><svg class="icon"><use href="#i-repost"/></svg>3</button>
+              <button class="pill quiet" aria-label="Share"><svg class="icon"><use href="#i-share"/></svg></button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="tabs"><span class="tab active">Best</span><span class="tab">Top</span><span class="tab">New</span></div>
+            <div class="cur">
+              <div class="comment"><div class="gutter"></div><div class="comment-body">
+                <div class="comment-meta"><a href="#">briar</a><span>21 likes</span><span>1d ago</span></div>
+                <div class="comment-text">Broad beans and a late row of spinach. The garlic can take a frost; the beans are the gamble.</div>
+                <div class="comment-actions"><button class="cvote">▲</button><span>21</span><span>reply</span><span>save</span></div></div>
+                <div class="children">
+                  <div class="comment"><div class="gutter"></div><div class="comment-body">
+                    <div class="comment-meta"><a href="#">sage</a><span>4 likes</span><span>5h ago</span></div>
+                    <div class="comment-text">Fleece over the beans and they will be fine.</div>
+                    <div class="comment-actions"><button class="cvote">▲</button><span>4</span><span>reply</span><span>save</span></div></div>
+                    <div class="children">
+                      <div class="comment"><div class="gutter"></div><div class="comment-body">
+                        <div class="comment-meta"><a href="#">briar</a><span>2 likes</span><span>4h ago</span></div>
+                        <div class="comment-text">Fleece it is. Thank you.</div>
+                        <div class="comment-actions"><button class="cvote">▲</button><span>2</span><span>reply</span><span>save</span></div></div></div>
+                    </div></div>
+                </div></div>
+              <div class="comment quote-node"><div class="quote-meta">❝ <a href="#">juniper</a> quoted this · 6h ago · 9 likes</div>
+                <div class="quote-body">Same question, one valley over — nobody here trusts the forecast either.</div>
+                <div class="quote-meta"><a href="#">open its thread ↳</a></div></div>
+              <div class="comment"><div class="gutter"></div><div class="comment-body">
+                <div class="comment-meta"><a href="#">moss</a><span>0 likes</span><span>1d ago</span></div>
+                <div class="comment-text">Nothing. It is a bog out there.</div>
+                <div class="comment-actions"><button class="cvote">▲</button><span>0</span><span>reply</span><span>save</span></div></div></div>
+            </div>
+            <div class="proposed">
+              <div class="c">
+                <span class="av c1">b</span>
+                <div class="byline"><span class="who">briar</span><span class="dot"></span><span>1d</span></div>
+                <div class="ctext">Broad beans and a late row of spinach. The garlic can take a frost; the beans are the gamble.</div>
+                <div class="cact">
+                  <button class="fold" data-fold aria-label="Collapse"><svg class="icon"><use href="#i-minus"/></svg></button>
+                  <button class="cbtn like" aria-pressed="true" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">21</span></button>
+                  <button class="cbtn"><svg class="icon"><use href="#i-reply"/></svg>Reply</button>
+                  <button class="cbtn more" aria-label="Comment options">⋯</button></div>
+                <div class="kids">
+                  <div class="c">
+                    <span class="av c5">s</span>
+                    <div class="byline"><span class="who">sage</span><span class="dot"></span><span>5h</span></div>
+                    <div class="ctext">Fleece over the beans and they will be fine.</div>
+                    <div class="cact">
+                      <button class="fold" data-fold aria-label="Collapse"><svg class="icon"><use href="#i-minus"/></svg></button>
+                      <button class="cbtn like" aria-pressed="false" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">4</span></button>
+                      <button class="cbtn"><svg class="icon"><use href="#i-reply"/></svg>Reply</button>
+                      <button class="cbtn more" aria-label="Comment options">⋯</button></div>
+                    <div class="kids">
+                      <div class="c leaf">
+                        <span class="av c1">b</span>
+                        <div class="byline"><span class="who">briar</span><span class="dot"></span><span>4h</span></div>
+                        <div class="ctext">Fleece it is. Thank you.</div>
+                        <div class="cact">
+                          <button class="cbtn like" aria-pressed="false" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">2</span></button>
+                          <button class="cbtn"><svg class="icon"><use href="#i-reply"/></svg>Reply</button>
+                          <button class="cbtn more" aria-label="Comment options">⋯</button></div>
+                        <div class="kids"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <button class="more-replies"><svg class="icon"><use href="#i-plus"/></svg>2 more replies</button>
+                </div>
+              </div>
+              <div class="c quote leaf">
+                <span class="av c2">j</span>
+                <div class="byline"><span class="who">juniper</span><span class="dot"></span><span class="kind"><svg class="icon"><use href="#i-repost"/></svg>quoted this</span><span class="dot"></span><span>6h</span></div>
+                <div class="qwall">Same question, one valley over — nobody here trusts the forecast either.
+                  <a class="open" href="#">open its thread ↳</a></div>
+                <div class="cact">
+                  <button class="cbtn like" aria-pressed="false" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">9</span></button>
+                  <button class="cbtn more" aria-label="Options">⋯</button></div>
+                <div class="kids"></div>
+              </div>
+              <div class="c leaf">
+                <span class="av c4">m</span>
+                <div class="byline"><span class="who">moss</span><span class="dot"></span><span>1d</span></div>
+                <div class="ctext">Nothing. It is a bog out there.</div>
+                <div class="cact">
+                  <button class="cbtn like" aria-pressed="false" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">0</span></button>
+                  <button class="cbtn"><svg class="icon"><use href="#i-reply"/></svg>Reply</button>
+                  <button class="cbtn more" aria-label="Comment options">⋯</button></div>
+                <div class="kids"></div>
+              </div>
+            </div>
+          </div>
+          <div class="toast" data-toast></div>
+        </div>
+      </div>
+    </div>
+    <div class="cols">
+      <div class="callout"><h3>What changes in the grammar</h3>
+        <ul><li><b>Depth 0 has no rail.</b> The rail says “these answer the comment above”, so it starts under a comment, never under the post.</li>
+            <li><b>The rail is paint.</b> <code>pointer-events:none</code>; nothing on the left edge is tappable. The current 24px gutter button is what makes a scroll on a phone open or close threads by accident.</li>
+            <li><b>Collapse is ⊖ on the actions row</b>, and only on comments that have children. Collapsed, it becomes ⊕ and says how many it is hiding — the note the gutter writes today, moved onto the control.</li>
+            <li><b>The elbow lands on the child's avatar</b>, which is why avatars in comments earn their 32px: they are the anchors the connector points at.</li>
+            <li><b>Quotes keep the wall, lose the box.</b> The brand-green wall stays the grammar for quoted material (3q). The tinted block goes on the phone, where it read as a card you could tap; on desktop it stays, lighter.</li></ul></div>
+      <div class="callout"><h3>Trade-offs to talk through</h3>
+        <ul><li>Losing the gutter loses the “click anywhere on the left to fold” affordance that the spec (§3.3) called the signature. The proposal bets that it was never discoverable on a phone and cost more mis-taps than it saved.</li>
+            <li>Reddit fades the connector after the last child; here the last elbow is masked with the card colour, which breaks on a striped row background (<code>--row-odd/even</code>). The thread card is unstriped today, so this holds — worth a test.</li>
+            <li>Deep threads: the connector nests 22px per level (16px on phone). Past depth 5 or so it wants the existing “continue this thread” stub sooner than 10.</li></ul></div>
+      <div class="callout"><h3>Current, for the record</h3>
+        <p>Memory-mode demo thread as it renders today on a phone and on desktop — every direct reply carries the rail.</p>
+        <p style="margin-top:8px"><img class="shot" src="thread-current-phone.png" alt="Forage thread today on a 390px phone: each top-level comment has a vertical line on its left" width="260"></p></div>
+    </div>
+    <img class="shot" src="thread-current-desk.png" alt="Forage thread today on desktop: forty flat comments, each with a left rail">
+  </section>
+
+  <!-- ================================================================ -->
+  <section id="d">
+    <div class="eyebrow">Proposal D</div>
+    <h2>The like control: one target, arrow and count together — and it buzzes</h2>
+    <p class="sub">On a post, Reddit's pill (arrow · count in one 44px target) replaces our detached ▲ over a number; on a
+      comment, the outlined arrow with the count beside it and <b>Reply</b> spelled out, as in the screenshots. Pressed state is
+      the brand green with the arrow filled, not just a colour change on a 13px glyph. Try the buttons above.</p>
+    <div class="cols">
+      <div class="callout"><h3>Sizing</h3>
+        <ul><li>Post pill: 36px tall on desktop, 44px on phone; comment button 36/44 — the floor MOBILE-FIRST.md sets.</li>
+            <li>Tabular numerals so 9 → 10 does not shift the row.</li>
+            <li>Read-only viewer (signed out): the pill renders as a count with no arrow — the same rule <code>voteBox</code> keeps today (owner, 2026-08-27).</li>
+            <li>One implementation. <code>miniVote</code> is the second copy of <code>voteBox</code>; the plan that removed downvotes named “fix one and ship” as the likely mistake. This is the moment to fold them.</li></ul></div>
+      <div class="callout"><h3>Haptics, on by default</h3>
+        <ul><li><code>navigator.vibrate(12)</code> on a like or a promote; nothing on un-like. Optimistic — fires with the flip, not the server round-trip.</li>
+            <li>Default on, one switch in settings (“Buzz on like”), stored like skin and mode.</li>
+            <li><b>Honest limit:</b> iOS Safari has no vibrate API, and Chrome ignores it until the page has had a user gesture. It degrades to nothing — never a fallback sound, never a toast.</li>
+            <li>Respects <code>prefers-reduced-motion</code>? Open question — it is not motion, but some people set it for exactly this.</li></ul></div>
+      <div class="callout"><h3>Where it lands in code</h3>
+        <ul><li><code>js/ui/components.js</code> — <code>voteBox</code>, <code>miniVote</code>, <code>postRow</code>, <code>commentNode</code>.</li>
+            <li><code>js/ui/lens-views.js</code> — <code>kindContext</code>, <code>quoteNode</code>, <code>lensNode</code>, the thread head near line 2150.</li>
+            <li><code>css/app.css</code> — <code>.postrow</code> grid, <code>.gutter</code>, <code>.quote-node</code>, <code>.cvote</code>; six skins style <code>.vote.boost</code> and would need the new class names.</li>
+            <li>Gates that will notice: <code>e2e/no-downvote.workflow.mjs</code>, <code>e2e/density.workflow.mjs</code>, <code>scenarios/comment-tree-collapse.js</code>, the a11y/skins workflows.</li></ul></div>
+    </div>
+  </section>
+
+  <!-- ================================================================ -->
+  <section>
+    <div class="eyebrow">Decisions</div>
+    <h2>What needs a yes before any of this becomes a plan</h2>
+    <div class="tablewrap"><table>
+      <tr><th style="width:36px">#</th><th>Decision</th><th>Proposal</th><th>Alternative</th></tr>
+      <tr><td>1</td><td>Vote leaves the left column</td><td>Yes — into the action row as a pill; the column becomes the avatar</td><td>Keep the rail; put the avatar in the byline only (no left column at all)</td></tr>
+      <tr><td>2</td><td>Collapse control</td><td>⊖/⊕ on the actions row, children only</td><td>Keep the gutter but draw it only from depth 1, and shrink the hit area</td></tr>
+      <tr><td>3</td><td>Menu contents</td><td>The four groups in B; steward group conditional; Delete replaces Report on your own post</td><td>Fewer: Copy link · Save · Hide · Report</td></tr>
+      <tr><td>4</td><td>Menu on phone</td><td>Bottom sheet (Reddit); popover on desktop (Bluesky)</td><td>Popover everywhere</td></tr>
+      <tr><td>5</td><td>Quote on phone</td><td>Wall only, no tint, avatar header like a comment</td><td>Keep the tinted block everywhere</td></tr>
+      <tr><td>6</td><td>Haptics</td><td>On by default, one settings switch, like + promote only</td><td>Off by default</td></tr>
+      <tr><td>7</td><td>Time format</td><td>Bare “1d” / “5h” next to the name (Reddit/Bluesky)</td><td>Keep “1d ago”</td></tr>
+    </table></div>
+  </section>
+</div>
+
+<script>
+const q=(s,r=document)=>r.querySelector(s), qa=(s,r=document)=>[...r.querySelectorAll(s)];
+let haptic=true;
+qa('.seg').forEach(seg=>seg.addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  qa('button',seg).forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+  const ctl=seg.dataset.ctl, v=b.dataset.v;
+  if(ctl==='skin') qa('.app').forEach(a=>a.dataset.skin=v);
+  if(ctl==='variant') qa('.app[data-thread]').forEach(a=>a.dataset.variant=v);
+  if(ctl==='haptic') haptic=v==='on';
+}));
+function toast(app,msg){const t=q('[data-toast]',app); if(!t) return; t.textContent=msg; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),1400);}
+document.addEventListener('click',e=>{
+  const like=e.target.closest('[data-like]');
+  if(like){
+    const on=like.getAttribute('aria-pressed')!=='true', n=q('.n',like);
+    like.setAttribute('aria-pressed',String(on)); n.textContent=Number(n.textContent)+(on?1:-1);
+    if(on&&haptic){ const ok=typeof navigator.vibrate==='function'&&navigator.vibrate(12);
+      toast(like.closest('.app'), ok?'liked · buzz':'liked · (no vibrate API here)'); }
+    return;
+  }
+  const fold=e.target.closest('[data-fold]');
+  if(fold){
+    const c=fold.closest('.c'), collapsed=c.classList.toggle('collapsed');
+    const n=qa('.c',c).length;
+    fold.innerHTML=collapsed?`<svg class="icon"><use href="#i-plus"/></svg><span>${n} ${n===1?'reply':'replies'} hidden</span>`:`<svg class="icon"><use href="#i-minus"/></svg>`;
+    fold.setAttribute('aria-label',collapsed?'Expand':'Collapse');
+    return;
+  }
+  const kb=e.target.closest('[data-menu]');
+  if(kb){
+    const m=document.getElementById(kb.dataset.menu), open=m.hidden;
+    m.hidden=!open; kb.setAttribute('aria-expanded',String(open));
+    const sc=q(`[data-scrim="${kb.dataset.menu}"]`); if(sc) sc.hidden=!open;
+    return;
+  }
+  const cl=e.target.closest('[data-close],[data-scrim]');
+  if(cl){ const id=cl.dataset.close||cl.dataset.scrim, m=document.getElementById(id); m.hidden=true;
+    const sc=q(`[data-scrim="${id}"]`); if(sc) sc.hidden=true; q(`[data-menu="${id}"]`).setAttribute('aria-expanded','false'); return; }
+  if(e.target.closest('.mi')){ const m=e.target.closest('.menu'); m.hidden=true; const sc=q(`[data-scrim="${m.id}"]`); if(sc) sc.hidden=true; q(`[data-menu="${m.id}"]`)?.setAttribute('aria-expanded','false'); toast(m.closest('.app'),e.target.closest('.mi').textContent.trim()+' — (mock)'); return; }
+  if(!e.target.closest('.menu')) qa('.menu:not([hidden])').forEach(m=>{ if(!m.closest('.app[data-phone]')){ m.hidden=true; q(`[data-menu="${m.id}"]`)?.setAttribute('aria-expanded','false'); } });
+});
+</script>
+</body>
+</html>
