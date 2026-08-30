@@ -3,7 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forage Post &amp; Thread Proposals</title>
+<title>Forage Post &amp; Thread Proposals v5</title>
+<meta name="mock-version" content="5">
+<meta name="mock-baseline" content="forage@9eb0074">
 <style>
 :root{
   --page-bg:#EFE9DE; --page-card:#F8F4EC; --page-ink:#2B251C; --page-muted:#6B6252;
@@ -222,6 +224,10 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
 .tab{padding:6px 12px;color:var(--muted);border-bottom:2px solid transparent}
 .tab.active{color:var(--brand-ink);border-bottom-color:var(--brand-ink);font-weight:600}
 .h2s{font-family:ui-serif,Georgia,serif;font-size:var(--t-md);font-weight:700;margin:0 0 4px}
+.sortbar{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+.pill.sel .lbl{color:var(--muted);font-weight:400}
+.pill.sel .caret{font-size:10px;opacity:.7}
+.muted{color:var(--muted)}.xs{font-size:var(--t-xs)}
 .toast{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:var(--text);color:var(--bg);
   font-size:var(--t-xs);padding:6px 12px;border-radius:999px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
 .toast.show{opacity:1}
@@ -252,13 +258,44 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
 
 <div class="wrap">
   <header>
-    <div class="eyebrow">Forage · mock · 2026-08-29</div>
+    <div class="eyebrow">Forage · mock · post-and-thread <b>v5</b> · baseline forage@9eb0074 · 2026-08-29</div>
     <h1>Posts, threads, and the ⋯ menu</h1>
-    <p class="sub">Four proposals to talk through, studied from the Reddit and Bluesky screenshots in
-      <code>~/Downloads/new/Photos-1-001</code> and Forage as it renders today. Everything below is a
-      drawing, not code — the “Current” panels mirror <code>css/app.css</code> and
-      <code>js/ui/components.js</code> as of <code>d256817</code>.</p>
+    <p class="sub"><b>Five proposals (A–E) and nine open decisions</b>, made to be talked through — not code. The purpose:
+      make a Forage thread read the way the Reddit and Bluesky screenshots in <code>~/Downloads/new/Photos-1-001</code> read —
+      who said what, what answers what, what is a repost — with fewer things to tap by accident on a phone. A is the header
+      line, B the ⋯ menu, C the threading, D the like control, E the sort control. Every proposal shows Forage today beside
+      the proposal; the “today” frames in C are also captured pixels, not drawings (see <code>snaps/</code>).</p>
   </header>
+
+  <!-- ================================================================ -->
+  <section>
+    <div class="eyebrow">Decisions</div>
+    <h2>Open decisions — read these as you go</h2>
+    <div class="tablewrap"><table>
+      <tr><th style="width:36px">#</th><th>Decision</th><th>Proposal</th><th>Alternative</th></tr>
+      <tr><td>1</td><td>Vote leaves the left column</td><td>Yes — into the action row as a pill; the column becomes the avatar</td><td>Keep the rail; put the avatar in the byline only (no left column at all)</td></tr>
+      <tr><td>2</td><td>Collapse control</td><td>⊖/⊕ on the actions row, children only</td><td>Keep the gutter but draw it only from depth 1, and shrink the hit area</td></tr>
+      <tr><td>3</td><td>Menu contents</td><td>Post · thread · account as in B, separators only; steward group conditional; Delete replaces Report on your own post; Save via Bluesky bookmarks</td><td>Fewer: Copy link · Save · Hide · Report</td></tr>
+      <tr><td>4</td><td>Menu on phone</td><td>Bottom sheet (Reddit); popover on desktop (Bluesky)</td><td>Popover everywhere</td></tr>
+      <tr><td>5</td><td>Quote on phone</td><td>Wall on the node’s outer edge (left of the avatar), no tint, avatar header like a comment</td><td>Keep the tinted block everywhere</td></tr>
+      <tr><td>6</td><td>Haptics</td><td>On by default, one settings switch, like + promote only</td><td>Off by default</td></tr>
+      <tr><td>7</td><td>Time format</td><td>Bare “1d” / “5h” next to the name (Reddit/Bluesky)</td><td>Keep “1d ago”</td></tr>
+      <tr><td>8</td><td>Avatars are real (owner, 2026-08-29)</td><td>Every avatar in A and C is the account's actual picture; the masthead's initials stand-in (deliberate, <code>js/main.js</code> E144: “their little avatar or like a stand-in”) is retired for the fetched one, with the initials only as the not-yet-loaded state</td><td>Keep the stand-in in the masthead; real avatars only on posts and comments</td></tr>
+      <tr><td>9</td><td>Sort: one control bar, not tabs — and what Best means (E)</td><td>Adapt the lens board toolbar (selects) into one bar used on boards AND threads; every sort on every board, timeframe on Top; Best redefined, since without downvotes it orders exactly as Top today</td><td>Keep Best/Top/New tabs on threads; sort bar on boards only</td></tr>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Revisions</div>
+    <div class="tablewrap"><table>
+      <tr><th style="width:36px">v</th><th>What changed</th><th>Commit</th></tr>
+      <tr><td>5</td><td>Versioned (MOCKS.md); blurb + decisions on top; captured phone/desktop snaps of today; real avatars (8) and the sort bar (E, 9) added</td><td><i>this</i></td></tr>
+      <tr><td>4</td><td>⋯ top-right on every comment and quote, with its menu; quotes get like · Reply · Repost</td><td><code>9eb0074</code></td></tr>
+      <tr><td>3</td><td>Connector anchored to avatars; quote wall outside the avatar; Reply gets a return arrow</td><td><code>a2ca71f</code></td></tr>
+      <tr><td>2</td><td>Current beside Proposed (toggle dropped); share pill right-aligned; Save rides Bluesky bookmarks</td><td><code>0339b28</code></td></tr>
+      <tr><td>1</td><td>First draft: A–D</td><td><code>927b44b</code></td></tr>
+    </table></div>
+  </section>
 
   <div class="controls">
     <div class="cgroup"><span class="eyebrow">Skin</span>
@@ -275,7 +312,9 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
     <p class="sub">Every post and every comment opens the same way: a 32px avatar, the author, a dot, how long ago. On a feed row
       the board (<code>f/gardening</code>) leads the line instead, because that is what you scan a mixed feed by. The ⋯ sits
       top-right on the feed row <b>and</b> on the read view, so it is one gesture in both places. Vote moves off the left rail
-      and into the action row (Proposal D), which is what frees the left column for the avatar.</p>
+      and into the action row (Proposal D), which is what frees the left column for the avatar. <b>The lettered circles here
+      stand in for the account's real picture</b> — the lens already carries <code>avatar</code> on profiles and feeds; posts and
+      comments would render the same URL, and the masthead's initials stand-in becomes the loading state only (decision 8).</p>
     <div class="stage">
       <div class="device phone"><div class="device-label">Phone · feed row</div>
         <div class="screen app" data-phone data-skin="light">
@@ -648,11 +687,17 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
             <li>Reddit fades the connector after the last child; here the last elbow is masked with the card colour, which breaks on a striped row background (<code>--row-odd/even</code>). The thread card is unstriped today, so this holds — worth a test.</li>
             <li>Should a plain reply carry Repost too? On Bluesky a reply is a post and can be reposted; the row here shows it only on quotes, per the ask. Cheap to add, busier row.</li>
             <li>Deep threads: the connector nests 22px per level (16px on phone). Past depth 5 or so it wants the existing “continue this thread” stub sooner than 10.</li></ul></div>
-      <div class="callout"><h3>Current, for the record</h3>
-        <p>Memory-mode demo thread as it renders today on a phone and on desktop — every direct reply carries the rail.</p>
-        <p style="margin-top:8px"><img class="shot" src="thread-current-phone.png" alt="Forage thread today on a 390px phone: each top-level comment has a vertical line on its left" width="260"></p></div>
+      <div class="callout"><h3>Today, captured</h3>
+        <p>Below: real pixels of the memory-mode demo thread at <b>forage@9eb0074</b>, taken by <code>scripts/mock-snaps.mjs</code>
+        at the standard frames (390×844, 1280×900; <code>snaps/manifest.json</code>). The drawn “Current (today)” row above uses this
+        mock's own content for a like-for-like read; these are the evidence it is a faithful drawing of.</p></div>
     </div>
-    <img class="shot" src="thread-current-desk.png" alt="Forage thread today on desktop: forty flat comments, each with a left rail">
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · thread · captured</div>
+        <img class="shot" src="snaps/thread.phone.png" alt="Forage thread today on a 390px phone: each top-level comment has a vertical line on its left" width="390"></div>
+      <div class="device desk"><div class="device-label">Desktop · thread · captured</div>
+        <img class="shot" src="snaps/thread.desktop.png" alt="Forage thread today on desktop: forty flat comments, each with a left rail"></div>
+    </div>
   </section>
 
   <!-- ================================================================ -->
@@ -681,20 +726,67 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
     </div>
   </section>
 
+
   <!-- ================================================================ -->
-  <section>
-    <div class="eyebrow">Decisions</div>
-    <h2>What needs a yes before any of this becomes a plan</h2>
-    <div class="tablewrap"><table>
-      <tr><th style="width:36px">#</th><th>Decision</th><th>Proposal</th><th>Alternative</th></tr>
-      <tr><td>1</td><td>Vote leaves the left column</td><td>Yes — into the action row as a pill; the column becomes the avatar</td><td>Keep the rail; put the avatar in the byline only (no left column at all)</td></tr>
-      <tr><td>2</td><td>Collapse control</td><td>⊖/⊕ on the actions row, children only</td><td>Keep the gutter but draw it only from depth 1, and shrink the hit area</td></tr>
-      <tr><td>3</td><td>Menu contents</td><td>Post · thread · account as in B, separators only; steward group conditional; Delete replaces Report on your own post; Save via Bluesky bookmarks</td><td>Fewer: Copy link · Save · Hide · Report</td></tr>
-      <tr><td>4</td><td>Menu on phone</td><td>Bottom sheet (Reddit); popover on desktop (Bluesky)</td><td>Popover everywhere</td></tr>
-      <tr><td>5</td><td>Quote on phone</td><td>Wall on the node’s outer edge (left of the avatar), no tint, avatar header like a comment</td><td>Keep the tinted block everywhere</td></tr>
-      <tr><td>6</td><td>Haptics</td><td>On by default, one settings switch, like + promote only</td><td>Off by default</td></tr>
-      <tr><td>7</td><td>Time format</td><td>Bare “1d” / “5h” next to the name (Reddit/Bluesky)</td><td>Keep “1d ago”</td></tr>
-    </table></div>
+  <section id="e">
+    <div class="eyebrow">Proposal E</div>
+    <h2>Sort: one control bar, on boards and threads — and what Best means</h2>
+    <p class="sub">Today there are two mechanisms: the memory tier draws <b>tabs</b> (Hot · New · Top · Rising on a board, Best · Top · New
+      on a thread, in <code>views.js</code>), and the lens draws a <b>toolbar of selects</b> (Feed order · New · Top, a timeframe under
+      Top, density, preview size — <code>boardToolbar</code> in <code>lens-views.js</code>). The proposal adapts the toolbar into one bar
+      used everywhere, including the thread page, and puts every sort on every board. Reddit withholds sorts on new posts and
+      threads; we don't have to.</p>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · thread · sort bar (proposed)</div>
+        <div class="screen app" data-phone data-skin="light">
+          <div class="card" style="margin:10px">
+            <div class="sortbar">
+              <button class="pill sel"><span class="lbl">Sort</span> Best <span class="caret">▾</span></button>
+              <button class="pill sel"><span class="lbl">From</span> Today <span class="caret">▾</span></button>
+              <span class="muted xs" style="margin-left:auto">40 replies</span>
+            </div>
+            <div class="c leaf" style="padding-top:12px">
+              <div class="avcol"><span class="av c1">b</span><span class="line"></span></div>
+              <div class="byline"><span class="who">briar</span><span class="dot"></span><span>1d</span><button class="kebab sm" aria-label="Options">⋯</button></div>
+              <div class="ctext">Broad beans and a late row of spinach.</div>
+              <div class="cact"><button class="cbtn like" aria-pressed="false" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">21</span></button>
+                <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button></div>
+              <div class="kids"></div>
+            </div>
+          </div>
+          <div class="card" style="margin:10px">
+            <div class="h2s">Today (tabs)</div>
+            <div class="tabs"><span class="tab active">Best</span><span class="tab">Top</span><span class="tab">New</span></div>
+          </div>
+          <div class="toast" data-toast></div>
+        </div>
+      </div>
+      <div class="device desk"><div class="device-label">What each sort means today · <code>js/engines/rank.js</code></div>
+        <div class="tablewrap" style="margin:0"><table>
+          <tr><th>Sort</th><th>Formula today</th><th>Where</th><th>Note</th></tr>
+          <tr><td>Hot</td><td>likes vs age, log-scaled</td><td>memory boards (default)</td><td></td></tr>
+          <tr><td>New</td><td>newest first</td><td>everywhere</td><td></td></tr>
+          <tr><td>Top</td><td>most likes; timeframe hour · day · week · month · year · all</td><td>everywhere</td><td>the lens offers day → all</td></tr>
+          <tr><td>Rising</td><td>likes per hour, young posts favoured</td><td>memory boards</td><td></td></tr>
+          <tr><td><b>Best</b></td><td>Wilson lower bound on likes/(likes+downs) — with downs gone, <code>confidence(n) = 1/(1+z²/n)</code></td><td>threads (default)</td><td><b>strictly increasing in likes, so Best orders exactly as Top today.</b> The word promises something the number no longer delivers</td></tr>
+          <tr><td>Feed order</td><td>the generator's ranking (DL-010)</td><td>lens boards (default)</td><td>a live whole-feed sort is the Jetstream frontier, E139</td></tr>
+        </table></div>
+      </div>
+    </div>
+    <div class="cols">
+      <div class="callout"><h3>The bar</h3>
+        <ul><li>Two pills: <b>Sort</b> and <b>From</b> (the timeframe), each a select dressed as the action-row pill so the page has one vocabulary. <b>From</b> shows only when the sort is Top or Best.</li>
+            <li>Same bar on a board and on a thread; on the lens board it keeps density and preview size at its right end, as now.</li>
+            <li>Not the retired two-half strip: that control had two jobs and could not have one (owner, 2026-08-28, <code>nav.js</code>). A select has one.</li></ul></div>
+      <div class="callout"><h3>What Best could mean</h3>
+        <ul><li><b>Likes against replies</b> — a reply that drew answers is engaged with; Wilson on likes/(likes+replies) gives Best a denominator again.</li>
+            <li><b>Likes with decay</b> — Hot applied to comments: recent-and-liked over old-and-liked. Cheap; Reddit's threads effectively do this.</li>
+            <li><b>Retire the word</b> — threads default to Top and say so. Honest, and one sort fewer to explain.</li></ul></div>
+      <div class="callout"><h3>Timeframes, friendlier than Reddit</h3>
+        <ul><li>Every sort available on every board and thread, whatever its age — no “this post is too new to sort”.</li>
+            <li>Default <b>From</b>: Today on a board, All time on a thread (a thread's window is the thread).</li>
+            <li>Hour is in the memory tier and not the lens; either add it to the lens or drop it — one list.</li></ul></div>
+    </div>
   </section>
 </div>
 

@@ -1,0 +1,39 @@
+{
+  "baseline": "forage@9eb0074",
+  "capturedAt": "2026-08-29",
+  "population": "memory:seeded",
+  "files": [
+    {
+      "file": "board.phone.png",
+      "route": "board",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "scale": 2
+    },
+    {
+      "file": "thread.phone.png",
+      "route": "thread",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "scale": 2
+    },
+    {
+      "file": "board.desktop.png",
+      "route": "board",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "scale": 1
+    },
+    {
+      "file": "thread.desktop.png",
+      "route": "thread",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "scale": 1
+    }
+  ]
+}
