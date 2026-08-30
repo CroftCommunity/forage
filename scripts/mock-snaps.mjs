@@ -98,7 +98,10 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
   // post-and-thread § F: a deep link lands on the comment, its parents above, the bar over it
   if (wanted('focus-lens')) {
     await l.page.goto(`${l.origin}${THREAD_PATH}&focus=${encodeURIComponent(NODE_IDS[2])}`);
-    await l.page.waitForSelector('.comment.focused', { timeout: 15000 });
+    // wait for the BAR, not `.comment.focused`: a tree where the focus is lost
+    // after the cascade repaint (main before 2026-08-30) is exactly what a
+    // Current capture must be able to show
+    await l.page.waitForSelector('.focus-bar', { timeout: 15000 });
     await l.page.waitForTimeout(2200); // the 2s focus tint has faded: the resting state, not the flash
     await shoot(l.page, 'focus-lens', 'lens:mock-thread', name, vp);
   }
