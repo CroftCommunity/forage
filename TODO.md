@@ -88,6 +88,34 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
   What survives for E139: keeping POST streams fresh, where the events are the
   310/sec Jetstream is good at.
 
+## Device queue — owed device runs (for the device-testing queue session to lift)
+
+Every item here is a **look or a measurement on a real phone** that a shipped plan could not
+make because no device was attached. Each names the plan, the phase, and the exact claim;
+none needs code before the run, and each may need code after it. Claim `testbed--samsung`
+(`CroftC/.claude/TESTBED.md`) before running.
+
+- **board-cards D1 — the blurred backdrop's cost.** `plans/2026-08-29-plan-board-cards.md`
+  Phase 0/5b (O2, PHASE-GATED). Ten stages with `filter: blur(22px)` on a mid-range
+  Android: scroll a picture-heavy board (`/f/whats-hot` at card size 4) and read the frame
+  timeline. **Pass:** no dropped frames at 60Hz. **Fail:** set `data-flat` on `.stage`
+  (the flat band `prefers-reduced-transparency` already selects) by default on phones —
+  the rule exists in `css/app.css`; only the trigger is missing.
+- **board-cards 5c Broad — the four card sizes on the Samsung.** Same plan, Phase 5c.
+  The live site's shapes at card size 1, 2, 3 and 4 (toolbar pill or Settings → Card size):
+  does 4 feel tall on a phone (O4 said 3 would be the first thing to try)? Portrait /
+  landscape / wide / video posts each at 390 wide.
+- **board-cards 6 — the carousel's swipe as a feel.** The handler is proven (pointer
+  events, `e2e/media-stage`); the feel — threshold 40px, the 250ms slide — is not. A
+  four-picture post at setting 1 (the default).
+- **board-cards 7 — the one-column phone layout with the rail folded.** The rail's cards
+  follow the content on a phone (the hero owns the fold); one look that the sign-in card
+  is findable signed out on `/f/whats-hot` at 390, and that the Side panel switch's OFF
+  state changes nothing visible on a phone (as designed).
+- **post-and-thread Phase 7 — haptics.** `plans/2026-08-29-plan-post-and-thread.md`:
+  a like buzzes once on the flip to on, never on off; Settings → Buzz on like stops it.
+  `navigator.vibrate` is stubbed in `e2e/no-downvote`; the buzz itself was never felt.
+
 ## Ledgered (see `ledger/divergence.js`)
 
 - ~~DL-013 boost-as-like~~ — SHIPPED 2026-08-25 (plan 2026-08-25-1, 3c): boosts
