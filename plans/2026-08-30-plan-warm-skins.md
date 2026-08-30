@@ -47,7 +47,7 @@ real style, and every file's header says so in those words, so that a reader who
 | Lavender | lilac paper, aubergine ink, violet band, Trebuchet | violet-black ground, lilac links | the purple recolours; the night-sky subsilver2 styles (Milky Way) |
 | Apricot | cream, terracotta band, rust links, Georgia display | cocoa ground, apricot links, burnt-orange band | the coffee styles (Latte) and subsilver2's orange hover made primary |
 | Seaglass | sea-foam paper, teal band, coral hover, 10px corners | deep teal ground, seaglass links, coral hover | the white-and-mint prosilver descendants (Artodia Air, Aero) |
-| Cornflower | sky-tinted paper, prosilver's measured band `#4688CE` and navbar `#C9DEE8`, white cards, 7px corners, Trebuchet headings | navy ground, sky links | prosilver itself — the phpBB blue on the warm set's grammar (added on review, see decision 7) |
+| Cornflower | sky-tinted paper, the phpBB skin's band blue `#3A78BC` (prosilver's literal `#4688CE` fails 14px white at 3.70) and prosilver's measured navbar `#C9DEE8`, white cards, 7px corners, Trebuchet headings | navy ground, sky links | prosilver itself — the phpBB blue on the warm set's grammar (added on review, see decision 7) |
 
 All four keep the prosilver grammar the phpBB skin already proved the tokens can carry:
 a filled masthead band (`--band-fill`), a pale tab strip (`--nav-fill`), white cards on a
@@ -121,7 +121,14 @@ and MOCKS.md's "the page says which skin" rule needs the manifest to know.
 | 7 | Cornflower is a fifth family, and the phpBB pair is untouched | owner on review (2026-08-30): "I do like them all, but want to keep my phpbb forum ones as well and refine along these lines … the blue one I mean", then "if you want to keep it as a blue family and just have the blue family showcase the phpbb blue that's great". The phpBB skin is a recorded choice (OQ5: subSilver gray, squares, bevel) and it prefers compact rows; a blue family beside it costs one registry row and rewrites nothing |
 | 8 | Mock decisions 1–5 locked as proposed | same review: "I do like them all" — names, Seaglass, the serif display, the two radii, Apricot's band all stand |
 
+| 9 | The band floor is 4.5, not 3.0 | CI's per-skin axe pass on the first push: 18 violations, all masthead nav links on Apricot (band link 4.11) and Cornflower (white on `#4688CE`, 3.70). The masthead paints those links at 14px normal weight — body text to WCAG. The 3.0 "band" calibration belongs to the importer's gate, not to this surface; `test/skins.test.js` now grades every band pair at 4.5 and names the same four pairs axe did |
+
 ## Owed
+
+- The importer's gate still grades band text at 3.0 (`docs/SKINS.md` § The contrast gate). An
+  imported skin can therefore pass the importer and fail the masthead's 14px links under axe —
+  the gate should learn the surface's real size, or the masthead should paint band links bold.
+  Filed here, not fixed: it is the importer's contract, and no imported skin ships yet.
 
 - Device check: the eight skins on the Samsung at 390 wide, in daylight — `[device: android]`
   on the CHANGELOG line. Contrast is computed, not seen; the warm grounds may read

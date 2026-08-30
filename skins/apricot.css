@@ -8,26 +8,28 @@
    the hover: a terracotta band, rust links, cream ground, Georgia display over
    a Trebuchet body. Every value is ours; none was measured from a real style.
 
-   The band is the tightest pair in the set: white on #C2551F is 4.55:1, above
-   the 3.0 floor a band earns and above 4.5 besides, but a warmer terracotta
-   than this fails body-text AA for the button fill that shares the value.
+   The band is the tightest pair in the set: white on #C2551F is 4.55:1. That
+   IS the floor — forage's masthead paints its nav links at 14px normal weight,
+   so band text is body text to WCAG and axe, and the cream #FFF1E4 the band
+   link first shipped with measured 4.11 there (CI's per-skin axe pass caught
+   it, 2026-08-30). A warmer terracotta than this fails white outright.
 
    CONTRAST (measured by test/skins.test.js):
-     text        #3E2A1C  on bg          #FFF6EC   12.65:1  body
-     text        #3E2A1C  on card        #FFFFFF   13.52:1  body
-     text        #3E2A1C  on row-even    #FFF6EC   12.65:1  body
-     text        #3E2A1C  on row-head    #FAE3CC   10.90:1  body
-     text        #3E2A1C  on nav-fill    #FAE3CC   10.90:1  body
-     muted       #7A5E49  on bg          #FFF6EC    5.57:1  body
-     link        #A54118  on card        #FFFFFF    6.23:1  body
-     link        #A54118  on nav-fill    #FAE3CC    5.02:1  body
-     link-hover  #8C3611  on card        #FFFFFF    7.92:1  body
-     brand-ink   #A54118  on tint        #FBE6D2    5.15:1  body
-     band-ink    #FFFFFF  on band-fill   #C2551F    4.55:1  large/UI
-     band-link   #FFF1E4  on band-fill   #C2551F    4.11:1  large/UI
-     on-brand    #FFFFFF  on brand-fill  #C2551F    4.55:1  body
+     text        #3E2A1C  on bg               #FFF6EC   12.65:1  body
+     text        #3E2A1C  on card             #FFFFFF   13.52:1  body
+     text        #3E2A1C  on row-even         #FFF6EC   12.65:1  body
+     text        #3E2A1C  on row-head         #FAE3CC   10.90:1  body
+     text        #3E2A1C  on nav-fill         #FAE3CC   10.90:1  body
+     muted       #7A5E49  on bg               #FFF6EC    5.57:1  body
+     link        #A54118  on card             #FFFFFF    6.23:1  body
+     link        #A54118  on nav-fill         #FAE3CC    5.02:1  body
+     link-hover  #8C3611  on card             #FFFFFF    7.92:1  body
+     brand-ink   #A54118  on tint             #FBE6D2    5.15:1  body
+     band-ink    #FFFFFF  on band-fill        #C2551F    4.55:1  body
+     band-link   #FFFFFF  on band-fill        #C2551F    4.55:1  body
+     on-brand    #FFFFFF  on brand-fill       #C2551F    4.55:1  body
      on-brand    #FFFFFF  on brand-fill-hover #AD4B1B    5.53:1  body
-     danger-ink  #8F2A22  on danger-tint #F8ECEA    7.21:1  body
+     danger-ink  #8F2A22  on danger-tint      #F8ECEA    7.21:1  body
      tag chip: --gold-strong on mix(gold 18%, card)=#f7edd9  6.06
      unread pill: white on --clay-600 #A24D2C  5.78
 */
@@ -48,7 +50,7 @@
 
   --band-fill:   #C2551F;
   --band-ink:    #FFFFFF;
-  --band-link:   #FFF1E4;
+  --band-link:   #FFFFFF;
   --band-brand:  #FFFFFF;
   --nav-fill:    #FAE3CC;
   --panel:       #FFFFFF;

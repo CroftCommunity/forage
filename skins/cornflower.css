@@ -10,10 +10,13 @@
    density preference.
 
    MEASURED (from skins/phpbb.css's Phase 0 readings of prosilver colours.css):
-     .headerbar/.forumbg #4688CE   .navbar #C9DEE8
-   Everything else is ours. The button fill is #3A78BC rather than the band's
-   #4688CE for the same reason phpbb.css chose it: white on #4688CE is 3.70:1,
-   fine for a band (3.0 floor) and under AA for button text (4.5).
+     .navbar #C9DEE8 — the tab strip is prosilver's, to the hex.
+   The band is #3A78BC, the blue the phpBB skin here paints, NOT prosilver's
+   literal .headerbar #4688CE: white on #4688CE is 3.70:1, and forage's
+   masthead paints its nav links at 14px normal weight, which is body text to
+   WCAG and to axe (4.5). This skin shipped with #4688CE first and CI's
+   per-skin axe pass refused it the same day — the exact finding phpbb.css
+   recorded when it made the same swap. Everything else is ours.
 
    CONTRAST (measured by test/skins.test.js):
      text        #1F2C3D  on bg               #EEF3F9   12.67:1  body
@@ -26,8 +29,8 @@
      link        #1B5C9E  on nav-fill         #C9DEE8    4.92:1  body
      link-hover  #0F3F73  on card             #FFFFFF   10.61:1  body
      brand-ink   #1B5C9E  on tint             #DCE8F4    5.50:1  body
-     band-ink    #FFFFFF  on band-fill        #4688CE    3.70:1  large/UI
-     band-link   #FFFFFF  on band-fill        #4688CE    3.70:1  large/UI
+     band-ink    #FFFFFF  on band-fill        #3A78BC    4.57:1  body
+     band-link   #FFFFFF  on band-fill        #3A78BC    4.57:1  body
      on-brand    #FFFFFF  on brand-fill       #3A78BC    4.57:1  body
      on-brand    #FFFFFF  on brand-fill-hover #2F6BAE    5.48:1  body
      danger-ink  #8F2A22  on danger-tint      #F8ECEA    7.21:1  body
@@ -49,7 +52,7 @@
   --brand-fill-hover: #2F6BAE;
   --on-brand:    #FFFFFF;
 
-  --band-fill:   #4688CE;
+  --band-fill:   #3A78BC;
   --band-ink:    #FFFFFF;
   --band-link:   #FFFFFF;
   --band-brand:  #FFFFFF;

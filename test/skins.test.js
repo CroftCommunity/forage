@@ -718,11 +718,17 @@ test('the new set: rosewater, lavender, apricot, seaglass and cornflower each sh
 // only body text on the ground was graded for every skin, and only for the dark
 // ones; each file's header RECORDS the rest by hand. A recorded number nothing
 // recomputes is a comment. So: every pair the chrome actually paints, on every
-// registered skin, at the threshold that role earns — body text and links at
-// 4.5, band text at 3.0 (large/bold UI, the same calibration docs/SKINS.md
-// gives the importer's gate). A role a skin leaves as a passthrough (var(),
-// transparent) is skipped here, because its value is whatever the default
-// resolves to and the default is graded on its own.
+// registered skin, at the threshold that role earns. Everything is 4.5 — the
+// band INCLUDED, because forage's masthead paints its nav links at 14px normal
+// weight, which is body text to WCAG and to axe. The first draft graded the
+// band at 3.0, the importer's "large/bold UI" calibration (docs/SKINS.md), and
+// CI's per-skin axe pass (e2e/a11y-skins.workflow.mjs) refused it: apricot's
+// band link at 4.1 and cornflower's white on prosilver's #4688CE at 3.7 — the
+// exact pair skins/phpbb.css had already swapped for #3A78BC. The importer's
+// 3.0 stays the importer's problem; here the surface is known and it is 14px.
+// A role a skin leaves as a passthrough (var(), transparent) is skipped,
+// because its value is whatever the default resolves to and the default is
+// graded on its own.
 const ROLE_PAIRS = [
   ['--text', '--bg', 4.5], ['--text', '--card', 4.5], ['--text', '--card-2', 4.5],
   ['--text', '--row-even', 4.5], ['--text', '--row-head', 4.5], ['--text', '--nav-fill', 4.5],
@@ -731,7 +737,7 @@ const ROLE_PAIRS = [
   ['--link', '--card', 4.5], ['--link', '--bg', 4.5], ['--link', '--row-even', 4.5], ['--link', '--nav-fill', 4.5],
   ['--link-hover', '--card', 4.5],
   ['--brand-ink', '--bg', 4.5], ['--brand-ink', '--tint', 4.5],
-  ['--band-ink', '--band-fill', 3.0], ['--band-link', '--band-fill', 3.0], ['--band-brand', '--band-fill', 3.0],
+  ['--band-ink', '--band-fill', 4.5], ['--band-link', '--band-fill', 4.5], ['--band-brand', '--band-fill', 4.5],
   ['--on-brand', '--brand-fill', 4.5], ['--on-brand', '--brand-fill-hover', 4.5],
   ['--danger-ink', '--danger-tint', 4.5], ['--danger', '--card', 4.5], ['--bury', '--card', 4.5],
 ];
