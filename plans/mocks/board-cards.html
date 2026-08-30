@@ -3,13 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forage Board Cards Proposals v1</title>
-<meta name="mock-version" content="1">
+<title>Forage Board Cards Proposals v2</title>
+<meta name="mock-version" content="2">
 <meta name="mock-baseline" content="forage@411c40f">
 <style>
 :root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
   --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page-bg:#1C1813;--page-card:#262019;--page-ink:#EFE7D9;--page-muted:#B5A88F;--page-line:#3D3527;--page-accent:#A5CD98}}
+:root[data-theme="dark"]{--page-bg:#1C1813;--page-card:#262019;--page-ink:#EFE7D9;--page-muted:#B5A88F;--page-line:#3D3527;--page-accent:#A5CD98}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{background:var(--page-bg);color:var(--page-ink);font-family:var(--f-body);line-height:1.55;margin:0;padding:32px 20px 72px}
@@ -48,6 +49,13 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
 .app{--bg:#F8F4EC;--card:#FFFFFF;--card-2:#F2EDE2;--text:#2B251C;--muted:#68604F;--border:#E3DCCD;--link:#38683F;--brand-ink:#33623A;--brand-fill:#41724A;--on-brand:#fff;--tint:#EAEFDF;--boost:#41724A;--danger:#9E2F26;--scrim:rgba(0,0,0,.55);
   --t-xs:13px;--t-sm:14px;--t-md:16px;--t-lg:20px;--radius-card:6px;--radius-sm:4px;--radius-chip:999px;
   background:var(--bg);color:var(--text);font-size:var(--t-md);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.45}
+/* card size 1–4 (owner, 2026-08-29): the reader chooses how much real estate a card takes; 4 = as first proposed */
+.app{--stage-desk:520px;--stage-phone:420px;--card-pad:12px;--title:16px}
+.app[data-size="3"]{--stage-desk:420px;--stage-phone:340px;--card-pad:10px;--title:15px}
+.app[data-size="2"]{--stage-desk:320px;--stage-phone:260px;--card-pad:9px;--title:15px}
+.app[data-size="1"]{--stage-desk:220px;--stage-phone:180px;--card-pad:8px;--title:14px}
+.app .card{padding:var(--card-pad)}
+.app .posttitle{font-size:var(--title)}
 .app[data-skin="dark"]{--bg:#262019;--card:#31291F;--card-2:#3B3226;--text:#EFE7D9;--muted:#B5A88F;--border:#4C4232;--link:#A5CD98;--brand-ink:#A5CD98;--brand-fill:#41724A;--tint:#3A392A;--boost:#8FC48A;--danger:#F0938A}
 .app a{color:var(--link);text-decoration:none}
 .icon{display:inline-block;width:1.15em;height:1.15em;vertical-align:-.2em;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -97,7 +105,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
 .mstage{position:relative;width:100%;border-radius:var(--radius-card);overflow:hidden;background:#000;margin:8px 0;display:grid;place-items:center;border:1px solid var(--border)}
 .mstage .back{position:absolute;inset:-24px;aspect-ratio:auto;height:auto;filter:blur(22px) brightness(.55) saturate(1.1);transform:scale(1.15)}
 .mstage .fore{position:relative;z-index:1;border:0;border-radius:0;box-shadow:0 0 24px rgba(0,0,0,.35);aspect-ratio:auto}
-.mstage.h-phone{height:420px}.mstage.h-desk{height:520px}
+.mstage.h-phone{height:var(--stage-phone)}.mstage.h-desk{height:var(--stage-desk)}
 .mstage.video .back{display:none}
 .arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:2;width:36px;height:36px;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#fff;font-size:18px;display:grid;place-items:center;cursor:pointer}
 .arrow.l{left:10px}.arrow.r{right:10px}
@@ -110,7 +118,8 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
 .grid3{display:grid;grid-template-columns:2fr 1fr;grid-template-rows:1fr 1fr;gap:4px;margin:8px 0;height:260px}
 .grid3 .ph{aspect-ratio:auto;height:100%;border-radius:var(--radius-sm)}
 .grid3 .ph:first-child{grid-row:1/span 2}
-.grid4{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:4px;margin:8px 0;height:300px}
+.grid4{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:4px;margin:8px 0;height:var(--stage-desk)}
+.minigrids{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}.minigrids>div{width:150px}.minigrids .grid2,.minigrids .grid3,.minigrids .grid4{height:110px;margin:4px 0}.minigrids .grid2 .ph{aspect-ratio:auto;height:100%}
 .grid4 .ph{aspect-ratio:auto;height:100%;border-radius:var(--radius-sm)}
 /* page column */
 .shell{display:grid;gap:14px;padding:14px}
@@ -143,7 +152,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
 
 <div class="wrap">
   <header>
-    <div class="eyebrow">Forage · mock · board-cards <b>v1</b> · baseline forage@411c40f · 2026-08-29</div>
+    <div class="eyebrow">Forage · mock · board-cards <b>v2</b> · baseline forage@411c40f · 2026-08-29</div>
     <h1>Board cards: the guest like, share, the toolbar, the media stage, the column, the pinned bar</h1>
     <p class="sub"><b>Six proposals (A–F), six open decisions.</b> Purpose: the owner's review of forage.fyi after the post-and-thread landings — the ▲ a guest cannot press,
       no share on posts, two toolbar controls that do not match, cards that are half empty beside a 220px-tall image, and a masthead that scrolls away.
@@ -154,6 +163,8 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
   <div class="controls">
     <div class="cgroup"><span class="eyebrow">Skin</span>
       <div class="seg" data-skin-seg><button aria-pressed="true" data-skin="light">Light</button><button aria-pressed="false" data-skin="dark">Dark</button></div></div>
+    <div class="cgroup"><span class="eyebrow">Card size (all frames; 4 = as first proposed)</span>
+      <div class="seg" data-size-seg><button aria-pressed="false" data-size="1">1</button><button aria-pressed="false" data-size="2">2</button><button aria-pressed="false" data-size="3">3</button><button aria-pressed="true" data-size="4">4</button></div></div>
     <div class="cgroup"><span class="eyebrow">Pictures shown at once (D)</span>
       <div class="seg" data-n-seg><button aria-pressed="true" data-n="1">1</button><button aria-pressed="false" data-n="2">2</button><button aria-pressed="false" data-n="3">3</button><button aria-pressed="false" data-n="4">4</button></div></div>
   </div>
@@ -166,8 +177,9 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
       <tr><td>1</td><td>The like control for a guest (A)</td><td>Same pill, dashed, a person glyph before the count, tooltip “Sign in to like”; tapping it opens the sign-in sheet. The count stays legible as the fact it is</td><td>Plain text count, no pill, nothing to tap (today's rule, drawn honestly)</td></tr>
       <tr><td>2</td><td>Share on posts (B)</td><td>Every post's action row ends with the share glyph, guest or not — same glyph and placement as comments (decision 10 of post-and-thread)</td><td>Share only in the ⋯ menu (Copy link)</td></tr>
       <tr><td>3</td><td>The toolbar (C)</td><td>Density dial takes the sort bar's pill dressing; Sort · From · Card/Compact in one row; the media slider stays at the right edge on desktop, hidden on a phone</td><td>Drop the density dial on the lens (card only)</td></tr>
-      <tr><td>4</td><td>The media stage (D)</td><td>A card-wide frame, height capped (520px desktop, 420px phone), picture centred and contain-fit, blurred self as backdrop (black bands for video). The slider becomes the stage's max height</td><td>Keep the inline image, raise the cap to 480px</td></tr>
+      <tr><td>4</td><td>The media stage (D)</td><td>A card-wide frame, height capped (520px desktop, 420px phone), picture centred and contain-fit, blurred self as backdrop (black bands for video). No slider: the card size is a four-notch setting (decision 7)</td><td>Keep the inline image, raise the cap to 480px</td></tr>
       <tr><td>5</td><td>More than one picture (D)</td><td>One advanced setting, <b>pictures shown at once: 1 · 2 · 3 · 4</b> (default 1). Up to that many in Bluesky's grid; more → a carousel with dots, edge arrows, swipe, arrow keys, and an aria-live “picture 2 of 3”. 4 = never a carousel (Bluesky caps at 4)</td><td>Carousel always, no setting</td></tr>
+      <tr><td>7</td><td>Card size, 1 · 2 · 3 · 4 (all proposals)</td><td>One setting, four notches (default 4 = as drawn): it scales the stage cap (220 → 520px desktop, 180 → 420 phone), the card padding and the title — the whole card, so the reader chooses how much real estate a post takes. Replaces the drag slider, which on a phone moved in visible jumps and felt broken. Use the <b>Card size</b> control above to see every frame at each notch</td><td>Keep the continuous slider; or stage height only</td></tr>
       <tr><td>6</td><td>The column and the pinned bar (E, F)</td><td>One centred column, 740px max, nav and sidebar quieter at its sides; the masthead pinned (the <code>#masthost</code> wrapper takes the sticky), the dev bar unpinned</td><td>Keep the 1100px three-column shell</td></tr>
     </table></div>
     <p class="note"><b>Not in this mock, by design:</b> the thread page (post-and-thread v17 owns it), text-only posts (no stage — they stay short), link posts (the external card is unchanged).</p>
@@ -239,9 +251,9 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
       <div class="device desk"><div class="device-label">Proposed · desktop (the slider stays, right edge)</div>
         <div class="screen app" data-skin="dark" style="padding:12px"><div style="font-family:ui-serif,Georgia,serif;font-size:26px;font-weight:600;margin:6px 0 10px">Bluesky</div>
           <div class="sortbar" style="margin:0"><select class="pillsel"><option>Sort · Hot</option></select><select class="pillsel"><option>From · All time</option></select><select class="pillsel"><option>Card</option></select>
-            <span class="small" style="margin-left:auto">Stage height</span><input type="range" style="width:120px"></div></div></div>
+            <select class="pillsel" style="margin-left:auto"><option>Size · 4</option></select></div></div></div>
     </div>
-    <p class="note"><b>Mechanism:</b> <code>densityDial()</code> in <code>js/board-density.js</code> takes <code>class="pillsel"</code>; the label inside the select names the axis (“Sort · Hot”) so three pills in a row read without headings. The media slider's meaning changes with D: it caps the <b>stage</b>, not the picture.</p>
+    <p class="note"><b>Mechanism:</b> <code>densityDial()</code> in <code>js/board-density.js</code> takes <code>class="pillsel"</code>; the label inside the select names the axis (“Sort · Hot”) so three pills in a row read without headings. The media slider is retired for the four-notch <b>Size</b> (decision 7) — the same control on the board and in Advanced.</p>
   </section>
 
   <!-- ================================================================ D -->
@@ -274,14 +286,14 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
           <div class="mstage h-desk"><span class="ph land back"></span><span class="ph land fore" data-label="landscape 4:3"></span></div>
           <div class="actions"><button class="pill like" aria-pressed="false"><svg class="icon"><use href="#i-up"/></svg><span class="n">312</span></button><button class="pill quiet"><svg class="icon"><use href="#i-reply"/></svg>4</button><button class="pill quiet"><svg class="icon"><use href="#i-repost"/></svg>20</button><button class="pill quiet share" aria-label="Copy link"><svg class="icon"><use href="#i-share"/></svg></button></div>
         </div></div></div>
-      <div class="device desk"><div class="device-label">Proposed · three pictures — carousel (setting = 1 or 2) or grid (3, 4)</div>
+      <div class="device desk"><div class="device-label">Proposed · four pictures — a carousel below the setting, the 2×2 grid at 4</div>
         <div class="screen app" data-skin="light"><div class="card" data-multi>
           <div class="byline"><span class="av c1">ka</span><span class="who">kat.bsky.social</span><span class="dot"></span><span>2h</span><button class="kebab">⋯</button></div>
           <div class="posttitle">Three from the allotment this morning</div>
-          <div class="mstage h-desk" data-carousel><span class="ph wide back"></span><span class="ph wide fore" data-label="1 of 3 · wide 16:9"></span>
+          <div class="mstage h-desk" data-carousel><span class="ph wide back"></span><span class="ph wide fore" data-label="1 of 4 · wide 16:9"></span>
             <button class="arrow l" aria-label="Previous picture">‹</button><button class="arrow r" aria-label="Next picture">›</button>
-            <div class="dots"><i class="on"></i><i></i><i></i></div><span class="count">1 / 3</span></div>
-          <div class="grid3" data-grid hidden><span class="ph wide" data-label="1"></span><span class="ph square" data-label="2"></span><span class="ph land" data-label="3"></span></div>
+            <div class="dots"><i class="on"></i><i></i><i></i><i></i></div><span class="count">1 / 4</span></div>
+          <div class="grid4" data-grid hidden><span class="ph wide" data-label="1"></span><span class="ph square" data-label="2"></span><span class="ph land" data-label="3"></span><span class="ph portrait" data-label="4"></span></div>
           <div class="actions"><button class="pill like" aria-pressed="false"><svg class="icon"><use href="#i-up"/></svg><span class="n">88</span></button><button class="pill quiet"><svg class="icon"><use href="#i-reply"/></svg>9</button><button class="pill quiet"><svg class="icon"><use href="#i-repost"/></svg>3</button><button class="pill quiet share" aria-label="Copy link"><svg class="icon"><use href="#i-share"/></svg></button></div>
         </div></div></div>
     </div>
@@ -298,7 +310,8 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
           <div style="font-family:ui-serif,Georgia,serif;font-size:22px;font-weight:600;margin:6px 0 10px">Advanced</div>
           <div class="field"><label>Pictures shown at once</label><div class="switchrow"><b class="on">1</b><b>2</b><b>3</b><b>4</b></div></div>
           <div class="small" style="padding:8px 0">Up to this many pictures side by side; more than that scroll as a carousel. Bluesky posts carry at most four, so 4 means never a carousel.</div>
-          <div class="field"><label>Stage height</label><input type="range" style="width:120px"></div>
+          <div class="field"><label>Card size</label><div class="switchrow" data-size-row><b>1</b><b>2</b><b>3</b><b class="on">4</b></div></div>
+          <div class="small" style="padding:8px 0">How much of the screen a post takes: 1 is a strip with a small picture, 4 fills the width. The same control sits on the board toolbar.</div>
           <div class="field"><label>Buzz on like</label><div class="switchrow"><b class="on">On</b></div></div>
         </div></div></div>
     </div>
@@ -308,8 +321,12 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
         <li>Backdrop = the same picture, <code>blur(22px) brightness(.55)</code>, scaled 115% so the blur has no edge. Video: black bands instead (a moving blur is noise).</li>
         <li>Tap = opens full size (image) or bsky.app (video), as today. The stage is one link; the arrows and dots are buttons inside it.</li>
         <li>Compact rows keep the 40px thumb — nothing here changes compact.</li></ul></div>
+      <div class="callout"><h3>Grids by count (Bluesky's own shapes)</h3><div class="minigrids app" data-skin="light" style="background:none">
+        <div><div class="small">2</div><div class="grid2"><span class="ph land"></span><span class="ph square"></span></div></div>
+        <div><div class="small">3</div><div class="grid3"><span class="ph wide"></span><span class="ph square"></span><span class="ph land"></span></div></div>
+        <div><div class="small">4</div><div class="grid4"><span class="ph wide"></span><span class="ph square"></span><span class="ph land"></span><span class="ph portrait"></span></div></div></div></div>
       <div class="callout"><h3>Carousel / grid</h3><ul>
-        <li>Setting N (1–4, default 1): ≤ N pictures → grid (2 side by side · 3 = one tall + two · 4 = 2×2, Bluesky's own shapes); > N → carousel.</li>
+        <li>Setting N (1–4, default 1): ≤ N pictures → grid (2 side by side · 3 = one tall + two · 4 = 2×2, Bluesky's own shapes); > N → carousel. The sample post above has four pictures, so it is a carousel until the setting reaches 4.</li>
         <li>Carousel: dots, edge arrows (desktop), swipe (phone), ← → when focused, <code>aria-live</code> “picture 2 of 3” for a screen reader, the counter top-right.</li>
         <li>Each slide keeps its own alt; a slide without alt is named “picture n of m, opens full size”.</li></ul></div>
     </div>
@@ -355,7 +372,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
 
   <section>
     <div class="eyebrow">Revisions</div>
-    <ul class="small" style="margin:0;padding-left:18px"><li><b>v1</b> — first draft from the owner's 2026-08-29 review and Reddit front-page references; baseline forage@411c40f.</li></ul>
+    <ul class="small" style="margin:0;padding-left:18px"><li><b>v2</b> — card size 1–4 (decision 7) replaces the slider everywhere; the skin control flips the page too; the multi-picture sample has four pictures and a grids-by-count strip. Owner review 2026-08-29.</li><li><b>v1</b> — first draft from the owner's 2026-08-29 review and Reddit front-page references; baseline forage@411c40f.</li></ul>
   </section>
 </div>
 
@@ -366,39 +383,48 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
     const b = e.target.closest('button'); if (!b) return;
     qa('[data-skin-seg] button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
     qa('.app').forEach((a) => a.setAttribute('data-skin', b.dataset.skin));
+    document.documentElement.setAttribute('data-theme', b.dataset.skin); // the PAGE too, not only the frames
+  });
+  q('[data-size-seg]').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    qa('[data-size-seg] button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    qa('.app').forEach((a) => a.setAttribute('data-size', b.dataset.size));
+    qa('[data-size-row] b').forEach((x) => x.classList.toggle('on', x.textContent === b.dataset.size));
+    fit();
   });
   // D: pictures shown at once — 3 pictures in the sample; N >= 3 shows the grid, else the carousel
   q('[data-n-seg]').addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b) return;
     qa('[data-n-seg] button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
     const n = Number(b.dataset.n);
-    qa('[data-multi]').forEach((card) => { q('[data-carousel]', card).hidden = n >= 3; q('[data-grid]', card).hidden = n < 3; });
-    qa('.switchrow b').forEach((x) => { if (/^[1-4]$/.test(x.textContent)) x.classList.toggle('on', x.textContent === String(n)); });
+    qa('[data-multi]').forEach((card) => { q('[data-carousel]', card).hidden = n >= 4; q('[data-grid]', card).hidden = n < 4; });
+    fit();
+    qa('.switchrow:not([data-size-row]) b').forEach((x) => { if (/^[1-4]$/.test(x.textContent)) x.classList.toggle('on', x.textContent === String(n)); });
   });
   // the stage: contain-fit — width = min(frame width, frame height × ratio), like an <img> would size itself
   const RATIO = { portrait: 9 / 16, land: 4 / 3, wide: 16 / 9, square: 1 };
-  const fit = () => qa('.mstage').forEach((st) => {
+  function fit() { qa('.mstage').forEach((st) => {
     const fore = q('.fore', st); if (!fore) return;
     const shape = [...fore.classList].find((c) => RATIO[c]); const r = RATIO[shape] || 1;
     const W = st.clientWidth, H = st.clientHeight;
     const w = Math.min(W, H * r); fore.style.width = w + 'px'; fore.style.height = (w / r) + 'px';
-  });
+  }); }
   fit(); window.addEventListener('resize', fit);
   // the carousel
-  const labels = ['1 of 3 · wide 16:9', '2 of 3 · square', '3 of 3 · landscape 4:3'];
-  const shapes = ['wide', 'square', 'land'];
+  const labels = ['1 of 4 · wide 16:9', '2 of 4 · square', '3 of 4 · landscape 4:3', '4 of 4 · portrait'];
+  const shapes = ['wide', 'square', 'land', 'portrait'];
   qa('[data-carousel]').forEach((c) => {
     let i = 0;
     const paint = () => {
       const fore = q('.fore', c), back = q('.back', c);
       fore.className = 'ph ' + shapes[i] + ' fore'; back.className = 'ph ' + shapes[i] + ' back';
-      fore.dataset.label = labels[i]; q('.count', c).textContent = (i + 1) + ' / 3'; fit();
+      fore.dataset.label = labels[i]; q('.count', c).textContent = (i + 1) + ' / 4'; fit();
       qa('.dots i', c).forEach((d, k) => d.classList.toggle('on', k === i));
     };
-    q('.arrow.l', c).addEventListener('click', () => { i = (i + 2) % 3; paint(); });
-    q('.arrow.r', c).addEventListener('click', () => { i = (i + 1) % 3; paint(); });
+    q('.arrow.l', c).addEventListener('click', () => { i = (i + 3) % 4; paint(); });
+    q('.arrow.r', c).addEventListener('click', () => { i = (i + 1) % 4; paint(); });
     c.tabIndex = 0;
-    c.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight') { i = (i + 1) % 3; paint(); } if (e.key === 'ArrowLeft') { i = (i + 2) % 3; paint(); } });
+    c.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight') { i = (i + 1) % 4; paint(); } if (e.key === 'ArrowLeft') { i = (i + 3) % 4; paint(); } });
   });
 })();
 </script>
