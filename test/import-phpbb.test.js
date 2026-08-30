@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  ROLES, TOKEN_FOR, readRules, resolveRoles, gate, emit, contrast,
+  ROLES, TOKEN_FOR, GATE_PAIRS, readRules, resolveRoles, gate, emit, contrast,
 } from '../scripts/import-phpbb-style.mjs';
 import { skinScan, declaredTokens } from '../js/skins.js';
 
@@ -119,24 +119,36 @@ test('4B: the gate thresholds hold at the boundary, in both directions', () => {
   // an equivalent mutant for colour inputs, recorded rather than papered over.
 });
 
-test('4B: band text is graded at 3.0, not 4.5 — the calibration Finding 0.5 fixed', () => {
-  // A ratio between the two thresholds must PASS as band chrome and FAIL as
-  // body text. Grading bands at 4.5 refuses prosilver's own shipping values
-  // (measured 3.41 and 3.70 in Phase 0) — a miscalibrated gate, not a finding.
+test('4B: band text is graded at 4.5 — the 3.0 "large/UI" calibration was wrong for THIS masthead', () => {
+  // Finding 0.5 graded bands at 3.0 because WCAG allows 3.0 for LARGE text,
+  // and prosilver's own band measures 3.41 and 3.70. But forage's masthead
+  // paints its nav links at 14px normal weight — body text to WCAG and to
+  // axe — and CI's per-skin axe pass refused a hand-authored skin at exactly
+  // prosilver's #4688CE (2026-08-30, plan warm-skins decision 7). A gate that
+  // admits what the surface then refuses is the miscalibration. So every band
+  // pair is graded at 4.5, and a ratio between the thresholds FAILS as band
+  // chrome now, the same as it fails as body text.
   const between = '#8a8a8a'; // ~3.5:1 on white
   const ratio = contrast(between, '#ffffff');
   assert.ok(ratio > 3.0 && ratio < 4.5, `fixture must sit between thresholds, got ${ratio.toFixed(2)}`);
-
+  const bandPairs = GATE_PAIRS.filter(([fg]) => fg.startsWith('band-'));
+  assert.ok(bandPairs.length >= 2, 'the gate grades band ink and band link');
+  for (const [, , , floor] of bandPairs) assert.equal(floor, 4.5, 'no band pair is graded under 4.5');
   assert.equal(gate({ a: { value: between }, b: { value: '#ffffff' } },
-    [['a', 'b', 'band (large/UI)', 3.0]]).ok, true, 'passes as band chrome');
-  assert.equal(gate({ a: { value: between }, b: { value: '#ffffff' } },
-    [['a', 'b', 'body text', 4.5]]).ok, false, 'and fails as body text');
+    [['a', 'b', 'band text', 4.5]]).ok, false, 'fails as band chrome');
 });
 
-test('4B: prosilver passes its own gate at the right thresholds', () => {
+test('4B: prosilver FAILS its own gate on the band alone — which is the finding, recorded, not a miscalibration', () => {
+  // prosilver's .headerbar #4688CE under white is 3.70. Every other pair
+  // passes. Importing prosilver verbatim therefore exits non-zero unless
+  // --allow-contrast-failures, and the hand-authored skins/phpbb.css and
+  // skins/cornflower.css both chose #3A78BC for this reason.
   const { roles } = resolveRoles(prosilver());
   const g = gate(roles);
-  assert.equal(g.ok, true, `prosilver should pass: ${JSON.stringify(g.pairs.filter((p) => !p.ok))}`);
+  assert.equal(g.ok, false, 'prosilver does not clear 4.5 on the band');
+  const failing = g.pairs.filter((p) => !p.ok).map((p) => p.label);
+  assert.ok(failing.length > 0 && failing.every((l) => /band/.test(l)),
+    `only band pairs fail: ${JSON.stringify(g.pairs.filter((p) => !p.ok))}`);
 });
 
 // ---------------------------------------------------------------------------

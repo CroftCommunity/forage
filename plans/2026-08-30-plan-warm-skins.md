@@ -161,14 +161,17 @@ card over a nebula cannot be graded, and the per-skin axe pass would be the only
 
 ## Owed
 
-- The importer's gate still grades band text at 3.0 (`docs/SKINS.md` § The contrast gate). An
-  imported skin can therefore pass the importer and fail the masthead's 14px links under axe —
-  the gate should learn the surface's real size, or the masthead should paint band links bold.
-  Filed here, not fixed: it is the importer's contract, and no imported skin ships yet.
+- ~~The importer's gate still grades band text at 3.0~~ **Done 2026-08-30** (`claude/importer-band-floor`):
+  `GATE_PAIRS` grades the band at 4.5; prosilver verbatim now fails its own gate on the band
+  alone, recorded as the finding rather than a miscalibration (`test/import-phpbb.test.js` 4B).
 
-- Device check: the eight skins on the Samsung at 390 wide, in daylight — `[device: android]`
-  on the CHANGELOG line. Contrast is computed, not seen; the warm grounds may read
-  differently on an AMOLED panel.
+- Device check: the ten colour skins (warm set + Cornflower) on the Samsung at 390 wide, in
+  daylight — contrast is computed, not seen, and the warm grounds may read differently on an
+  AMOLED panel. The CHANGELOG line carries the same tag, but the queue reads plans and TODOs,
+  so this is the line that records the debt. [device: android]
+- Device check: Surf and Nebula on the Samsung — the art layers (sunset band, foam line,
+  starfield, glow) at 390 wide and under the phone's real fonts (`ui-rounded`, "Avenir Next"
+  fall through to Roboto on Android; the frames were captured on a Mac). [device: android]
 - `docs/SKINS.md` still described the retired `pairedWith` / `validatePairing`; corrected
   to `family` / `validateFamilies` in passing here (three lines, a drift fix, flagged in
   the PR).

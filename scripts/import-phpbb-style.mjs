@@ -107,17 +107,24 @@ export const TOKEN_FOR = Object.freeze({
   'font-body': '--font-body',
 });
 
-// Pairs the AA gate grades, with the threshold appropriate to each. Band text
-// is large/bold UI: grading it at 4.5 refuses prosilver's own shipping values,
-// which is a miscalibrated gate rather than a finding (Phase 0, Finding 0.5).
-const GATE_PAIRS = [
+// Pairs the AA gate grades. Everything at 4.5 — the band INCLUDED. Finding 0.5
+// graded bands at 3.0 (WCAG's large-text floor) because prosilver's own band
+// measures 3.41 and 3.70 under white; but forage's masthead paints its nav
+// links at 14px normal weight, which is body text to WCAG and to axe, and CI's
+// per-skin axe pass refused a hand-authored skin at exactly prosilver's
+// #4688CE (2026-08-30, plan warm-skins decision 7). A gate that admits what
+// the surface then refuses is the miscalibration. Consequence, deliberate:
+// importing prosilver verbatim exits non-zero on the band unless
+// --allow-contrast-failures — the finding skins/phpbb.css and cornflower.css
+// each answered by hand with #3A78BC. Exported so the test can pin the floors.
+export const GATE_PAIRS = [
   ['page-ink', 'page-bg', 'body text', 4.5],
   ['page-ink', 'row-odd', 'text on odd rows', 4.5],
   ['page-ink', 'row-even', 'text on even rows', 4.5],
   ['link', 'surface', 'link on surface', 4.5],
   ['link-hover', 'surface', 'link hover on surface', 4.5],
-  ['band-ink', 'band-fill', 'band text (large/UI)', 3.0],
-  ['band-link', 'band-fill', 'band link (large/UI)', 3.0],
+  ['band-ink', 'band-fill', 'band text (14px nav links sit on it)', 4.5],
+  ['band-link', 'band-fill', 'band link (14px)', 4.5],
 ];
 
 // ---------------------------------------------------------------------------
