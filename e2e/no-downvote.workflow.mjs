@@ -247,27 +247,51 @@ export async function run() {
     // The plan's phase list named only the first; the second was found by
     // grepping, which is the argument for asserting over both rather than over
     // the one the plan happened to mention.
-    const threadTabs = await page.evaluate(() =>
-      [...document.querySelectorAll('.tabs .tab')].map((t) => t.textContent.trim()));
-    // Phase 10 (plan 2026-08-29 post-and-thread, decision 9): Best is retired; Hot leads
-    assert.deepEqual(threadTabs, ['Hot', 'Top', 'New'],
-      `a thread offers three comment sorts, Hot first, and neither Best nor Controversial: ${JSON.stringify(threadTabs)}`);
+    // Phase 11 (plan 2026-08-29 post-and-thread, decision 9): sort is ONE
+    // control bar — `Sort` and `From` selects dressed as pills — on boards and
+    // threads alike, not tabs. Best is retired; Hot leads. Options are read as
+    // an exact array: "contains Hot" would pass a list that kept Best.
+    const sortOptions = () => page.$$eval('select[data-sort] option', (os) => os.map((o) => o.textContent.trim()));
+    const sortValue = () => page.evaluate(() => document.querySelector('select[data-sort]')?.value ?? null);
+    const fromCount = () => page.locator('select[data-from]').count();
+    assert.equal(await page.locator('.tabs .tab').count(), 0, 'no sort tabs remain on a thread');
+    assert.deepEqual(await sortOptions(), ['Hot', 'Top', 'New'],
+      'a thread offers three comment sorts, Hot first, and neither Best nor Controversial');
+    assert.equal(await sortValue(), 'hot', 'Hot is the default');
+    assert.equal(await fromCount(), 1, 'From is offered for Hot');
+    // From: on a thread the default is All time (a thread is one conversation)
+    assert.equal(await page.evaluate(() => document.querySelector('select[data-from]').value), 'all');
+    await page.locator('select[data-sort]').selectOption('new');
+    await page.waitForFunction(() => location.search.includes('sort=new'));
+    assert.equal(await fromCount(), 0, 'From is not offered for New — it has no window');
+    await page.locator('select[data-sort]').selectOption('top');
+    await page.waitForFunction(() => location.search.includes('sort=top'));
+    assert.equal(await fromCount(), 1, 'and it is back for Top');
+    await page.locator('select[data-from]').selectOption('week');
+    await page.waitForFunction(() => location.search.includes('from=week'));
+    await page.locator('select[data-sort]').selectOption('hot');
+    await page.waitForFunction(() => location.search.includes('sort=hot'));
+    assert.match(page.url(), /from=week/, 'choosing a sort keeps ?from=');
+    // an old ?sort=best link lands on Hot (O7), not on a blank sort
+    await page.goto(`${mem.origin}${threadHref}?sort=best`);
+    await page.waitForSelector('select[data-sort]');
+    assert.equal(await sortValue(), 'hot', '?sort=best falls to Hot');
 
     await page.goto(`${mem.origin}/popular`);
     await page.waitForSelector('.postrow');
-    const boardTabs = await page.evaluate(() =>
-      [...document.querySelectorAll('.tabs .tab')].map((t) => t.textContent.trim()));
-    assert.deepEqual(boardTabs, ['Hot', 'New', 'Top', 'Rising'],
-      `the board offers four sorts and Controversial is not one: ${JSON.stringify(boardTabs)}`);
+    assert.equal(await page.locator('.tabs .tab').count(), 0, 'no sort tabs remain on a board');
+    assert.deepEqual(await sortOptions(), ['Hot', 'New', 'Top', 'Rising'],
+      'the board offers four sorts and Controversial is not one');
+    assert.equal(await page.evaluate(() => document.querySelector('select[data-from]').value), 'day',
+      'a board defaults to From: Today');
 
     // …and each remaining sort still renders a board. A sort list that lost a
     // member and quietly broke its neighbours would pass the assertion above.
     for (const sort of ['hot', 'new', 'top', 'rising']) {
       await page.goto(`${mem.origin}/popular?sort=${sort}`);
-      await page.waitForSelector('.tabs .tab');
-      const active = await page.evaluate(() =>
-        document.querySelector('.tabs .tab.active')?.textContent.trim() ?? null);
-      assert.equal(active?.toLowerCase(), sort, `?sort=${sort} selects its own tab`);
+      await page.waitForSelector('select[data-sort]');
+      assert.equal(await sortValue(), sort, `?sort=${sort} selects itself`);
+      assert.equal(await fromCount(), sort === 'hot' || sort === 'top' ? 1 : 0, `From is offered for hot and top only (${sort})`);
     }
 
     // The edge that reaches a PERSON: a link someone shared before this change.
@@ -278,11 +302,12 @@ export async function run() {
     await page.waitForSelector('.postrow');
     const stranded = await page.evaluate(() => ({
       rows: document.querySelectorAll('.postrow').length,
-      tabs: [...document.querySelectorAll('.tabs .tab')].map((t) => t.textContent.trim()),
-      active: document.querySelector('.tabs .tab.active')?.textContent.trim() ?? null,
+      options: [...document.querySelectorAll('select[data-sort] option')].map((o) => o.textContent.trim()),
+      value: document.querySelector('select[data-sort]')?.value ?? null,
     }));
     assert.ok(stranded.rows > 0, 'an old ?sort=controversial link still shows posts');
-    assert.ok(!stranded.tabs.includes('Controversial'),
-      'and it does not resurrect the tab to match the url');
+    assert.ok(!stranded.options.includes('Controversial'),
+      'and it does not resurrect the option to match the url');
+    assert.equal(stranded.value, 'hot', 'the bar shows what actually rendered: Hot');
   } finally { await mem.close(); }
 }
