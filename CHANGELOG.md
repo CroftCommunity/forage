@@ -8,6 +8,17 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-08
 
+- 2026-08-30 **Five new skins, each with a lighter and a darker side.** Settings → Skin
+  now offers **Rosewater** (blush paper and raspberry links; plum after dark), **Lavender**
+  (lilac and violet; twilight after dark), **Apricot** (cream and terracotta; espresso
+  after dark), **Seaglass** (mint and white with a coral hover; deep water after dark) and
+  **Cornflower** (the phpBB blue on white cards and sky-tinted paper, rounded rather than
+  squared; midnight after dark), beside the four styles already there — the classic phpBB
+  board included, unchanged. The ☾/☀ control switches sides on all five. The four warm ones
+  are inspired by the pink, purple, orange and mint styles of the classic phpBB era, not
+  copied from any of them, and every text pairing in every one clears AA. Also repaired:
+  on Usenet gray after dark, a removal notice was painted in a red meant for a light page
+  (1.93:1); it is now legible. (plan 2026-08-30-plan-warm-skins) [device: android]
 - 2026-08-30 **A link to a reply lands on it, and a board row's name holds its line.** Opening
   a link to a specific reply in a thread now scrolls to that reply and keeps it marked, even
   when the thread also has quotes (before, the page said "Viewing one comment" and sat at the

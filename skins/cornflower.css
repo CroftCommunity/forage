@@ -1,0 +1,83 @@
+/* Cornflower (sky) — the blue one, refined along the warm set's lines (owner,
+   2026-08-30: "want to keep my phpbb forum ones as well … and refine along
+   these lines — the blue one I mean"). Light half of the `cornflower` family;
+   skins/cornflower-dark.css is the sibling. The phpBB pair is UNTOUCHED: that
+   skin is subSilver's gray palette under prosilver's band, squared and
+   bevelled, a recorded owner choice (OQ5). This one is prosilver's own
+   grammar done the way Rosewater and its siblings are: white cards on a
+   sky-tinted ground, the band and the tab strip in prosilver's measured
+   blues, 7px corners (prosilver's), a soft shadow instead of a bevel, and no
+   density preference.
+
+   MEASURED (from skins/phpbb.css's Phase 0 readings of prosilver colours.css):
+     .navbar #C9DEE8 — the tab strip is prosilver's, to the hex.
+   The band is #3A78BC, the blue the phpBB skin here paints, NOT prosilver's
+   literal .headerbar #4688CE: white on #4688CE is 3.70:1, and forage's
+   masthead paints its nav links at 14px normal weight, which is body text to
+   WCAG and to axe (4.5). This skin shipped with #4688CE first and CI's
+   per-skin axe pass refused it the same day — the exact finding phpbb.css
+   recorded when it made the same swap. Everything else is ours.
+
+   CONTRAST (measured by test/skins.test.js):
+     text        #1F2C3D  on bg               #EEF3F9   12.67:1  body
+     text        #1F2C3D  on card             #FFFFFF   14.13:1  body
+     text        #1F2C3D  on row-even         #EEF3F9   12.67:1  body
+     text        #1F2C3D  on row-head         #D9E5F0   11.05:1  body
+     text        #1F2C3D  on nav-fill         #C9DEE8   10.16:1  body
+     muted       #56677B  on bg               #EEF3F9    5.20:1  body
+     link        #1B5C9E  on card             #FFFFFF    6.84:1  body
+     link        #1B5C9E  on nav-fill         #C9DEE8    4.92:1  body
+     link-hover  #0F3F73  on card             #FFFFFF   10.61:1  body
+     brand-ink   #1B5C9E  on tint             #DCE8F4    5.50:1  body
+     band-ink    #FFFFFF  on band-fill        #3A78BC    4.57:1  body
+     band-link   #FFFFFF  on band-fill        #3A78BC    4.57:1  body
+     on-brand    #FFFFFF  on brand-fill       #3A78BC    4.57:1  body
+     on-brand    #FFFFFF  on brand-fill-hover #2F6BAE    5.48:1  body
+     danger-ink  #8F2A22  on danger-tint      #F8ECEA    7.21:1  body
+     tag chip: --gold-strong on mix(gold 18%, card)=#f5eddc  5.09
+     unread pill: white on --clay-600 #A24D2C  5.78
+*/
+:root {
+  --bg:          #EEF3F9;
+  --card:        #FFFFFF;
+  --card-2:      #E3EBF4;
+  --text:        #1F2C3D;
+  --muted:       #56677B;
+  --border:      #CBD8E6;
+
+  --link:        #1B5C9E;
+  --link-hover:  #0F3F73;
+  --brand-ink:   #1B5C9E;
+  --brand-fill:  #3A78BC;
+  --brand-fill-hover: #2F6BAE;
+  --on-brand:    #FFFFFF;
+
+  --band-fill:   #3A78BC;
+  --band-ink:    #FFFFFF;
+  --band-link:   #FFFFFF;
+  --band-brand:  #FFFFFF;
+  --nav-fill:    #C9DEE8;
+  --panel:       #FFFFFF;
+  --row-odd:     #FFFFFF;
+  --row-even:    #EEF3F9;
+  --row-head:    #D9E5F0;
+
+  --boost:       #1B5C9E;
+  --bury:        #A24D2C;
+  --tint:        #DCE8F4;
+
+  --gold-500:    #C99A3C;
+  --gold-strong: #7A6110;
+  --danger:      #9E2F26;
+  --danger-ink:  #8F2A22;
+  --danger-tint: #F8ECEA;
+  --clay-600:    #A24D2C;
+  --stripe:      rgba(0,0,0,.03);
+
+  --font-body:   Verdana, Helvetica, Arial, sans-serif;
+  --font-display: "Trebuchet MS", Verdana, Helvetica, Arial, sans-serif;
+  --radius-card:  7px;
+  --radius-sm:    4px;
+  --card-shadow:  0 1px 3px rgba(30, 60, 110, .10);
+  --color-scheme: light;
+}

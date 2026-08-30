@@ -1,0 +1,67 @@
+/* Seaglass (deep water) — sibling of `seaglass`. Hand-authored (ADR-003).
+   Deep teal ground, seaglass links, the coral hover kept from the light half so
+   the family reads as one identity across the toggle.
+
+   CONTRAST (measured by test/skins.test.js):
+     text        #E3F0EC  on bg          #142320   13.90:1  body
+     text        #E3F0EC  on card        #1C2E2A   12.18:1  body
+     text        #E3F0EC  on row-even    #21342F   11.24:1  body
+     text        #E3F0EC  on row-head    #2A423C    9.23:1  body
+     text        #E3F0EC  on nav-fill    #182A26   12.83:1  body
+     muted       #A5C0B9  on bg          #142320    8.40:1  body
+     link        #7FD6C2  on card        #1C2E2A    8.35:1  body
+     link        #7FD6C2  on nav-fill    #182A26    8.80:1  body
+     link-hover  #FFA48E  on card        #1C2E2A    7.43:1  body
+     brand-ink   #7FD6C2  on tint        #274641    6.03:1  body
+     band-ink    #EAF7F3  on band-fill   #0F5A50    7.35:1  large/UI
+     band-link   #C8F0E6  on band-fill   #0F5A50    6.57:1  large/UI
+     on-brand    #FFFFFF  on brand-fill  #117A6D    5.21:1  body
+     on-brand    #FFFFFF  on brand-fill-hover #0F6E62    6.13:1  body
+     danger-ink  #F0938A  on danger-tint #3E2A28    5.90:1  body
+     tag chip: --gold-strong on mix(gold 18%, card)=#3d4430  5.61
+     unread pill: white on --clay-600 #A24D2C  5.78
+*/
+:root {
+  --bg:          #142320;
+  --card:        #1C2E2A;
+  --card-2:      #233833;
+  --text:        #E3F0EC;
+  --muted:       #A5C0B9;
+  --border:      #34504A;
+
+  --link:        #7FD6C2;
+  --link-hover:  #FFA48E;
+  --brand-ink:   #7FD6C2;
+  --brand-fill:  #117A6D;
+  --brand-fill-hover: #0F6E62;
+  --on-brand:    #FFFFFF;
+
+  --band-fill:   #0F5A50;
+  --band-ink:    #EAF7F3;
+  --band-link:   #C8F0E6;
+  --band-brand:  #EAF7F3;
+  --nav-fill:    #182A26;
+  --panel:       #1C2E2A;
+  --row-odd:     #1C2E2A;
+  --row-even:    #21342F;
+  --row-head:    #2A423C;
+
+  --boost:       #7FD6C2;
+  --bury:        #FFA48E;
+  --tint:        #274641;
+
+  --gold-500:    #D4A94E;
+  --gold-strong: #E2BC64;
+  --danger:      #F0938A;
+  --danger-ink:  #F0938A;
+  --danger-tint: #3E2A28;
+  --clay-600:    #A24D2C;
+  --stripe:      rgba(255,255,255,.04);
+
+  --font-body:   "Trebuchet MS", Verdana, Helvetica, Arial, sans-serif;
+  --font-display: "Trebuchet MS", Verdana, Helvetica, Arial, sans-serif;
+  --radius-card:  10px;
+  --radius-sm:    5px;
+  --card-shadow:  0 1px 3px rgba(0, 0, 0, .35);
+  --color-scheme: dark;
+}

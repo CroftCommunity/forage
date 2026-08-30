@@ -1,0 +1,561 @@
+{
+  "capturedAt": "2026-08-30",
+  "files": [
+    {
+      "file": "thread-lens.phone.rosewater.png",
+      "route": "thread-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-thread",
+      "skin": "rosewater"
+    },
+    {
+      "file": "board-lens.phone.rosewater.png",
+      "route": "board-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-board",
+      "skin": "rosewater"
+    },
+    {
+      "file": "thread-lens.desktop.rosewater.png",
+      "route": "thread-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-thread",
+      "skin": "rosewater"
+    },
+    {
+      "file": "board-lens.desktop.rosewater.png",
+      "route": "board-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-board",
+      "skin": "rosewater"
+    },
+    {
+      "file": "thread-lens.phone.rosewater-dark.png",
+      "route": "thread-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-thread",
+      "skin": "rosewater-dark"
+    },
+    {
+      "file": "board-lens.phone.rosewater-dark.png",
+      "route": "board-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-board",
+      "skin": "rosewater-dark"
+    },
+    {
+      "file": "thread-lens.desktop.rosewater-dark.png",
+      "route": "thread-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-thread",
+      "skin": "rosewater-dark"
+    },
+    {
+      "file": "board-lens.desktop.rosewater-dark.png",
+      "route": "board-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-board",
+      "skin": "rosewater-dark"
+    },
+    {
+      "file": "thread-lens.phone.lavender.png",
+      "route": "thread-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-thread",
+      "skin": "lavender"
+    },
+    {
+      "file": "board-lens.phone.lavender.png",
+      "route": "board-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-board",
+      "skin": "lavender"
+    },
+    {
+      "file": "thread-lens.desktop.lavender.png",
+      "route": "thread-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-thread",
+      "skin": "lavender"
+    },
+    {
+      "file": "board-lens.desktop.lavender.png",
+      "route": "board-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-board",
+      "skin": "lavender"
+    },
+    {
+      "file": "thread-lens.phone.lavender-dark.png",
+      "route": "thread-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-thread",
+      "skin": "lavender-dark"
+    },
+    {
+      "file": "board-lens.phone.lavender-dark.png",
+      "route": "board-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-board",
+      "skin": "lavender-dark"
+    },
+    {
+      "file": "thread-lens.desktop.lavender-dark.png",
+      "route": "thread-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-thread",
+      "skin": "lavender-dark"
+    },
+    {
+      "file": "board-lens.desktop.lavender-dark.png",
+      "route": "board-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-board",
+      "skin": "lavender-dark"
+    },
+    {
+      "file": "thread-lens.phone.apricot.png",
+      "route": "thread-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-thread",
+      "skin": "apricot"
+    },
+    {
+      "file": "board-lens.phone.apricot.png",
+      "route": "board-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-board",
+      "skin": "apricot"
+    },
+    {
+      "file": "thread-lens.desktop.apricot.png",
+      "route": "thread-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-thread",
+      "skin": "apricot"
+    },
+    {
+      "file": "board-lens.desktop.apricot.png",
+      "route": "board-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-board",
+      "skin": "apricot"
+    },
+    {
+      "file": "thread-lens.phone.apricot-dark.png",
+      "route": "thread-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-thread",
+      "skin": "apricot-dark"
+    },
+    {
+      "file": "board-lens.phone.apricot-dark.png",
+      "route": "board-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-board",
+      "skin": "apricot-dark"
+    },
+    {
+      "file": "thread-lens.desktop.apricot-dark.png",
+      "route": "thread-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-thread",
+      "skin": "apricot-dark"
+    },
+    {
+      "file": "board-lens.desktop.apricot-dark.png",
+      "route": "board-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-board",
+      "skin": "apricot-dark"
+    },
+    {
+      "file": "thread-lens.phone.seaglass.png",
+      "route": "thread-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-thread",
+      "skin": "seaglass"
+    },
+    {
+      "file": "board-lens.phone.seaglass.png",
+      "route": "board-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-board",
+      "skin": "seaglass"
+    },
+    {
+      "file": "thread-lens.desktop.seaglass.png",
+      "route": "thread-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-thread",
+      "skin": "seaglass"
+    },
+    {
+      "file": "board-lens.desktop.seaglass.png",
+      "route": "board-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-board",
+      "skin": "seaglass"
+    },
+    {
+      "file": "thread-lens.phone.seaglass-dark.png",
+      "route": "thread-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-thread",
+      "skin": "seaglass-dark"
+    },
+    {
+      "file": "board-lens.phone.seaglass-dark.png",
+      "route": "board-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-board",
+      "skin": "seaglass-dark"
+    },
+    {
+      "file": "thread-lens.desktop.seaglass-dark.png",
+      "route": "thread-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-thread",
+      "skin": "seaglass-dark"
+    },
+    {
+      "file": "board-lens.desktop.seaglass-dark.png",
+      "route": "board-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-board",
+      "skin": "seaglass-dark"
+    },
+    {
+      "file": "thread-lens.phone.current.png",
+      "route": "thread-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@fe2b77b",
+      "population": "lens:mock-thread"
+    },
+    {
+      "file": "board-lens.phone.current.png",
+      "route": "board-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@fe2b77b",
+      "population": "lens:mock-board"
+    },
+    {
+      "file": "thread-lens.desktop.current.png",
+      "route": "thread-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@fe2b77b",
+      "population": "lens:mock-thread"
+    },
+    {
+      "file": "board-lens.desktop.current.png",
+      "route": "board-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@fe2b77b",
+      "population": "lens:mock-board"
+    },
+    {
+      "file": "thread-lens.phone.forage-dark.current.png",
+      "route": "thread-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@fe2b77b",
+      "population": "lens:mock-thread",
+      "skin": "forage-dark"
+    },
+    {
+      "file": "board-lens.phone.forage-dark.current.png",
+      "route": "board-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@fe2b77b",
+      "population": "lens:mock-board",
+      "skin": "forage-dark"
+    },
+    {
+      "file": "thread-lens.desktop.forage-dark.current.png",
+      "route": "thread-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@fe2b77b",
+      "population": "lens:mock-thread",
+      "skin": "forage-dark"
+    },
+    {
+      "file": "board-lens.desktop.forage-dark.current.png",
+      "route": "board-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@fe2b77b",
+      "population": "lens:mock-board",
+      "skin": "forage-dark"
+    },
+    {
+      "file": "thread-lens.phone.cornflower.png",
+      "route": "thread-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-thread",
+      "skin": "cornflower"
+    },
+    {
+      "file": "board-lens.phone.cornflower.png",
+      "route": "board-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-board",
+      "skin": "cornflower"
+    },
+    {
+      "file": "thread-lens.desktop.cornflower.png",
+      "route": "thread-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-thread",
+      "skin": "cornflower"
+    },
+    {
+      "file": "board-lens.desktop.cornflower.png",
+      "route": "board-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-board",
+      "skin": "cornflower"
+    },
+    {
+      "file": "thread-lens.phone.cornflower-dark.png",
+      "route": "thread-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-thread",
+      "skin": "cornflower-dark"
+    },
+    {
+      "file": "board-lens.phone.cornflower-dark.png",
+      "route": "board-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-board",
+      "skin": "cornflower-dark"
+    },
+    {
+      "file": "thread-lens.desktop.cornflower-dark.png",
+      "route": "thread-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-thread",
+      "skin": "cornflower-dark"
+    },
+    {
+      "file": "board-lens.desktop.cornflower-dark.png",
+      "route": "board-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@0341203",
+      "population": "lens:mock-board",
+      "skin": "cornflower-dark"
+    },
+    {
+      "file": "thread-lens.phone.phpbb.current.png",
+      "route": "thread-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@fe2b77b",
+      "population": "lens:mock-thread",
+      "skin": "phpbb"
+    },
+    {
+      "file": "board-lens.phone.phpbb.current.png",
+      "route": "board-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@fe2b77b",
+      "population": "lens:mock-board",
+      "skin": "phpbb"
+    },
+    {
+      "file": "thread-lens.desktop.phpbb.current.png",
+      "route": "thread-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@fe2b77b",
+      "population": "lens:mock-thread",
+      "skin": "phpbb"
+    },
+    {
+      "file": "board-lens.desktop.phpbb.current.png",
+      "route": "board-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@fe2b77b",
+      "population": "lens:mock-board",
+      "skin": "phpbb"
+    },
+    {
+      "file": "thread-lens.phone.phpbb-dark.current.png",
+      "route": "thread-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@fe2b77b",
+      "population": "lens:mock-thread",
+      "skin": "phpbb-dark"
+    },
+    {
+      "file": "board-lens.phone.phpbb-dark.current.png",
+      "route": "board-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@fe2b77b",
+      "population": "lens:mock-board",
+      "skin": "phpbb-dark"
+    },
+    {
+      "file": "thread-lens.desktop.phpbb-dark.current.png",
+      "route": "thread-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@fe2b77b",
+      "population": "lens:mock-thread",
+      "skin": "phpbb-dark"
+    },
+    {
+      "file": "board-lens.desktop.phpbb-dark.current.png",
+      "route": "board-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@fe2b77b",
+      "population": "lens:mock-board",
+      "skin": "phpbb-dark"
+    }
+  ]
+}

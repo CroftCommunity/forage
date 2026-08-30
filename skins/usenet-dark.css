@@ -38,5 +38,12 @@
   --radius-card: 2px;
   --radius-chip: 2px;
   --gold-strong: #E2BC64;
+  /* Declared 2026-08-30: this skin used to INHERIT the light --danger #9E2F26,
+     which is 1.93:1 on its card — the role-level AA test in test/skins.test.js
+     is what found it (no header note covered danger, and no fixture renders a
+     removal on this skin). Same values forage-dark uses for the role. */
+  --danger:      #F0938A;
+  --danger-ink:  #F0938A;
+  --danger-tint: #42251F;
   --color-scheme: dark;
 }

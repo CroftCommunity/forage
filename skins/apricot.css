@@ -1,0 +1,79 @@
+/* Apricot (cream) — the warm set, plan 2026-08-30-plan-warm-skins. Light half
+   of the `apricot` family; skins/apricot-dark.css is the sibling.
+
+   INSPIRATION, not import. Two lineages: the coffee styles (Latte is the one
+   still maintained) and subsilver2's orange link-hover, which is the single
+   most-remembered colour of the whole era — and which the phpBB skin here had
+   to darken to pass AA. Apricot makes that orange the primary hue instead of
+   the hover: a terracotta band, rust links, cream ground, Georgia display over
+   a Trebuchet body. Every value is ours; none was measured from a real style.
+
+   The band is the tightest pair in the set: white on #C2551F is 4.55:1. That
+   IS the floor — forage's masthead paints its nav links at 14px normal weight,
+   so band text is body text to WCAG and axe, and the cream #FFF1E4 the band
+   link first shipped with measured 4.11 there (CI's per-skin axe pass caught
+   it, 2026-08-30). A warmer terracotta than this fails white outright.
+
+   CONTRAST (measured by test/skins.test.js):
+     text        #3E2A1C  on bg               #FFF6EC   12.65:1  body
+     text        #3E2A1C  on card             #FFFFFF   13.52:1  body
+     text        #3E2A1C  on row-even         #FFF6EC   12.65:1  body
+     text        #3E2A1C  on row-head         #FAE3CC   10.90:1  body
+     text        #3E2A1C  on nav-fill         #FAE3CC   10.90:1  body
+     muted       #7A5E49  on bg               #FFF6EC    5.57:1  body
+     link        #A54118  on card             #FFFFFF    6.23:1  body
+     link        #A54118  on nav-fill         #FAE3CC    5.02:1  body
+     link-hover  #8C3611  on card             #FFFFFF    7.92:1  body
+     brand-ink   #A54118  on tint             #FBE6D2    5.15:1  body
+     band-ink    #FFFFFF  on band-fill        #C2551F    4.55:1  body
+     band-link   #FFFFFF  on band-fill        #C2551F    4.55:1  body
+     on-brand    #FFFFFF  on brand-fill       #C2551F    4.55:1  body
+     on-brand    #FFFFFF  on brand-fill-hover #AD4B1B    5.53:1  body
+     danger-ink  #8F2A22  on danger-tint      #F8ECEA    7.21:1  body
+     tag chip: --gold-strong on mix(gold 18%, card)=#f7edd9  6.06
+     unread pill: white on --clay-600 #A24D2C  5.78
+*/
+:root {
+  --bg:          #FFF6EC;
+  --card:        #FFFFFF;
+  --card-2:      #FBEBDB;
+  --text:        #3E2A1C;
+  --muted:       #7A5E49;
+  --border:      #EBD3BC;
+
+  --link:        #A54118;
+  --link-hover:  #8C3611;
+  --brand-ink:   #A54118;
+  --brand-fill:  #C2551F;
+  --brand-fill-hover: #AD4B1B;
+  --on-brand:    #FFFFFF;
+
+  --band-fill:   #C2551F;
+  --band-ink:    #FFFFFF;
+  --band-link:   #FFFFFF;
+  --band-brand:  #FFFFFF;
+  --nav-fill:    #FAE3CC;
+  --panel:       #FFFFFF;
+  --row-odd:     #FFFFFF;
+  --row-even:    #FFF6EC;
+  --row-head:    #FAE3CC;
+
+  --boost:       #A54118;
+  --bury:        #A24D2C;
+  --tint:        #FBE6D2;
+
+  --gold-500:    #D19A2E;
+  --gold-strong: #745306;
+  --danger:      #9E2F26;
+  --danger-ink:  #8F2A22;
+  --danger-tint: #F8ECEA;
+  --clay-600:    #A24D2C;
+  --stripe:      rgba(0,0,0,.03);
+
+  --font-body:   "Trebuchet MS", Verdana, Helvetica, Arial, sans-serif;
+  --font-display: Georgia, "Times New Roman", serif;
+  --radius-card:  7px;
+  --radius-sm:    4px;
+  --card-shadow:  0 1px 3px rgba(120, 70, 30, .10);
+  --color-scheme: light;
+}

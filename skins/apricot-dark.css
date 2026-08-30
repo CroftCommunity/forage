@@ -1,0 +1,67 @@
+/* Apricot (espresso) — sibling of `apricot`. Hand-authored (ADR-003). Cocoa
+   ground, apricot links, a burnt-orange band; the coffee styles' dark siblings
+   were exactly this and nobody called them dark mode.
+
+   CONTRAST (measured by test/skins.test.js):
+     text        #F5E7D8  on bg          #26190F   14.09:1  body
+     text        #F5E7D8  on card        #322216   12.58:1  body
+     text        #F5E7D8  on row-even    #382619   11.86:1  body
+     text        #F5E7D8  on row-head    #45301F   10.21:1  body
+     text        #F5E7D8  on nav-fill    #2E1F14   13.09:1  body
+     muted       #C4A88E  on bg          #26190F    7.60:1  body
+     link        #F4B07A  on card        #322216    8.24:1  body
+     link        #F4B07A  on nav-fill    #2E1F14    8.57:1  body
+     link-hover  #FFC99A  on card        #322216   10.23:1  body
+     brand-ink   #F4B07A  on tint        #48321F    6.47:1  body
+     band-ink    #FFF1E4  on band-fill   #7A3413    8.14:1  large/UI
+     band-link   #FFD9B8  on band-fill   #7A3413    6.82:1  large/UI
+     on-brand    #FFFFFF  on brand-fill  #C2551F    4.55:1  body
+     on-brand    #FFFFFF  on brand-fill-hover #AE4C1A    5.46:1  body
+     danger-ink  #F0938A  on danger-tint #4A2A22    5.62:1  body
+     tag chip: --gold-strong on mix(gold 18%, card)=#4f3a20  5.93
+     unread pill: white on --clay-600 #A24D2C  5.78
+*/
+:root {
+  --bg:          #26190F;
+  --card:        #322216;
+  --card-2:      #3B2A1C;
+  --text:        #F5E7D8;
+  --muted:       #C4A88E;
+  --border:      #533D2B;
+
+  --link:        #F4B07A;
+  --link-hover:  #FFC99A;
+  --brand-ink:   #F4B07A;
+  --brand-fill:  #C2551F;
+  --brand-fill-hover: #AE4C1A;
+  --on-brand:    #FFFFFF;
+
+  --band-fill:   #7A3413;
+  --band-ink:    #FFF1E4;
+  --band-link:   #FFD9B8;
+  --band-brand:  #FFF1E4;
+  --nav-fill:    #2E1F14;
+  --panel:       #322216;
+  --row-odd:     #322216;
+  --row-even:    #382619;
+  --row-head:    #45301F;
+
+  --boost:       #F4B07A;
+  --bury:        #F0A886;
+  --tint:        #48321F;
+
+  --gold-500:    #D4A94E;
+  --gold-strong: #E2BC64;
+  --danger:      #F0938A;
+  --danger-ink:  #F0938A;
+  --danger-tint: #4A2A22;
+  --clay-600:    #A24D2C;
+  --stripe:      rgba(255,255,255,.04);
+
+  --font-body:   "Trebuchet MS", Verdana, Helvetica, Arial, sans-serif;
+  --font-display: Georgia, "Times New Roman", serif;
+  --radius-card:  7px;
+  --radius-sm:    4px;
+  --card-shadow:  0 1px 3px rgba(0, 0, 0, .35);
+  --color-scheme: dark;
+}

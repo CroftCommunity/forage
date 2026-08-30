@@ -1,0 +1,73 @@
+/* Lavender (lilac) — the warm set, plan 2026-08-30-plan-warm-skins. Light
+   half of the `lavender` family; skins/lavender-dark.css is the sibling.
+
+   INSPIRATION, not import. Purple prosilver recolours were the second most
+   common colour variant after pink on the old customisation database, and
+   "Lavender" was a style name more than once. Same grammar as the rest of the
+   set — filled band, pale tab strip, white cards on a tinted ground, 7px
+   corners — with Trebuchet MS, prosilver's own heading face, for both roles.
+   Every value is ours; none was measured from a real style.
+
+   CONTRAST (measured by test/skins.test.js):
+     text        #2E2540  on bg          #F4F0FA   12.85:1  body
+     text        #2E2540  on card        #FFFFFF   14.43:1  body
+     text        #2E2540  on row-even    #F4F0FA   12.85:1  body
+     text        #2E2540  on row-head    #E4DBF2   10.80:1  body
+     text        #2E2540  on nav-fill    #E4DBF2   10.80:1  body
+     muted       #665A7C  on bg          #F4F0FA    5.63:1  body
+     link        #6A3FB5  on card        #FFFFFF    7.02:1  body
+     link        #6A3FB5  on nav-fill    #E4DBF2    5.25:1  body
+     link-hover  #4E2A8E  on card        #FFFFFF   10.27:1  body
+     brand-ink   #6A3FB5  on tint        #E8E0F4    5.48:1  body
+     band-ink    #FFFFFF  on band-fill   #6F49B8    6.32:1  large/UI
+     band-link   #FFFFFF  on band-fill   #6F49B8    6.32:1  large/UI
+     on-brand    #FFFFFF  on brand-fill  #6F49B8    6.32:1  body
+     on-brand    #FFFFFF  on brand-fill-hover #6140A6    7.52:1  body
+     danger-ink  #8F2A22  on danger-tint #F8ECEA    7.21:1  body
+     tag chip: --gold-strong on mix(gold 18%, card)=#f5eddc  5.09
+     unread pill: white on --clay-600 #A24D2C  5.78
+*/
+:root {
+  --bg:          #F4F0FA;
+  --card:        #FFFFFF;
+  --card-2:      #EDE6F6;
+  --text:        #2E2540;
+  --muted:       #665A7C;
+  --border:      #D9CFEA;
+
+  --link:        #6A3FB5;
+  --link-hover:  #4E2A8E;
+  --brand-ink:   #6A3FB5;
+  --brand-fill:  #6F49B8;
+  --brand-fill-hover: #6140A6;
+  --on-brand:    #FFFFFF;
+
+  --band-fill:   #6F49B8;
+  --band-ink:    #FFFFFF;
+  --band-link:   #FFFFFF;
+  --band-brand:  #FFFFFF;
+  --nav-fill:    #E4DBF2;
+  --panel:       #FFFFFF;
+  --row-odd:     #FFFFFF;
+  --row-even:    #F4F0FA;
+  --row-head:    #E4DBF2;
+
+  --boost:       #6A3FB5;
+  --bury:        #A24D2C;
+  --tint:        #E8E0F4;
+
+  --gold-500:    #C99A3C;
+  --gold-strong: #7A6110;
+  --danger:      #9E2F26;
+  --danger-ink:  #8F2A22;
+  --danger-tint: #F8ECEA;
+  --clay-600:    #A24D2C;
+  --stripe:      rgba(0,0,0,.03);
+
+  --font-body:   "Trebuchet MS", Verdana, Helvetica, Arial, sans-serif;
+  --font-display: "Trebuchet MS", Verdana, Helvetica, Arial, sans-serif;
+  --radius-card:  7px;
+  --radius-sm:    4px;
+  --card-shadow:  0 1px 3px rgba(60, 40, 110, .10);
+  --color-scheme: light;
+}

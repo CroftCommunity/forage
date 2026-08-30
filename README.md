@@ -90,9 +90,13 @@ restructure nothing, so it can never hide a moderation notice or a gate.
 they are skins (ADR-003). A skin may declare a **sibling** — its opposite-palette
 twin — and the upper-right toggle swaps to it, or reads as disabled where none
 exists. Shipping: **Forage (light)** ↔ **Forage (dark)**, **phpBB (classic
-board)** ↔ **phpBB (after hours)**, **Classic BBS** (amber terminal) and
-**Usenet gray** (newsprint). Skins and modes stay independent axes — the phpBB
-board in the Bluesky view is legal, just off-theme.
+board)** ↔ **phpBB (after hours)**, **Classic BBS** (amber terminal),
+**Usenet gray** (newsprint), the warm set — **Rosewater**, **Lavender**,
+**Apricot** and **Seaglass**, inspired by the classic phpBB era's colour
+variants under our own values — and **Cornflower**, the phpBB blue on the same
+grammar beside the classic board, each with both sides
+(`plans/2026-08-30-plan-warm-skins.md`; captures in `plans/mocks/warm-skins.html`). Skins and modes stay independent
+axes — the phpBB board in the Bluesky view is legal, just off-theme.
 
 New skins are cheap: one CSS file plus one registry line in `js/skins.js`.
 

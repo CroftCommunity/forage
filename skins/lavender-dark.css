@@ -1,0 +1,68 @@
+/* Lavender (twilight) — sibling of `lavender`. Hand-authored (ADR-003). The
+   ground is a violet-black in the spirit of the night-sky subsilver2 styles
+   (Milky Way was the one everybody ran), with lilac links rather than the
+   era's saturated purple, which fails AA on any dark surface it was ever put on.
+
+   CONTRAST (measured by test/skins.test.js):
+     text        #E9E3F4  on bg          #1E1A2B   13.54:1  body
+     text        #E9E3F4  on card        #282236   12.21:1  body
+     text        #E9E3F4  on row-even    #2D2740   11.36:1  body
+     text        #E9E3F4  on row-head    #382F4E    9.95:1  body
+     text        #E9E3F4  on nav-fill    #241F33   12.71:1  body
+     muted       #B2A8C8  on bg          #1E1A2B    7.54:1  body
+     link        #C3AEF0  on card        #282236    7.75:1  body
+     link        #C3AEF0  on nav-fill    #241F33    8.06:1  body
+     link-hover  #DACDF8  on card        #282236   10.25:1  body
+     brand-ink   #C3AEF0  on tint        #3A3050    6.19:1  body
+     band-ink    #F1EBFA  on band-fill   #3F2E6E    9.85:1  large/UI
+     band-link   #E0D3FA  on band-fill   #3F2E6E    8.14:1  large/UI
+     on-brand    #FFFFFF  on brand-fill  #6F49B8    6.32:1  body
+     on-brand    #FFFFFF  on brand-fill-hover #7D57C6    5.18:1  body
+     danger-ink  #F0938A  on danger-tint #42252C    6.03:1  body
+     tag chip: --gold-strong on mix(gold 18%, card)=#473a3a  6.00
+     unread pill: white on --clay-600 #A24D2C  5.78
+*/
+:root {
+  --bg:          #1E1A2B;
+  --card:        #282236;
+  --card-2:      #302A40;
+  --text:        #E9E3F4;
+  --muted:       #B2A8C8;
+  --border:      #44395A;
+
+  --link:        #C3AEF0;
+  --link-hover:  #DACDF8;
+  --brand-ink:   #C3AEF0;
+  --brand-fill:  #6F49B8;
+  --brand-fill-hover: #7D57C6;
+  --on-brand:    #FFFFFF;
+
+  --band-fill:   #3F2E6E;
+  --band-ink:    #F1EBFA;
+  --band-link:   #E0D3FA;
+  --band-brand:  #F1EBFA;
+  --nav-fill:    #241F33;
+  --panel:       #282236;
+  --row-odd:     #282236;
+  --row-even:    #2D2740;
+  --row-head:    #382F4E;
+
+  --boost:       #C3AEF0;
+  --bury:        #F0A886;
+  --tint:        #3A3050;
+
+  --gold-500:    #D4A94E;
+  --gold-strong: #E2BC64;
+  --danger:      #F0938A;
+  --danger-ink:  #F0938A;
+  --danger-tint: #42252C;
+  --clay-600:    #A24D2C;
+  --stripe:      rgba(255,255,255,.04);
+
+  --font-body:   "Trebuchet MS", Verdana, Helvetica, Arial, sans-serif;
+  --font-display: "Trebuchet MS", Verdana, Helvetica, Arial, sans-serif;
+  --radius-card:  7px;
+  --radius-sm:    4px;
+  --card-shadow:  0 1px 3px rgba(0, 0, 0, .35);
+  --color-scheme: dark;
+}
