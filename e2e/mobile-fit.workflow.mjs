@@ -163,7 +163,8 @@ export async function run() {
     // overflow risk we care about here)
     const threadLink = await m.page.evaluate(() => {
       for (const row of document.querySelectorAll('.postrow')) {
-        const link = [...row.querySelectorAll('a')].find((a) => /\d+ comments/.test(a.textContent) && !/^0 /.test(a.textContent));
+        // the replies pill (board-cards Phase 4) — its words say how many
+        const link = [...row.querySelectorAll('a.replies')].find((a) => /\d+ comments/.test(a.textContent) && !/\b0 comments\b/.test(a.textContent));
         if (link) return link.getAttribute('href');
       }
       return null;

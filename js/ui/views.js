@@ -167,7 +167,7 @@ export function threadView(params, query) {
         el('h1', {}, p.maskedRemoved ? '[removed by stewards]' : p.title),
         p.format === 'link' && p.url ? el('div', {}, el('a', { href: p.url, target: '_blank', rel: 'noopener noreferrer', class: 'domain' }, `${p.url} (${domainOf(p.url)})`)) : null,
         p.body && !p.maskedRemoved ? el('div', { class: 'small', html: mdLite(p.body) }) : null,
-        el('div', { class: 'foot' },
+        el('div', { class: 'actions' },
           vote('post', p.id, p, t.perms.canVote), // Phase 6c: the head's pill, the row's control
           el('div', { class: 'postmeta' },
             p.author ? el('a', { href: `/u/${p.author}` }, p.author) : el('span', { class: 'muted' }, '[removed]'),

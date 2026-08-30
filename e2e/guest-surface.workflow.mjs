@@ -77,6 +77,9 @@ const seen = (page) => page.evaluate(() => ({
     pressed: b.getAttribute('aria-pressed'),
   })),
   scores: [...document.querySelectorAll('button[data-vote][data-guest] .n')].map((v) => v.textContent.trim()).filter(Boolean),
+  // board-cards decision 2: share is for everyone — a guest can copy a link
+  shares: document.querySelectorAll('.postrow .actions > button.share').length,
+  rows: document.querySelectorAll('.postrow').length,
 }));
 
 export async function run() {
@@ -105,6 +108,7 @@ export async function run() {
       `the SCORE survives — the arrow is an action, the number is a fact: ${JSON.stringify(board.scores)}`);
     const rows = await out.page.locator('.postrow').count();
     assert.equal(board.guestDoors.length, rows, `every row carries the guest's door (${board.guestDoors.length} of ${rows})`);
+    assert.equal(board.shares, rows, `every row carries a share, signed out (${board.shares} of ${rows})`);
     for (const d of board.guestDoors) {
       assert.match(d.name, /^\d[\d,.]*[km]? likes? — sign in to like$/, `the door is named with the count and the way in: ${JSON.stringify(d.name)}`);
       assert.equal(d.title, 'Sign in to like', 'the tooltip says the one thing');

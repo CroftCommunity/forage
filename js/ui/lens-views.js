@@ -634,6 +634,7 @@ const lensRow = (p, view = 'card') => {
   return postRow(p, !!session, {
     onVote: lensVote(p),
     onGuest: session ? null : openAuthSheet, // board-cards decision 1: the guest's pill is the door
+    permalink: `${location.origin}/p?uri=${encodeURIComponent(p.id)}`, // decision 2: the row's share
     menuGroups: (row) => lensMenuGroups(row, { kind: 'post' }), // 4b
     aboveNode: kindContext(p),
     // 3i: never duplicate the title — a preview renders only when it adds
@@ -2312,7 +2313,7 @@ export function lensThreadView(params, query) {
       // renders below — the picture is the thing the heading stood in for.
       // A real title (text or alt-derived) keeps its heading above the media.
       p.placeholderTitle && p.media ? null : el('h1', {}, p.title.slice(0, 300)),
-      el('div', { class: 'foot' },
+      el('div', { class: 'actions' },
         vote('post', p.id, p, !!session, { onVote: lensVote(p), onGuest: session ? null : openAuthSheet }), // Phase 6c: the head's pill
         el('div', { class: 'postmeta' },
           p.author ? el('a', { href: `/u/${encodeURIComponent(p.author)}` }, p.author) : '[muted]',

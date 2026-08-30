@@ -23,6 +23,27 @@ export async function run() {
     const { page } = mem;
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: mem.origin });
 
+    // ---- board-cards Phase 4 (decision 2): every POST has a share too ----
+    // The owner looked for it on the live site and found it only in the ⋯.
+    // Same glyph, same place as a comment's: last on the row's action row,
+    // guest or not, copying the post's own address.
+    await page.goto(`${mem.origin}/f/grove`);
+    await page.waitForSelector('.postrow');
+    const rowShare = page.locator('.postrow').first().locator('.actions > button.share');
+    assert.equal(await rowShare.count(), 1, 'a post row has one share glyph on its action row');
+    assert.equal(await rowShare.getAttribute('aria-label'), 'Copy link to this post');
+    assert.ok(await rowShare.evaluate((b) => b === b.parentElement.lastElementChild), 'it is the LAST thing on the row\'s action row');
+    assert.equal(await page.locator('.postrow').count(), await page.locator('.postrow .actions > button.share').count(), 'every row, not just the first');
+    const rowHref = await page.locator('.postrow').first().locator('.posttitle a').getAttribute('href');
+    await rowShare.click();
+    await page.waitForSelector('text=Link copied');
+    assert.equal(await page.evaluate(() => navigator.clipboard.readText()), `${mem.origin}${rowHref}`, 'the post\'s own address');
+    // the row's replies pill is a link into the thread, and says how many in words
+    const replies = page.locator('.postrow').first().locator('.actions > a.replies');
+    assert.equal(await replies.count(), 1, 'the replies pill is on the action row');
+    assert.equal(await replies.getAttribute('href'), rowHref, 'and it opens the thread');
+    assert.match(await replies.innerText(), /\d+ comments?$/, 'it counts in words');
+
     // ---- 12a: the share glyph, quiet and at the end of the action row ----
     await page.goto(`${mem.origin}${THREAD}`);
     await page.waitForSelector('.comment');
@@ -115,6 +136,7 @@ export async function run() {
   ] } };
   const lens = await scenario('first-visit', { mode: 'bluesky', responses: {
     'getTrendingTopics': { topics: [] },
+    'getFeed': { feed: [{ post: mk('root', 'did:plc:aa', '2026-08-26T10:00:00Z') }] },
     [`getPostThread?uri=${encodeURIComponent(REPLY)}`]: { thread: { post: rootThread.thread.replies[1].post, replies: [] } },
     [`getPostThread?uri=${encodeURIComponent(ROOT)}`]: rootThread,
     'getQuotes': { posts: [] },
@@ -140,6 +162,15 @@ export async function run() {
     await page.waitForSelector('text=Link copied');
     assert.equal(await page.evaluate(() => navigator.clipboard.readText()),
       `${lens.origin}/p?uri=${encodeURIComponent(ROOT)}&focus=${encodeURIComponent(REPLY)}`);
+    // board-cards Phase 4: a lens ROW's share writes the post's /p?uri= address,
+    // and its repost count sits on the row as a fact (never a write on a row)
+    await page.goto(`${lens.origin}/f/whats-hot`);
+    await page.waitForSelector('.postrow');
+    await page.locator('.postrow .actions > button.share').first().click();
+    await page.waitForSelector('text=Link copied');
+    assert.equal(await page.evaluate(() => navigator.clipboard.readText()), `${lens.origin}/p?uri=${encodeURIComponent(ROOT)}`);
+    assert.equal(await page.locator('.postrow .actions [data-repost][data-readonly]').count(), 1, 'the repost count is a read-only fact on the row');
+    assert.equal(await page.locator('.postrow .actions button[data-repost]').count(), 0, 'and never a button on a row');
     // an explicit &focus= on the root uri does the same thing with ONE fetch
     await page.goto(`${lens.origin}/p?uri=${encodeURIComponent(ROOT)}&focus=${encodeURIComponent(REPLY)}`);
     await page.waitForSelector('.comment.focused');

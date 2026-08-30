@@ -256,7 +256,6 @@ export function postRow(p, viewerCanVote, opts = {}) {
     // need no creator, so the plain slug stays the default.
     el('a', { href: opts.feedHref || `/f/${p.feedSlug}` }, `f/${p.feedSlug}`),
     p.format === 'link' && p.url ? el('span', { class: 'domain' }, domainOf(p.url)) : null,
-    el('a', { href: link }, plural(p.commentCount, 'comment')),
     p.edited ? el('span', { class: 'muted' }, 'edited') : null,
     opts.metaExtra || null, // 3u: the lens hangs a language chip here
   );
@@ -297,12 +296,28 @@ export function postRow(p, viewerCanVote, opts = {}) {
     title,
     body,
   );
-  // Decision 1: the vote is a pill on the action row; the left column is gone
-  // (the byline carries the avatar). `.foot` is NOT `.postmeta`, on purpose —
-  // mobile-fit exempts .postmeta as prose, and a tap target must be measured.
-  right.append(el('div', { class: 'foot' }, vote('post', p.id, p, viewerCanVote, { onVote: opts.onVote,
-    // the lens passes its sheet; a sandbox row decides from its feed-scoped perms
-    onGuest: opts.onGuest ?? (opts.perms?.(p)?.loggedIn ? null : guestGate) }), meta));
+  // Decision 1 (post-and-thread): the vote is a pill on the action row; the
+  // left column is gone (the byline carries the avatar). board-cards decision
+  // 2: the row's action row is like · replies · reposts · share, the comment
+  // row's shape — the share was only in the ⋯ and the owner could not find
+  // it. `.actions` is NOT `.postmeta`, on purpose — mobile-fit exempts
+  // .postmeta as prose, and a tap target must be measured. The replies pill
+  // says "12 comments" in words beside its glyph: the count is a fact and the
+  // words are what every thread picker (and a screen reader) reads.
+  const replies = el('a', { class: 'cbtn replies', href: link, title: 'Open the thread' },
+    el('span', { 'aria-hidden': 'true' }, '\u{1F4AC}'), plural(p.commentCount, 'comment'));
+  // a repost COUNT, never a write on a row (post-and-thread O2); the sandbox
+  // has no reposts and draws nothing
+  const reposts = p.repostCount == null ? null
+    : el('span', { class: 'cbtn', 'data-repost': '1', 'data-readonly': '1', role: 'img',
+      'aria-label': plural(p.repostCount, 'repost') }, el('span', { 'aria-hidden': 'true' }, '\u27F3'), el('span', { class: 'n' }, fmtScore(p.repostCount)));
+  right.append(el('div', { class: 'actions' },
+    vote('post', p.id, p, viewerCanVote, { onVote: opts.onVote,
+      // the lens passes its sheet; a sandbox row decides from its feed-scoped perms
+      onGuest: opts.onGuest ?? (opts.perms?.(p)?.loggedIn ? null : guestGate) }),
+    replies, reposts,
+    shareButton(opts.permalink ?? `${location.origin}${link}`, 'post')),
+  meta);
   return el('div', { class: 'postrow' + (p.pinned ? ' pinned-row' : '') + (opts.compact ? ' compact' : '') }, right);
 }
 

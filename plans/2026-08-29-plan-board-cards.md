@@ -254,7 +254,7 @@ feedback); if `openAuthSheet` is unavailable (`manager === 'unavailable'`) the s
 toast speaks — the pill never fails silently, which was the whole complaint.
 **Validation:** Moderate — a phone look: the dashed pill reads as "not yet", not "broken".
 
-#### Phase 4: the post action row — replies · reposts · share (decision 2)
+#### Phase 4: the post action row — replies · reposts · share (decision 2) — ✅ shipped 2026-08-29
 - **4a (RED):** `e2e/deep-link.workflow.mjs` — a post row's action row ends with
   `button.share[aria-label="Copy link to this post"]` (memory: `/f/<slug>/p/<id>`; lens:
   `/p?uri=`), clipboard asserted; `e2e/guest-surface` — the share is present signed out;
@@ -265,6 +265,11 @@ toast speaks — the pill never fails silently, which was the whole complaint.
 **Edges:** the reply pill's count is `commentCount` and links to the thread; the repost pill
 is a **count**, not a write, on rows (O2 of post-and-thread stays); compact rows: the row
 still >25% shorter than card.
+**Found in execution:** the replies pill keeps the WORDS ("12 comments") beside its glyph —
+five suites pick a thread by that text, and a screen reader wants the noun; the mock's bare
+number was the one place the plan follows the suites over the picture. The two thread heads
+(`views.js`, `lens-views.js`) also drew `.foot` and are `.actions` now (the class test
+caught the orphan).
 **Observability:** *(Pass 3)* the clipboard failure path is the existing `copy()`
 (`console.warn('forage: clipboard write failed')` + toast) — reused, not duplicated.
 **Validation:** *(Pass 3)* Moderate — one phone look at a compact board: the pill row does

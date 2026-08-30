@@ -78,6 +78,10 @@ export async function run() {
     await mem.page.waitForSelector('.postrow');
     assert.ok(await rowsAreCompact(mem.page),
       'the sandbox board renders compact rows when the reader has chosen compact');
+    // board-cards Phase 4: compact rows KEEP the action row (like · replies ·
+    // share) — density trims the preview, never the actions
+    assert.equal(await mem.page.locator('.postrow.compact .actions > button.share').count(),
+      await mem.page.locator('.postrow.compact').count(), 'every compact row keeps its action row');
     const compactH = await medianRowHeight(mem.page);
 
     // and the control is reachable from the board itself, not only from the
