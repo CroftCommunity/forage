@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forage Board Cards Proposals v1</title>
+<meta name="mock-version" content="1">
+<meta name="mock-baseline" content="forage@411c40f">
+<style>
+:root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
+  --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page-bg:#1C1813;--page-card:#262019;--page-ink:#EFE7D9;--page-muted:#B5A88F;--page-line:#3D3527;--page-accent:#A5CD98}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--page-bg);color:var(--page-ink);font-family:var(--f-body);line-height:1.55;margin:0;padding:32px 20px 72px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:30px}
+h1{font-family:var(--f-display);font-size:30px;font-weight:600;margin:0;letter-spacing:-.01em}
+h2{font-family:var(--f-display);font-size:22px;font-weight:600;margin:0}
+h3{font-family:var(--f-display);font-size:17px;margin:0 0 7px;font-weight:600}
+.sub{color:var(--page-muted);font-size:15px;max-width:70ch;margin:0}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+.note{border-left:2px solid var(--page-accent);padding-left:14px;color:var(--page-muted);font-size:14px;max-width:72ch}
+.note b,.callout b,.callout code{color:var(--page-ink);font-weight:600}
+section{display:flex;flex-direction:column;gap:14px}
+.stage{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap}
+.device{display:flex;flex-direction:column;gap:9px;min-width:0}
+.device-label{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+.screen{border:1px solid var(--page-line);border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.10),0 8px 24px rgba(0,0,0,.06)}
+.phone .screen{width:390px}
+.desk{flex:1;min-width:460px}
+.shot{max-width:100%;display:block;border:1px solid var(--page-line);border-radius:8px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.callout{background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:16px 18px}
+.callout p,.callout li{margin:0;font-size:14px;color:var(--page-muted)}
+.callout ul,.callout ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+table{border-collapse:collapse;font-size:14px;width:100%}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--page-line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page-muted)}
+.tablewrap{overflow-x:auto;background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:6px 8px}
+.controls{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-end;background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:14px 18px;position:sticky;top:0;z-index:20}
+.cgroup{display:flex;flex-direction:column;gap:7px}
+.seg{display:flex;border:1px solid var(--page-line);border-radius:6px;overflow:hidden}
+.seg button{font:inherit;font-size:13px;padding:8px 14px;min-height:40px;background:transparent;color:var(--page-ink);border:0;border-right:1px solid var(--page-line);cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--page-accent);color:#fff}
+
+/* ---- FORAGE tokens (css/tokens.css, skins/forage-dark.css) ---- */
+.app{--bg:#F8F4EC;--card:#FFFFFF;--card-2:#F2EDE2;--text:#2B251C;--muted:#68604F;--border:#E3DCCD;--link:#38683F;--brand-ink:#33623A;--brand-fill:#41724A;--on-brand:#fff;--tint:#EAEFDF;--boost:#41724A;--danger:#9E2F26;--scrim:rgba(0,0,0,.55);
+  --t-xs:13px;--t-sm:14px;--t-md:16px;--t-lg:20px;--radius-card:6px;--radius-sm:4px;--radius-chip:999px;
+  background:var(--bg);color:var(--text);font-size:var(--t-md);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.45}
+.app[data-skin="dark"]{--bg:#262019;--card:#31291F;--card-2:#3B3226;--text:#EFE7D9;--muted:#B5A88F;--border:#4C4232;--link:#A5CD98;--brand-ink:#A5CD98;--brand-fill:#41724A;--tint:#3A392A;--boost:#8FC48A;--danger:#F0938A}
+.app a{color:var(--link);text-decoration:none}
+.icon{display:inline-block;width:1.15em;height:1.15em;vertical-align:-.2em;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.masthead{display:flex;align-items:center;gap:12px;padding:8px 12px;background:var(--card);border-bottom:1px solid var(--border);min-height:52px}
+.wordmark{font-family:ui-serif,Georgia,serif;font-size:var(--t-lg);color:var(--brand-ink);font-weight:700;display:flex;align-items:center;gap:8px}
+.glyph{width:26px;height:26px;border-radius:50%;background:var(--tint);display:grid;place-items:center;font-size:14px}
+.acct{margin-left:auto;width:36px;height:36px;border-radius:50%;background:var(--brand-fill);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:600}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-card);margin:10px;padding:12px;position:relative}
+.av{width:28px;height:28px;border-radius:50%;flex:none;display:grid;place-items:center;font-size:11px;font-weight:600;color:#fff;background:var(--brand-fill)}
+.av.c1{background:#7A5B3E}.av.c2{background:#578A61}.av.c3{background:#A24D2C}.av.c4{background:#4C6E8A}
+.byline{display:flex;align-items:center;gap:8px;font-size:var(--t-xs);color:var(--muted);min-width:0}
+.byline .who{color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.byline .dot::before{content:"·"}
+.kebab{margin-left:auto;flex:none;width:36px;height:36px;border-radius:50%;border:0;background:none;color:var(--muted);font-size:20px;line-height:1;cursor:pointer;display:grid;place-items:center;letter-spacing:1px}
+.posttitle{font-size:var(--t-md);font-weight:600;line-height:1.3;margin:4px 0}
+.postmeta{color:var(--muted);font-size:var(--t-xs);display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.postrow{padding:12px 0;border-bottom:1px solid var(--border)}
+.postrow:last-child{border-bottom:0}
+/* current (as shipped f374bc7): the foot row, the read-only pill, the 220px media cap */
+.foot{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:6px}
+.vote{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--border);border-radius:999px;background:var(--card);color:var(--muted);padding:3px 10px;font-size:var(--t-xs);font-weight:600}
+.media-strip{display:flex;gap:6px;margin:6px 0;flex-wrap:wrap}
+.media-strip .ph{max-height:220px;border-radius:var(--radius-card);border:1px solid var(--border)}
+/* photo placeholders: gradients with real aspect ratios */
+.ph{display:block;background:linear-gradient(160deg,#8fb39a,#3f6b4a 55%,#26412e);position:relative;overflow:hidden}
+.ph.portrait{aspect-ratio:9/16;background:linear-gradient(170deg,#c9a4d8,#7c4c9c 50%,#3b2550)}
+.ph.land{aspect-ratio:4/3;background:linear-gradient(160deg,#e7d27a,#b58f2c 55%,#4a3a12)}
+.ph.wide{aspect-ratio:16/9;background:linear-gradient(160deg,#6b8ec9,#2f4f86 55%,#15243f)}
+.ph.square{aspect-ratio:1;background:linear-gradient(160deg,#d98d7a,#9e4a3a 55%,#4a1f18)}
+.ph::after{content:attr(data-label);position:absolute;left:8px;bottom:6px;font-size:11px;color:rgba(255,255,255,.85);letter-spacing:.06em;text-transform:uppercase}
+/* ---- proposed ---- */
+.actions{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--border);background:var(--card);color:var(--text);font:inherit;font-size:var(--t-xs);font-weight:600;cursor:pointer;font-variant-numeric:tabular-nums}
+.pill.quiet{border-color:transparent;color:var(--muted)}
+.pill.like[aria-pressed="true"]{color:var(--boost);border-color:var(--boost)}
+.pill.guest{color:var(--muted);border-style:dashed}
+.pill.guest .icon{width:1.05em;height:1.05em}
+.pill.share{margin-left:auto;padding:0 10px;opacity:.6}
+.pill.share:hover{opacity:1}
+.tip{position:absolute;left:12px;bottom:58px;background:var(--text);color:var(--card);font-size:12px;padding:6px 10px;border-radius:6px;white-space:nowrap}
+.tip::after{content:"";position:absolute;left:14px;bottom:-5px;border:5px solid transparent;border-top-color:var(--text);border-bottom:0}
+.sortbar{display:flex;gap:8px;align-items:center;margin:8px 10px}
+.pillsel{appearance:none;-webkit-appearance:none;border:1px solid var(--border);border-radius:999px;background:var(--card);color:var(--text);font:inherit;font-size:var(--t-xs);font-weight:600;padding:6px 26px 6px 12px;min-height:32px;cursor:pointer;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 15px) 55%,calc(100% - 10px) 55%;background-size:5px 5px;background-repeat:no-repeat}
+.rawsel{font:inherit;font-size:14px;padding:3px 6px;border:1px solid #888;background:#333;color:#eee;border-radius:3px}
+/* the stage */
+.mstage{position:relative;width:100%;border-radius:var(--radius-card);overflow:hidden;background:#000;margin:8px 0;display:grid;place-items:center;border:1px solid var(--border)}
+.mstage .back{position:absolute;inset:-24px;aspect-ratio:auto;height:auto;filter:blur(22px) brightness(.55) saturate(1.1);transform:scale(1.15)}
+.mstage .fore{position:relative;z-index:1;border:0;border-radius:0;box-shadow:0 0 24px rgba(0,0,0,.35);aspect-ratio:auto}
+.mstage.h-phone{height:420px}.mstage.h-desk{height:520px}
+.mstage.video .back{display:none}
+.arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:2;width:36px;height:36px;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#fff;font-size:18px;display:grid;place-items:center;cursor:pointer}
+.arrow.l{left:10px}.arrow.r{right:10px}
+.dots{position:absolute;left:0;right:0;bottom:10px;z-index:2;display:flex;justify-content:center;gap:6px}
+.dots i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.45)}
+.dots i.on{background:#fff}
+.count{position:absolute;top:10px;right:10px;z-index:2;background:rgba(0,0,0,.55);color:#fff;font-size:11px;padding:3px 8px;border-radius:999px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:8px 0}
+.grid2 .ph{aspect-ratio:1;border-radius:var(--radius-sm)}
+.grid3{display:grid;grid-template-columns:2fr 1fr;grid-template-rows:1fr 1fr;gap:4px;margin:8px 0;height:260px}
+.grid3 .ph{aspect-ratio:auto;height:100%;border-radius:var(--radius-sm)}
+.grid3 .ph:first-child{grid-row:1/span 2}
+.grid4{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:4px;margin:8px 0;height:300px}
+.grid4 .ph{aspect-ratio:auto;height:100%;border-radius:var(--radius-sm)}
+/* page column */
+.shell{display:grid;gap:14px;padding:14px}
+.shell.wide{grid-template-columns:200px 1fr 220px;max-width:1100px}
+.shell.centred{grid-template-columns:1fr minmax(0,740px) 1fr;max-width:none}
+.shell.centred>.col{grid-column:2}
+.navbox,.sidebox{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-card);height:140px;font-size:var(--t-xs);color:var(--muted);padding:10px}
+.shell.centred .navbox{grid-column:1;position:sticky;top:60px;height:auto;opacity:.75}
+.shell.centred .sidebox{grid-column:3;height:auto;opacity:.75}
+/* pinned masthead frame */
+.scroller{height:420px;overflow:auto}
+.scroller .masthead.pinned{position:sticky;top:0;z-index:5}
+.field{display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:var(--t-sm)}
+.field label{width:200px;color:var(--muted)}
+.switchrow{display:flex;gap:6px}
+.switchrow b{display:grid;place-items:center;width:36px;height:36px;border:1px solid var(--border);border-radius:999px;font-weight:600;font-size:13px}
+.switchrow b.on{background:var(--brand-fill);color:#fff;border-color:var(--brand-fill)}
+.small{font-size:var(--t-xs);color:var(--muted)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></symbol>
+  <symbol id="i-reply" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H8l-5 3 1.5-4.5A8 8 0 1 1 21 12z"/></symbol>
+  <symbol id="i-repost" viewBox="0 0 24 24"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></symbol>
+  <symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0"/></symbol>
+</svg>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Forage · mock · board-cards <b>v1</b> · baseline forage@411c40f · 2026-08-29</div>
+    <h1>Board cards: the guest like, share, the toolbar, the media stage, the column, the pinned bar</h1>
+    <p class="sub"><b>Six proposals (A–F), six open decisions.</b> Purpose: the owner's review of forage.fyi after the post-and-thread landings — the ▲ a guest cannot press,
+      no share on posts, two toolbar controls that do not match, cards that are half empty beside a 220px-tall image, and a masthead that scrolls away.
+      Reddit's front page is the reference (screenshots 2026-08-29). Every proposal shows Forage today beside the proposal; the today frames are re-drawn in this file's CSS from the
+      shipped rules at the baseline (a claim), with the captured memory-board pixels in <code>snaps/</code> as the evidence for the row and toolbar shapes.</p>
+  </header>
+
+  <div class="controls">
+    <div class="cgroup"><span class="eyebrow">Skin</span>
+      <div class="seg" data-skin-seg><button aria-pressed="true" data-skin="light">Light</button><button aria-pressed="false" data-skin="dark">Dark</button></div></div>
+    <div class="cgroup"><span class="eyebrow">Pictures shown at once (D)</span>
+      <div class="seg" data-n-seg><button aria-pressed="true" data-n="1">1</button><button aria-pressed="false" data-n="2">2</button><button aria-pressed="false" data-n="3">3</button><button aria-pressed="false" data-n="4">4</button></div></div>
+  </div>
+
+  <section>
+    <div class="eyebrow">Decisions</div>
+    <h2>Open decisions</h2>
+    <div class="tablewrap"><table>
+      <tr><th style="width:36px">#</th><th>Decision</th><th>Proposed (as drawn)</th><th>Alternative</th></tr>
+      <tr><td>1</td><td>The like control for a guest (A)</td><td>Same pill, dashed, a person glyph before the count, tooltip “Sign in to like”; tapping it opens the sign-in sheet. The count stays legible as the fact it is</td><td>Plain text count, no pill, nothing to tap (today's rule, drawn honestly)</td></tr>
+      <tr><td>2</td><td>Share on posts (B)</td><td>Every post's action row ends with the share glyph, guest or not — same glyph and placement as comments (decision 10 of post-and-thread)</td><td>Share only in the ⋯ menu (Copy link)</td></tr>
+      <tr><td>3</td><td>The toolbar (C)</td><td>Density dial takes the sort bar's pill dressing; Sort · From · Card/Compact in one row; the media slider stays at the right edge on desktop, hidden on a phone</td><td>Drop the density dial on the lens (card only)</td></tr>
+      <tr><td>4</td><td>The media stage (D)</td><td>A card-wide frame, height capped (520px desktop, 420px phone), picture centred and contain-fit, blurred self as backdrop (black bands for video). The slider becomes the stage's max height</td><td>Keep the inline image, raise the cap to 480px</td></tr>
+      <tr><td>5</td><td>More than one picture (D)</td><td>One advanced setting, <b>pictures shown at once: 1 · 2 · 3 · 4</b> (default 1). Up to that many in Bluesky's grid; more → a carousel with dots, edge arrows, swipe, arrow keys, and an aria-live “picture 2 of 3”. 4 = never a carousel (Bluesky caps at 4)</td><td>Carousel always, no setting</td></tr>
+      <tr><td>6</td><td>The column and the pinned bar (E, F)</td><td>One centred column, 740px max, nav and sidebar quieter at its sides; the masthead pinned (the <code>#masthost</code> wrapper takes the sticky), the dev bar unpinned</td><td>Keep the 1100px three-column shell</td></tr>
+    </table></div>
+    <p class="note"><b>Not in this mock, by design:</b> the thread page (post-and-thread v17 owns it), text-only posts (no stage — they stay short), link posts (the external card is unchanged).</p>
+  </section>
+
+  <!-- ================================================================ A + B -->
+  <section>
+    <div class="eyebrow">Proposal A + B</div>
+    <h2>A. The like a guest cannot press &nbsp;·&nbsp; B. Share on every post</h2>
+    <p class="sub">Today the guest's count is a read-only span dressed exactly like the live pill, so it reads as a button and ignores the touch. Proposed: the pill is honest about being a door.</p>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · signed out · today (f374bc7 rules)</div>
+        <div class="screen app" data-skin="light"><div class="card">
+          <div class="postrow"><div class="byline"><span class="av c3">th</span><span class="who">theshunbun.bsky.social</span><span class="dot"></span><span>13h</span><button class="kebab">⋯</button></div>
+            <div class="posttitle">A commission 💜</div>
+            <div class="media-strip"><span class="ph portrait" data-label="portrait 9:16" style="height:220px"></span></div>
+            <div class="foot"><span class="vote">▲ 1540</span><span class="postmeta"><a href="#">f/whats-hot</a><a href="#">5 comments</a></span></div>
+          </div></div></div></div>
+      <div class="device phone"><div class="device-label">Phone · signed out · proposed</div>
+        <div class="screen app" data-skin="light"><div class="card">
+          <div class="postrow" style="position:relative"><div class="byline"><span class="av c3">th</span><span class="who">theshunbun.bsky.social</span><span class="dot"></span><span>13h</span><button class="kebab">⋯</button></div>
+            <div class="posttitle">A commission 💜</div>
+            <div class="mstage h-phone"><span class="ph portrait back"></span><span class="ph portrait fore" data-label="portrait 9:16"></span></div>
+            <div class="tip">Sign in to like</div>
+            <div class="actions">
+              <button class="pill guest" aria-label="1540 likes — sign in to like"><svg class="icon"><use href="#i-person"/></svg><span class="n">1,540</span></button>
+              <button class="pill quiet"><svg class="icon"><use href="#i-reply"/></svg>5</button>
+              <button class="pill quiet"><svg class="icon"><use href="#i-repost"/></svg>477</button>
+              <button class="pill quiet share" aria-label="Copy link to this post"><svg class="icon"><use href="#i-share"/></svg></button>
+            </div>
+            <div class="postmeta" style="margin-top:6px"><a href="#">f/whats-hot</a></div>
+          </div></div></div></div>
+      <div class="device phone"><div class="device-label">Phone · signed in · proposed (for comparison)</div>
+        <div class="screen app" data-skin="light"><div class="card">
+          <div class="postrow"><div class="byline"><span class="av c3">th</span><span class="who">theshunbun.bsky.social</span><span class="dot"></span><span>13h</span><button class="kebab">⋯</button></div>
+            <div class="posttitle">A commission 💜</div>
+            <div class="mstage h-phone"><span class="ph portrait back"></span><span class="ph portrait fore" data-label="portrait 9:16"></span></div>
+            <div class="actions">
+              <button class="pill like" aria-pressed="true"><svg class="icon"><use href="#i-up"/></svg><span class="n">1,541</span></button>
+              <button class="pill quiet"><svg class="icon"><use href="#i-reply"/></svg>5</button>
+              <button class="pill quiet"><svg class="icon"><use href="#i-repost"/></svg>477</button>
+              <button class="pill quiet share" aria-label="Copy link to this post"><svg class="icon"><use href="#i-share"/></svg></button>
+            </div>
+            <div class="postmeta" style="margin-top:6px"><a href="#">f/whats-hot</a></div>
+          </div></div></div></div>
+    </div>
+    <div class="cols">
+      <div class="callout"><h3>A — what changes</h3><ul>
+        <li><b>Signed out:</b> the pill keeps the count (it is a fact) but the arrow goes; a person glyph and a dashed border say “this is a door”; tap → the sign-in sheet; hover/focus → “Sign in to like”. Accessible name carries both facts.</li>
+        <li><b>Signed in:</b> unchanged from post-and-thread decision 1 — arrow + count, pressed = brand green.</li>
+        <li>The replies and reposts counts join the row as quiet pills (Reddit's row): replies opens the thread, reposts is the count (the write stays on quotes, O2).</li></ul></div>
+      <div class="callout"><h3>B — share</h3><ul>
+        <li>The same ↗ the comments got, at the row's right edge, 60% at rest, full hit area. Copies <code>/p?uri=…</code> on the lens, <code>/f/…/p/…</code> in memory. No session needed.</li>
+        <li><code>f/whats-hot · 5 comments</code> stops being the action row; the board link moves under the actions, the count is the reply pill.</li></ul></div>
+    </div>
+  </section>
+
+  <!-- ================================================================ C -->
+  <section>
+    <div class="eyebrow">Proposal C</div>
+    <h2>C. One toolbar, one dressing</h2>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Today · lens board toolbar (f374bc7)</div>
+        <div class="screen app" data-skin="dark" style="padding:12px"><div style="font-family:ui-serif,Georgia,serif;font-size:26px;font-weight:600;margin:6px 0 10px">Bluesky</div>
+          <div style="display:flex;gap:6px;align-items:center"><select class="pillsel"><option>Feed order</option></select><select class="rawsel"><option>Card</option></select></div></div></div>
+      <div class="device phone"><div class="device-label">Proposed · phone</div>
+        <div class="screen app" data-skin="dark" style="padding:12px"><div style="font-family:ui-serif,Georgia,serif;font-size:26px;font-weight:600;margin:6px 0 10px">Bluesky</div>
+          <div class="sortbar" style="margin:0"><select class="pillsel"><option>Sort · Hot</option></select><select class="pillsel"><option>From · All time</option></select><select class="pillsel" style="margin-left:auto"><option>Card</option></select></div></div></div>
+      <div class="device desk"><div class="device-label">Proposed · desktop (the slider stays, right edge)</div>
+        <div class="screen app" data-skin="dark" style="padding:12px"><div style="font-family:ui-serif,Georgia,serif;font-size:26px;font-weight:600;margin:6px 0 10px">Bluesky</div>
+          <div class="sortbar" style="margin:0"><select class="pillsel"><option>Sort · Hot</option></select><select class="pillsel"><option>From · All time</option></select><select class="pillsel"><option>Card</option></select>
+            <span class="small" style="margin-left:auto">Stage height</span><input type="range" style="width:120px"></div></div></div>
+    </div>
+    <p class="note"><b>Mechanism:</b> <code>densityDial()</code> in <code>js/board-density.js</code> takes <code>class="pillsel"</code>; the label inside the select names the axis (“Sort · Hot”) so three pills in a row read without headings. The media slider's meaning changes with D: it caps the <b>stage</b>, not the picture.</p>
+  </section>
+
+  <!-- ================================================================ D -->
+  <section>
+    <div class="eyebrow">Proposal D</div>
+    <h2>D. The media stage, and more than one picture</h2>
+    <p class="sub">One rule for every shape: a card-wide frame, height capped, the picture centred and contain-fit, a blurred copy of itself behind. Portrait, landscape, widescreen and a screenshot all fill the same rectangle. Use the <b>Pictures shown at once</b> control above to see the setting.</p>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Today · desktop card (220px image cap, f374bc7)</div>
+        <div class="screen app" data-skin="dark"><div class="card">
+          <div class="byline"><span class="av c4">pr</span><span class="who">propublica.org ✓</span><span class="dot"></span><span>11h</span><button class="kebab">⋯</button></div>
+          <div class="posttitle">WATCH: ProPublica spent months investigating hundreds of private schools using data, public records, court cases and countless interviews.</div>
+          <div class="media-strip"><span class="ph portrait" data-label="video thumb 9:16" style="height:220px"></span></div>
+          <div class="foot"><span class="vote">▲ 584</span><span class="postmeta"><a href="#">f/whats-hot</a><a href="#">13 comments</a></span></div>
+        </div></div></div>
+      <div class="device desk"><div class="device-label">Proposed · desktop card · portrait video</div>
+        <div class="screen app" data-skin="dark"><div class="card">
+          <div class="byline"><span class="av c4">pr</span><span class="who">propublica.org ✓</span><span class="dot"></span><span>11h</span><button class="kebab">⋯</button></div>
+          <div class="posttitle">WATCH: ProPublica spent months investigating hundreds of private schools using data, public records, court cases and countless interviews.</div>
+          <div class="mstage h-desk video"><span class="ph portrait fore" data-label="video 9:16 · plays on bsky.app"></span><span class="count">▶ video</span></div>
+          <div class="actions"><button class="pill like" aria-pressed="false"><svg class="icon"><use href="#i-up"/></svg><span class="n">584</span></button><button class="pill quiet"><svg class="icon"><use href="#i-reply"/></svg>13</button><button class="pill quiet"><svg class="icon"><use href="#i-repost"/></svg>96</button><button class="pill quiet share" aria-label="Copy link"><svg class="icon"><use href="#i-share"/></svg></button></div>
+          <div class="postmeta" style="margin-top:6px"><a href="#">f/whats-hot</a></div>
+        </div></div></div>
+    </div>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Proposed · landscape photo (4:3) — the blur fills the sides</div>
+        <div class="screen app" data-skin="light"><div class="card">
+          <div class="byline"><span class="av c2">lu</span><span class="who">lumendes.bsky.social</span><span class="dot"></span><span>10h</span><button class="kebab">⋯</button></div>
+          <div class="posttitle">MORRA</div>
+          <div class="mstage h-desk"><span class="ph land back"></span><span class="ph land fore" data-label="landscape 4:3"></span></div>
+          <div class="actions"><button class="pill like" aria-pressed="false"><svg class="icon"><use href="#i-up"/></svg><span class="n">312</span></button><button class="pill quiet"><svg class="icon"><use href="#i-reply"/></svg>4</button><button class="pill quiet"><svg class="icon"><use href="#i-repost"/></svg>20</button><button class="pill quiet share" aria-label="Copy link"><svg class="icon"><use href="#i-share"/></svg></button></div>
+        </div></div></div>
+      <div class="device desk"><div class="device-label">Proposed · three pictures — carousel (setting = 1 or 2) or grid (3, 4)</div>
+        <div class="screen app" data-skin="light"><div class="card" data-multi>
+          <div class="byline"><span class="av c1">ka</span><span class="who">kat.bsky.social</span><span class="dot"></span><span>2h</span><button class="kebab">⋯</button></div>
+          <div class="posttitle">Three from the allotment this morning</div>
+          <div class="mstage h-desk" data-carousel><span class="ph wide back"></span><span class="ph wide fore" data-label="1 of 3 · wide 16:9"></span>
+            <button class="arrow l" aria-label="Previous picture">‹</button><button class="arrow r" aria-label="Next picture">›</button>
+            <div class="dots"><i class="on"></i><i></i><i></i></div><span class="count">1 / 3</span></div>
+          <div class="grid3" data-grid hidden><span class="ph wide" data-label="1"></span><span class="ph square" data-label="2"></span><span class="ph land" data-label="3"></span></div>
+          <div class="actions"><button class="pill like" aria-pressed="false"><svg class="icon"><use href="#i-up"/></svg><span class="n">88</span></button><button class="pill quiet"><svg class="icon"><use href="#i-reply"/></svg>9</button><button class="pill quiet"><svg class="icon"><use href="#i-repost"/></svg>3</button><button class="pill quiet share" aria-label="Copy link"><svg class="icon"><use href="#i-share"/></svg></button></div>
+        </div></div></div>
+    </div>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Proposed · phone · portrait, stage 420px</div>
+        <div class="screen app" data-skin="dark"><div class="card">
+          <div class="byline"><span class="av c3">th</span><span class="who">theshunbun.bsky.social</span><span class="dot"></span><span>13h</span><button class="kebab">⋯</button></div>
+          <div class="posttitle">A commission 💜</div>
+          <div class="mstage h-phone"><span class="ph portrait back"></span><span class="ph portrait fore" data-label="portrait"></span></div>
+          <div class="actions"><button class="pill like" aria-pressed="false"><svg class="icon"><use href="#i-up"/></svg><span class="n">1,540</span></button><button class="pill quiet"><svg class="icon"><use href="#i-reply"/></svg>5</button><button class="pill quiet share" aria-label="Copy link"><svg class="icon"><use href="#i-share"/></svg></button></div>
+        </div></div></div>
+      <div class="device phone"><div class="device-label">Proposed · phone · the advanced setting</div>
+        <div class="screen app" data-skin="dark" style="padding:12px">
+          <div style="font-family:ui-serif,Georgia,serif;font-size:22px;font-weight:600;margin:6px 0 10px">Advanced</div>
+          <div class="field"><label>Pictures shown at once</label><div class="switchrow"><b class="on">1</b><b>2</b><b>3</b><b>4</b></div></div>
+          <div class="small" style="padding:8px 0">Up to this many pictures side by side; more than that scroll as a carousel. Bluesky posts carry at most four, so 4 means never a carousel.</div>
+          <div class="field"><label>Stage height</label><input type="range" style="width:120px"></div>
+          <div class="field"><label>Buzz on like</label><div class="switchrow"><b class="on">On</b></div></div>
+        </div></div></div>
+    </div>
+    <div class="cols">
+      <div class="callout"><h3>The stage rule</h3><ul>
+        <li>Frame = card width; height = min(stage cap, picture's natural height at that width). A small landscape photo never gets stretched; a tall portrait never exceeds the cap.</li>
+        <li>Backdrop = the same picture, <code>blur(22px) brightness(.55)</code>, scaled 115% so the blur has no edge. Video: black bands instead (a moving blur is noise).</li>
+        <li>Tap = opens full size (image) or bsky.app (video), as today. The stage is one link; the arrows and dots are buttons inside it.</li>
+        <li>Compact rows keep the 40px thumb — nothing here changes compact.</li></ul></div>
+      <div class="callout"><h3>Carousel / grid</h3><ul>
+        <li>Setting N (1–4, default 1): ≤ N pictures → grid (2 side by side · 3 = one tall + two · 4 = 2×2, Bluesky's own shapes); > N → carousel.</li>
+        <li>Carousel: dots, edge arrows (desktop), swipe (phone), ← → when focused, <code>aria-live</code> “picture 2 of 3” for a screen reader, the counter top-right.</li>
+        <li>Each slide keeps its own alt; a slide without alt is named “picture n of m, opens full size”.</li></ul></div>
+    </div>
+  </section>
+
+  <!-- ================================================================ E + F -->
+  <section>
+    <div class="eyebrow">Proposal E + F</div>
+    <h2>E. One centred column &nbsp;·&nbsp; F. The masthead stays put</h2>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Today · 1100px shell, three columns (see snaps/board.desktop.png)</div>
+        <div class="screen app" data-skin="dark"><div class="masthead"><span class="wordmark"><span class="glyph">🌿</span>Forage</span><span class="acct">cp</span></div>
+          <div class="shell wide"><div class="navbox">nav</div><div class="col"><div class="card" style="margin:0"><div class="byline"><span class="av c4">pr</span><span class="who">propublica.org</span><button class="kebab">⋯</button></div><div class="posttitle">A card the full width of the middle column</div><div class="media-strip"><span class="ph portrait" style="height:160px"></span></div></div></div><div class="sidebox">sidebar</div></div></div></div>
+      <div class="device desk"><div class="device-label">Proposed · one 740px column, pinned masthead — scroll this frame</div>
+        <div class="screen app scroller" data-skin="dark"><div class="masthead pinned"><span class="wordmark"><span class="glyph">🌿</span>Forage</span><span class="acct">cp</span></div>
+          <div class="shell centred"><div class="navbox">nav (sticky, quiet)</div>
+            <div class="col">
+              <div class="card" style="margin:0 0 12px"><div class="byline"><span class="av c4">pr</span><span class="who">propublica.org</span><span class="dot"></span><span>11h</span><button class="kebab">⋯</button></div><div class="posttitle">WATCH: ProPublica spent months investigating hundreds of private schools</div><div class="mstage video" style="height:300px"><span class="ph portrait fore"></span></div><div class="actions"><button class="pill like"><svg class="icon"><use href="#i-up"/></svg>584</button><button class="pill quiet"><svg class="icon"><use href="#i-reply"/></svg>13</button><button class="pill quiet share"><svg class="icon"><use href="#i-share"/></svg></button></div></div>
+              <div class="card" style="margin:0 0 12px"><div class="byline"><span class="av c2">lu</span><span class="who">lumendes.bsky.social</span><span class="dot"></span><span>10h</span><button class="kebab">⋯</button></div><div class="posttitle">MORRA</div><div class="mstage" style="height:300px"><span class="ph land back"></span><span class="ph land fore"></span></div><div class="actions"><button class="pill like"><svg class="icon"><use href="#i-up"/></svg>312</button><button class="pill quiet"><svg class="icon"><use href="#i-reply"/></svg>4</button><button class="pill quiet share"><svg class="icon"><use href="#i-share"/></svg></button></div></div>
+              <div class="card" style="margin:0 0 12px"><div class="byline"><span class="av c1">ka</span><span class="who">kat.bsky.social</span><span class="dot"></span><span>2h</span><button class="kebab">⋯</button></div><div class="posttitle">A text-only post stays short — no stage, no empty frame</div><div class="actions"><button class="pill like"><svg class="icon"><use href="#i-up"/></svg>12</button><button class="pill quiet"><svg class="icon"><use href="#i-reply"/></svg>2</button><button class="pill quiet share"><svg class="icon"><use href="#i-share"/></svg></button></div></div>
+            </div>
+            <div class="sidebox">sidebar (quiet)</div></div></div></div>
+    </div>
+    <div class="cols">
+      <div class="callout"><h3>E — the column</h3><ul><li><code>.shell</code> becomes <code>1fr minmax(0,740px) 1fr</code> with the nav and sidebar in the outer tracks at reduced weight; under 860px it is already one column. The stage cap is what makes 740 feel full rather than narrow.</li></ul></div>
+      <div class="callout"><h3>F — pinned</h3><ul><li><code>.masthead</code> is already <code>position: sticky</code> but sits in a <code>#masthost</code> wrapper exactly its own height, so it scrolls away. The wrapper takes the sticky (or <code>display: contents</code>); the dev bar is unpinned. <code>mobile-fit</code> gains “masthead top is 0 after a scroll”.</li></ul></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Mapping</div>
+    <h2>Where each proposal lands in code</h2>
+    <div class="tablewrap"><table>
+      <tr><th>Proposal</th><th>Files</th><th>Suites that pin it</th></tr>
+      <tr><td>A guest like</td><td><code>js/ui/components.js</code> <code>vote()</code> read-only branch → a button opening the sign-in sheet; <code>css/app.css</code></td><td><code>guest-surface</code> (a guest's pill is a door, not a vote), <code>no-downvote</code></td></tr>
+      <tr><td>B share on posts</td><td><code>postRow</code> action row: like · replies · reposts · share; <code>lens-views.js</code> permalink</td><td><code>deep-link</code> (post case)</td></tr>
+      <tr><td>C toolbar</td><td><code>js/board-density.js</code> <code>densityDial</code>, <code>lens-views.js</code> <code>boardToolbar</code>, <code>views.js</code> board</td><td><code>density</code>, <code>mobile-fit</code></td></tr>
+      <tr><td>D stage + carousel</td><td>new <code>js/ui/stage.js</code>; <code>mediaNode</code> in <code>lens-views.js</code>; <code>js/media-scale.js</code> (cap semantics); settings field</td><td>new <code>media-stage</code> workflow (stage geometry per shape, carousel keys, grid per N), <code>bluesky-view</code> media assertions</td></tr>
+      <tr><td>E column</td><td><code>css/app.css</code> <code>.shell</code></td><td><code>mobile-fit</code> (no overflow), a11y-skins</td></tr>
+      <tr><td>F pinned</td><td><code>js/main.js</code> masthost / <code>css/app.css</code>; dev bar unpinned</td><td><code>mobile-fit</code> (top stays 0 after scroll)</td></tr>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Revisions</div>
+    <ul class="small" style="margin:0;padding-left:18px"><li><b>v1</b> — first draft from the owner's 2026-08-29 review and Reddit front-page references; baseline forage@411c40f.</li></ul>
+  </section>
+</div>
+
+<script>
+(() => {
+  const q = (s, r = document) => r.querySelector(s), qa = (s, r = document) => [...r.querySelectorAll(s)];
+  q('[data-skin-seg]').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    qa('[data-skin-seg] button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    qa('.app').forEach((a) => a.setAttribute('data-skin', b.dataset.skin));
+  });
+  // D: pictures shown at once — 3 pictures in the sample; N >= 3 shows the grid, else the carousel
+  q('[data-n-seg]').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    qa('[data-n-seg] button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    const n = Number(b.dataset.n);
+    qa('[data-multi]').forEach((card) => { q('[data-carousel]', card).hidden = n >= 3; q('[data-grid]', card).hidden = n < 3; });
+    qa('.switchrow b').forEach((x) => { if (/^[1-4]$/.test(x.textContent)) x.classList.toggle('on', x.textContent === String(n)); });
+  });
+  // the stage: contain-fit — width = min(frame width, frame height × ratio), like an <img> would size itself
+  const RATIO = { portrait: 9 / 16, land: 4 / 3, wide: 16 / 9, square: 1 };
+  const fit = () => qa('.mstage').forEach((st) => {
+    const fore = q('.fore', st); if (!fore) return;
+    const shape = [...fore.classList].find((c) => RATIO[c]); const r = RATIO[shape] || 1;
+    const W = st.clientWidth, H = st.clientHeight;
+    const w = Math.min(W, H * r); fore.style.width = w + 'px'; fore.style.height = (w / r) + 'px';
+  });
+  fit(); window.addEventListener('resize', fit);
+  // the carousel
+  const labels = ['1 of 3 · wide 16:9', '2 of 3 · square', '3 of 3 · landscape 4:3'];
+  const shapes = ['wide', 'square', 'land'];
+  qa('[data-carousel]').forEach((c) => {
+    let i = 0;
+    const paint = () => {
+      const fore = q('.fore', c), back = q('.back', c);
+      fore.className = 'ph ' + shapes[i] + ' fore'; back.className = 'ph ' + shapes[i] + ' back';
+      fore.dataset.label = labels[i]; q('.count', c).textContent = (i + 1) + ' / 3'; fit();
+      qa('.dots i', c).forEach((d, k) => d.classList.toggle('on', k === i));
+    };
+    q('.arrow.l', c).addEventListener('click', () => { i = (i + 2) % 3; paint(); });
+    q('.arrow.r', c).addEventListener('click', () => { i = (i + 1) % 3; paint(); });
+    c.tabIndex = 0;
+    c.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight') { i = (i + 1) % 3; paint(); } if (e.key === 'ArrowLeft') { i = (i + 2) % 3; paint(); } });
+  });
+})();
+</script>
+</body>
+</html>
