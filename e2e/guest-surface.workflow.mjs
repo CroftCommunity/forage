@@ -92,6 +92,13 @@ export async function run() {
     assert.equal(board.voteArrows, 0, 'no vote arrows for a guest');
     assert.ok(board.scores.length && board.scores.some((s) => s.length),
       `the SCORE survives — the arrow is an action, the number is a fact: ${JSON.stringify(board.scores)}`);
+    // Phase 4b (plan 2026-08-29 post-and-thread): the ⋯ shows a guest the
+    // three things a guest can do, and never a Save it cannot perform.
+    await out.page.locator('.postrow .byline button.kebab').first().click();
+    await out.page.waitForTimeout(150);
+    assert.deepEqual(await out.page.$$eval('[role="menu"] [role="menuitem"] > span:first-child', (els) => els.map((e) => e.textContent.trim())),
+      ['Copy text', 'Copy link', 'Open on bsky.app'], 'a guest\'s lens menu');
+    await out.page.keyboard.press('Escape');
   } finally { await out.close(); }
 
   // ---------- signed IN: all of it comes back ----------
@@ -110,5 +117,10 @@ export async function run() {
     const board = await seen(inn.page);
     assert.ok(board.voteArrows > 0, 'signed in, the boost arrow is back');
     assert.equal(board.favorite, 1, 'signed in, the favorite star is back');
+    await inn.page.locator('.postrow .byline button.kebab').first().click();
+    await inn.page.waitForTimeout(150);
+    const items = await inn.page.$$eval('[role="menu"] [role="menuitem"] > span:first-child', (els) => els.map((e) => e.textContent.trim()));
+    assert.ok(items.includes('Save') && items.includes('Report'), `signed in, the menu is the full list: ${JSON.stringify(items)}`);
+    await inn.page.keyboard.press('Escape');
   } finally { await inn.close(); }
 }

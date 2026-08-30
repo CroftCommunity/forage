@@ -52,7 +52,8 @@ export const GUEST_FLOOR = Object.freeze(new Set([
 
 export const EMPTY_POSTURE = Object.freeze({
   mutedWords: [], labelPrefs: new Map(), adultEnabled: false,
-  mutedDids: new Set(), blockedDids: new Set(), hideBadges: false,
+  mutedDids: new Set(), blockedDids: new Set(), blockUriByDid: new Map(), hideBadges: false,
+  hiddenUris: new Set(), // 4b "Hide for me": device-local, never a request
   // OQ5: the guest posture IS the floor. A session replaces this wholesale.
   floor: GUEST_FLOOR,
 });
@@ -73,6 +74,9 @@ export function buildPosture({ preferences = [], mutes = [], blocks = [], listMu
     adultEnabled: adult ? !!adult.enabled : false,
     mutedDids: new Set(mutes.map((u) => u.did)),
     blockedDids: new Set(blocks.map((u) => u.did)),
+    // Phase 4a: unblock deletes a RECORD, so the menu needs each block's uri —
+    // getBlocks carries it as viewer.blocking (D2-verified).
+    blockUriByDid: new Map(blocks.filter((u) => u.viewer?.blocking).map((u) => [u.did, u.viewer.blocking])),
     hideBadges: !!verifPref?.hideBadges,
     // OQ5: a signed-in account carries NO floor — its own settings govern.
     floor: null,
@@ -181,8 +185,14 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
     verified: posture.hideBadges ? null
       : post.author?.verification?.verifiedStatus === 'valid' ? 'valid'
       : post.author?.verification?.trustedVerifierStatus === 'valid' ? 'trusted' : null,
-    saved: false, // bookmarks are not public API surface yet — frontier
+    // Phase 4a (plan 2026-08-29 post-and-thread): Save IS Bluesky's private
+    // bookmark — viewer.bookmarked on the way in, the createBookmark /
+    // deleteBookmark procedures on the way out (D1-verified).
+    saved: !!post.viewer?.bookmarked,
     commentCount: post.replyCount ?? 0,
+    repostCount: post.repostCount ?? 0,
+    repostUri: post.viewer?.repost ?? null, // 4a-iii: the unrepost input, like likeUri
+    threadMute: !!post.viewer?.threadMuted, // 4b: Mute thread / Unmute thread (named so no "muted" string reaches a shaped board — lens-posture.test pins that)
     // Decision 8 (plan 2026-08-29 post-and-thread): the byline draws the
     // author's PICTURE; null (never undefined) when the account has none, so
     // the component falls back to initials on one check.
@@ -200,7 +210,7 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
   // a muted account is client-side rendering guidance — "do not show me this" —
   // and the only rendering that honours it is nothing at all. `hidden` is what
   // the boards filter on, which is how blocked authors already disappear.
-  if (maskedByViewer(post) || posture.mutedDids.has(post.author?.did)) {
+  if (maskedByViewer(post) || posture.mutedDids.has(post.author?.did) || posture.hiddenUris?.has(post.uri)) {
     return { ...base, title: '', body: '', url: '', author: null, authorId: null, maskedRemoved: true, hidden: true };
   }
   if (posture.mutedWords.some((w) => mutedWordHits(w, post))) {
@@ -295,7 +305,8 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
     id: p.id, postId: post.id, parentId: null,
     createdTs: p.createdTs, createdSec: p.createdSec, edited: false,
     removed: false, deleted: false,
-    likes: p.likes, myVote: p.myVote, saved: false,
+    likes: p.likes, myVote: p.myVote, saved: p.saved, cid: p.cid,
+    repostCount: p.repostCount, repostUri: p.repostUri,
     body: p.body, author: p.author, authorId: p.authorId, avatar: p.avatar,
     ...(p.maskedRemoved ? { maskedRemoved: true, title: p.title } : { removedReason: '' }),
     depth,
@@ -828,9 +839,47 @@ const POST_COLLECTION = 'app.bsky.feed.post';
 // neither, it is a query. Deliberately narrow, like the two above it: our own
 // repo, this one collection, create and delete only — it edits nothing.
 const TAGSUB_COLLECTION = 'fyi.forage.tagsub';
+// Phase 4a (plan 2026-08-29 post-and-thread, decision 3): the ⋯ menu's writes.
+// A block is a RECORD — public, visible to the blocked account, which is why
+// the menu item's copy says so — where a mute is a private procedure.
+const BLOCK_COLLECTION = 'app.bsky.graph.block';
+// 4a-iii (O6): the ⟳ on a quote is a real repost, the like pair's shape.
+const REPOST_COLLECTION = 'app.bsky.feed.repost';
 
-export function createLens({ session = null, transport = fetch } = {}) {
-  let posture = EMPTY_POSTURE;
+// 4b (O5): "Mute words & tags" writes Bluesky's OWN mutedWordsPref — the store
+// the label promises (app.bsky.actor.defs#mutedWord: value + targets, verified
+// against the lexicon 2026-08-29). A leading # means a tag mute; a bare word
+// mutes text and tags, the official app's default. Pure; read-modify-write so
+// nothing else in the blob is disturbed. Returns null when already muted.
+export function withMutedWord(preferences, word) {
+  const raw = String(word || '').trim();
+  const isTag = raw.startsWith('#');
+  const value = isTag ? raw.slice(1) : raw;
+  if (!value) return null;
+  const type = 'app.bsky.actor.defs#mutedWordsPref';
+  const existing = preferences.find((p) => p.$type === type);
+  if ((existing?.items || []).some((i) => i.value.toLowerCase() === value.toLowerCase())) return null;
+  const item = { value, targets: isTag ? ['tag'] : ['content', 'tag'], actorTarget: 'all' };
+  if (!existing) return [...preferences, { $type: type, items: [item] }];
+  return preferences.map((p) => (p === existing ? { ...p, items: [...(p.items || []), item] } : p));
+}
+
+// 4b: the six reasons a person can pick, mapped to the lexicon's reasonType
+// (com.atproto.moderation.defs, verified 2026-08-29). Ozone's finer taxonomy is
+// deliberately not offered — those are a moderation service's words.
+export const REPORT_REASONS = Object.freeze({
+  spam: 'com.atproto.moderation.defs#reasonSpam',
+  rude: 'com.atproto.moderation.defs#reasonRude',
+  violation: 'com.atproto.moderation.defs#reasonViolation',
+  misleading: 'com.atproto.moderation.defs#reasonMisleading',
+  sexual: 'com.atproto.moderation.defs#reasonSexual',
+  other: 'com.atproto.moderation.defs#reasonOther',
+});
+
+export function createLens({ session = null, transport = fetch, hiddenUris = new Set() } = {}) {
+  // hiddenUris rides on the posture so the shape layer applies it like a mute;
+  // the caller owns persisting it (a substrate never reaches for localStorage).
+  let posture = { ...EMPTY_POSTURE, hiddenUris };
   // 3x: rings are expensive — mutuals+1 is one getFollows per mutual, so a
   // full ring is 26+ graph reads before a single post loads, and it was paid
   // again on every visit to the dial. The follow graph changes slowly, so the
@@ -848,6 +897,17 @@ export function createLens({ session = null, transport = fetch } = {}) {
     });
     if (!res.ok) throw new Error(`lens: ${verb} failed HTTP ${res.status}`);
     return res.json();
+  }
+
+  // A write PROCEDURE: a 200 with an empty body is success (bookmarks and
+  // mutes answer exactly that — D1/D2-verified), so unlike post() this never
+  // parses a body. test/invariants.test.js pins every caller by name.
+  async function call(path, body, verb) {
+    if (!session) throw new Error(`lens: ${verb} needs a session — sign in first`);
+    const res = await session.fetchHandler(`/xrpc/${path}`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`lens: ${verb} failed HTTP ${res.status}`);
   }
 
   async function get(path, params = {}) {
@@ -898,7 +958,7 @@ export function createLens({ session = null, transport = fetch } = {}) {
     // entry). Guests keep the permissive default; failures throw with words —
     // the caller decides whether to run unfiltered.
     async loadPosture() {
-      if (!session) { posture = EMPTY_POSTURE; return posture; }
+      if (!session) { posture = { ...EMPTY_POSTURE, hiddenUris }; return posture; }
       const [prefs, mutes, blocks, listMutes, listBlocks] = await Promise.all([
         get('app.bsky.actor.getPreferences'),
         get('app.bsky.graph.getMutes', { limit: 100 }),
@@ -906,13 +966,29 @@ export function createLens({ session = null, transport = fetch } = {}) {
         get('app.bsky.graph.getListMutes', { limit: 100 }),
         get('app.bsky.graph.getListBlocks', { limit: 100 }),
       ]);
-      posture = buildPosture({
+      posture = { ...buildPosture({
         preferences: prefs.preferences, mutes: mutes.mutes, blocks: blocks.blocks,
         listMutes: listMutes.lists, listBlocks: listBlocks.lists,
-      }, Date.now());
+      }, Date.now()), hiddenUris };
       return posture;
     },
     posture: () => posture,
+    // 4b "Hide for me": local, immediate, no request. Returns the set so the
+    // caller can persist it.
+    hide(uri, on) {
+      if (on) hiddenUris.add(uri); else hiddenUris.delete(uri);
+      return hiddenUris;
+    },
+    // 4b: Report — a procedure to the account's moderation service, with a
+    // strongRef subject. Refuses an unknown reason before any request.
+    async report({ uri, cid }, reasonKey, detail = '') {
+      const reasonType = REPORT_REASONS[reasonKey];
+      if (!reasonType) throw new Error(`lens: not a report reason: ${JSON.stringify(reasonKey)}`);
+      await call('com.atproto.moderation.createReport', {
+        reasonType, reason: String(detail || ''),
+        subject: { $type: 'com.atproto.repo.strongRef', uri, cid },
+      }, 'report');
+    },
 
     // 3r: the thread, then its quote cascade. The cascade is opt-in (onCascade)
     // and lands AFTER the first paint — a quote of a quote is worth showing,
@@ -1152,6 +1228,57 @@ export function createLens({ session = null, transport = fetch } = {}) {
         ...(ringInfo.overflow ? { overflow: ringInfo.overflow } : {}),
         cursor: Object.keys(nextMap).length ? btoa(JSON.stringify({ m: nextMap })) : undefined,
       };
+    },
+
+    // ---- Phase 4a: the ⋯ menu's writes (plan 2026-08-29 post-and-thread) ----
+    // Save = Bluesky's private, server-side bookmark. No record, no repo write;
+    // getBookmarks is the only reader and it needs auth.
+    async bookmark(uri, cid, on) {
+      if (on) await call('app.bsky.bookmark.createBookmark', { uri, cid }, 'bookmark');
+      else await call('app.bsky.bookmark.deleteBookmark', { uri }, 'unbookmark');
+    },
+    async muteActor(did, on) {
+      if (on) await call('app.bsky.graph.muteActor', { actor: did }, 'mute');
+      else await call('app.bsky.graph.unmuteActor', { actor: did }, 'unmute');
+    },
+    async muteThread(rootUri, on) {
+      if (on) await call('app.bsky.graph.muteThread', { root: rootUri }, 'mute thread');
+      else await call('app.bsky.graph.unmuteThread', { root: rootUri }, 'unmute thread');
+    },
+    // A block is a record in MY repo. Refused before any request when the
+    // subject is me — the guard holds when block() is called directly, the
+    // deletePost pattern.
+    async block(did) {
+      if (!session) throw new Error('lens: blocking needs a session — sign in first');
+      if (did === session.did) throw new Error('lens: you cannot block yourself');
+      const data = await post('com.atproto.repo.createRecord', {
+        repo: session.did, collection: BLOCK_COLLECTION,
+        record: { $type: BLOCK_COLLECTION, subject: did, createdAt: new Date().toISOString() },
+      }, 'block');
+      return { blockUri: data.uri };
+    },
+    async unblock(blockUri) {
+      if (!session) throw new Error('lens: unblocking needs a session — sign in first');
+      const m = /^at:\/\/(did:[^/]+)\/app\.bsky\.graph\.block\/([^/]+)$/.exec(String(blockUri || ''));
+      if (!m || m[1] !== session.did) throw new Error('lens: that block record is outside your repo');
+      const parsed = { did: m[1], rkey: m[2] };
+      await post('com.atproto.repo.deleteRecord', {
+        repo: session.did, collection: BLOCK_COLLECTION, rkey: parsed.rkey,
+      }, 'unblock');
+    },
+    // 4a-iii (O6): repost — the like pair's shape on app.bsky.feed.repost.
+    async repost(uri, cid) {
+      const data = await post('com.atproto.repo.createRecord', {
+        repo: session?.did, collection: REPOST_COLLECTION,
+        record: { $type: REPOST_COLLECTION, subject: { uri, cid }, createdAt: new Date().toISOString() },
+      }, 'repost');
+      return { repostUri: data.uri };
+    },
+    async unrepost(repostUri) {
+      const rkey = repostUri.split('/').pop();
+      await post('com.atproto.repo.deleteRecord', {
+        repo: session?.did, collection: REPOST_COLLECTION, rkey,
+      }, 'unrepost');
     },
 
     // boost: create MY like of the post (D1-pinned shape). Returns the like's
@@ -1487,6 +1614,15 @@ export function createLens({ session = null, transport = fetch } = {}) {
       const next = withPinnedFeed(prefs.preferences || [], uri, on);
       await post('app.bsky.actor.putPreferences', { preferences: next }, on ? 'favorite feed' : 'unfavorite feed');
       return next;
+    },
+    // 4b (O5): the THIRD preferences write — see withMutedWord.
+    async muteWord(word) {
+      if (!session) throw new Error('lens: muting a word needs a session — sign in first');
+      const prefs = await get('app.bsky.actor.getPreferences');
+      const next = withMutedWord(prefs.preferences || [], word);
+      if (!next) return false;
+      await post('app.bsky.actor.putPreferences', { preferences: next }, 'mute word');
+      return true;
     },
 
     // 3k: a user's profile card — the persistent /u/<handle> surface. Read

@@ -333,3 +333,184 @@ test('every tagsub write needs a session, and says so rather than failing at the
   await assert.rejects(() => lens.removeTagSub('3aa'), /sign in/i);
   await assert.rejects(() => lens.tagSubs(), /sign in/i);
 });
+
+// ---- plan 2026-08-29 post-and-thread, Phase 4a: the ⋯ menu's writes ----------
+// Phase 0 (D1/D2) probed every one of these live on the test account; the raw
+// responses are test/fixtures/atproto/{bookmarks,graph-writes}.json. Bookmarks
+// and mutes are PROCEDURES (200 with an empty body, no record); block is a
+// RECORD (app.bsky.graph.block); repost is a record (app.bsky.feed.repost).
+
+function procSession() {
+  const calls = [];
+  const fetchHandler = async (path, init = {}) => {
+    calls.push({ path, method: init.method || 'GET', body: init.body ? JSON.parse(init.body) : null });
+    // procedures answer 200 with NO body — exactly what the PDS did in D1/D2
+    if (/bookmark|muteActor|unmuteActor|muteThread|unmuteThread/.test(path)) {
+      return { ok: true, status: 200, json: async () => { throw new Error('no body'); }, text: async () => '' };
+    }
+    return { ok: true, status: 200, json: async () => ({ uri: 'at://did:plc:me/app.bsky.graph.block/3blk', cid: 'c' }) };
+  };
+  return { session: { did: 'did:plc:me', handle: 'me.test', fetchHandler }, calls };
+}
+
+test('4a-i: bookmark(uri, cid, true|false) is the create/delete PROCEDURE pair — no record, and an empty 200 is success', async () => {
+  const { session, calls } = procSession();
+  const lens = createLens({ session });
+  await lens.bookmark('at://did:plc:a/app.bsky.feed.post/p', 'cid1', true);
+  await lens.bookmark('at://did:plc:a/app.bsky.feed.post/p', 'cid1', false);
+  assert.deepEqual(calls.map((c) => [c.path, c.method, c.body]), [
+    ['/xrpc/app.bsky.bookmark.createBookmark', 'POST', { uri: 'at://did:plc:a/app.bsky.feed.post/p', cid: 'cid1' }],
+    ['/xrpc/app.bsky.bookmark.deleteBookmark', 'POST', { uri: 'at://did:plc:a/app.bsky.feed.post/p' }],
+  ]);
+});
+
+test('4a-i: a post shapes `saved` from viewer.bookmarked — the bookmark IS the save', () => {
+  const on = shapeLensPost({ uri: 'at://d/p/1', cid: 'c1', author: { did: 'd', handle: 'h' },
+    record: { text: 't', createdAt: '2026-08-25T00:00:00Z' }, viewer: { bookmarked: true } }, SRC);
+  const off = shapeLensPost({ uri: 'at://d/p/1', cid: 'c1', author: { did: 'd', handle: 'h' },
+    record: { text: 't', createdAt: '2026-08-25T00:00:00Z' }, viewer: {} }, SRC);
+  assert.equal(on.saved, true);
+  assert.equal(off.saved, false);
+});
+
+test('4a-ii: muteActor / muteThread are procedure pairs, keyed on the same subject both ways', async () => {
+  const { session, calls } = procSession();
+  const lens = createLens({ session });
+  await lens.muteActor('did:plc:x', true);
+  await lens.muteActor('did:plc:x', false);
+  await lens.muteThread('at://did:plc:a/app.bsky.feed.post/root', true);
+  await lens.muteThread('at://did:plc:a/app.bsky.feed.post/root', false);
+  assert.deepEqual(calls.map((c) => [c.path, c.body]), [
+    ['/xrpc/app.bsky.graph.muteActor', { actor: 'did:plc:x' }],
+    ['/xrpc/app.bsky.graph.unmuteActor', { actor: 'did:plc:x' }],
+    ['/xrpc/app.bsky.graph.muteThread', { root: 'at://did:plc:a/app.bsky.feed.post/root' }],
+    ['/xrpc/app.bsky.graph.unmuteThread', { root: 'at://did:plc:a/app.bsky.feed.post/root' }],
+  ]);
+  assert.ok(calls.every((c) => c.method === 'POST'));
+});
+
+test('4a-ii: block() is a RECORD in my repo; unblock() deletes that exact rkey; blocking yourself is refused before any request', async () => {
+  const { session, calls } = procSession();
+  const lens = createLens({ session });
+  const res = await lens.block('did:plc:x');
+  assert.equal(res.blockUri, 'at://did:plc:me/app.bsky.graph.block/3blk');
+  assert.equal(calls[0].path, '/xrpc/com.atproto.repo.createRecord');
+  assert.equal(calls[0].body.repo, 'did:plc:me');
+  assert.equal(calls[0].body.collection, 'app.bsky.graph.block');
+  assert.equal(calls[0].body.record.$type, 'app.bsky.graph.block');
+  assert.equal(calls[0].body.record.subject, 'did:plc:x');
+  assert.ok(calls[0].body.record.createdAt);
+  await lens.unblock('at://did:plc:me/app.bsky.graph.block/3blk');
+  assert.equal(calls[1].path, '/xrpc/com.atproto.repo.deleteRecord');
+  assert.deepEqual(calls[1].body, { repo: 'did:plc:me', collection: 'app.bsky.graph.block', rkey: '3blk' });
+  await assert.rejects(() => lens.block('did:plc:me'), /yourself/);
+  await assert.rejects(() => lens.unblock('at://did:plc:other/app.bsky.graph.block/3blk'), /outside|not yours|other/i);
+  assert.equal(calls.length, 2, 'the refusals sent nothing');
+});
+
+test('4a-iii (O6): repost() / unrepost() are the like pair\'s shape on app.bsky.feed.repost; a post shapes repostUri from viewer.repost', async () => {
+  const { session, calls } = procSession();
+  const lens = createLens({ session });
+  const r = await lens.repost('at://did:plc:a/app.bsky.feed.post/p', 'cid1');
+  assert.equal(r.repostUri, 'at://did:plc:me/app.bsky.graph.block/3blk'); // whatever the fake returns as uri
+  assert.equal(calls[0].body.collection, 'app.bsky.feed.repost');
+  assert.deepEqual(calls[0].body.record.subject, { uri: 'at://did:plc:a/app.bsky.feed.post/p', cid: 'cid1' });
+  await lens.unrepost('at://did:plc:me/app.bsky.feed.repost/3rp');
+  assert.deepEqual(calls[1].body, { repo: 'did:plc:me', collection: 'app.bsky.feed.repost', rkey: '3rp' });
+  const shaped = shapeLensPost({ uri: 'at://d/p/1', cid: 'c1', author: { did: 'd', handle: 'h' },
+    record: { text: 't', createdAt: '2026-08-25T00:00:00Z' }, repostCount: 4,
+    viewer: { repost: 'at://did:plc:me/app.bsky.feed.repost/3rp' } }, SRC);
+  assert.equal(shaped.repostUri, 'at://did:plc:me/app.bsky.feed.repost/3rp');
+  assert.equal(shaped.repostCount, 4);
+});
+
+test('4a: every one of these rejects with words on a non-2xx, so the menu can say so', async () => {
+  const { session } = writerSession({ failWith: 403 });
+  const lens = createLens({ session });
+  for (const [name, fn] of [
+    ['bookmark', () => lens.bookmark('at://a/b/c', 'c', true)],
+    ['muteActor', () => lens.muteActor('did:plc:x', true)],
+    ['muteThread', () => lens.muteThread('at://a/b/c', true)],
+    ['block', () => lens.block('did:plc:x')],
+    ['repost', () => lens.repost('at://a/b/c', 'c')],
+  ]) await assert.rejects(fn, /403/, `${name} names the status`);
+});
+
+// ---- Phase 4b: the lens menu's remaining writes and the local hide ----------
+test('4b (O5): muteWord() appends a mutedWord to mutedWordsPref by read-modify-write — the THIRD putPreferences', async () => {
+  const calls = [];
+  const fetchHandler = async (path, init = {}) => {
+    calls.push({ path, method: init.method || 'GET', body: init.body ? JSON.parse(init.body) : null });
+    if (path.includes('getPreferences')) return { ok: true, status: 200, json: async () => ({ preferences: [
+      { $type: 'app.bsky.actor.defs#adultContentPref', enabled: false },
+      { $type: 'app.bsky.actor.defs#mutedWordsPref', items: [{ value: 'old', targets: ['content'] }] },
+    ] }) };
+    return { ok: true, status: 200, json: async () => ({}) };
+  };
+  const lens = createLens({ session: { did: 'did:plc:me', handle: 'me.test', fetchHandler } });
+  await lens.muteWord('#spoilers');
+  const put = calls.find((c) => c.path.includes('putPreferences'));
+  assert.ok(put, 'putPreferences was sent');
+  const pref = put.body.preferences.find((p) => p.$type === 'app.bsky.actor.defs#mutedWordsPref');
+  assert.deepEqual(pref.items.map((i) => i.value), ['old', 'spoilers'], 'a leading # is a tag mute, stored bare');
+  assert.deepEqual(pref.items[1].targets, ['tag']);
+  assert.equal(pref.items[1].actorTarget, 'all');
+  assert.ok(put.body.preferences.some((p) => p.$type === 'app.bsky.actor.defs#adultContentPref'), 'nothing else in the blob is disturbed');
+  await lens.muteWord('rain');
+  const put2 = calls.filter((c) => c.path.includes('putPreferences')).at(-1);
+  const pref2 = put2.body.preferences.find((p) => p.$type === 'app.bsky.actor.defs#mutedWordsPref');
+  assert.deepEqual(pref2.items.at(-1), { value: 'rain', targets: ['content', 'tag'], actorTarget: 'all' }, 'a plain word mutes text and tags');
+});
+
+test('4b: muteWord() with no mutedWordsPref yet creates one; a duplicate is not appended twice', async () => {
+  const calls = [];
+  const fetchHandler = async (path, init = {}) => {
+    calls.push({ path, body: init.body ? JSON.parse(init.body) : null });
+    if (path.includes('getPreferences')) return { ok: true, status: 200, json: async () => ({ preferences: [
+      { $type: 'app.bsky.actor.defs#mutedWordsPref', items: [{ value: 'rain', targets: ['content', 'tag'] }] },
+    ] }) };
+    return { ok: true, status: 200, json: async () => ({}) };
+  };
+  const lens = createLens({ session: { did: 'did:plc:me', handle: 'me.test', fetchHandler } });
+  await lens.muteWord('rain');
+  assert.equal(calls.filter((c) => c.path.includes('putPreferences')).length, 0, 'already muted: nothing written');
+  const fresh = createLens({ session: { did: 'did:plc:me', handle: 'me.test', fetchHandler: async (path, init = {}) => {
+    calls.push({ path, body: init.body ? JSON.parse(init.body) : null });
+    if (path.includes('getPreferences')) return { ok: true, status: 200, json: async () => ({ preferences: [] }) };
+    return { ok: true, status: 200, json: async () => ({}) };
+  } } });
+  await fresh.muteWord('snow');
+  const put = calls.filter((c) => c.path.includes('putPreferences')).at(-1);
+  assert.deepEqual(put.body.preferences, [{ $type: 'app.bsky.actor.defs#mutedWordsPref', items: [{ value: 'snow', targets: ['content', 'tag'], actorTarget: 'all' }] }]);
+});
+
+test('4b: report() files com.atproto.moderation.createReport with a strongRef subject and a known reasonType', async () => {
+  const { session, calls } = procSession();
+  const lens = createLens({ session });
+  await lens.report({ uri: 'at://did:plc:a/app.bsky.feed.post/p', cid: 'c1' }, 'spam', 'sells watches');
+  assert.equal(calls[0].path, '/xrpc/com.atproto.moderation.createReport');
+  assert.deepEqual(calls[0].body, {
+    reasonType: 'com.atproto.moderation.defs#reasonSpam', reason: 'sells watches',
+    subject: { $type: 'com.atproto.repo.strongRef', uri: 'at://did:plc:a/app.bsky.feed.post/p', cid: 'c1' },
+  });
+  await assert.rejects(() => lens.report({ uri: 'at://a/b/c', cid: 'c' }, 'not-a-reason', ''), /reason/);
+  assert.equal(calls.length, 1, 'an unknown reason sends nothing');
+  for (const [key, type] of [['rude', 'reasonRude'], ['violation', 'reasonViolation'], ['misleading', 'reasonMisleading'], ['sexual', 'reasonSexual'], ['other', 'reasonOther']]) {
+    await lens.report({ uri: 'at://a/b/c', cid: 'c' }, key, '');
+    assert.equal(calls.at(-1).body.reasonType, `com.atproto.moderation.defs#${type}`);
+  }
+});
+
+test('4b: hide(uri, on) is LOCAL — no request — and the shape layer hides the post from then on', async () => {
+  const { session, calls } = procSession();
+  const lens = createLens({ session, hiddenUris: new Set(['at://d/p/already']) });
+  const post = (id) => ({ uri: `at://d/p/${id}`, cid: 'c', author: { did: 'd', handle: 'h' }, record: { text: 't', createdAt: '2026-08-25T00:00:00Z' } });
+  assert.equal(shapeLensPost(post('already'), SRC, lens.posture()).hidden, true, 'a uri handed in at creation is hidden');
+  assert.equal(shapeLensPost(post('x'), SRC, lens.posture()).hidden, undefined);
+  const set = lens.hide('at://d/p/x', true);
+  assert.equal(shapeLensPost(post('x'), SRC, lens.posture()).hidden, true);
+  assert.ok(set.has('at://d/p/x'), 'the caller gets the set back to persist');
+  lens.hide('at://d/p/x', false);
+  assert.equal(shapeLensPost(post('x'), SRC, lens.posture()).hidden, undefined);
+  assert.equal(calls.length, 0, 'hiding never reaches the network');
+});

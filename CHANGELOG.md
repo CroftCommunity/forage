@@ -8,6 +8,15 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-08
 
+- 2026-08-29 **The ⋯ menu.** Every post row and comment has one — a popover on a desktop, a
+  bottom sheet on a phone. Copy text · Copy link · Open on bsky.app · Save, then Mute thread
+  · Mute words & tags, Hide for me, Mute account · Block account · Report. Save is your
+  Bluesky bookmark (private, server-side); Mute words writes your Bluesky muted-words
+  setting; Hide is this device only; Report goes to your moderation service through a
+  sheet, not a `prompt()`. A signed-out reader sees the three things anyone can do. On the
+  memory demo the same menu holds Save · Report and the steward actions. Save, Report and
+  the steward buttons left the comment action row. (plan 2026-08-29-plan-post-and-thread,
+  branch B)
 - 2026-08-29 **Posts and comments open with a byline** — the author's picture (initials
   until it loads, or when the account has none), their name, a bare time (`1d`), and a
   ⋯ slot top-right, the same on a board row and on every comment; the masthead's account

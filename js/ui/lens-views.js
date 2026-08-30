@@ -7,7 +7,7 @@
 // sign-in survives reloads. The lens consumes { did, handle, fetchHandler }.
 
 import { el, timeAgo, fmtScore, domainOf, plural } from '../util.js';
-import { postRow, commentNode, voteBox, skeleton, emptyState, toast } from './components.js';
+import { postRow, commentNode, voteBox, skeleton, emptyState, toast, reportSheet } from './components.js';
 import { navTree } from './nav.js';
 import { LADDER, RUNG_IDS, labelFor } from '../rings.js';
 import { lastBoard, setLastBoard, landingBoard, DIRECTORY } from '../last-board.js';
@@ -40,7 +40,12 @@ let session = null;        // the lens session shape, set after restore
 // leaves the initials stand-in, which is the loading state anyway.
 let sessionAvatarUrl = null;
 export function sessionAvatar() { return session ? sessionAvatarUrl : null; }
-let lens = createLens({});
+// 4b "Hide for me": device-local, like the density preference. The substrate
+// applies it through the posture; this file owns reading and writing it.
+const HIDDEN_KEY = 'forage.hidden';
+const hiddenUris = new Set((() => { try { return JSON.parse(localStorage.getItem(HIDDEN_KEY) || '[]'); } catch { return []; } })());
+const persistHidden = () => { try { localStorage.setItem(HIDDEN_KEY, JSON.stringify([...hiddenUris])); } catch { /* private mode */ } };
+let lens = createLens({ hiddenUris });
 let bootPromise = null;   // the in-flight boot, SHARED — see bootAuth()
 // which feeds the account has saved (join state). Fetched ONCE per session
 // and shared — the header card and the sidebar both need it, and a race
@@ -319,7 +324,7 @@ async function adoptSession(s) {
     if (r.ok) handle = (await r.json()).handle ?? s.did;
   } catch { /* keep the did */ }
   session = { did: s.did, handle, fetchHandler: (p, i) => manager.fetch(p, i) };
-  lens = createLens({ session });
+  lens = createLens({ session, hiddenUris });
   sessionAvatarUrl = null;
   lens.profile(s.did).then((p) => { if (session?.did === s.did) { sessionAvatarUrl = p.avatar; rerender(); } })
     .catch((e) => console.warn('forage: could not load your profile picture', e));
@@ -625,6 +630,7 @@ const lensRow = (p, view = 'card') => {
     : null;
   return postRow(p, !!session, {
     onVote: lensVote(p),
+    menuGroups: (row) => lensMenuGroups(row, { kind: 'post' }), // 4b
     aboveNode: kindContext(p),
     // 3i: never duplicate the title — a preview renders only when it adds
     // content. Card mode carries media and tag doorways; compact is dense.
@@ -707,7 +713,7 @@ function sessionCard() {
     out.addEventListener('click', async () => {
       try { await manager.signOut(); } catch (e) { toast(e.message, 'err'); }
       session = null;
-      lens = createLens({});
+      lens = createLens({ hiddenUris });
       savedFeedUris.clear();
       pinnedFeedUris.clear();
       savedFeedsPromise = null;
@@ -1088,6 +1094,99 @@ function quoteNode(node, ctx) {
 
 // 3r: one dispatch for every thread node. The substrate says which kind it is;
 // the view only draws.
+// ---- the ⋯ menu on the lens (4b; decision 3) ------------------------------
+// post · thread · account groups, separators only, destructive last; a guest
+// gets only what a guest can do. Own posts carry no Mute/Block/Report (Delete
+// stays the two-press control in the action row, which bluesky-view pins).
+async function copyText(text, what) {
+  try { await navigator.clipboard.writeText(text); toast(`${what} copied.`, 'ok'); }
+  catch (e) { console.warn('forage: clipboard write failed', e); toast(`Could not copy the ${what.toLowerCase()} — your browser refused the clipboard.`, 'err'); }
+}
+
+async function afterPostureWrite(msg) {
+  try { await lens.loadPosture(); } catch (e) { console.warn('forage: posture reload failed', e); }
+  if (msg) toast(msg, 'ok');
+  rerender();
+}
+
+function muteWordSheet() {
+  const input = el('input', { class: 'form', type: 'text', placeholder: 'a word, or #tag', 'aria-label': 'Word or tag to mute' });
+  const save = el('button', { type: 'button', class: 'btn primary' }, 'Mute');
+  const cancel = el('button', { type: 'button', class: 'btn' }, 'Cancel');
+  const dialog = el('dialog', { class: 'sheet', 'aria-label': 'Mute words & tags' },
+    el('div', { class: 'row spread' }, el('strong', {}, 'Mute words & tags'),
+      el('button', { type: 'button', class: 'sheet-x', 'aria-label': 'Close' }, '✕')),
+    el('p', { class: 'small muted' }, 'Muted on your Bluesky account — posts containing it disappear here and in every app that honours your settings. A leading # mutes a tag only. Forage\u2019s own hashtag preferences are on your account page.'),
+    input, el('div', { class: 'sheet-actions' }, cancel, save));
+  dialog.querySelector('.sheet-x').addEventListener('click', () => dialog.close());
+  cancel.addEventListener('click', () => dialog.close());
+  save.addEventListener('click', async () => {
+    const word = input.value.trim();
+    if (!word) return;
+    save.disabled = true;
+    try {
+      const wrote = await lens.muteWord(word);
+      dialog.close();
+      await afterPostureWrite(wrote ? `Muted ${word}.` : `${word} was already muted.`);
+    } catch (e) { save.disabled = false; toast(e.message, 'err'); }
+  });
+  dialog.addEventListener('close', () => dialog.remove());
+  document.body.append(dialog);
+  dialog.showModal();
+  input.focus();
+}
+
+function lensMenuGroups(p, { kind }) {
+  const rkey = String(p.id).split('/').pop();
+  const link = `${location.origin}/p?uri=${encodeURIComponent(kind === 'comment' ? p.id : p.id)}`;
+  const first = [
+    { label: 'Copy text', icon: '⧉', onSelect: () => copyText(p.body || p.title || '', 'Text') },
+    { label: 'Copy link', icon: '🔗', onSelect: () => copyText(link, 'Link') },
+    { label: 'Open on bsky.app', icon: '↗', onSelect: () => window.open(`https://bsky.app/profile/${encodeURIComponent(p.author)}/post/${rkey}`, '_blank', 'noopener') },
+  ];
+  if (!session) return [first];
+  first.push({ label: p.saved ? 'Unsave' : 'Save', icon: '☆', onSelect: async () => {
+    try { await lens.bookmark(p.id, p.cid, !p.saved); p.saved = !p.saved; toast(p.saved ? 'Saved.' : 'Removed from saved.', 'ok'); rerender(); }
+    catch (e) { console.warn('forage: bookmark refused', e); toast(e.message, 'err'); }
+  } });
+  const rootUri = kind === 'comment' ? (p.postId || p.id) : p.id;
+  const thread = [
+    { label: p.threadMute ? 'Unmute thread' : 'Mute thread', icon: '🔕', onSelect: async () => {
+      try { await lens.muteThread(rootUri, !p.threadMute); p.threadMute = !p.threadMute; toast(p.threadMute ? 'Thread muted — no notifications from it.' : 'Thread unmuted.', 'ok'); }
+      catch (e) { console.warn('forage: mute thread refused', e); toast(e.message, 'err'); }
+    } },
+    { label: 'Mute words & tags', icon: '⛉', onSelect: () => muteWordSheet() },
+  ];
+  const hide = [{ label: 'Hide for me', icon: '⌀', onSelect: () => {
+    lens.hide(p.id, true); persistHidden();
+    const node = document.querySelector(`[data-node-id="${CSS.escape(p.id)}"]`);
+    if (node) node.remove(); else rerender();
+    toast('Hidden on this device. Your account page can unhide it.', 'ok');
+  } }];
+  const own = session && p.authorId === session.did;
+  const posture = lens.posture();
+  const muted = posture.mutedDids.has(p.authorId);
+  const blockUri = posture.blockUriByDid.get(p.authorId);
+  const account = own ? [] : [
+    { label: muted ? 'Unmute account' : 'Mute account', icon: '🔇', onSelect: async () => {
+      try { await lens.muteActor(p.authorId, !muted); await afterPostureWrite(muted ? `Unmuted @${p.author}.` : `Muted @${p.author}. Their posts disappear here and on Bluesky.`); }
+      catch (e) { console.warn('forage: mute refused', e); toast(e.message, 'err'); }
+    } },
+    { label: blockUri ? 'Unblock account' : 'Block account', icon: '⛔', onSelect: async () => {
+      try {
+        if (blockUri) await lens.unblock(blockUri); else await lens.block(p.authorId);
+        await afterPostureWrite(blockUri ? `Unblocked @${p.author}.` : `Blocked @${p.author}. Blocks are public on Bluesky — they can see it.`);
+      } catch (e) { console.warn('forage: block refused', e); toast(e.message, 'err'); }
+    } },
+    { label: 'Report', icon: '⚑', danger: true, onSelect: () => reportSheet({
+      what: kind === 'comment' ? 'this reply' : 'this post',
+      reasons: [['spam', 'Spam'], ['rude', 'Harassment or rudeness'], ['misleading', 'Misleading'], ['sexual', 'Unwanted sexual content'], ['violation', 'Breaks Bluesky\u2019s rules'], ['other', 'Something else']],
+      onSubmit: async ({ reason, detail }) => { await lens.report({ uri: p.id, cid: p.cid }, reason, detail); toast('Report sent to your moderation service.', 'ok'); },
+    }) },
+  ];
+  return [first, thread, hide, account];
+}
+
 function lensNode(node, ctx) {
   return threadNodeStyle(node).walled ? quoteNode(node, ctx) : commentNode(node, ctx);
 }
@@ -1334,7 +1433,7 @@ export function accountMenu() {
     const did = session?.did;
     try { await manager.signOut(); } catch (e) { toast(e.message, 'err'); }
     if (did) roster.forget(did);
-    session = null; lens = createLens({}); savedFeedUris.clear(); pinnedFeedUris.clear(); savedFeedsPromise = null;
+    session = null; lens = createLens({ hiddenUris }); savedFeedUris.clear(); pinnedFeedUris.clear(); savedFeedsPromise = null;
     toast('Signed out.', 'ok');
     rerender();
   });
@@ -2215,6 +2314,7 @@ export function lensThreadView(params, query) {
         })),
       replyHost));
     const ctx = { ...LENS_PERMS, locked: true, // vote/save/mod still gate; replying does not
+      menuGroups: (n) => lensMenuGroups(n, { kind: 'comment' }), // 4b: the ⋯ on every reply
       authorHref: (n) => `/u/${encodeURIComponent(n.author)}`, // 3k: authors reach OUR profile page (which links out)
       nodeRenderer: (n, c) => lensNode(n, c), // 3r: a quote nested under a reply is still a quote
       // phase 2: a reply you regret is the commoner case than a post you

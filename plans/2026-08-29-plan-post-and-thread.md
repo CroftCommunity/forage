@@ -4,7 +4,7 @@
 applied the same day** — see Review Log. **Pass 3 (quality gates) applied the same day** — see
 Review Log. **Not started: Phase 0 first.** Open-question severities (O2–O8) **confirmed as recommended by the owner
 2026-08-29** ("accept all as recommended"): O5/O6/O8 PHASE-GATED, O2/O3/O4/O7 ADVISORY.
-**Progress tracker:** this Status line. last green: Phase 2 (branch A) — At every phase end append `last green: <phase> @ <sha>`;
+**Progress tracker:** this Status line. last green: Phase 4b (branch B) — At every phase end append `last green: <phase> @ <sha>`;
 at every landing the CHANGELOG entry and the mock's `mock-baseline` sha are the markers.
 **Origin:** owner session 2026-08-29 — Reddit (web + Android) and Bluesky screenshots
 studied against Forage as it renders, worked through twelve revisions of a mock, and
@@ -456,7 +456,15 @@ mock's baseline bumped.
 
 ### Landing branch B — the ⋯ menu
 
-#### Phase 3: the menu component, wired to the memory tier
+#### Phase 3: the menu component, wired to the memory tier — ✅ SHIPPED (branch B)
+**Delivered:** 3a/3b as specified, plus a **3c** (`js/ui/views.js`: the thread `ctx` gains
+`loggedIn`/`viewerId`, and every `postRow` caller passes `perms: rowPerms` — a row's menu
+needs its OWN feed's permissions, `/popular` mixes feeds). The menu is a native `<dialog>`
+(the authsheet pattern) — popover pinned beside the kebab on desktop, bottom sheet under
+480px, one element. **Memory has no Delete write** (`post.deletedByAuthor` exists in the
+reducer with no action), so on your own post the menu drops Report and adds nothing;
+Delete-on-own is the lens's (4b, `deletePost`). `sw.js` SHELL gained `menu.js` (CACHE
+v59); `board-density.test.js`'s regex loosened to allow another key beside `compact`.
 **Goal:** one menu, popover on desktop and sheet on the phone, groups declared as data;
 the memory tier's Save · Hide · Report (and steward items, Delete on your own) move
 into it and out of the action row.
@@ -499,7 +507,16 @@ closed menu and nothing else.
 groups; (2) `node e2e/run.mjs post-menu guest-surface` green.
 **Validation:** Moderate — plus keyboard: Tab to kebab, Enter, arrow keys, Esc.
 
-#### Phase 4a: the lens writes — bookmarks, mutes, blocks (substrate only)
+#### Phase 4a: the lens writes — bookmarks, mutes, blocks (substrate only) — ✅ SHIPPED (branch B)
+**Delivered:** 4a-i, ii, iii (O6 taken: `repost`/`unrepost`) and iv in one commit — the
+unit tests were written RED together, the writes landed together, `invariants.test.js`
+pins `createRecord`/`deleteRecord` at 5/5 with `BLOCK_COLLECTION` + `REPOST_COLLECTION`
+and the six procedure writes by name through one `call()` helper. `e2e/lens-writes-live`
+ran green against the real PDS (LIVE=1); its first run found the AppView indexes a repost
+a beat after the PDS accepts it (polled now, undone in `finally` — the stray record from
+that run was deleted by hand and `listRecords` is the suite's last assertion). Posts also
+shape `saved` from `viewer.bookmarked`, `repostCount`, `repostUri`; the posture keeps
+`blockUriByDid` so Unblock knows its rkey.
 **Goal:** the substrate can save/unsave (bookmark), mute/unmute an account, mute/unmute
 a thread, block/unblock — each argued in `invariants.test.js` and listed in `AGENTS.md`.
 **Changes:**
@@ -548,7 +565,19 @@ argument in the test's own voice, do not bump the number.
 read back via `getBookmarks` / `getMutes` / `getBlocks`, then undone — *(Pass 3)* as
 `LIVE=1` on 4a-iv, not by hand.
 
-#### Phase 4b: the lens menu
+#### Phase 4b: the lens menu — ✅ SHIPPED (branch B)
+**Delivered:** the full decided list on rows and replies (`lensMenuGroups`), guest = three
+items (`guest-surface` gates it). Two more writes were needed and argued: **O5 taken** —
+`muteWord()` writes Bluesky's `mutedWordsPref` (third `putPreferences`, under the marker;
+`withMutedWord` pure, lexicon-verified shape), and **Report** files
+`com.atproto.moderation.createReport` (seventh procedure, strongRef subject, six reasons
+mapped to `reasonType`) — shim-tested only: a live report against a real post is not a
+fixture anyone should create. `Hide for me` is device-local (`forage.hidden`, applied in the
+shape layer via `posture.hiddenUris`; the substrate never touches localStorage). The report
+`prompt()` became a `<dialog class="sheet">` on both tiers. **Delete stays the two-press
+control in the action row** (bluesky-view pins it); own posts simply carry no Mute/Block/
+Report. The shaped field is `threadMute`, not `threadMuted` — `lens-posture.test` pins that
+no string containing "muted" reaches a shaped board.
 **Goal:** the ⋯ on a lens post or comment carries the full decided list, each item live.
 **Changes:**
 - [ ] `js/ui/lens-views.js` — `LENS_PERMS`/ctx supply the menu groups: Copy text, Copy

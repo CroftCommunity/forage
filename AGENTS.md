@@ -180,6 +180,13 @@ adding another means arguing for it there first:
 | `putPreferences` (savedFeedsPrefV2) | favorite / unfavorite (pin) | 3s |
 | `createRecord` → `fyi.forage.tagsub` | save a hashtag subscription to your repo | P5 |
 | `deleteRecord` → `fyi.forage.tagsub` | remove one from your repo | P5 |
+| `app.bsky.bookmark.createBookmark` / `deleteBookmark` (procedures) | Save / Unsave — Bluesky's private, server-side bookmark; no record | post-and-thread 4a |
+| `app.bsky.graph.muteActor` / `unmuteActor` (procedures) | Mute / unmute an account | post-and-thread 4a |
+| `app.bsky.graph.muteThread` / `unmuteThread` (procedures) | Mute / unmute a thread | post-and-thread 4a |
+| `createRecord` → `app.bsky.graph.block` | Block an account (a record — the blocked account can see it) | post-and-thread 4a |
+| `deleteRecord` → `app.bsky.graph.block` | Unblock | post-and-thread 4a |
+| `createRecord` → `app.bsky.feed.repost` | Repost (O6) | post-and-thread 4a |
+| `deleteRecord` → `app.bsky.feed.repost` | Un-repost | post-and-thread 4a |
 
 The eighth and ninth are the first records **Forage defined for itself** that
 reach a repo. That step is argued for in `docs/LEXICON-REGISTER.md`, which every

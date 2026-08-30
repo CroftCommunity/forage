@@ -55,6 +55,9 @@ function limitsSidebar() {
 // Controversial is gone with downvotes (plan 2026-08-27-1) — it was the only
 // sort DEFINED by the up/down split, so it has no one-sided form.
 const SORTS = ['hot', 'new', 'top', 'rising'];
+// A row's ⋯ menu needs the permissions of the row's OWN feed — /popular mixes
+// feeds, and a steward of one is a member of the next.
+const rowPerms = (p) => ({ ...sel.permissions(S(), V(), p.feedId, NOW()), viewerId: V() });
 export function boardView(scope, title, query) {
   const sort = query.sort || (S().users[V()]?.prefs?.defaultSort ?? 'hot');
   const data = sel.board(S(), V(), scope, sort, 'all', NOW());
@@ -88,7 +91,7 @@ export function boardView(scope, title, query) {
         scope === 'home' ? 'Discover feeds' : 'Create a feed')));
   } else {
     const card = el('div', { class: 'card' });
-    for (const p of data.posts) card.append(postRow(p, data.perms.canVote, { compact: isCompact() }));
+    for (const p of data.posts) card.append(postRow(p, data.perms.canVote, { perms: rowPerms, compact: isCompact() }));
     main.append(card);
   }
   return { main, side: el('div', { class: 'side' }, limitsSidebar(), feedsSidebar()) };
@@ -171,7 +174,9 @@ export function threadView(params, query) {
 
   // comments
   const ctx = { canVote: t.perms.canVote, canComment: t.perms.canComment, canReport: t.perms.canReport,
-    canModerate: t.perms.canModerate, locked: t.locked, feedId: p.feedId, feedSlug: p.feedSlug };
+    canModerate: t.perms.canModerate, locked: t.locked, feedId: p.feedId, feedSlug: p.feedSlug,
+    // Phase 3: the ⋯ menu decides Save / Report / steward items from these
+    loggedIn: t.perms.loggedIn, viewerId: V() };
   // A SECOND sort list, for comments inside a thread. The plan's phase list
   // named only the board's `SORTS`; this one was found by grepping rather than
   // by reading the plan, and it is the kind of duplicate a phase list assembled
@@ -322,11 +327,11 @@ export function profileView(params, query) {
   main.append(el('div', { class: 'tabs' }, ...tlist.map(([l, h]) => el('a', { class: 'tab' + (l.toLowerCase() === tab ? ' active' : ''), href: h }, l))));
 
   const card = el('div', { class: 'card' });
-  if (tab === 'posts' || tab === 'overview') pr.posts.slice(0, tab === 'overview' ? 5 : 100).forEach((p) => card.append(postRow(p, false)));
+  if (tab === 'posts' || tab === 'overview') pr.posts.slice(0, tab === 'overview' ? 5 : 100).forEach((p) => card.append(postRow(p, false, { perms: rowPerms })));
   if (tab === 'comments' || tab === 'overview') pr.comments.slice(0, tab === 'overview' ? 5 : 100).forEach((c) => card.append(profileComment(c)));
   if (tab === 'saved') {
     if (!pr.saved.length) card.append(el('div', { class: 'muted small' }, 'Nothing saved yet.'));
-    pr.saved.forEach((s) => s.type === 'post' ? card.append(postRow(s.item, false)) : card.append(profileComment(s.item)));
+    pr.saved.forEach((s) => s.type === 'post' ? card.append(postRow(s.item, false, { perms: rowPerms })) : card.append(profileComment(s.item)));
   }
   if (!card.children.length) card.append(el('div', { class: 'muted small' }, 'Nothing here yet.'));
   main.append(card);
@@ -373,7 +378,7 @@ export function searchView(params, query) {
     el('span', { class: 'frontier-chip' }, 'facets: frontier')));
   if (!q) main.append(el('div', { class: 'muted small', style: 'padding:16px' }, 'Type a query and press Enter.'));
   else if (!res.results.length) main.append(emptyState('No results', `Nothing matched “${esc(q)}”.`));
-  else { const card = el('div', { class: 'card' }); res.results.forEach((r) => r.type === 'post' ? card.append(postRow(r.item, false)) : card.append(profileComment(r.item))); main.append(card); }
+  else { const card = el('div', { class: 'card' }); res.results.forEach((r) => r.type === 'post' ? card.append(postRow(r.item, false, { perms: rowPerms })) : card.append(profileComment(r.item))); main.append(card); }
   return { main, side: null };
 }
 
@@ -509,7 +514,7 @@ export function tagStreamView(params) {
   const s = store.getState();
   const r = sel.tagStream(s, store.getPersonaId(), params.tag, store.nowSec());
   const card = el('div', { class: 'card' });
-  for (const p of r.posts) card.append(postRow(p, r.perms.canVote));
+  for (const p of r.posts) card.append(postRow(p, r.perms.canVote, { perms: rowPerms }));
   const main = el('div', {},
     el('h1', {}, `#${r.tag}`),
     el('div', { class: 'xs muted', style: 'margin-bottom:8px' }, 'Tagged posts across every Feed.'),

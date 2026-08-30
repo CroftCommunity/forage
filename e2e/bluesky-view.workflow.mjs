@@ -42,6 +42,8 @@ export async function run() {
     initScripts: [FAKE_SIGNED_IN],
     responses: {
       'describeRepo': { handle: 'me.test' },
+      // Phase 4b: Save is Bluesky's bookmark procedure — an empty 200
+      'app.bsky.bookmark.': {},
       // Phase 2 (plan 2026-08-29 post-and-thread): sign-in reads the profile once for the masthead picture
       'getProfile?actor=did%3Aplc%3Ame': { did: 'did:plc:me', handle: 'me.test', displayName: 'Me' },
       'getPreferences': { preferences: [{ $type: 'app.bsky.actor.defs#mutedWordsPref',
@@ -369,6 +371,28 @@ export async function run() {
   await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('deleteRecord')
     && JSON.parse(h.body).rkey === 'myreply'));
   await page.waitForSelector('text=You deleted this reply.');
+
+  // Phase 4b (plan 2026-08-29 post-and-thread, decision 3): the ⋯ on someone
+  // else's reply carries the whole decided list, in order, destructive last.
+  const menuLabels = () => page.$$eval('[role="menu"] [role="menuitem"] > span:first-child', (els) => els.map((e) => e.textContent.trim()));
+  const theirsKebab = page.locator('.comment[data-node-id$="/reply1"] > .comment-body > .byline button.kebab');
+  await theirsKebab.click();
+  await page.waitForTimeout(150);
+  assert.deepEqual(await menuLabels(), ['Copy text', 'Copy link', 'Open on bsky.app', 'Save',
+    'Mute thread', 'Mute words & tags', 'Hide for me', 'Mute account', 'Block account', 'Report']);
+  // Save IS the bookmark procedure (4a-i) — the shim records the call
+  await page.getByRole('menuitem', { name: 'Save', exact: true }).click();
+  await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('app.bsky.bookmark.createBookmark')
+    && JSON.parse(h.body).uri.endsWith('/reply1')));
+  // Hide is local, and it holds across a reload — the shape layer reads it
+  await theirsKebab.click();
+  await page.waitForTimeout(150);
+  await page.getByRole('menuitem', { name: 'Hide for me', exact: true }).click();
+  await page.waitForFunction(() => !document.querySelector('.comment[data-node-id$="/reply1"]'));
+  await page.reload();
+  await page.waitForSelector('.comment');
+  assert.equal(await page.locator('.comment[data-node-id$="/reply1"]').count(), 0, 'a hidden reply stays hidden after a reload');
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('forage.hidden') || '[]').length), 1);
 
   await page.goto(`${s.origin}/p?uri=${encodeURIComponent('at://did:plc:me/app.bsky.feed.post/mine')}`);
   await page.waitForSelector('text=a post of my own');

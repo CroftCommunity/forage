@@ -55,8 +55,11 @@ test('the lens exception holds: writes are records-none, likes-one-pair, prefere
   // join/leave and favorite/unfavorite — because Bluesky models saved and
   // pinned separately and Forage must not conflate them. Both live under the
   // marker; the count is pinned so a third does not appear unnoticed.
-  assert.equal((src.match(/putPreferences/g) || []).length, 2,
-    'exactly two putPreferences callers: join/leave (3j) and favorite (3s)');
+  // Plan 2026-08-29 post-and-thread, 4b (O5): the THIRD — "Mute words & tags"
+  // writes Bluesky's own mutedWordsPref, the store the menu item's label
+  // promises (Forage's hashtag prefs are a different store, linked from /me).
+  assert.equal((src.match(/putPreferences/g) || []).length, 3,
+    'exactly three putPreferences callers: join/leave (3j), favorite (3s), mute word (4b)');
   const prefMarker = src.indexOf('the SECOND lens write');
   assert.ok(prefMarker > 0, 'the preferences write carries its marker comment');
   assert.ok(src.indexOf('putPreferences') > prefMarker, 'they live under that marker');
@@ -73,12 +76,35 @@ test('the lens exception holds: writes are records-none, likes-one-pair, prefere
   // lexicons a subscription always points at a thing that EXISTS, a record or
   // an identity, and a hashtag is neither. Raising these counts is the step
   // that is supposed to cost something; it is not raised by accident.
-  assert.equal((src.match(/createRecord/g) || []).length, 3, 'exactly three createRecord (the like, the post, the tagsub)');
+  // Plan 2026-08-29 post-and-thread, Phase 4a: the ⋯ menu's writes. Two more
+  // RECORD kinds — app.bsky.graph.block (a block is a record the blocked
+  // account can see) and app.bsky.feed.repost (O6: the ⟳ on a quote is a
+  // real repost, the like pair's shape) — so create/delete go 3 → 5 each.
+  assert.equal((src.match(/createRecord/g) || []).length, 5, 'exactly five createRecord (the like, the post, the tagsub, the block, the repost)');
   // Phase 2 widens this to two deletes — unlike, and remove-your-own-post.
   // The count alone is weak, so every occurrence is inspected: the OLD version
   // of this check read src.indexOf('deleteRecord'), which with two deletes
   // would have silently examined only the first (caught in Pass 2 review).
-  assert.equal((src.match(/deleteRecord/g) || []).length, 3, 'exactly three deleteRecord (the unlike, the post delete, the tagsub delete)');
+  assert.equal((src.match(/deleteRecord/g) || []).length, 5, 'exactly five deleteRecord (the unlike, the post delete, the tagsub delete, the unblock, the unrepost)');
+  assert.match(src, /BLOCK_COLLECTION = 'app\.bsky\.graph\.block'/, 'the block collection is a named constant');
+  assert.equal((src.match(/collection: BLOCK_COLLECTION/g) || []).length, 2, 'block and unblock bind to it');
+  assert.match(src, /REPOST_COLLECTION = 'app\.bsky\.feed\.repost'/, 'and the repost collection');
+  assert.equal((src.match(/collection: REPOST_COLLECTION/g) || []).length, 2, 'repost and unrepost bind to it');
+  // PROCEDURE writes match none of the regexes above — a bookmark or a mute is
+  // an XRPC procedure with no record, no collection and no repo argument, so
+  // without this list one could land unnoticed by a test whose whole point is
+  // that "anything else added here needs the same argument". Pinned by name;
+  // the call helper is `call(` and nothing else reaches a write procedure.
+  const PROCEDURE_WRITES = [
+    'app.bsky.bookmark.createBookmark', 'app.bsky.bookmark.deleteBookmark',
+    'app.bsky.graph.muteActor', 'app.bsky.graph.unmuteActor',
+    'app.bsky.graph.muteThread', 'app.bsky.graph.unmuteThread',
+    // 4b: Report files to the account's moderation service. Shim-tested only:
+    // a live report against a real post is not a fixture anyone should create.
+    'com.atproto.moderation.createReport',
+  ];
+  const procs = [...src.matchAll(/call\('([a-z.A-Z]+)'/g)].map((m) => m[1]).sort();
+  assert.deepEqual(procs, [...PROCEDURE_WRITES].sort(), 'the procedure writes are exactly these seven, each called once');
   assert.match(src, /LIKE_COLLECTION = 'app\.bsky\.feed\.like'/, 'the like collection is a named constant');
   assert.match(src, /POST_COLLECTION = 'app\.bsky\.feed\.post'/, 'so is the post collection');
   assert.equal((src.match(/collection: LIKE_COLLECTION/g) || []).length, 2, 'the like pair binds to its constant');
