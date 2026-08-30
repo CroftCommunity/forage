@@ -358,10 +358,16 @@ dialog.menu::backdrop { background: transparent; }
    "collapsible reply", so these must not look alike — the wall is static and
    sits inside its own tinted block. .cmeta/.cbody had no rules at all before
    this, which is why the node rendered as unstyled body text (2026-08-26). */
-.quote-node { border-left: 3px solid var(--brand-ink); padding: var(--s2) 0 var(--s2) 12px; margin: var(--s2) 0; background: var(--card-2); border-radius: 0 var(--radius-card) var(--radius-card) 0; }
-.quote-meta { font-size: var(--t-xs); color: var(--muted); }
-.quote-body { font-size: var(--t-sm); margin: 4px 0; overflow-wrap: anywhere; }
-.quote-open { margin-top: 2px; }
+/* Phase 9 (decision 5): a quote is a walled COMMENT — the brand rule on the node's own
+   outer edge, outside the avatar; no tint, no box */
+.comment.quote { border-left: 3px solid var(--brand-ink); padding-left: 10px; margin: 4px 0; }
+.kids > .comment.quote::before, .kids > .comment.quote::after { left: -10px; }
+.kind { display: inline-flex; align-items: center; gap: 2px; color: var(--muted); }
+.cbtn { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 0 8px; border-radius: var(--radius-chip); border: 0;
+  background: none; color: var(--muted); font: inherit; font-size: var(--t-xs); cursor: default; }
+button.cbtn { cursor: pointer; }
+button.cbtn:hover, button.cbtn:focus-visible { background: var(--card-2); color: var(--text); }
+button.cbtn[aria-pressed="true"] { color: var(--boost); }
 .continue-stub { font-size: var(--t-xs); padding: 6px 0; }
 .loadmore { font-size: var(--t-xs); padding: 4px 0; }
 

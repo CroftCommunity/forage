@@ -292,7 +292,13 @@ const CHILD_PAGE = 20; // "load N more replies" threshold
 
 export function commentNode(node, ctx) {
   const hasKids = (node.children || []).length > 0 || (node.deferred || 0) > 0;
-  const wrap = el('div', { class: 'comment' + (hasKids ? '' : ' leaf'), 'data-node-id': node.id });
+  // Phase 9 (decision 5): a quote-response is a comment with a WALL — the
+  // brand rule on the node's own outer edge, outside the avatar; the lens
+  // says which nodes are quotes (node.kind) and hands the extra byline words
+  // and controls through ctx.
+  const isQuote = node.kind === 'quote';
+  const wrap = el('div', { class: 'comment' + (hasKids ? '' : ' leaf') + (isQuote ? ' quote' : ''), 'data-node-id': node.id,
+    ...(node.kind ? { 'data-kind': node.kind } : {}), ...(node.depth != null ? { 'data-depth': String(node.depth) } : {}) });
 
   const avcol = el('div', { class: 'avcol' }, avatarSlot(node.author, node.avatar || null),
     hasKids ? el('span', { class: 'line', 'aria-hidden': 'true' }) : null);
@@ -326,6 +332,7 @@ export function commentNode(node, ctx) {
       : () => memoryMenuGroups({ type: 'comment', subject: node, text: node.body,
         link: `/f/${ctx.feedSlug}/p/${node.postId}`, perms: ctx, viewerId: ctx.viewerId ?? null }),
     after: [
+      ctx.bylineExtra?.(node) || null, // the lens: "⟳ quoted this" on a quote
       node.edited ? el('span', { class: 'muted' }, 'edited') : null,
       node.removed && ctx.canModerate ? el('span', { class: 'chip badge-nsfw' }, 'removed') : null,
     ],
@@ -380,9 +387,11 @@ function renderChildren(container, node, ctx) {
 
   if (kids.length) showBatch();
 
-  // continuation stub past depth 10 (spec §9 / acceptance)
+  // continuation stub past depth 10 (spec §9 / acceptance); the lens supplies
+  // its own address and words for a quote cascade (ctx.continueStub)
   if (node.deferred > 0) {
-    container.append(el('a', { class: 'continue-stub', href: `/f/${ctx.feedSlug}/p/${node.postId}?focus=${node.id}` },
+    const custom = ctx.continueStub?.(node);
+    container.append(custom || el('a', { class: 'continue-stub', href: `/f/${ctx.feedSlug}/p/${node.postId}?focus=${node.id}` },
       `→ continue this thread (${node.deferred} more)`));
   }
 }

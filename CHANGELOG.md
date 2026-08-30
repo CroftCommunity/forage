@@ -8,6 +8,15 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-08
 
+- 2026-08-29 **Threads read like threads.** The full-height collapse gutter is gone: a
+  comment's replies hang off its avatar on a rail, each reply drawing its own elbow, and a
+  comment that has replies carries one ⊖ on its action row (⊕ *n replies hidden* when
+  folded). A direct reply to the post has no rail at all. The vote is one control — a
+  `▲ 35` pill on posts, a count-over-arrow pill under a comment's avatar — that presses
+  like a button and reads as a plain count when you cannot vote. A like buzzes on phones
+  that can (Settings → Buzz on like; off with reduced motion). A quote-response is a
+  walled comment with the same header and controls, plus a ⟳ that really reposts. (plan
+  2026-08-29-plan-post-and-thread, branch C)
 - 2026-08-29 **The ⋯ menu.** Every post row and comment has one — a popover on a desktop, a
   bottom sheet on a phone. Copy text · Copy link · Open on bsky.app · Save, then Mute thread
   · Mute words & tags, Hide for me, Mute account · Block account · Report. Save is your

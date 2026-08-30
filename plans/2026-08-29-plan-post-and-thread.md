@@ -4,7 +4,7 @@
 applied the same day** — see Review Log. **Pass 3 (quality gates) applied the same day** — see
 Review Log. **Not started: Phase 0 first.** Open-question severities (O2–O8) **confirmed as recommended by the owner
 2026-08-29** ("accept all as recommended"): O5/O6/O8 PHASE-GATED, O2/O3/O4/O7 ADVISORY.
-**Progress tracker:** this Status line. last green: Phase 8b (branch C) — At every phase end append `last green: <phase> @ <sha>`;
+**Progress tracker:** this Status line. last green: Phase 9 (branch C) — At every phase end append `last green: <phase> @ <sha>`;
 at every landing the CHANGELOG entry and the mock's `mock-baseline` sha are the markers.
 **Origin:** owner session 2026-08-29 — Reddit (web + Android) and Bluesky screenshots
 studied against Forage as it renders, worked through twelve revisions of a mock, and
@@ -759,7 +759,15 @@ off its avatar; ⊖ folds them; (2) `node e2e/run.mjs bluesky-view mobile-fit` g
 `npm test` green (css-classes: no orphan `.gutter` literal).
 **Validation:** Moderate — phone look at three nesting levels.
 
-#### Phase 9: the quote node
+#### Phase 9: the quote node — ✅ SHIPPED (branch C)
+**Delivered:** `quoteNode` renders through `commentNode` with three ctx hooks
+(`bylineExtra` → "⟳ quoted this", `extraActions` → the Repost glyph, `continueStub` → the
+cascade's own address); the wall is `.comment.quote`'s own left edge; `.quote-*` rules are
+gone. The Repost glyph is LIVE (O6 taken in 4a-iii): `repostControl` toggles
+`lens.repost`/`unrepost` optimistically with `aria-pressed`, a read-only count for a guest.
+**One 8a assertion changed:** a quote with children now folds like any comment (decision 2
+applies to it — the "no fold, no rail" wording pre-dated Phase 9); the two grammars stay
+distinct in the wall, not in the fold. O2 (repost on plain replies) stays not taken.
 **Goal:** a quote-response is a comment with a wall: avatar header, wall on the outer
 edge, no tint, no "open its thread", full action row (vote stack, Reply, ⟳ glyph, share).
 **Changes:**

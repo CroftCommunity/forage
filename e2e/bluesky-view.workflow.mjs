@@ -252,9 +252,21 @@ export async function run() {
   await page.waitForSelector('text=post reply1');
   await page.waitForSelector('[data-kind="quote"]');
   const qnode = page.locator('[data-kind="quote"][data-depth="0"]');
-  assert.match(await qnode.innerText(), /❝/, 'the quote marker distinguishes the kind');
-  assert.match(await qnode.innerText(), /post quote1/, 'the quote body renders in the thread');
-  assert.ok(await qnode.locator('a:has-text("open its thread")').count(), 'a quote opens as its own room');
+  // Phase 9 (plan 2026-08-29 post-and-thread, decision 5): a quote is a
+  // COMMENT with a wall — the byline says what it is, the body reads at
+  // comment scale, it carries the vote stack and a repost control, and the
+  // "open its thread" link is gone (the ⋯ has Open on bsky.app; decision 10
+  // gives it an address).
+  const qByline = qnode.locator(':scope > .comment-body > .byline');
+  assert.match((await qByline.innerText()).replace(/\s+/g, ' '), /quoted this/, 'the byline names the kind');
+  assert.match(await qnode.locator(':scope > .comment-body > .comment-text').innerText(), /post quote1/, 'the quote body renders in the thread');
+  assert.equal(await qnode.locator('a:has-text("open its thread")').count(), 0, 'no "open its thread" — the ⋯ carries Open on bsky.app');
+  assert.equal(await qnode.locator(':scope > .comment-body > [data-vote]').count(), 1, 'the quote carries the vote stack');
+  const repostBtn = qnode.locator(':scope > .comment-body > .comment-actions > [data-repost]');
+  assert.equal(await repostBtn.count(), 1, 'and a repost control — the glyph alone, no word');
+  assert.equal(await repostBtn.getAttribute('aria-pressed'), 'false');
+  assert.match(await repostBtn.getAttribute('aria-label'), /^Repost$/, 'named for a screen reader');
+  assert.equal(await qnode.locator(':scope > .avcol > .av').count(), 1, 'the avatar heads its column like any comment');
 
   // 3q: the quote is WALLED — a left rule — so it reads as a top-level thread
   // on the post instead of blending into the replies beneath it.
@@ -271,11 +283,14 @@ export async function run() {
     rails: n.querySelectorAll(':scope > .avcol > .line').length,
     elbow: getComputedStyle(n, '::before').content !== 'none',
     gutters: n.querySelectorAll('.gutter').length,
+    kids: n.querySelectorAll(':scope > .kids > *').length,
   });
   const qbox = await qnode.evaluate(chrome);
   assert.ok(qbox.wall >= 2, `the quote carries a left wall (got ${qbox.wall}px)`);
-  assert.equal(qbox.folds, 0, 'a walled quote has no fold — the two grammars stay distinct');
-  assert.equal(qbox.rails, 0, 'and no rail');
+  // Phase 9 made the quote a comment, so decision 2 applies to it too: a fold
+  // and a rail iff it has replies of its own, never a gutter
+  assert.equal(qbox.folds, qbox.kids ? 1 : 0, `a quote folds iff it has children (${qbox.kids})`);
+  assert.equal(qbox.rails, qbox.folds, 'and the rail comes with the fold');
   assert.equal(qbox.gutters, 0, 'the gutter is gone everywhere');
   const leaf = await page.locator('.comment[data-node-id$="/myreply"]').evaluate(chrome);
   assert.equal(leaf.wall, 0, 'a reply is NOT walled');
@@ -307,7 +322,7 @@ export async function run() {
   assert.equal(await kidsShown(), true, 'clicking it again unfolds — a one-way collapse is a trap');
   // and the body is styled at all — .cmeta/.cbody had no rules, so the node
   // used to render as default body text (2026-08-26)
-  const qFont = await qnode.locator(':scope > .quote-body').evaluate((n) => parseFloat(getComputedStyle(n).fontSize));
+  const qFont = await qnode.locator(':scope > .comment-body > .comment-text').evaluate((n) => parseFloat(getComputedStyle(n).fontSize));
   const rootFont = await page.evaluate(() => parseFloat(getComputedStyle(document.body).fontSize));
   assert.ok(qFont < rootFont, `the quote body reads at comment scale (${qFont}px < ${rootFont}px)`);
 
