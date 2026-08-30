@@ -2,7 +2,8 @@
 
 **Status:** Pass 1 written straight to the phase-plan template 2026-08-29; **Pass 2 (gap analysis)
 applied the same day** — every file:line below was read in the `board-cards` worktree at
-`411c40f`. **Pass 3 not yet run.** Not started; Phase 0 first.
+`411c40f`. **Pass 3 (quality gates) applied the same day.** Open-question severities O1–O5
+**confirmed as recommended by the owner 2026-08-29** ("accept all"). Not started; Phase 0 first.
 **Progress tracker:** this Status line. At every phase end append `last green: <phase> @ <sha>`.
 **Origin:** the owner's review of forage.fyi after the post-and-thread landings (2026-08-29),
 with Reddit's front page as the reference; worked through four revisions of
@@ -155,7 +156,8 @@ the only disjoint pair is 1 (masthead: `main.js`, `app.css`, `mobile-fit`) ↔ 5
 `lens.js`, `lens.test.js`) and both are minutes of work. No phase binds a port; the only
 ambient state is localStorage inside a Playwright context the harness discards. **No live
 account is touched by any phase** — every write here is device-local (`forage.cardsize`,
-`forage.pictures`, `forage.rail`).
+`forage.pictures`, `forage.rail`). *(Pass 3)* Map confirmed after the additions; no shared
+external state, so no contract to write; the one disjoint pair (1 ↔ 5a) stays sequential.
 
 ## Phases
 
@@ -197,8 +199,11 @@ code** (post-and-thread's D-landing lesson). Observability convention as in post
 at 320/360/390 and 1280 (RED first).
 **Wiring test:** `mobile-fit`. **Write-set:** 3 files. **Edges:** top is 0 at every width, not
 only the phone ones; the dev bar's top is *not* 0 after the scroll (memory mode).
+**Observability:** *(Pass 3)* none needed — a sticky rule either holds or does not, and the
+suite is the instrument.
 **Done when:** the bar stays put on the live site's shape; `mobile-fit` green.
 **Validation:** Narrow, plus one look at 320 wide that the bar still holds one row (E144).
+**Checkpoint:** *(Pass 3)* the first commit of branch A; `mobile-fit` is the whole gate.
 
 #### Phase 2: one toolbar dressing (decision 3)
 **Changes:** `js/board-density.js` — `densityDial` gets `class: 'pillsel'` and its label
@@ -209,6 +214,11 @@ in `.sortbar`'s row (RED first).
 **Write-set:** 4 → **2a** `density` suite (RED); **2b** `board-density.js`, `lens-views.js`,
 `views.js`. **Wiring test:** `density`. **Edges:** the dial keeps `data-density` (three suites
 read it); the slider is untouched here (5c retires it).
+**Edges (Pass 3):** the dial's options are exactly `['Card','Compact']` (an exact array — a
+third option would be a regression `contains` misses); at 320 the dial is ≥44px like the
+sort pills (`mobile-fit` measures `select`); the dial's `change` still calls `setDensity`
+(`density` asserts the rows change, not the class).
+**Validation:** *(Pass 3)* Narrow — the suites are sufficient; this is dressing.
 **Done when:** `density`, `mobile-fit` green.
 
 #### Phase 3: the guest's like is a door; Sign in in the guest's ⋯ (decisions 1, 8)
@@ -233,6 +243,9 @@ list is now `Copy text · Copy link · Sign in…` — its exact-list assertion 
 absent (it is not a toggle); the tooltip is `title`, the name carries the count.
 **Done when:** a guest's tap opens the sheet on the lens and the toast in memory;
 `guest-surface`, `post-menu`, `no-downvote` green.
+**Observability:** *(Pass 3)* the guest tap logs nothing on success (the sheet IS the
+feedback); if `openAuthSheet` is unavailable (`manager === 'unavailable'`) the sheet's own
+toast speaks — the pill never fails silently, which was the whole complaint.
 **Validation:** Moderate — a phone look: the dashed pill reads as "not yet", not "broken".
 
 #### Phase 4: the post action row — replies · reposts · share (decision 2)
@@ -246,6 +259,11 @@ absent (it is not a toggle); the tooltip is `title`, the name carries the count.
 **Edges:** the reply pill's count is `commentCount` and links to the thread; the repost pill
 is a **count**, not a write, on rows (O2 of post-and-thread stays); compact rows: the row
 still >25% shorter than card.
+**Observability:** *(Pass 3)* the clipboard failure path is the existing `copy()`
+(`console.warn('forage: clipboard write failed')` + toast) — reused, not duplicated.
+**Validation:** *(Pass 3)* Moderate — one phone look at a compact board: the pill row does
+not wrap onto two lines at 320 (the overflow is measured by `mobile-fit`; the wrap is a
+visual judgement).
 **Done when:** `deep-link`, `guest-surface`, `density`, `mobile-fit` green.
 
 **Branch A lands:** `CHANGELOG.md`; mock baseline + snaps.
@@ -259,7 +277,10 @@ still >25% shorter than card.
 `image.aspectRatio` (null when absent); `video.aspect` likewise (D2); `test/lens.test.js` —
 pins both from the fixtures, and null when the embed has none.
 **Write-set:** 2. **Edges:** `aspectRatio` missing → `aspect: null`, never `NaN`; a 0 height
-→ null.
+→ null; a string width (seen in the wild on old records) → null, not a coerced number.
+**Wiring test:** *(Pass 3)* none of its own — 5b-i asserts the stage's height is set before
+the image loads, which is only possible if this field reached the DOM. That is the wire.
+**Validation:** Narrow.
 
 #### Phase 5b: `js/ui/stage.js` (decision 4)
 - **5b-i (RED):** `e2e/media-stage.workflow.mjs` (new, lens shim with four posts: portrait
@@ -274,6 +295,16 @@ pins both from the fixtures, and null when the embed has none.
 **Wiring test:** 5c wires it; 5b's suite drives `stage()` through a lens board (the entry
 point IS `mediaNode` → 5c). 5b-i is written against 5c's DOM, so it stays RED until 5c —
 5b and 5c land back to back.
+**Edges (Pass 3):** a picture wider than tall at the cap fills the width and the stage is
+SHORTER than the cap (height = width / ratio); a picture with `aspect: null` gets the cap
+as its height and sizes on `load` (assert the stage grows from 0 only in that case); the
+stage never exceeds the card's inner width by a pixel at 320/360/390/1280; the video stage
+has no `.stage-back` and a black ground; `prefers-reduced-transparency` → no blur filter
+(stub with `emulateMedia`).
+**Observability:** *(Pass 3)* `stage()` says once per session when it had to size on
+`load` (`console.debug('forage: stage sized from the picture — no aspect on the embed')`) —
+the line that explains a layout jump if one is ever reported.
+**Validation:** Broad — D1's device look (or its deferral recorded).
 
 #### Phase 5c: `mediaNode` draws the stage; card size 1–4 replaces the slider (decision 7)
 - **5c-i (RED):** `e2e/bluesky-view.workflow.mjs:591-610` — the slider assertions become
@@ -290,7 +321,11 @@ point IS `mediaNode` → 5c). 5b-i is written against 5c's DOM, so it stays RED 
 1–4 reads as 4; the text-only post has **no** stage element at all.
 **Done when:** `media-stage`, `bluesky-view`, `density`, `mobile-fit`, `a11y-skins` green;
 `npm test` green (the class literals; the `media-scale` tests move to `card-size`).
+**Observability:** *(Pass 3)* a stored `forage.cardsize` outside 1–4 reads as 4 and
+`console.warn`s the raw value once.
 **Validation:** Broad — the live site's shapes on the Samsung at each of the four sizes.
+**Checkpoint:** *(Pass 3)* 5b and 5c are one CI-green point; commit 5b-ii and 5c together if
+5b-i cannot be made green alone.
 
 #### Phase 6: more than one picture (decision 5)
 - **6a (RED):** `e2e/media-stage` — a four-picture post: setting 1 → carousel (`[data-slide]`
@@ -303,6 +338,10 @@ point IS `mediaNode` → 5c). 5b-i is written against 5c's DOM, so it stays RED 
 **Edges:** exactly N shown for count ≤ N (never a one-slide carousel); swipe on a phone
 (Playwright `touchscreen` in the suite); the counter is `n / m` text with `aria-hidden`,
 the live region carries the words; each slide keeps its own alt.
+**Observability:** *(Pass 3)* the live region is the observability — a screen reader hears
+every slide change; nothing logs.
+**Validation:** *(Pass 3)* Moderate — swipe on the Samsung (Playwright's touchscreen proves
+the handler, not the feel).
 **Done when:** `media-stage` green; `npm test` green.
 
 **Branch B lands:** `CHANGELOG.md`; mock baseline + snaps; `README.md:353`.
@@ -327,11 +366,15 @@ tracks and the column's left offset equals the right margin); rail on under 860p
 sign-in card is the top notice, not a rail.
 **Done when:** the live board reads as one content column with a quiet rail; all suites
 green.
+**Observability:** *(Pass 3)* none — layout; the suites and the look are the instrument.
 **Validation:** Moderate — the Samsung at 390 (one column) and the laptop at 1280.
+**Checkpoint:** *(Pass 3)* 7b before 7c: the CSS alone must not break `mobile-fit`.
 
 **Branch C lands:** `CHANGELOG.md`; mock baseline + snaps.
 
 ## Open Questions
+
+*All five confirmed at their recommended severity by the owner, 2026-08-29.*
 
 - [RECOMMENDED: ADVISORY] **O1: the memory tier's guest door.** Memory has personas, not a
   sign-in; the pill's tap shows the existing `Log in to vote.` toast, which names the dev bar.
@@ -358,3 +401,29 @@ green.
   three cards already exist as `sessionCard`, `lensSidebar` and `trendingRail`, so Phase 7 is
   CSS plus an ordering, not a new surface; `mobile-fit` measures the masthead's controls but
   never its position, which is how the dead sticky rule shipped unseen. Pass 3 owed.
+
+### Pass 3: Quality Gates — 2026-08-29
+
+**TDD ordering:**
+- Every phase opens with its RED suite (2a, 3a, 4a, 5b-i, 5c-i, 6a, 7a) or a RED unit test
+  (5a). 5b's suite is written against 5c's DOM on purpose — the stage's entry point is
+  `mediaNode`, so a unit-only 5b would be the Isolation Trap; recorded as a two-phase green
+  point.
+- Edges added to 2, 5a, 5b; the others carried them from Pass 1.
+**Observability:** stage sizing-on-load debug line; out-of-range card size warn; the guest
+door's failure path named (the auth sheet's own toast); everything else is layout, where the
+suite is the instrument.
+**Debugging readiness:** the Status line tracks `last green`; checkpoints named for 1, 5b/5c
+and 7b/7c.
+**Validation calibration:** 2 and 5a Narrow; 4, 6, 7 Moderate with the specific look named;
+5b/5c Broad (the device). No phase says "tests are sufficient" for a visual change.
+**Concurrency honesty:** map confirmed; sequential; no shared external state.
+**Discovery:** D1 `throwaway` with an explicit deferral rule; D2 `keep-as-fixture`; D3
+resolved. Neither open task can be resolved during planning (a device; a fixture read that
+is Phase 0's first minute).
+**Coherence:** the plan answers each of the seven measurements in the Problem Statement;
+no scope beyond the eight decisions. Severities confirmed by the owner.
+**Documentation impact:** every listed file has a phase (README:353 and app.css:481 in 5c;
+CHANGELOG and mock per landing); no trailing docs phase.
+**Confirmed ready:** yes — no BLOCKING items; O2 gates 5b on a device look or its recorded
+deferral.
