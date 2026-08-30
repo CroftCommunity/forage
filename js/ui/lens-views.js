@@ -17,7 +17,8 @@ import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortW
 import { initSession, createAccountRoster, isOAuthCallback } from '../auth/session.js';
 import { hostById, featuredHosts, otherHosts, canCreateAccount } from '../auth/hosts.js';
 import { heroDismissed, dismissHero, EMBLEM } from '../hero.js';
-import { stage } from './stage.js';
+import { stage, carousel, grid } from './stage.js';
+import * as pictures from '../pictures.js';
 import * as lang from '../lang.js';
 import { density, densityDial } from '../board-density.js';
 import { sortBar } from './sortbar.js';
@@ -462,9 +463,15 @@ function mediaNode(p) {
     // link DOES and stop there. We do NOT invent a description of a picture
     // nobody has described: a fabricated alt makes a screen reader worse while
     // turning this gate green, which is the worst of both.
-    return el('div', { class: 'stages' },
-      ...p.media.items.map((i) => stage({ kind: 'images', thumb: i.thumb, alt: i.alt, aspect: i.aspect, link: i.full,
-        linkLabel: i.alt ? null : 'Image, opens full size', linkAttrs: { target: '_blank', rel: 'noopener noreferrer' } })));
+    // decision 5: one picture is a stage; up to "pictures shown at once" is a
+    // grid; more fold into a carousel (js/pictures.js owns the rule)
+    const linkAttrs = { target: '_blank', rel: 'noopener noreferrer' };
+    const layout = pictures.layoutFor(p.media.items.length, pictures.active());
+    if (layout === 'grid') return grid({ items: p.media.items, linkAttrs });
+    if (layout === 'carousel') return carousel({ items: p.media.items, linkAttrs });
+    const i = p.media.items[0];
+    return stage({ kind: 'images', thumb: i.thumb, alt: i.alt, aspect: i.aspect, link: i.full,
+      linkLabel: i.alt ? null : 'Image, opens full size', linkAttrs });
   }
   if (p.media.kind === 'video') {
     const link = `https://bsky.app/profile/${p.author}/post/${p.id.split('/').pop()}`;

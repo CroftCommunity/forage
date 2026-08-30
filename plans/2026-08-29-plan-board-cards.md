@@ -345,7 +345,7 @@ was only ever applied on a drag, so a stored size now lands before first paint (
 **Checkpoint:** *(Pass 3)* 5b and 5c are one CI-green point; commit 5b-ii and 5c together if
 5b-i cannot be made green alone.
 
-#### Phase 6: more than one picture (decision 5)
+#### Phase 6: more than one picture (decision 5) — ✅ shipped 2026-08-29
 - **6a (RED):** `e2e/media-stage` — a four-picture post: setting 1 → carousel (`[data-slide]`
   count 4, one visible, dots 4, `aria-live` region reads "picture 1 of 4"; → and ← keys
   move it; the arrows move it); setting 4 → `.stage-grid[data-count="4"]` with four `img`;
@@ -360,6 +360,11 @@ the live region carries the words; each slide keeps its own alt.
 every slide change; nothing logs.
 **Validation:** *(Pass 3)* Moderate — swipe on the Samsung (Playwright's touchscreen proves
 the handler, not the feel).
+**Found in execution:** the harness context has no `hasTouch`, so Playwright's `touchscreen`
+is unavailable; the swipe is pointer events (a finger and a mouse both send them) and the
+suite drives it with `mouse` — the handler is proven, the feel is the Samsung's. The rule
+(one → stage, ≤ setting → grid, more → carousel) is `layoutFor()` in `js/pictures.js`, a
+pure function with its own unit test, so the views cannot each re-derive it.
 **Done when:** `media-stage` green; `npm test` green.
 
 **Branch B lands:** `CHANGELOG.md`; mock baseline + snaps; `README.md:353`.
