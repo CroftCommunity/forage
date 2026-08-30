@@ -256,6 +256,15 @@ button.avvote[aria-pressed="true"] { color: var(--boost); border-color: var(--bo
   color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer; display: grid; place-items: center; }
 .kebab:hover, .kebab[aria-expanded="true"] { background: var(--card-2); color: var(--text); }
 .comment .kebab { width: 32px; height: 32px; margin-top: -4px; margin-bottom: -4px; }
+/* a settings switch (the haptics toggle, decision 6): a button[role=switch] on the tap floor */
+.switch { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px 0 8px;
+  border: 1px solid var(--border); border-radius: var(--radius-chip); background: var(--card); color: var(--text);
+  font: inherit; font-size: var(--t-xs); font-weight: 600; cursor: pointer; }
+.switch::before { content: ""; width: 28px; height: 16px; border-radius: var(--radius-chip); background: var(--border); flex: none; }
+.switch[aria-checked="true"] { border-color: var(--boost); }
+.switch[aria-checked="true"]::before { background: var(--boost); }
+.switch-state { min-width: 2em; }
+@media (max-width: 480px) { .switch { min-height: 44px; } }
 /* the ⋯ menu (js/ui/menu.js): ONE <dialog> — a popover pinned beside the kebab
    on a desktop, a bottom sheet on a phone. Same element, CSS moves the box. */
 dialog.menu { border: 1px solid var(--border); border-radius: var(--radius-card); padding: 4px;

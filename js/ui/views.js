@@ -6,6 +6,7 @@ import * as store from '../store.js';
 import * as sel from '../selectors.js';
 import * as actions from '../actions.js';
 import * as skins from '../skins.js';
+import * as haptics from '../haptics.js';
 import * as version from '../version.js';
 import { go } from '../router.js';
 import { frontiers } from '../../ledger/divergence.js';
@@ -599,6 +600,20 @@ export function settingsView() {
   // — and the two namespaces overlap on bbs/usenet/phpbb, so nothing may read
   // this value as a skin id.
   const curFamily = skins.SKINS[skins.activeSkin()]?.family ?? null;
+  // Decision 6 (plan 2026-08-29 post-and-thread): the haptics switch. Device-
+  // local like the skin; default on. Where the device cannot buzz the switch
+  // still renders — it is honest about a preference, not about hardware.
+  // A button[role=switch], not a 13px checkbox: the tap floor (mobile-fit)
+  // measures the control itself, and a switch is what the plan calls it.
+  const hapticsBox = el('button', { type: 'button', class: 'switch', id: 'pref-haptics', role: 'switch',
+    'aria-checked': String(haptics.enabled()) }, el('span', { class: 'switch-state' }, haptics.enabled() ? 'On' : 'Off'));
+  hapticsBox.addEventListener('click', () => {
+    const on = hapticsBox.getAttribute('aria-checked') !== 'true';
+    haptics.set(on);
+    hapticsBox.setAttribute('aria-checked', String(on));
+    hapticsBox.querySelector('.switch-state').textContent = on ? 'On' : 'Off';
+    if (on) haptics.buzz();
+  });
   const skinSel = el('select', { class: 'form', id: 'pref-skin' },
     ...skins.families().map((f) => el('option',
       { value: f.id, 'data-family': f.id, selected: f.id === curFamily || false },
@@ -615,6 +630,8 @@ export function settingsView() {
     // silently lost four rows and nothing tells you the toggle gained them.
     el('div', { class: 'xs muted', style: 'margin:-4px 0 8px' },
       'Light or dark is the ☾ toggle in the top bar. A style that ships one palette says so.'),
+    el('div', { class: 'field-row' }, el('label', { for: 'pref-haptics' }, 'Buzz on like'),
+      el('span', {}, hapticsBox, el('span', { class: 'xs muted', style: 'margin-left:8px' }, 'a short vibration when you like or promote something, on phones that can'))),
     el('div', { class: 'field-row' }, el('label', {}, 'Mode'),
       el('a', { href: '/mode' }, 'Bluesky view ↔ Memory sandbox — choose at /mode')),
     el('div', { class: 'field-row' }, el('label', {}, 'Accounts'),

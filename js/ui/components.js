@@ -3,6 +3,7 @@
 import { el, esc, mdLite, timeAgo, domainOf, fmtScore, plural } from '../util.js';
 import * as actions from '../actions.js';
 import { openMenu } from './menu.js';
+import * as haptics from '../haptics.js';
 
 // ---------- toasts ----------
 export function toast(msg, kind = '') {
@@ -68,6 +69,9 @@ export function vote(subjectType, id, data, canVote, { layout = 'pill', onVote =
     const next = myVote === 1 ? 0 : 1;
     // optimistic paint; the arithmetic is what makes un-liking correct
     myVote = next; score = prevScore - prevVote + next; paint();
+    // decision 6: a buzz on the flip TO on, never on off — here, inside the
+    // gesture and before the await, or Chrome ignores it
+    if (next === 1) haptics.buzz();
     try {
       if (onVote) await onVote(next, prevVote);
       else await actions.setVote(subjectType, id, next);

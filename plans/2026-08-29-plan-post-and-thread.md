@@ -4,7 +4,7 @@
 applied the same day** — see Review Log. **Pass 3 (quality gates) applied the same day** — see
 Review Log. **Not started: Phase 0 first.** Open-question severities (O2–O8) **confirmed as recommended by the owner
 2026-08-29** ("accept all as recommended"): O5/O6/O8 PHASE-GATED, O2/O3/O4/O7 ADVISORY.
-**Progress tracker:** this Status line. last green: Phase 6 (branch C) — At every phase end append `last green: <phase> @ <sha>`;
+**Progress tracker:** this Status line. last green: Phase 7 (branch C) — At every phase end append `last green: <phase> @ <sha>`;
 at every landing the CHANGELOG entry and the mock's `mock-baseline` sha are the markers.
 **Origin:** owner session 2026-08-29 — Reddit (web + Android) and Bluesky screenshots
 studied against Forage as it renders, worked through twelve revisions of a mock, and
@@ -654,7 +654,13 @@ toggling; a guest sees counts only; (2) `node e2e/run.mjs no-downvote guest-surf
 density` green, `npm test` green.
 **Validation:** Moderate — phone-width: the stack is 44px tall under 480px.
 
-#### Phase 7: haptics
+#### Phase 7: haptics — ✅ SHIPPED (branch C; device validation owed)
+**Delivered:** 7a/7b as specified, O3 taken (reduced-motion → no buzz, unit-pinned). The
+switch is a `button[role=switch]` (`#pref-haptics`, `.switch`) on `settingsView`, not a
+checkbox — a 13px checkbox failed the tap floor at 320 (`mobile-fit`). `no-downvote` stubs
+`navigator.vibrate` per document and pins one buzz per like-on, none per like-off, none
+when switched off. **Owed:** the Samsung run ("a like buzzes and the switch stops it") —
+D4 was deferred for want of a device; the platform contract is the only evidence so far.
 **Goal:** a like or promote buzzes on devices that can; one switch on `/me`; default on.
 **Changes:**
 - [ ] `js/haptics.js` (new) — `buzz()` reads `forage.haptics` (default `'on'`), calls
