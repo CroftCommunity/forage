@@ -43,7 +43,8 @@ below are the landings of that month, and everything earlier is in `git log`.
   under a comment, Reply drops a simple box — Send or Cancel. **A reply you started is kept
   in this browser** until you send or discard it (it survives Cancel and a reload). The dashed
   `DL-010` / `DL-011` chips over a board are gone — they belonged to the divergence ledger,
-  not to readers. (mock feed-row v4, from the owner's 2026-08-30 phone screenshots; plan
+  not to readers. The board's sort now reads **Default** · Hot · New · Top ("Feed order" was
+  the ledger's word for it). (mock feed-row v5, from the owner's 2026-08-30 phone screenshots; plan
   pending on the captures)
 - 2026-08-30 **A link to a reply lands on it, and a board row's name holds its line.** Opening
   a link to a specific reply in a thread now scrolls to that reply and keeps it marked, even

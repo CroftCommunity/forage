@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forage Feed Row Proposals v4</title>
-<meta name="mock-version" content="4">
+<title>Forage Feed Row Proposals v5</title>
+<meta name="mock-version" content="5">
 <meta name="mock-baseline" content="forage@7a701c3">
-<meta name="mock-proposal" content="forage@dcca0e1">
+<meta name="mock-proposal" content="forage@37007fd">
 <style>
 :root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
   --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
@@ -43,9 +43,9 @@ code{font-size:.92em}
 <body>
 <div class="wrap">
   <header>
-    <div class="eyebrow">Forage · mock · feed-row <b>v4</b> · Current forage@7a701c3 · Proposed forage@dcca0e1 · 2026-08-30</div>
+    <div class="eyebrow">Forage · mock · feed-row <b>v5</b> · Current forage@7a701c3 · Proposed forage@37007fd · 2026-08-30</div>
     <h1>The feed row, made to agree with the phone</h1>
-    <p class="sub"><b>One proposal in thirteen decisions, for one purpose:</b> the lens feed row on forage.fyi should look the way the owner's phone expected it to, with Bluesky's own row as the reference — and this time the thing being agreed on is the app, not a drawing.
+    <p class="sub"><b>One proposal in fourteen decisions, for one purpose:</b> the lens feed row on forage.fyi should look the way the owner's phone expected it to, with Bluesky's own row as the reference — and this time the thing being agreed on is the app, not a drawing.
       Origin: six phone screenshots of forage.fyi and bsky.app taken 2026-08-30 16:17–16:28 (phpBB skin, <code>f/whats-hot</code> and two threads), plus a desktop pair (<code>/u/pds.ls</code> → <code>f/pds.ls</code> → "Unknown feed").
       They showed: the picture the thread page renders missing from the feed; a post's text set as a bold heading; and an action row whose share arrow wrapped under "7315 · 270 comments · 1225", with the dashed like box two lines tall beside it.
       <b>None of it was visible in board-cards v9's captures</b> — default skin, card density, "1284 · 40 comments · 12".</p>
@@ -72,6 +72,7 @@ code{font-size:.92em}
         <tr><td>11</td><td><b>A draft is kept in this browser</b> (v4, owner: "save drafts … local browser stash or the native bsky version")</td><td>Per post answered (<code>forage.draft:&lt;uri&gt;</code>): saved as you type, survives Cancel and a reload, cleared on Send, "Discard draft" throws it away; the box says "Draft saved in this browser · 20:15".</td><td><b>Bluesky's own drafts</b> (<code>app.bsky.draft.createDraft / updateDraft / getDrafts / deleteDraft</code>, private stash, needs a session). Read from the published lexicon 2026-08-30: <code>defs#draft</code> carries <code>deviceId, deviceName, posts, langs, postgateEmbeddingRules, threadgateAllow</code> — <b>no reply target</b>. A native draft would keep the words and forget which post they answer, so the parent must live locally regardless. Recorded as O8, not built.</td><td>nothing decided before</td></tr>
         <tr><td>12</td><td><b>Under a comment, a quick box</b> (v4, owner: "a simple text box to drop down with a send or cancel")</td><td>Textarea · Send · Cancel and a counter, nothing else; Cancel folds it and keeps the words as the same kind of draft; reopened, they are back.</td><td>The full composer under the comment (today)</td><td>post-and-thread decision 2's row keeps ↩ Reply; what opens changed</td></tr>
         <tr><td>13</td><td><b>The frontier chips are off the board</b> (v4, owner: "what's this content about? … we can just remove that")</td><td>The dashed <code>likes-only scores (DL-011)</code> and <code>ranking: feed order (DL-010)</code> chips over a board named entries of the divergence ledger (<code>ledger/divergence.js</code>) — "this surface knowingly differs from the memory-tier spec" — for whoever compares the two tiers. A reader gets nothing from them. Gone from every reader-facing board; the ledger and <code>/frontiers</code> keep them.</td><td>Keep them behind the dev bar's Frontiers toggle</td><td>the lens board header</td></tr>
+        <tr><td>14</td><td><b>The sort's first choice is "Default"</b> (v5, owner: 'change "Feed order" to "Default"')</td><td>The board's sort select reads Default · Hot · New · Top. "Default" is the order the feed's own generator hands us (DL-010's fact, without the ledger's vocabulary).</td><td>"Feed order" (today); "As curated"</td><td>the sort bar's wording (plan 2026-08-26 feed-discovery-sorts)</td></tr>
         <tr><td>5</td><td><b>An author board's row points home</b> (desktop pair)</td><td>On <code>/u/&lt;handle&gt;</code> a row's breadcrumb reads <code>@handle</code> and opens <code>/u/&lt;handle&gt;</code>. Before: <code>f/pds.ls</code> → <code>/f/pds.ls</code> → "Unknown feed — this link is missing the feed's creator".</td><td>Resolve <code>/f/&lt;handle&gt;</code> as an author board when the slug looks like a handle (also fixes old links; not done here)</td><td>nothing decided before — a gap</td></tr>
       </tbody>
     </table></div>
@@ -166,13 +167,13 @@ code{font-size:.92em}
     <div class="stage">
       <div class="device phone"><div class="device-label">Phone · thread-lens · CURRENT (forage@7a701c3)</div>
         <img class="shot" src="snaps/feed-row/thread-lens.phone.current.png" alt="Thread head today: Reply as a button under the post, left-aligned" width="390"></div>
-      <div class="device phone"><div class="device-label">Phone · thread-lens · PROPOSED (forage@dcca0e1)</div>
+      <div class="device phone"><div class="device-label">Phone · thread-lens · PROPOSED (forage@37007fd)</div>
         <img class="shot" src="snaps/feed-row/thread-lens.phone.proposed.png" alt="Thread head on the branch: Reply at the right end of the like's row" width="390"></div>
-      <div class="device phone"><div class="device-label">Phone · reply-lens · PROPOSED (forage@dcca0e1) — no Current: the page did not exist</div>
+      <div class="device phone"><div class="device-label">Phone · reply-lens · PROPOSED (forage@37007fd) — no Current: the page did not exist</div>
         <img class="shot" src="snaps/feed-row/reply-lens.phone.proposed.png" alt="The /reply page: the post being answered above a text box with a kept draft, Discard draft, Cancel and Send" width="390"></div>
     </div>
     <div class="stage">
-      <div class="device desk"><div class="device-label">Desktop · reply-lens · PROPOSED (forage@dcca0e1)</div>
+      <div class="device desk"><div class="device-label">Desktop · reply-lens · PROPOSED (forage@37007fd)</div>
         <img class="shot" src="snaps/feed-row/reply-lens.desktop.proposed.png" alt="The /reply page at 1280"></div>
     </div>
   </section>
@@ -184,7 +185,7 @@ code{font-size:.92em}
     <div class="stage">
       <div class="device phone"><div class="device-label">Phone · thread-lens-reply · CURRENT (forage@7a701c3)</div>
         <img class="shot" src="snaps/feed-row/thread-lens-reply.phone.current.png" alt="Today: the full composer opens under the comment" width="390"></div>
-      <div class="device phone"><div class="device-label">Phone · thread-lens-reply · PROPOSED (forage@dcca0e1)</div>
+      <div class="device phone"><div class="device-label">Phone · thread-lens-reply · PROPOSED (forage@37007fd)</div>
         <img class="shot" src="snaps/feed-row/thread-lens-reply.phone.proposed.png" alt="On the branch: a quick box — textarea, counter, Cancel and Send — under the comment" width="390"></div>
     </div>
   </section>
@@ -192,7 +193,7 @@ code{font-size:.92em}
   <section>
     <div class="eyebrow">Proposal H</div>
     <h2>H. Three skins — Forage light · Forage dark · phpBB</h2>
-    <p class="sub">The owner asked to see the mocks in three themes. Every frame is Proposed at <code>forage@dcca0e1</code>; only <code>forage.skin</code> differs (the phpBB frame is therefore at Compact density — that family prefers it — with its picture, decision 1). A skin restyles and restructures nothing (SKINS.md): any difference in <i>shape</i> between these columns would be a bug.</p>
+    <p class="sub">The owner asked to see the mocks in three themes. Every frame is Proposed at <code>forage@37007fd</code>; only <code>forage.skin</code> differs (the phpBB frame is therefore at Compact density — that family prefers it — with its picture, decision 1). A skin restyles and restructures nothing (SKINS.md): any difference in <i>shape</i> between these columns would be a bug.</p>
     <div class="stage">
       <div class="device phone"><div class="device-label">Phone · board-lens · Forage light (default)</div><img class="shot" src="snaps/feed-row/board-lens.phone.proposed.png" alt="Board, Forage light" width="390"></div>
       <div class="device phone"><div class="device-label">Phone · board-lens · Forage dark</div><img class="shot" src="snaps/feed-row/board-lens.phone.forage-dark.proposed.png" alt="Board, Forage dark" width="390"></div>
@@ -234,6 +235,7 @@ code{font-size:.92em}
         <tr><td>13</td><td>The page shows the post being answered above the box, its ⋯ on the byline; Send posts with parent = root = the post and lands on the thread</td><td>structure · behaviour</td><td>mock-thread — "the post being answered is on the page" / "the answered post's ⋯ left its byline" / the createRecord body; <code>bluesky-view</code> — the head-reply flow through the page</td></tr>
         <tr><td>14</td><td>A draft is saved as you type, comes back after a reload with its status line, and is cleared on Send</td><td>behaviour</td><td>mock-thread — "the draft came back after a reload" / draft-status / the cleared key; <code>test/drafts.test.js</code></td></tr>
         <tr><td>15</td><td>Under a comment the box is the quick one — no image strip, Send, Cancel; Cancel folds it and keeps the words; reopened, they are back</td><td>structure · behaviour</td><td>mock-thread — "the box under a comment is the quick box" / "no image strip" / "Cancel folds the box" / "keeps the words as a draft" / "reopened, the draft is back"</td></tr>
+        <tr><td>17</td><td>The sort's first option reads "Default"</td><td>structure</td><td>mock-board — "the sort’s first choice is Default"</td></tr>
         <tr><td>16</td><td>No frontier chips over a reader's board</td><td>structure</td><td>mock-board — "no frontier chips over a reader’s board"</td></tr>
         <tr><td>8</td><td>An author board's breadcrumb is <code>@handle</code> → <code>/u/handle</code></td><td>structure</td><td><code>test/lens-intake.test.js</code> — "rows carry the kind of source they came from"; <code>bluesky-view</code> — "an author board's breadcrumb opens the author board"</td></tr>
       </tbody>
@@ -265,7 +267,8 @@ code{font-size:.92em}
   <section>
     <div class="eyebrow">Revisions</div>
     <ul class="small" style="margin:0;padding-left:18px">
-      <li><b>v4</b> — 2026-08-30, night: rebased onto main's warm-skins landing (Current re-captured at <code>forage@7a701c3</code>); decisions 9–13 built and captured (Proposed <code>forage@dcca0e1</code>) — the head's Reply at the right, the <code>/reply</code> page, drafts in this browser (with the lexicon finding that a native draft has no reply target), the quick box under a comment, the frontier chips gone; § H shows three skins at the owner's ask. Two things the frames caught that the claims had not — the squeezed pill, the dropped ⋯ — became claims before the re-capture.</li>
+      <li><b>v5</b> — 2026-08-30, night: decision 14 — the sort's first choice is "Default"; every Proposed frame re-captured at <code>forage@37007fd</code> (the toolbar is on every board frame).</li>
+      <li><b>v4</b> — 2026-08-30, night: rebased onto main's warm-skins landing (Current re-captured at <code>forage@7a701c3</code>); decisions 9–13 built and captured (Proposed <code>forage@37007fd</code>) — the head's Reply at the right, the <code>/reply</code> page, drafts in this browser (with the lexicon finding that a native draft has no reply target), the quick box under a comment, the frontier chips gone; § H shows three skins at the owner's ask. Two things the frames caught that the claims had not — the squeezed pill, the dropped ⋯ — became claims before the re-capture.</li>
       <li><b>v3</b> — 2026-08-30, evening (owner: the ↗ share icon): decision 8 — the tray-and-arrow line icon at text size, on rows and comments; Proposed re-captured at <code>forage@97b4d00</code>, Current unchanged (same population). O1's "line icons for the four" is now one glyph closer; three remain.</li>
       <li><b>v2</b> — 2026-08-30, later the same day (owner: "replace the foo.bsky.social on posts with the display name users choose and a small icon for each provider that can be toggled off"): decisions 6–7 built and captured; both columns re-captured under the named population (Proposed <code>forage@c1f780e</code>; Current still <code>forage@fe2b77b</code>). O0 records the impersonation risk and the muted-handle alternative.</li>
       <li><b>v1</b> — 2026-08-30, first version: five decisions built on <code>claude/feed-card</code> and captured (Current <code>forage@fe2b77b</code>, Proposed <code>forage@8f25520</code>) from the owner's phone screenshots. Nothing drawn. Awaiting the owner on the frames.</li>
