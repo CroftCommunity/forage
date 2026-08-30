@@ -51,6 +51,8 @@ export async function run() {
     // other population's toolbar
     const dial = mem.page.locator('#main select[data-density]');
     assert.equal(await dial.count(), 1, 'the sandbox board offers the density dial');
+    // Phase 11: the dial sits beside the sort bar, in the same row
+    assert.equal(await mem.page.locator('#main .sortbar select[data-sort]').count(), 1, 'the sort bar is there beside it');
     await dial.selectOption('card');
     await mem.page.waitForFunction(() =>
       [...document.querySelectorAll('.postrow')].some((r) => !r.classList.contains('compact')));

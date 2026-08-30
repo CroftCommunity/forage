@@ -257,6 +257,14 @@ export async function run() {
   // comment scale, it carries the vote stack and a repost control, and the
   // "open its thread" link is gone (the ⋯ has Open on bsky.app; decision 10
   // gives it an address).
+  // Phase 11c: the lens thread carries the sort bar; New puts the latest
+  // top-level reply first (client-side — the thread is loaded whole)
+  assert.equal(await page.locator('.card .sortbar select[data-sort]').count(), 1, 'the thread has a sort bar');
+  await page.locator('.card .sortbar select[data-sort]').selectOption('new');
+  await page.waitForFunction(() => document.querySelector('.card .sortbar select[data-sort]')?.value === 'new');
+  const newOrder = await page.$$eval('.card > .comment', (els) => els.map((e) => e.getAttribute('data-node-id').split('/').pop()));
+  assert.equal(newOrder[0], 'quote1', `New: the latest top-level node first: ${JSON.stringify(newOrder)}`);
+  await page.locator('.card .sortbar select[data-sort]').selectOption('hot');
   const qByline = qnode.locator(':scope > .comment-body > .byline');
   assert.match((await qByline.innerText()).replace(/\s+/g, ' '), /quoted this/, 'the byline names the kind');
   assert.match(await qnode.locator(':scope > .comment-body > .comment-text').innerText(), /post quote1/, 'the quote body renders in the thread');
@@ -644,7 +652,7 @@ export async function run() {
     'the no-alt image post still renders its image in card mode');
   assert.equal(await page.locator('.posttitle', { hasText: '[image]' }).count(), 0,
     'card mode never prints the literal [image] placeholder above a rendered image');
-  await page.locator('[data-board-toolbar] select').nth(2).selectOption('compact');
+  await page.locator('[data-board-toolbar] select[data-density]').selectOption('compact');
   await page.waitForFunction(() => !document.querySelector('.media-strip'));
   assert.ok(await page.locator('.postrow.compact').count() > 0, 'compact rows are compact');
   // Compact renders no media strip, but a placeholder-titled row still needs a

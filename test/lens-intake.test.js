@@ -972,7 +972,8 @@ test('11c (plan 2026-08-29 post-and-thread): sortWindow knows hot — engagement
   const mk = (id, hoursAgo, likes, commentCount = 0, repostCount = 0) => ({ id, createdTs: NOW - hoursAgo * 3600_000, likes, commentCount, repostCount });
   // equal age: 3 likes + 4 replies (7) beats 5 likes (5); a repost breaks a tie
   const posts = [mk('liked', 2, 5), mk('talked', 2, 3, 4), mk('shared', 2, 5, 0, 1), mk('old', 30, 90)];
-  assert.deepEqual(sortWindow(posts, 'hot', 'all', NOW).map((p) => p.id), ['old', 'talked', 'shared', 'liked']);
+  // the 30h-old post's 90 likes (log10 ≈ 1.95) lose to 28h of decay (≈ 2.24 units): hot is time-weighted
+  assert.deepEqual(sortWindow(posts, 'hot', 'all', NOW).map((p) => p.id), ['talked', 'shared', 'liked', 'old']);
   assert.deepEqual(sortWindow(posts, 'hot', 'day', NOW).map((p) => p.id), ['talked', 'shared', 'liked'], 'From: Today drops the 30h post');
   assert.deepEqual(sortWindow(posts, 'top', 'all', NOW).map((p) => p.id), ['old', 'liked', 'shared', 'talked'], 'top stays likes-only');
 });
