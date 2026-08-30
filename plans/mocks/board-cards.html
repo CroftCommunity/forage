@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forage Board Cards Proposals v2</title>
-<meta name="mock-version" content="2">
+<title>Forage Board Cards Proposals v4</title>
+<meta name="mock-version" content="4">
 <meta name="mock-baseline" content="forage@411c40f">
 <style>
 :root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
@@ -124,7 +124,12 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
 /* page column */
 .shell{display:grid;gap:14px;padding:14px}
 .shell.wide{grid-template-columns:200px 1fr 220px;max-width:1100px}
-.shell.centred{grid-template-columns:1fr minmax(0,740px) 1fr;max-width:none}
+.shell.centred{grid-template-columns:200px minmax(0,680px) 300px;justify-content:center;max-width:none}
+.app[data-rail="off"] .shell.centred{grid-template-columns:200px minmax(0,680px)}
+.app[data-rail="off"] .rail{display:none}
+.rail{opacity:.85;font-size:var(--t-xs)}
+.rail .railcard{background:color-mix(in srgb,var(--card) 70%,var(--bg))}
+.device.full{flex-basis:100%}
 .shell.centred>.col{grid-column:2}
 .navbox,.sidebox{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-card);height:140px;font-size:var(--t-xs);color:var(--muted);padding:10px}
 .shell.centred .navbox{grid-column:1;position:sticky;top:60px;height:auto;opacity:.75}
@@ -138,6 +143,14 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
 .switchrow b{display:grid;place-items:center;width:36px;height:36px;border:1px solid var(--border);border-radius:999px;font-weight:600;font-size:13px}
 .switchrow b.on{background:var(--brand-fill);color:#fff;border-color:var(--brand-fill)}
 .small{font-size:var(--t-xs);color:var(--muted)}
+.mi{display:flex;align-items:center;min-height:44px;padding:0 12px;font-size:var(--t-sm)}
+.rail{display:flex;flex-direction:column;gap:12px}
+.railcard{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-card);padding:12px;font-size:var(--t-sm)}
+.railcard h4{margin:0 0 8px;font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.railrow{display:flex;align-items:center;gap:8px;padding:6px 0;color:var(--text)}
+.railrow .av{width:24px;height:24px;font-size:10px}
+.btnp{display:block;width:100%;text-align:center;background:var(--brand-fill);color:#fff;border-radius:999px;padding:9px 0;font-weight:600;margin:6px 0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}.chips span{border:1px solid var(--border);border-radius:999px;padding:2px 10px;font-size:var(--t-xs);color:var(--link)}
 </style>
 </head>
 <body>
@@ -152,9 +165,9 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
 
 <div class="wrap">
   <header>
-    <div class="eyebrow">Forage · mock · board-cards <b>v2</b> · baseline forage@411c40f · 2026-08-29</div>
+    <div class="eyebrow">Forage · mock · board-cards <b>v4</b> · baseline forage@411c40f · 2026-08-29</div>
     <h1>Board cards: the guest like, share, the toolbar, the media stage, the column, the pinned bar</h1>
-    <p class="sub"><b>Six proposals (A–F), six open decisions.</b> Purpose: the owner's review of forage.fyi after the post-and-thread landings — the ▲ a guest cannot press,
+    <p class="sub"><b>Six proposals (A–F), eight open decisions.</b> Purpose: the owner's review of forage.fyi after the post-and-thread landings — the ▲ a guest cannot press,
       no share on posts, two toolbar controls that do not match, cards that are half empty beside a 220px-tall image, and a masthead that scrolls away.
       Reddit's front page is the reference (screenshots 2026-08-29). Every proposal shows Forage today beside the proposal; the today frames are re-drawn in this file's CSS from the
       shipped rules at the baseline (a claim), with the captured memory-board pixels in <code>snaps/</code> as the evidence for the row and toolbar shapes.</p>
@@ -165,6 +178,8 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
       <div class="seg" data-skin-seg><button aria-pressed="true" data-skin="light">Light</button><button aria-pressed="false" data-skin="dark">Dark</button></div></div>
     <div class="cgroup"><span class="eyebrow">Card size (all frames; 4 = as first proposed)</span>
       <div class="seg" data-size-seg><button aria-pressed="false" data-size="1">1</button><button aria-pressed="false" data-size="2">2</button><button aria-pressed="false" data-size="3">3</button><button aria-pressed="true" data-size="4">4</button></div></div>
+    <div class="cgroup"><span class="eyebrow">Rail (E)</span>
+      <div class="seg" data-rail-seg><button aria-pressed="true" data-rail="on">On</button><button aria-pressed="false" data-rail="off">Off</button></div></div>
     <div class="cgroup"><span class="eyebrow">Pictures shown at once (D)</span>
       <div class="seg" data-n-seg><button aria-pressed="true" data-n="1">1</button><button aria-pressed="false" data-n="2">2</button><button aria-pressed="false" data-n="3">3</button><button aria-pressed="false" data-n="4">4</button></div></div>
   </div>
@@ -180,7 +195,8 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
       <tr><td>4</td><td>The media stage (D)</td><td>A card-wide frame, height capped (520px desktop, 420px phone), picture centred and contain-fit, blurred self as backdrop (black bands for video). No slider: the card size is a four-notch setting (decision 7)</td><td>Keep the inline image, raise the cap to 480px</td></tr>
       <tr><td>5</td><td>More than one picture (D)</td><td>One advanced setting, <b>pictures shown at once: 1 · 2 · 3 · 4</b> (default 1). Up to that many in Bluesky's grid; more → a carousel with dots, edge arrows, swipe, arrow keys, and an aria-live “picture 2 of 3”. 4 = never a carousel (Bluesky caps at 4)</td><td>Carousel always, no setting</td></tr>
       <tr><td>7</td><td>Card size, 1 · 2 · 3 · 4 (all proposals)</td><td>One setting, four notches (default 4 = as drawn): it scales the stage cap (220 → 520px desktop, 180 → 420 phone), the card padding and the title — the whole card, so the reader chooses how much real estate a post takes. Replaces the drag slider, which on a phone moved in visible jumps and felt broken. Use the <b>Card size</b> control above to see every frame at each notch</td><td>Keep the continuous slider; or stage height only</td></tr>
-      <tr><td>6</td><td>The column and the pinned bar (E, F)</td><td>One centred column, 740px max, nav and sidebar quieter at its sides; the masthead pinned (the <code>#masthost</code> wrapper takes the sticky), the dev bar unpinned</td><td>Keep the 1100px three-column shell</td></tr>
+      <tr><td>6</td><td>The column, the right rail, the pinned bar (E, F)</td><td>Content first: a 680px column for the posts; a 300px right rail that is <b>optional, on by default, usable but less prominent</b> — quieter surfaces, smaller type; a sign-in card for a guest, feeds and tags you might like, nothing sold. Off (Advanced → Side panel) the column stays 680 and centres. A slim 200px left nav. Not Reddit's ratio (its rail is advertising); ours is content and one door. The masthead pinned (the <code>#masthost</code> wrapper takes the sticky), the dev bar unpinned</td><td>One column, no rail (v2); rail always on (v3); or keep the 1100px shell</td></tr>
+      <tr><td>8</td><td>Sign in from the ⋯ menu when signed out (A)</td><td>Today a guest's menu is Copy text · Copy link · Open on bsky.app and nothing says why the rest is missing. Proposed: a last group with one item, <b>Sign in to like, save and reply</b>, opening the sign-in sheet — on every post and comment</td><td>Leave the menu as it is; the like pill (decision 1) is the only door</td></tr>
     </table></div>
     <p class="note"><b>Not in this mock, by design:</b> the thread page (post-and-thread v17 owns it), text-only posts (no stage — they stay short), link posts (the external card is unchanged).</p>
   </section>
@@ -212,6 +228,16 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
             </div>
             <div class="postmeta" style="margin-top:6px"><a href="#">f/whats-hot</a></div>
           </div></div></div></div>
+      <div class="device phone"><div class="device-label">Phone · signed out · the ⋯ menu (decision 8)</div>
+        <div class="screen app" data-skin="light" style="position:relative;min-height:420px"><div class="card" style="opacity:.55">
+          <div class="postrow"><div class="byline"><span class="av c3">th</span><span class="who">theshunbun.bsky.social</span><span class="dot"></span><span>13h</span><button class="kebab" aria-expanded="true">⋯</button></div>
+            <div class="posttitle">A commission 💜</div><div class="mstage" style="height:120px"><span class="ph portrait back"></span><span class="ph portrait fore"></span></div></div></div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--border);border-radius:16px 16px 0 0;padding:10px 12px 14px;box-shadow:0 -8px 30px rgba(0,0,0,.25)">
+            <div style="display:flex;justify-content:space-between;align-items:center;font-weight:600;padding:0 4px 8px">Options <span class="glyph" style="background:var(--card-2)">✕</span></div>
+            <div class="mi">Copy text</div><div class="mi">Copy link</div><div class="mi">Open on bsky.app</div>
+            <div style="height:1px;background:var(--border);margin:5px 4px"></div>
+            <div class="mi" style="color:var(--brand-ink);font-weight:600"><svg class="icon"><use href="#i-person"/></svg>&nbsp;Sign in to like, save and reply</div>
+          </div></div></div>
       <div class="device phone"><div class="device-label">Phone · signed in · proposed (for comparison)</div>
         <div class="screen app" data-skin="light"><div class="card">
           <div class="postrow"><div class="byline"><span class="av c3">th</span><span class="who">theshunbun.bsky.social</span><span class="dot"></span><span>13h</span><button class="kebab">⋯</button></div>
@@ -248,7 +274,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
       <div class="device phone"><div class="device-label">Proposed · phone</div>
         <div class="screen app" data-skin="dark" style="padding:12px"><div style="font-family:ui-serif,Georgia,serif;font-size:26px;font-weight:600;margin:6px 0 10px">Bluesky</div>
           <div class="sortbar" style="margin:0"><select class="pillsel"><option>Sort · Hot</option></select><select class="pillsel"><option>From · All time</option></select><select class="pillsel" style="margin-left:auto"><option>Card</option></select></div></div></div>
-      <div class="device desk"><div class="device-label">Proposed · desktop (the slider stays, right edge)</div>
+      <div class="device desk"><div class="device-label">Proposed · desktop (the Size pill at the right edge)</div>
         <div class="screen app" data-skin="dark" style="padding:12px"><div style="font-family:ui-serif,Georgia,serif;font-size:26px;font-weight:600;margin:6px 0 10px">Bluesky</div>
           <div class="sortbar" style="margin:0"><select class="pillsel"><option>Sort · Hot</option></select><select class="pillsel"><option>From · All time</option></select><select class="pillsel"><option>Card</option></select>
             <select class="pillsel" style="margin-left:auto"><option>Size · 4</option></select></div></div></div>
@@ -312,6 +338,8 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
           <div class="small" style="padding:8px 0">Up to this many pictures side by side; more than that scroll as a carousel. Bluesky posts carry at most four, so 4 means never a carousel.</div>
           <div class="field"><label>Card size</label><div class="switchrow" data-size-row><b>1</b><b>2</b><b>3</b><b class="on">4</b></div></div>
           <div class="small" style="padding:8px 0">How much of the screen a post takes: 1 is a strip with a small picture, 4 fills the width. The same control sits on the board toolbar.</div>
+          <div class="field"><label>Side panel</label><div class="switchrow" data-rail-row><b class="on">On</b></div></div>
+          <div class="small" style="padding:8px 0">Feeds and tags you might like, beside the posts on a wide screen. Off, the posts keep the same width and sit in the middle.</div>
           <div class="field"><label>Buzz on like</label><div class="switchrow"><b class="on">On</b></div></div>
         </div></div></div>
     </div>
@@ -337,10 +365,10 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
     <div class="eyebrow">Proposal E + F</div>
     <h2>E. One centred column &nbsp;·&nbsp; F. The masthead stays put</h2>
     <div class="stage">
-      <div class="device desk"><div class="device-label">Today · 1100px shell, three columns (see snaps/board.desktop.png)</div>
+      <div class="device desk full"><div class="device-label">Today · 1100px shell, three columns (see snaps/board.desktop.png)</div>
         <div class="screen app" data-skin="dark"><div class="masthead"><span class="wordmark"><span class="glyph">🌿</span>Forage</span><span class="acct">cp</span></div>
           <div class="shell wide"><div class="navbox">nav</div><div class="col"><div class="card" style="margin:0"><div class="byline"><span class="av c4">pr</span><span class="who">propublica.org</span><button class="kebab">⋯</button></div><div class="posttitle">A card the full width of the middle column</div><div class="media-strip"><span class="ph portrait" style="height:160px"></span></div></div></div><div class="sidebox">sidebar</div></div></div></div>
-      <div class="device desk"><div class="device-label">Proposed · one 740px column, pinned masthead — scroll this frame</div>
+      <div class="device desk full"><div class="device-label">Proposed · 200 / 680 / 300 — content column, an optional quieter rail (on by default; the Rail control above), pinned masthead — scroll this frame</div>
         <div class="screen app scroller" data-skin="dark"><div class="masthead pinned"><span class="wordmark"><span class="glyph">🌿</span>Forage</span><span class="acct">cp</span></div>
           <div class="shell centred"><div class="navbox">nav (sticky, quiet)</div>
             <div class="col">
@@ -348,10 +376,14 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
               <div class="card" style="margin:0 0 12px"><div class="byline"><span class="av c2">lu</span><span class="who">lumendes.bsky.social</span><span class="dot"></span><span>10h</span><button class="kebab">⋯</button></div><div class="posttitle">MORRA</div><div class="mstage" style="height:300px"><span class="ph land back"></span><span class="ph land fore"></span></div><div class="actions"><button class="pill like"><svg class="icon"><use href="#i-up"/></svg>312</button><button class="pill quiet"><svg class="icon"><use href="#i-reply"/></svg>4</button><button class="pill quiet share"><svg class="icon"><use href="#i-share"/></svg></button></div></div>
               <div class="card" style="margin:0 0 12px"><div class="byline"><span class="av c1">ka</span><span class="who">kat.bsky.social</span><span class="dot"></span><span>2h</span><button class="kebab">⋯</button></div><div class="posttitle">A text-only post stays short — no stage, no empty frame</div><div class="actions"><button class="pill like"><svg class="icon"><use href="#i-up"/></svg>12</button><button class="pill quiet"><svg class="icon"><use href="#i-reply"/></svg>2</button><button class="pill quiet share"><svg class="icon"><use href="#i-share"/></svg></button></div></div>
             </div>
-            <div class="sidebox">sidebar (quiet)</div></div></div></div>
+            <div class="rail" style="grid-column:3;align-self:start;position:sticky;top:60px">
+              <div class="railcard"><h4>Your ring</h4><div class="small">Sign in and this board can be your mutuals, your follows, or the world.</div><span class="btnp">Sign in with Bluesky</span><div class="small">or another atmo provider</div></div>
+              <div class="railcard"><h4>Feeds you might like</h4><div class="railrow"><span class="av c2">g</span>Gardening<span class="small" style="margin-left:auto">12k</span></div><div class="railrow"><span class="av c4">s</span>Science<span class="small" style="margin-left:auto">40k</span></div><div class="railrow"><span class="av c1">b</span>Birds<span class="small" style="margin-left:auto">8k</span></div></div>
+              <div class="railcard"><h4>Trending tags</h4><div class="chips"><span>#allotment</span><span>#frost</span><span>#skypunks</span><span>#birdwatching</span></div></div>
+            </div></div></div></div>
     </div>
     <div class="cols">
-      <div class="callout"><h3>E — the column</h3><ul><li><code>.shell</code> becomes <code>1fr minmax(0,740px) 1fr</code> with the nav and sidebar in the outer tracks at reduced weight; under 860px it is already one column. The stage cap is what makes 740 feel full rather than narrow.</li></ul></div>
+      <div class="callout"><h3>E — the column</h3><ul><li><code>.shell</code> becomes <code>200px minmax(0,680px) 300px</code>, centred. The right rail is optional (Advanced → Side panel, on by default) and drawn a step quieter than the posts — usable space, never the loud one. It is content, not commerce: a sign-in card for a guest (the ring pitch that already lives in the nav note), three feeds you might like, trending tags — the same sources <code>lensSidebar</code> already draws. Under 860px it is one column and the rail's sign-in card becomes the existing top notice.</li></ul></div>
       <div class="callout"><h3>F — pinned</h3><ul><li><code>.masthead</code> is already <code>position: sticky</code> but sits in a <code>#masthost</code> wrapper exactly its own height, so it scrolls away. The wrapper takes the sticky (or <code>display: contents</code>); the dev bar is unpinned. <code>mobile-fit</code> gains “masthead top is 0 after a scroll”.</li></ul></div>
     </div>
   </section>
@@ -372,7 +404,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
 
   <section>
     <div class="eyebrow">Revisions</div>
-    <ul class="small" style="margin:0;padding-left:18px"><li><b>v2</b> — card size 1–4 (decision 7) replaces the slider everywhere; the skin control flips the page too; the multi-picture sample has four pictures and a grids-by-count strip. Owner review 2026-08-29.</li><li><b>v1</b> — first draft from the owner's 2026-08-29 review and Reddit front-page references; baseline forage@411c40f.</li></ul>
+    <ul class="small" style="margin:0;padding-left:18px"><li><b>v4</b> — the rail is optional, on by default, quieter (decision 6); the E frames take the full row so the 680px column reads at true width; a Rail control at the top. Owner review 2026-08-29.</li><li><b>v3</b> — E redrawn at 200 / 680 / 300 with a content rail (sign-in card, feeds, tags) — Reddit's ratio is advertising's, not ours; decision 8: Sign in in the guest's ⋯ menu, drawn in A. Owner review 2026-08-29.</li><li><b>v2</b> — card size 1–4 (decision 7) replaces the slider everywhere; the skin control flips the page too; the multi-picture sample has four pictures and a grids-by-count strip. Owner review 2026-08-29.</li><li><b>v1</b> — first draft from the owner's 2026-08-29 review and Reddit front-page references; baseline forage@411c40f.</li></ul>
   </section>
 </div>
 
@@ -384,6 +416,12 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
     qa('[data-skin-seg] button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
     qa('.app').forEach((a) => a.setAttribute('data-skin', b.dataset.skin));
     document.documentElement.setAttribute('data-theme', b.dataset.skin); // the PAGE too, not only the frames
+  });
+  q('[data-rail-seg]').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    qa('[data-rail-seg] button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    qa('.app').forEach((a) => a.setAttribute('data-rail', b.dataset.rail));
+    const r = q('[data-rail-row] b'); r.textContent = b.dataset.rail === 'on' ? 'On' : 'Off'; r.classList.toggle('on', b.dataset.rail === 'on');
   });
   q('[data-size-seg]').addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b) return;
