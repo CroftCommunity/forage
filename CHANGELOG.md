@@ -8,6 +8,15 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-08
 
+- 2026-08-29 **Pictures stand on a stage.** A picture in a card fills the card's width on a
+  framed stage — centred, whole (never cropped), a blurred copy of itself behind it, black
+  bands for video — instead of a small thumbnail in a half-empty tile; the frame is sized
+  before the picture loads, so the board does not jump. The preview-size slider is gone: a
+  **card size** of 1–4 (on the board's toolbar and in Settings) sets how much room a post
+  takes, 4 being the full stage. A post with more than one picture is a carousel (dots,
+  arrows, swipe, arrow keys, and it says "picture 2 of 4" to a screen reader); Settings →
+  *Pictures shown at once* raises how many stand side by side in a grid before they fold.
+  (plan 2026-08-29-plan-board-cards, branch B)
 - 2026-08-29 **The board's small honesties.** Signed out, the like count is a pill you can
   press: a person glyph instead of the arrow, "Sign in to like" on hover, and a tap opens the
   sign-in sheet instead of doing nothing; the ⋯ on every post and comment ends with *Sign in

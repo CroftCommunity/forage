@@ -6,6 +6,7 @@ applied the same day** — every file:line below was read in the `board-cards` w
 **confirmed as recommended by the owner 2026-08-29** ("accept all"). **Executing 2026-08-29** on `claude/board-cards-a`. Phase 0: D1 deferred to 5b (no device/adb attached); D2 answered (no `embed.video#view` in any fixture).
 **Progress tracker:** this Status line. At every phase end append `last green: <phase> @ <sha>`.
 last green: Phase 1 @ f71a04d · Phase 2 @ 16edc2b · Phase 3 @ 509a3b9 · Phase 4 @ 490bfc0 · **branch A gated** (npm test 623/0, workflows 25/0) @ 6c4b508.
+Phase 5a @ 7372582 · 5b+5c @ db0a990 · Phase 6 @ 674b4f3 · **branch B gated** (see the landing commit).
 **Origin:** the owner's review of forage.fyi after the post-and-thread landings (2026-08-29),
 with Reddit's front page as the reference; worked through four revisions of
 `plans/mocks/board-cards.html` and **eight decisions locked on v5**. The mock is the picture;
