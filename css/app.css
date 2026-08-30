@@ -123,13 +123,38 @@ kbd { background: var(--green-100); border: 1px solid var(--border); border-radi
 }
 .themetoggle:hover { background: var(--card-2); border-color: var(--muted); }
 
-/* ---- Layout: three columns ---- */
-.shell { max-width: 1100px; margin: 0 auto; padding: var(--s4); display: grid; gap: var(--s4);
-  grid-template-columns: 1fr 300px; }
+/* ---- Layout: the column and the rail (board-cards decision 6) ----------
+   A 680px content column, and a 300px right rail that is OPTIONAL (on by
+   default, `data-rail` from js/rail.js) and quieter than the column. The lens
+   adds a slim 200px nav on the left (`.with-nav`). Off, the rail's track goes
+   and the column stays 680, centred — not Reddit's ratio (its rail sells);
+   ours is content and one door. Below 1100px the rail FOLDS under the column
+   regardless of the setting (O5: three tracks need the width); below 860 the
+   page is one column, and there the guest's sign-in card leads while the
+   suggestion cards follow the content. */
+.shell { max-width: 1260px; margin: 0 auto; padding: var(--s4); display: grid; gap: var(--s4);
+  grid-template-columns: minmax(0, 680px) 300px; justify-content: center; }
+.shell[data-rail="off"] { grid-template-columns: minmax(0, 680px); }
+.shell[data-rail="off"] #side { display: none; }
 .main { min-width: 0; }
 .side { display: flex; flex-direction: column; gap: var(--s4); }
-.side .card { background: var(--panel); }
-@media (max-width: 860px) { .shell { grid-template-columns: 1fr; } .side { order: 2; } }
+.side .card { background: var(--panel); font-size: var(--t-sm); padding: var(--s3); }
+.side .card h2 { font-size: var(--t-sm); }
+@media (max-width: 1100px) {
+  .shell { grid-template-columns: minmax(0, 680px); }
+  .shell #side { grid-column: 1 / -1; }
+}
+@media (max-width: 860px) {
+  /* the off state is restated here: its selector outranks this block's,
+     and a two-track grid at 320 overflowed (mobile-fit caught it) */
+  .shell, .shell[data-rail="off"] { grid-template-columns: 1fr; }
+  /* one column: the rail's cards follow the content. The sign-in card does
+     NOT lead here — on the home page the hero is the door and owns the fold
+     (e2e/hero holds a 55% ceiling; a card above it reached 81%), and on a
+     board the like pill and the ⋯ are the doors (decisions 1, 8). */
+  #side, .side { display: contents; }
+  .side > .card { order: 2; }
+}
 
 /* ---- Cards ---- */
 .card {
@@ -737,7 +762,9 @@ dialog.authsheet::backdrop, dialog.sheet::backdrop { background: var(--scrim); }
    a DRAWER — off-canvas until asked for — which is the whole reason it beats
    the strip it replaced: it costs no vertical space until you open it, where
    a strip always spent a row. */
-.shell.with-nav { grid-template-columns: 210px minmax(0, 1fr); }
+.shell.with-nav { grid-template-columns: 200px minmax(0, 680px) 300px; }
+.shell.with-nav[data-rail="off"] { grid-template-columns: 200px minmax(0, 680px); }
+@media (max-width: 1100px) { .shell.with-nav { grid-template-columns: 200px minmax(0, 680px); } .shell.with-nav #side { grid-column: 2; } }
 .nav { border-right: 1px solid var(--border); background: var(--panel); padding: var(--s2) 0; }
 .navsec { font-size: 10px; text-transform: uppercase; letter-spacing: .10em;
   color: var(--muted); font-weight: 700; padding: 12px var(--s3) 5px; }
@@ -753,7 +780,8 @@ dialog.authsheet::backdrop, dialog.sheet::backdrop { background: var(--scrim); }
 .navscrim { display: none; }
 
 @media (max-width: 800px) {
-  .shell.with-nav { grid-template-columns: minmax(0, 1fr); }
+  .shell.with-nav, .shell.with-nav[data-rail="off"] { grid-template-columns: minmax(0, 1fr); }
+  .shell.with-nav #side { grid-column: auto; }
   .navburger { display: inline-flex; align-items: center; justify-content: center;
     width: 44px; height: 44px; flex: none; border: 1px solid var(--border);
     background: var(--card); color: var(--text); border-radius: var(--radius-card);

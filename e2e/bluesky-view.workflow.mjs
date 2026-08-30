@@ -614,6 +614,18 @@ export async function run() {
   await page.locator('[data-board-toolbar] select[data-density]').selectOption('card');
   await page.waitForSelector('.stage');
 
+  // board-cards Phase 7: the right rail is lensSidebar restyled — the same
+  // curated sources a guest was always offered, now beside the column with the
+  // sign-in card first and Trending last; and it is a setting (Side panel).
+  // (signed in here, so the Feeds card lists the ACCOUNT's saved feeds, which
+  // land async — the card and its browse link are the invariant; the guest's
+  // curated list is guest-surface's to pin)
+  assert.ok(await page.locator('#side .card a[href="/feeds"]').count() >= 1, 'the rail carries the Feeds card');
+  const railOrder = await page.$$eval('#side .card', (cs) => cs.map((c) => c.querySelector('h2')?.textContent.trim() ?? c.getAttribute('data-trending') ?? '?'));
+  assert.equal(railOrder.at(-1), 'Trending', `Trending is the last card on the rail: ${JSON.stringify(railOrder)}`);
+  // (the Side panel switch itself is guest-surface's: a trending board is not
+  // restorable by URL, so leaving it for /settings cannot come back)
+
   // 3u: a post declaring a language you do not read is ANNOTATED, not hidden,
   // until you say otherwise. Then the filter hides it and SAYS it did — a
   // silent filter is a lie.

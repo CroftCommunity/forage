@@ -130,6 +130,13 @@ export async function run() {
     await b.page.waitForSelector('.postrow');
     await assertBoth(b.page, `feed board (long tokens) @${width}`);
     await assertMastheadPinned(b.page, `feed board @${width}`);
+    // board-cards Phase 7: the side panel is optional (Settings → Side panel);
+    // neither state may overflow on a phone
+    await b.page.evaluate(() => localStorage.setItem('forage.rail', 'off'));
+    await b.page.reload();
+    await b.page.waitForSelector('.postrow');
+    await assertBoth(b.page, `feed board, side panel off @${width}`);
+    await b.page.evaluate(() => localStorage.removeItem('forage.rail'));
 
     await b.page.goto(`${b.origin}/p?uri=${encodeURIComponent('at://did:plc:aa/app.bsky.feed.post/long1')}`);
     await b.page.waitForSelector('.comment');
@@ -158,6 +165,11 @@ export async function run() {
     await m.page.waitForSelector('.postrow');
     await assertBoth(m.page, `memory popular @${width}`);
     await assertMastheadPinned(m.page, `memory popular @${width}`);
+    await m.page.evaluate(() => localStorage.setItem('forage.rail', 'off'));
+    await m.page.reload();
+    await m.page.waitForSelector('.postrow');
+    await assertBoth(m.page, `memory popular, side panel off @${width}`);
+    await m.page.evaluate(() => localStorage.removeItem('forage.rail'));
 
     // pick a seeded thread that actually HAS comments (deep nesting is the
     // overflow risk we care about here)

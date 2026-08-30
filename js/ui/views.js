@@ -15,6 +15,7 @@ import { postRow, commentNode, vote, guestGate, focusComment, emptyState, gate, 
 import { densityDial, isCompact } from '../board-density.js';
 import * as cardSize from '../card-size.js';
 import * as pictures from '../pictures.js';
+import * as rail from '../rail.js';
 import { sortBar } from './sortbar.js';
 
 // A board scope for one feed. Derived, not spelled: the old literal was the
@@ -671,10 +672,22 @@ export function settingsView() {
   // a radiogroup is not labelable, so each label names its group by id, not `for`
   const notchRow = (id, label, group, hint) => el('div', { class: 'field-row' }, el('label', { id: `${id}-label` }, label),
     el('span', {}, group, el('span', { class: 'xs muted', style: 'margin-left:8px' }, hint)));
+  // decision 6: the side panel switch — the rail is on by default and this is
+  // the one place it turns off; the shell follows at once (rail.apply)
+  const railBox = el('button', { type: 'button', class: 'switch', id: 'pref-rail', role: 'switch',
+    'aria-checked': String(rail.enabled()) }, el('span', { class: 'switch-state' }, rail.enabled() ? 'On' : 'Off'));
+  railBox.addEventListener('click', () => {
+    const on = railBox.getAttribute('aria-checked') !== 'true';
+    rail.set(on); rail.apply();
+    railBox.setAttribute('aria-checked', String(on));
+    railBox.querySelector('.switch-state').textContent = on ? 'On' : 'Off';
+  });
   const themeCard = el('div', { class: 'card' },
     fieldRow('Skin', skinSel),
     notchRow('pref-cardsize', 'Card size', sizeNotches, 'how much room a post takes — 1 is small, 4 is the full picture'),
     notchRow('pref-pictures', 'Pictures shown at once', picNotches, 'up to this many side by side; more become a carousel'),
+    el('div', { class: 'field-row' }, el('label', { for: 'pref-rail' }, 'Side panel'),
+      el('span', {}, railBox, el('span', { class: 'xs muted', style: 'margin-left:8px' }, 'the right-hand column — suggestions, and sign-in when you are signed out; off, the posts take the middle'))),
     // Say where the other half of the choice lives. Without this the picker
     // silently lost four rows and nothing tells you the toggle gained them.
     el('div', { class: 'xs muted', style: 'margin:-4px 0 8px' },

@@ -82,6 +82,21 @@ const seen = (page) => page.evaluate(() => ({
   rows: document.querySelectorAll('.postrow').length,
 }));
 
+// board-cards Phase 7 (decision 6): 200 / 680 / 300 — a slim nav, a content
+// column, and a right rail that is optional (on by default) and quieter. Off,
+// the column stays 680 and centres. Measured at the laptop width: the number
+// of grid tracks the shell resolves, and the centring as equal margins.
+const layout = (page) => page.evaluate(() => {
+  const shell = document.querySelector('.shell');
+  const tracks = getComputedStyle(shell).gridTemplateColumns.trim().split(/\s+/);
+  const first = [...shell.children].find((c) => !c.hidden && c.getBoundingClientRect().width > 0);
+  const main = document.getElementById('main');
+  const s = shell.getBoundingClientRect(), f = first.getBoundingClientRect(), m = main.getBoundingClientRect();
+  return { tracks, rail: shell.getAttribute('data-rail'), mainW: m.width,
+    leftMargin: f.left - s.left, rightMargin: s.right - m.right,
+    signin: document.querySelectorAll('#side [data-signin-card]').length };
+});
+
 export async function run() {
   // ---------- signed OUT ----------
   const out = await scenario('first-visit', { mode: 'bluesky', responses: RESPONSES });
@@ -108,6 +123,38 @@ export async function run() {
       `the SCORE survives — the arrow is an action, the number is a fact: ${JSON.stringify(board.scores)}`);
     const rows = await out.page.locator('.postrow').count();
     assert.equal(board.guestDoors.length, rows, `every row carries the guest's door (${board.guestDoors.length} of ${rows})`);
+    // Phase 7: the rail, on by default, carries the sign-in card for a guest
+    await out.page.setViewportSize({ width: 1280, height: 800 });
+    const on = await layout(out.page);
+    assert.equal(on.rail, 'on', 'the side panel is on by default');
+    assert.equal(on.tracks.length, 3, `nav · column · rail: three tracks (${on.tracks.join(' ')})`);
+    assert.equal(on.signin, 1, 'signed out, the rail carries the sign-in card');
+    const railHrefs = await out.page.$$eval('#side .card a[href^="/f/"]', (as) => as.map((a) => a.getAttribute('href')));
+    for (const h of ['/f/whats-hot', '/f/bsky.app']) assert.ok(railHrefs.includes(h), `a guest's rail lists the curated ${h}: ${JSON.stringify(railHrefs)}`);
+    assert.deepEqual(await out.page.$$eval('#side .card', (cs) => cs.map((c) => c.hasAttribute('data-signin-card') ? 'sign-in' : c.querySelector('h2')?.textContent.trim())),
+      ['sign-in', 'Feeds', 'Trending'], 'the rail\'s order: the door, the feeds, trending');
+    assert.ok(on.mainW >= 640 && on.mainW <= 680, `the column is 680 (${on.mainW})`);
+    await out.page.evaluate(() => localStorage.setItem('forage.rail', 'off'));
+    await out.page.reload();
+    await out.page.waitForSelector('.postrow');
+    const off = await layout(out.page);
+    assert.equal(off.rail, 'off');
+    assert.equal(off.tracks.length, 2, `off: nav · column, two tracks (${off.tracks.join(' ')})`);
+    assert.ok(off.mainW >= 640 && off.mainW <= 680, `off: the column is still 680 (${off.mainW})`);
+    assert.ok(Math.abs(off.leftMargin - off.rightMargin) <= 2, `off: the column centres (${off.leftMargin} vs ${off.rightMargin})`);
+    assert.equal(await out.page.locator('#side').isVisible(), false, 'off: no rail drawn');
+    await out.page.evaluate(() => localStorage.removeItem('forage.rail'));
+    // …and the switch in Settings is the one place it turns off; the shell follows at once
+    await out.page.goto(`${out.origin}/settings`);
+    await out.page.waitForSelector('#pref-rail');
+    assert.equal(await out.page.locator('#pref-rail').getAttribute('aria-checked'), 'true', 'Side panel is on by default');
+    await out.page.locator('#pref-rail').click();
+    assert.equal(await out.page.evaluate(() => localStorage.getItem('forage.rail')), 'off');
+    assert.equal(await out.page.evaluate(() => document.querySelector('.shell').getAttribute('data-rail')), 'off', 'the shell follows the switch at once');
+    await out.page.locator('#pref-rail').click();
+    assert.equal(await out.page.evaluate(() => localStorage.getItem('forage.rail')), 'on');
+    await out.page.goto(`${out.origin}/f/whats-hot`);
+    await out.page.waitForSelector('.postrow');
     assert.equal(board.shares, rows, `every row carries a share, signed out (${board.shares} of ${rows})`);
     for (const d of board.guestDoors) {
       assert.match(d.name, /^\d[\d,.]*[km]? likes? — sign in to like$/, `the door is named with the count and the way in: ${JSON.stringify(d.name)}`);
@@ -154,6 +201,7 @@ export async function run() {
     const board = await seen(inn.page);
     assert.ok(board.voteArrows > 0, 'signed in, the boost arrow is back');
     assert.equal(board.guestDoors.length, 0, 'signed in, no guest door anywhere');
+    assert.equal((await layout(inn.page)).signin, 0, 'signed in, the rail carries no sign-in card');
     assert.equal(board.favorite, 1, 'signed in, the favorite star is back');
     await inn.page.locator('.postrow .byline button.kebab').first().click();
     await inn.page.waitForTimeout(150);
