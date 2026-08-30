@@ -125,7 +125,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
 .pill.like[aria-pressed="true"] .icon{fill:currentColor}
 .pill.quiet{background:none}
 .app[data-phone] .pill{min-height:44px;padding:0 14px}
-.app[data-phone] .pill.share{margin-left:auto}
+.pill.share{margin-left:auto}
 
 /* ---- the ⋯ menu (Proposal B) ---- */
 .menu{position:absolute;right:10px;top:44px;width:270px;background:var(--card);border:1px solid var(--border);
@@ -258,11 +258,9 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
   <div class="controls">
     <div class="cgroup"><span class="eyebrow">Skin</span>
       <div class="seg" data-ctl="skin"><button aria-pressed="true" data-v="light">Light</button><button aria-pressed="false" data-v="dark">Dark</button></div></div>
-    <div class="cgroup"><span class="eyebrow">Thread</span>
-      <div class="seg" data-ctl="variant"><button aria-pressed="false" data-v="current">Current</button><button aria-pressed="true" data-v="proposed">Proposed</button></div></div>
     <div class="cgroup"><span class="eyebrow">Haptics on like</span>
       <div class="seg" data-ctl="haptic"><button aria-pressed="true" data-v="on">On (default)</button><button aria-pressed="false" data-v="off">Off</button></div></div>
-    <p class="sub" style="font-size:13px;max-width:34ch">Buttons are live: ⋯ opens the menu, ▲ toggles a like (and buzzes on Android), ⊖ folds a comment.</p>
+    <p class="sub" style="font-size:13px;max-width:34ch">Buttons are live: ⋯ opens the menu, ▲ toggles a like (and buzzes on Android), ⊖ folds a comment. Current and Proposed render side by side in C.</p>
   </div>
 
   <!-- ================================================================ -->
@@ -346,7 +344,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
                 <button class="pill like" aria-pressed="false" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">35</span></button>
                 <button class="pill"><svg class="icon"><use href="#i-reply"/></svg>40</button>
                 <button class="pill quiet"><svg class="icon"><use href="#i-repost"/></svg>3</button>
-                <button class="pill quiet" aria-label="Share"><svg class="icon"><use href="#i-share"/></svg></button>
+                <button class="pill quiet share" aria-label="Share"><svg class="icon"><use href="#i-share"/></svg></button>
               </div>
             </div>
             <div class="post">
@@ -358,7 +356,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
                 <button class="pill like" aria-pressed="true" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">31</span></button>
                 <button class="pill"><svg class="icon"><use href="#i-reply"/></svg>7</button>
                 <button class="pill quiet"><svg class="icon"><use href="#i-repost"/></svg>1</button>
-                <button class="pill quiet" aria-label="Share"><svg class="icon"><use href="#i-share"/></svg></button>
+                <button class="pill quiet share" aria-label="Share"><svg class="icon"><use href="#i-share"/></svg></button>
               </div>
             </div>
             <div class="menu" id="m2" hidden role="menu">
@@ -387,19 +385,20 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
   <section id="b">
     <div class="eyebrow">Proposal B</div>
     <h2>The ⋯ menu: Bluesky's list, Forage's items</h2>
-    <p class="sub">Bluesky's shape — label left, icon right, thin separators grouping “about this post / about this thread /
-      about this account”, destructive last — rather than Reddit's two-item popover. Open it above: a popover on desktop, a bottom
-      sheet on the phone. What goes in it is the decision; the list here is a starting proposal.</p>
+    <p class="sub">Bluesky's shape: <b>one flat list</b>, label left, icon right, destructive last. The thin separators are the only
+      grouping — three groups (post · thread · account), no headings and no submenus. Open it above: a popover under the ⋯ on
+      desktop, a bottom sheet on the phone (Reddit's “Options” sheet, with Bluesky's rows). What goes in it is the decision;
+      the list here is a starting proposal.</p>
     <div class="cols">
-      <div class="callout"><h3>About this post</h3>
+      <div class="callout"><h3>Post</h3>
         <ul><li><b>Copy post text</b> — as on Bluesky.</li>
             <li><b>Copy link</b> — the shareable <code>/p?uri=</code> form (3v already builds it for board rows).</li>
             <li><b>Open on bsky.app</b> — the lens is a lens; say so with a door.</li>
-            <li><b>Save</b> — today a bare text button in the actions row; it belongs here, not in the row.</li></ul></div>
-      <div class="callout"><h3>About this thread</h3>
+            <li><b>Save</b> — piggybacks on Bluesky's own: <code>app.bsky.bookmark.createBookmark</code> / <code>deleteBookmark</code> / <code>getBookmarks</code>, which are <b>private, server-side XRPC with no record</b> (<code>docs/LEXICON-REGISTER.md</code> § bookmarks). One intent, one outcome: a save here is the same save as on bsky.app and stays as private as theirs. The public <code>community.lexicon.bookmarks.bookmark</code> record is the one to avoid for exactly that reason. Memory mode keeps the local store. Verify the three procedures against the live lexicon before building — the register names them, no code calls them yet.</li></ul></div>
+      <div class="callout"><h3>Thread</h3>
         <ul><li><b>Mute thread</b> · <b>Mute words &amp; tags</b> — real atproto preferences, and the second is the doorway to the hashtag-prefs work (plan 2026-08-28-2).</li>
             <li><b>Hide for me</b> — local, reversible.</li></ul></div>
-      <div class="callout"><h3>About this account · then the red one</h3>
+      <div class="callout"><h3>Account · then the red one</h3>
         <ul><li><b>Mute account</b> · <b>Block account</b> — both are records on Bluesky; the copy should say which one is visible to them.</li>
             <li><b>Report post</b> — last, and the only red item. Today report is a <code>prompt()</code>; it wants a sheet of its own.</li>
             <li><b>Steward items</b> (remove / approve / pin / lock) appear as a fourth group only when you can moderate — never a second menu.</li>
@@ -414,14 +413,14 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
     <div class="eyebrow">Proposal C</div>
     <h2>Threading: a rail only where there is a branch</h2>
     <p class="sub">Today every comment carries the collapse gutter — a direct reply to the post looks “nested” under nothing, and
-      on a phone the whole left edge is a hit target (Current tab, and the screenshots below). Reddit's model reads correctly:
+      on a phone the whole left edge is a hit target (the second row below is today, drawn with the same content). Reddit's model reads correctly:
       a top-level comment sits flush; a connector is drawn only from a comment to <b>its own</b> replies, elbowing into each
       child's avatar. The connector is paint, not a button. Collapse is a single ⊖ on the actions row; the count of hidden
       replies lives on the ⊕ that replaces it. A repost-with-content (quote) keeps its wall — it is a different thing — but it
       gets the same avatar header as everything else, loses its tint on the phone, and only the explicit “open its thread ↳”
       is a link.</p>
     <div class="stage">
-      <div class="device phone"><div class="device-label">Phone · thread page</div>
+      <div class="device phone"><div class="device-label">Phone · thread page · PROPOSED</div>
         <div class="screen app" data-phone data-skin="light" data-variant="proposed" data-thread>
           <div class="masthead"><span class="wordmark"><span class="glyph">🐦‍⬛</span>Forage</span><span class="back">‹ f/gardening</span></div>
           <div class="card threadhead">
@@ -508,7 +507,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
           <div class="toast" data-toast></div>
         </div>
       </div>
-      <div class="device desk"><div class="device-label">Desktop · thread page</div>
+      <div class="device desk"><div class="device-label">Desktop · thread page · PROPOSED</div>
         <div class="screen app" data-skin="light" data-variant="proposed" data-thread>
           <div class="card threadhead">
             <div class="byline"><span class="av c2">f</span><span class="who">fern</span><span class="dot"></span><span>1d</span><span class="dot"></span><a class="board" href="#">f/gardening</a>
@@ -519,7 +518,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
               <button class="pill like" aria-pressed="false" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">35</span></button>
               <button class="pill"><svg class="icon"><use href="#i-reply"/></svg>40</button>
               <button class="pill quiet"><svg class="icon"><use href="#i-repost"/></svg>3</button>
-              <button class="pill quiet" aria-label="Share"><svg class="icon"><use href="#i-share"/></svg></button>
+              <button class="pill quiet share" aria-label="Share"><svg class="icon"><use href="#i-share"/></svg></button>
             </div>
           </div>
           <div class="card">
@@ -663,7 +662,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
       <tr><th style="width:36px">#</th><th>Decision</th><th>Proposal</th><th>Alternative</th></tr>
       <tr><td>1</td><td>Vote leaves the left column</td><td>Yes — into the action row as a pill; the column becomes the avatar</td><td>Keep the rail; put the avatar in the byline only (no left column at all)</td></tr>
       <tr><td>2</td><td>Collapse control</td><td>⊖/⊕ on the actions row, children only</td><td>Keep the gutter but draw it only from depth 1, and shrink the hit area</td></tr>
-      <tr><td>3</td><td>Menu contents</td><td>The four groups in B; steward group conditional; Delete replaces Report on your own post</td><td>Fewer: Copy link · Save · Hide · Report</td></tr>
+      <tr><td>3</td><td>Menu contents</td><td>Post · thread · account as in B, separators only; steward group conditional; Delete replaces Report on your own post; Save via Bluesky bookmarks</td><td>Fewer: Copy link · Save · Hide · Report</td></tr>
       <tr><td>4</td><td>Menu on phone</td><td>Bottom sheet (Reddit); popover on desktop (Bluesky)</td><td>Popover everywhere</td></tr>
       <tr><td>5</td><td>Quote on phone</td><td>Wall only, no tint, avatar header like a comment</td><td>Keep the tinted block everywhere</td></tr>
       <tr><td>6</td><td>Haptics</td><td>On by default, one settings switch, like + promote only</td><td>Off by default</td></tr>
@@ -673,6 +672,12 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
 </div>
 
 <script>
+// C: render Current beside Proposed — a clone of each thread frame, switched to today's grammar.
+(()=>{const stage=document.querySelector('#c .stage'); const row=stage.cloneNode(true);
+  row.querySelectorAll('.device-label').forEach(l=>l.textContent=l.textContent.replace('PROPOSED','CURRENT (today)'));
+  row.querySelectorAll('[data-thread]').forEach(a=>a.dataset.variant='current');
+  row.querySelectorAll('[data-menu],[id]').forEach(n=>{n.removeAttribute('data-menu');n.removeAttribute('id');});
+  stage.after(row);})();
 const q=(s,r=document)=>r.querySelector(s), qa=(s,r=document)=>[...r.querySelectorAll(s)];
 let haptic=true;
 qa('.seg').forEach(seg=>seg.addEventListener('click',e=>{
@@ -680,7 +685,6 @@ qa('.seg').forEach(seg=>seg.addEventListener('click',e=>{
   qa('button',seg).forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
   const ctl=seg.dataset.ctl, v=b.dataset.v;
   if(ctl==='skin') qa('.app').forEach(a=>a.dataset.skin=v);
-  if(ctl==='variant') qa('.app[data-thread]').forEach(a=>a.dataset.variant=v);
   if(ctl==='haptic') haptic=v==='on';
 }));
 function toast(app,msg){const t=q('[data-toast]',app); if(!t) return; t.textContent=msg; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),1400);}
