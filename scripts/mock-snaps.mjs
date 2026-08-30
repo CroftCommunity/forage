@@ -151,6 +151,11 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
     await cmp.page.goto(`${cmp.origin}${BOARD_PATH}`);
     await cmp.page.waitForSelector('.postrow', { timeout: 15000 });
     await cmp.page.evaluate(() => document.fonts?.ready);
+    // at the picture post, found by its handle (a tree that renders no stage in
+    // compact — main before feed-row — is exactly what the Current frame must show)
+    await cmp.page.evaluate(() => [...document.querySelectorAll('.postrow')]
+      .find((r) => r.querySelector('.who')?.textContent.includes('erislovesgardens'))?.scrollIntoView({ block: 'start' }));
+    await cmp.page.waitForTimeout(200);
     await shoot(cmp.page, 'board-lens-compact', 'lens:mock-board', name, vp);
     cmp.consoleErrors(); cmp.errors();
     await cmp.close();
