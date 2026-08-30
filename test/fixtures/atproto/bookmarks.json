@@ -1,0 +1,140 @@
+{
+  "subject-actor": {
+    "status": 200,
+    "body": {
+      "did": "did:plc:l5xigmplwu7eyxjobjr23iza"
+    }
+  },
+  "subject-post": {
+    "uri": "at://did:plc:dvz3bhpjo4yrlqtoohbqa5bl/app.bsky.feed.post/3mttlbetsbc27",
+    "cid": "bafyreif3v7n7hyzhqfdg3cpvefkl5osctoej64432vpewfen6sv6y2db2u"
+  },
+  "bookmark.create": {
+    "status": 200,
+    "body": ""
+  },
+  "bookmark.list": {
+    "status": 200,
+    "body": {
+      "bookmarks": [
+        {
+          "createdAt": "2026-08-30T01:54:46.653Z",
+          "subject": {
+            "uri": "at://did:plc:dvz3bhpjo4yrlqtoohbqa5bl/app.bsky.feed.post/3mttlbetsbc27",
+            "cid": "bafyreif3v7n7hyzhqfdg3cpvefkl5osctoej64432vpewfen6sv6y2db2u"
+          },
+          "item": {
+            "uri": "at://did:plc:dvz3bhpjo4yrlqtoohbqa5bl/app.bsky.feed.post/3mttlbetsbc27",
+            "cid": "bafyreif3v7n7hyzhqfdg3cpvefkl5osctoej64432vpewfen6sv6y2db2u",
+            "author": {
+              "did": "did:plc:dvz3bhpjo4yrlqtoohbqa5bl",
+              "handle": "chimney1022.bsky.social",
+              "displayName": "チムニー",
+              "avatar": "https://cdn.bsky.app/img/avatar/plain/did:plc:dvz3bhpjo4yrlqtoohbqa5bl/bafkreihg5uvq36cpln6amxbbf4xz5j3trlbkrdsmynxw5turvecu7lnzta",
+              "associated": {
+                "activitySubscription": {
+                  "allowSubscriptions": "followers"
+                }
+              },
+              "viewer": {
+                "muted": false,
+                "mutedOnlyReposts": false,
+                "mutedOnlyQuoteposts": false,
+                "blockedBy": false
+              },
+              "labels": [
+                {
+                  "src": "did:plc:dvz3bhpjo4yrlqtoohbqa5bl",
+                  "uri": "at://did:plc:dvz3bhpjo4yrlqtoohbqa5bl/app.bsky.actor.profile/self",
+                  "cid": "bafyreibaoqmw3r57limza2m5gqoeqcewifa6o4gkv3vsurkbkqivvexdh4",
+                  "val": "!no-unauthenticated",
+                  "cts": "2024-10-21T16:44:29.949Z"
+                }
+              ],
+              "createdAt": "2024-10-21T16:44:31.105Z"
+            },
+            "record": {
+              "$type": "app.bsky.feed.post",
+              "createdAt": "2026-08-24T15:04:48.413Z",
+              "embed": {
+                "$type": "app.bsky.embed.images",
+                "images": [
+                  {
+                    "alt": "",
+                    "aspectRatio": {
+                      "height": 2016,
+                      "width": 1152
+                    },
+                    "image": {
+                      "$type": "blob",
+                      "ref": {
+                        "$link": "bafkreig2dyqnlwqzrqfbu2vvvkdgwbblop5t5wcpyfbtr4zcu7qfhujxbi"
+                      },
+                      "mimeType": "image/jpeg",
+                      "size": 1478675
+                    }
+                  }
+                ]
+              },
+              "facets": [
+                {
+                  "features": [
+                    {
+                      "$type": "app.bsky.richtext.facet#tag",
+                      "tag": "YaniSuu"
+                    }
+                  ],
+                  "index": {
+                    "byteEnd": 8,
+                    "byteStart": 0
+                  }
+                }
+              ],
+              "langs": [
+                "en"
+              ],
+              "text": "#YaniSuu"
+            },
+            "embed": {
+              "images": [
+                {
+                  "thumb": "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:dvz3bhpjo4yrlqtoohbqa5bl/bafkreig2dyqnlwqzrqfbu2vvvkdgwbblop5t5wcpyfbtr4zcu7qfhujxbi",
+                  "fullsize": "https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:dvz3bhpjo4yrlqtoohbqa5bl/bafkreig2dyqnlwqzrqfbu2vvvkdgwbblop5t5wcpyfbtr4zcu7qfhujxbi",
+                  "alt": "",
+                  "aspectRatio": {
+                    "height": 2016,
+                    "width": 1152
+                  }
+                }
+              ],
+              "$type": "app.bsky.embed.images#view"
+            },
+            "bookmarkCount": 190,
+            "replyCount": 3,
+            "repostCount": 477,
+            "likeCount": 2884,
+            "quoteCount": 0,
+            "indexedAt": "2026-08-24T15:04:55.582Z",
+            "viewer": {
+              "bookmarked": true,
+              "threadMuted": false,
+              "embeddingDisabled": true
+            },
+            "labels": [],
+            "$type": "app.bsky.feed.defs#postView"
+          }
+        }
+      ]
+    }
+  },
+  "bookmark.delete": {
+    "status": 200,
+    "body": ""
+  },
+  "bookmark.list-after": {
+    "status": 200,
+    "body": {
+      "bookmarks": []
+    }
+  }
+}

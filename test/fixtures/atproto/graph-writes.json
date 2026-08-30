@@ -1,0 +1,139 @@
+{
+  "subject-actor": {
+    "status": 200,
+    "body": {
+      "did": "did:plc:l5xigmplwu7eyxjobjr23iza"
+    }
+  },
+  "subject-post": {
+    "uri": "at://did:plc:dvz3bhpjo4yrlqtoohbqa5bl/app.bsky.feed.post/3mttlbetsbc27",
+    "cid": "bafyreif3v7n7hyzhqfdg3cpvefkl5osctoej64432vpewfen6sv6y2db2u"
+  },
+  "muteActor": {
+    "status": 200,
+    "body": ""
+  },
+  "getMutes": {
+    "status": 200,
+    "body": {
+      "mutes": [
+        {
+          "did": "did:plc:l5xigmplwu7eyxjobjr23iza",
+          "handle": "bobzmudacroft.bsky.social",
+          "displayName": "",
+          "avatar": "https://cdn.bsky.app/img/avatar/plain/did:plc:l5xigmplwu7eyxjobjr23iza/bafkreif4kcyantkb5q5s2x6tqnjtbzi45itdpghvk3uf52ye6hcp2jnn6u",
+          "associated": {
+            "activitySubscription": {
+              "allowSubscriptions": "followers"
+            }
+          },
+          "viewer": {
+            "muted": true,
+            "mutedOnlyReposts": false,
+            "mutedOnlyQuoteposts": false,
+            "blockedBy": false,
+            "following": "at://did:plc:xyfhcaweaeyew3zrgk6jaln7/app.bsky.graph.follow/3mtcnajodoc2f",
+            "followedBy": "at://did:plc:l5xigmplwu7eyxjobjr23iza/app.bsky.graph.follow/3mtcnak262y2n"
+          },
+          "labels": [],
+          "createdAt": "2026-08-17T20:55:41.860Z",
+          "indexedAt": "2026-08-17T20:56:10.368Z"
+        }
+      ]
+    }
+  },
+  "unmuteActor": {
+    "status": 200,
+    "body": ""
+  },
+  "getMutes-after": {
+    "status": 200,
+    "body": {
+      "mutes": []
+    }
+  },
+  "muteThread": {
+    "status": 200,
+    "body": ""
+  },
+  "getPostThread-muted": {
+    "status": 200,
+    "viewerThreadMuted": true,
+    "viewer": {
+      "bookmarked": false,
+      "threadMuted": true,
+      "embeddingDisabled": true
+    }
+  },
+  "unmuteThread": {
+    "status": 200,
+    "body": ""
+  },
+  "block.create": {
+    "status": 200,
+    "body": {
+      "uri": "at://did:plc:xyfhcaweaeyew3zrgk6jaln7/app.bsky.graph.block/3mubbwcqolm2v",
+      "cid": "bafyreiecc5tzbvzf3ggq2mu3oqemxztwgnv6jnbmxiig5on4legsd5kbby",
+      "commit": {
+        "cid": "bafyreidzwwf3bvpdchhmu2nw5p6pu644xe4clma6h4t7inbu3lvbp4n56q",
+        "rev": "3mubbwcquh42v"
+      },
+      "validationStatus": "valid"
+    }
+  },
+  "getBlocks": {
+    "status": 200,
+    "body": {
+      "blocks": [
+        {
+          "did": "did:plc:l5xigmplwu7eyxjobjr23iza",
+          "handle": "bobzmudacroft.bsky.social",
+          "displayName": "",
+          "avatar": "https://cdn.bsky.app/img/avatar/plain/did:plc:l5xigmplwu7eyxjobjr23iza/bafkreif4kcyantkb5q5s2x6tqnjtbzi45itdpghvk3uf52ye6hcp2jnn6u",
+          "associated": {
+            "activitySubscription": {
+              "allowSubscriptions": "followers"
+            }
+          },
+          "viewer": {
+            "muted": false,
+            "mutedOnlyReposts": false,
+            "mutedOnlyQuoteposts": false,
+            "blockedBy": false,
+            "blocking": "at://did:plc:xyfhcaweaeyew3zrgk6jaln7/app.bsky.graph.block/3mubbwcqolm2v"
+          },
+          "labels": [],
+          "createdAt": "2026-08-17T20:55:41.860Z",
+          "indexedAt": "2026-08-17T20:56:10.368Z"
+        }
+      ]
+    }
+  },
+  "block.delete": {
+    "status": 200,
+    "body": {
+      "commit": {
+        "cid": "bafyreie7zx3wrl54lzjsu5z4v6ckb6gkqhnybbhonozfcn4iaw3mjf7ugu",
+        "rev": "3mubbwd2aum2a"
+      }
+    }
+  },
+  "getBlocks-after": {
+    "status": 200,
+    "body": {
+      "blocks": []
+    }
+  },
+  "getProfile-after": {
+    "status": 200,
+    "viewer": {
+      "muted": false,
+      "mutedOnlyReposts": false,
+      "mutedOnlyQuoteposts": false,
+      "blockedBy": false,
+      "following": "at://did:plc:xyfhcaweaeyew3zrgk6jaln7/app.bsky.graph.follow/3mtcnajodoc2f",
+      "followedBy": "at://did:plc:l5xigmplwu7eyxjobjr23iza/app.bsky.graph.follow/3mtcnak262y2n"
+    }
+  },
+  "_note": "Phase 0 D2 probe 2026-08-29 (plan post-and-thread). Pre-existing mutes on the test account were stripped: only the probe subject stays."
+}
