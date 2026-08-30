@@ -614,15 +614,13 @@ function kindContext(p) {
 }
 
 const lensRow = (p, view = 'card') => {
-  const showsMedia = view !== 'compact' && p.media && !p.maskedRemoved;
-  // Compact renders no media strip, so a placeholder-titled row takes a tiny
-  // thumbnail as its handle instead of the literal '[image]' — the same link
-  // to the same thread, showing a sliver of the thing rather than naming its
-  // absence. A video with no thumbnail keeps the text placeholder: the handle
-  // must render something.
-  const thumb = view === 'compact' && p.placeholderTitle && !p.maskedRemoved
-    ? (p.media?.kind === 'images' ? p.media.items?.[0]?.thumb : p.media?.thumb)
-    : null;
+  // feed-row v1 (2026-08-30): the picture shows in BOTH densities. Compact
+  // tightens the row — padding, byline, no body preview, no tag chips — but
+  // does not take the post's content out of it. The owner's phone runs the
+  // phpBB skin, which prefers compact, and showed a feed with no pictures
+  // beside a thread page with them; the 40px title-thumb that stood in for a
+  // placeholder-titled compact row went with the rule.
+  const showsMedia = !!p.media && !p.maskedRemoved;
   return postRow(p, !!session, {
     onVote: lensVote(p),
     onGuest: session ? null : openAuthSheet, // board-cards decision 1: the guest's pill is the door
@@ -631,23 +629,22 @@ const lensRow = (p, view = 'card') => {
     aboveNode: kindContext(p),
     // 3i: never duplicate the title — a preview renders only when it adds
     // content. Card mode carries media and tag doorways; compact is dense.
-    bodyNode: view === 'compact' ? null
-      : showsMedia ? el('div', {}, mediaNode(p), tagChips(p) || '')
+    bodyNode: showsMedia ? el('div', {}, mediaNode(p), view === 'compact' ? '' : tagChips(p) || '')
+      : view === 'compact' ? null
       : p.preview ? facetedBody({ ...p, body: p.preview }) : tagChips(p),
     // A placeholder title ('[image]', '[video]') exists so a row is never
-    // blank. A card row showing the media IS the content, so the placeholder
-    // drops there outright; a compact row swaps it for the thumb above.
+    // blank. A row showing the media IS the content, so the placeholder drops.
     ...(showsMedia && p.placeholderTitle ? { titleNode: null } : {}),
-    ...(thumb ? { titleNode: el('div', { class: 'posttitle' },
-      // Same href shape postRow builds — renderBoard rewrites it to /p?uri=.
-      // The img stays decorative inside a NAMED link: the label says what the
-      // link does, and invents no description of an undescribed picture.
-      el('a', { href: `/f/${p.feedSlug}/p/${p.id}`,
-        'aria-label': p.media.kind === 'video' ? 'Video post — open thread' : 'Image post — open thread' },
-        el('img', { class: 'title-thumb', src: thumb, alt: '', loading: 'lazy' }))) } : {}),
+    // a Bluesky post's text is body text; a link post's title is the card's headline
+    textPost: p.format !== 'link',
     authorBadge: verifiedBadge(p),
     metaExtra: langChip(p),
-    feedHref: feedHrefFor(p.feedSlug),
+    // an author board's row points back at the author board, and says so —
+    // `f/pds.ls` linked a feed path nothing resolved ("Unknown feed", the
+    // owner, 2026-08-30)
+    ...(p.feedKind === 'author'
+      ? { feedHref: `/u/${encodeURIComponent(p.feedSlug)}`, feedLabel: `@${p.feedSlug}` }
+      : { feedHref: feedHrefFor(p.feedSlug) }),
     compact: view === 'compact',
   });
 };
@@ -2318,7 +2315,11 @@ export function lensThreadView(params, query) {
       // The placeholder heading ('[image]', '[video]') drops when the media
       // renders below — the picture is the thing the heading stood in for.
       // A real title (text or alt-derived) keeps its heading above the media.
-      p.placeholderTitle && p.media ? null : el('h1', {}, p.title.slice(0, 300)),
+      // feed-row v1: a post's text at the head is text — one step up from the
+      // body, body face and weight — not a 26px serif heading (the owner's
+      // phone, 2026-08-30: a four-line post filled the screen above its
+      // picture). A link post's headline keeps the heading.
+      p.placeholderTitle && p.media ? null : el('h1', p.format === 'link' ? {} : { class: 'posttext' }, p.title.slice(0, 300)),
       el('div', { class: 'actions' },
         vote('post', p.id, p, !!session, { onVote: lensVote(p), onGuest: session ? null : openAuthSheet }), // Phase 6c: the head's pill
         el('div', { class: 'postmeta' },

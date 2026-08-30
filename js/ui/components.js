@@ -255,7 +255,7 @@ export function postRow(p, viewerCanVote, opts = {}) {
     // 3v: the lens passes a creator-qualified href when it has one, so a
     // copied breadcrumb resolves for a stranger. Memory Feeds are local and
     // need no creator, so the plain slug stays the default.
-    el('a', { href: opts.feedHref || `/f/${p.feedSlug}` }, `f/${p.feedSlug}`),
+    el('a', { href: opts.feedHref || `/f/${p.feedSlug}` }, opts.feedLabel || `f/${p.feedSlug}`),
     p.format === 'link' && p.url ? el('span', { class: 'domain' }, domainOf(p.url)) : null,
     p.edited ? el('span', { class: 'muted' }, 'edited') : null,
     opts.metaExtra || null, // 3u: the lens hangs a language chip here
@@ -272,8 +272,11 @@ export function postRow(p, viewerCanVote, opts = {}) {
   // drop a PLACEHOLDER title from a row that renders the media itself —
   // "[image]" above the actual image names nothing the reader can't see —
   // or swap it for a tiny thumbnail on a compact row that renders none.
+  // feed-row v1 (2026-08-30): a Bluesky post's text is text, not a title —
+  // the lens passes `textPost` and the row sets it at body weight. A memory
+  // post has a real title and keeps the heading weight.
   const title = opts.titleNode !== undefined ? opts.titleNode
-    : el('div', { class: 'posttitle' }, titleLink);
+    : el('div', { class: 'posttitle' + (opts.textPost ? ' posttext' : '') }, titleLink);
 
   const right = el('div', {},
     // Context ABOVE the title (plan 2026-08-28-1): the lens hangs a reply's
@@ -299,24 +302,29 @@ export function postRow(p, viewerCanVote, opts = {}) {
   );
   // Decision 1 (post-and-thread): the vote is a pill on the action row; the
   // left column is gone (the byline carries the avatar). board-cards decision
-  // 2: the row's action row is like · replies · reposts · share, the comment
-  // row's shape — the share was only in the ⋯ and the owner could not find
-  // it. `.actions` is NOT `.postmeta`, on purpose — mobile-fit exempts
-  // .postmeta as prose, and a tap target must be measured. The replies pill
-  // says "12 comments" in words beside its glyph: the count is a fact and the
-  // words are what every thread picker (and a screen reader) reads.
-  const replies = el('a', { class: 'cbtn replies', href: link, title: 'Open the thread' },
-    el('span', { 'aria-hidden': 'true' }, '\u{1F4AC}'), plural(p.commentCount, 'comment'));
+  // 2 put share on every row — it was only in the ⋯ and the owner could not
+  // find it. feed-row v1 (2026-08-30) reshaped the row to Bluesky's: replies ·
+  // reposts · like · share, four equal cells (css .postrow .actions), the like
+  // where the heart is. The owner's phone measured the old row — "7315 ·
+  // 270 comments · 1225" wrapped the share arrow under it at 390px and left the
+  // boxed like two lines tall. The replies control shows the glyph and the
+  // number; "270 comments" stays its accessible name and its tooltip, so a
+  // screen reader and a hover still get the words. `.actions` is NOT
+  // `.postmeta`, on purpose — mobile-fit exempts .postmeta as prose, and a tap
+  // target must be measured.
+  const repliesWords = `${plural(p.commentCount, 'comment')} \u2014 open the thread`;
+  const replies = el('a', { class: 'cbtn replies', href: link, title: repliesWords, 'aria-label': repliesWords },
+    el('span', { 'aria-hidden': 'true' }, '\u{1F4AC}'), el('span', { class: 'n' }, fmtScore(p.commentCount)));
   // a repost COUNT, never a write on a row (post-and-thread O2); the sandbox
   // has no reposts and draws nothing
   const reposts = p.repostCount == null ? null
     : el('span', { class: 'cbtn', 'data-repost': '1', 'data-readonly': '1', role: 'img',
       'aria-label': plural(p.repostCount, 'repost') }, el('span', { 'aria-hidden': 'true' }, '\u27F3'), el('span', { class: 'n' }, fmtScore(p.repostCount)));
   right.append(el('div', { class: 'actions' },
+    replies, reposts,
     vote('post', p.id, p, viewerCanVote, { onVote: opts.onVote,
       // the lens passes its sheet; a sandbox row decides from its feed-scoped perms
       onGuest: opts.onGuest ?? (opts.perms?.(p)?.loggedIn ? null : guestGate) }),
-    replies, reposts,
     shareButton(opts.permalink ?? `${location.origin}${link}`, 'post')),
   meta);
   return el('div', { class: 'postrow' + (p.pinned ? ' pinned-row' : '') + (opts.compact ? ' compact' : '') }, right);

@@ -42,7 +42,9 @@ export async function run() {
     const replies = page.locator('.postrow').first().locator('.actions > a.replies');
     assert.equal(await replies.count(), 1, 'the replies pill is on the action row');
     assert.equal(await replies.getAttribute('href'), rowHref, 'and it opens the thread');
-    assert.match(await replies.innerText(), /\d+ comments?$/, 'it counts in words');
+    // feed-row v1: the number is what shows; the words are its accessible name
+    assert.match(await replies.locator('.n').innerText(), /^\d+$/, 'the cell shows the number');
+    assert.match(await replies.getAttribute('aria-label'), /^\d+ comments? — open the thread$/, 'and its name counts in words');
 
     // ---- 12a: the share glyph, quiet and at the end of the action row ----
     await page.goto(`${mem.origin}${THREAD}`);

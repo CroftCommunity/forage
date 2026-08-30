@@ -7,6 +7,8 @@
 //   node scripts/mock-snaps.mjs                       # this checkout -> plans/mocks/snaps/
 //   node scripts/mock-snaps.mjs --as proposed         # files get a .proposed suffix
 //   node scripts/mock-snaps.mjs --only board-lens,menu-lens   # a subset of the routes below
+//       (routes: board thread board-lens board-lens-media board-lens-compact board-lens-in
+//        thread-lens menu-lens focus-lens)
 //   node scripts/mock-snaps.mjs --as current --serve ../../forage
 //       # the same script and fixtures, rendering ANOTHER checkout (main): the
 //       # Current frames come from the tree the owner is running, captured by
@@ -138,6 +140,20 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
     // errors the browser logs for them; this is a capture, not a gate
     out.consoleErrors(); out.errors();
     await out.close();
+  }
+  // feed-row v1: the board at COMPACT density — the phpBB skin's preference and
+  // the owner's phone (2026-08-30). Same skin as every other frame (MOCKS.md
+  // rule 4: compare in one skin), so the density is the only axis that moves.
+  if (wanted('board-lens-compact')) {
+    const cmp = await scenario('first-visit', { root: SERVE, mode: 'bluesky', responses: BOARD,
+      initScripts: ["try { localStorage.setItem('forage.boardview', 'compact'); } catch {}"] });
+    await cmp.page.setViewportSize({ width: vp.width, height: vp.height });
+    await cmp.page.goto(`${cmp.origin}${BOARD_PATH}`);
+    await cmp.page.waitForSelector('.postrow', { timeout: 15000 });
+    await cmp.page.evaluate(() => document.fonts?.ready);
+    await shoot(cmp.page, 'board-lens-compact', 'lens:mock-board', name, vp);
+    cmp.consoleErrors(); cmp.errors();
+    await cmp.close();
   }
   if (wanted('board-lens-in')) {
     const inn = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: BOARD });

@@ -26,6 +26,16 @@ below are the landings of that month, and everything earlier is in `git log`.
   copied from any of them, and every text pairing in every one clears AA. Also repaired:
   on Usenet gray after dark, a removal notice was painted in a red meant for a light page
   (1.93:1); it is now legible. (plan 2026-08-30-plan-warm-skins) [device: android]
+- 2026-08-30 **The feed row agrees with the phone.** A post's picture now shows in the feed at
+  both densities — Compact (the phpBB skin's preference) had dropped it and shown a 40px
+  thumbnail or nothing, while the thread page showed the picture. A Bluesky post's text is set
+  as text, not a bold heading, on the row and at the top of its thread. The action row is
+  Bluesky's: replies · reposts · like · share in four equal cells, so it stays one line under
+  four-digit counts and lines up row to row; the like sits where the heart does and loses its
+  box; the replies cell shows the number, with "270 comments" as its name for a screen reader
+  and a hover. On an author board a row's breadcrumb reads `@handle` and opens that board
+  (`f/pds.ls` opened "Unknown feed"). (mock feed-row v1, from the owner's 2026-08-30 phone
+  screenshots; plan pending on the captures)
 - 2026-08-30 **A link to a reply lands on it, and a board row's name holds its line.** Opening
   a link to a specific reply in a thread now scrolls to that reply and keeps it marked, even
   when the thread also has quotes (before, the page said "Viewing one comment" and sat at the

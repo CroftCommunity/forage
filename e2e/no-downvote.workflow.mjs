@@ -253,7 +253,7 @@ export async function run() {
     // no comment on it is exactly the shape of coverage this plan warns about.
     const threadHref = await page.evaluate(() =>
       [...document.querySelectorAll('.postrow')]
-        .filter((r) => !/\b0 comments\b/.test(r.innerText))
+        .filter((r) => !/\b0 comments\b/.test(r.querySelector('.actions a.replies')?.getAttribute('aria-label') || '')) // feed-row v1: the words are the control's name
         .map((r) => r.querySelector('.posttitle a')?.getAttribute('href'))
         .find(Boolean) ?? null);
     assert.ok(threadHref, 'the seeded board must offer a thread WITH replies, or the comment control goes unchecked');

@@ -8,7 +8,11 @@
 //   - a portrait picture (the media stage's tallest case) and a four-picture
 //     post (the carousel / grid setting), images fenced so no bytes load —
 //     the stage must hold its size from the aspect ratio alone
-//   - counts at both widths: 0 and 4-digit likes, 0 and many replies
+//   - counts at the widths the phone showed (2026-08-30, forage.fyi f/whats-hot):
+//     four-digit likes AND reposts beside a three-digit reply count on ONE row —
+//     the load that wrapped the share arrow under the action row; and 0s
+//   - a text-plus-picture post whose text runs past two lines (Bluesky's
+//     commonest shape), so the text's weight and the stage read together
 //
 // Shared by scripts/mock-snaps.mjs and any workflow that wants this board.
 const AV = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
@@ -41,12 +45,14 @@ const images = (...list) => ({ $type: 'app.bsky.embed.images#view', images: list
 
 const plain = post('plain', 'did:plc:plain', 'quietcartographer.bsky.social', T(9),
   'If we invent the Pneumatic Pie Tube Network today it will still be 49 years too late to follow up on the good work of the original proposal.',
-  { likes: 1284, replies: 40, reposts: 12 });
+  { likes: 7315, replies: 270, reposts: 1225 });
 const parent = post('parent', 'did:plc:parent', 'thefrostwarning.bsky.social', T(7), 'Garlic went in yesterday; the frost warning has me second-guessing the last of the brassicas.', { likes: 3 });
 const replyRow = post('reply', 'did:plc:reply', 'averyveryverylonghandle.bsky.social', T(8),
   'Fleece over the beans and they will be fine.', { likes: 0, reply: { root: { uri: parent.uri, cid: parent.cid }, parent: { uri: parent.uri, cid: parent.cid } } });
 const reposted = post('reposted', 'did:plc:orig', 'briarpatchradio.bsky.social', T(6), 'Broad beans and a late row of spinach. The garlic can take a frost; the beans are the gamble.', { likes: 21, replies: 2 });
-const portrait = post('portrait', 'did:plc:pic', 'erislovesgardens.bsky.social', T(5), 'the bog, this morning', { likes: 9, embed: images(img('p', { width: 1080, height: 1920 })) });
+const portrait = post('portrait', 'did:plc:pic', 'erislovesgardens.bsky.social', T(5),
+  'the bog, this morning — sundew open, the sphagnum finally holding water again after that dry fortnight #bog #peatland #sundew #wetlands',
+  { likes: 9, embed: images(img('p', { width: 1080, height: 1920 })) });
 const four = post('four', 'did:plc:four', 'misterhooperspecial.bsky.social', T(4), 'four from the allotment',
   { likes: 0, replies: 0, embed: images(img('4a', { width: 1600, height: 1200 }), img('4b', { width: 1080, height: 1920 }), img('4c', { width: 1920, height: 1080 }), img('4d', { width: 1200, height: 1200 })) });
 

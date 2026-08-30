@@ -67,6 +67,20 @@ test('author and list sources dispatch to their own XRPC methods', async () => {
   assert.ok(log[1].path.endsWith('app.bsky.feed.getListFeed'));
 });
 
+// feed-row v1 (2026-08-30): a row says which KIND of source it came from, so
+// the view can link an author board's breadcrumb to the author board. Without
+// it an author feed's slug is the bare handle, the row printed `f/pds.ls`, and
+// that link opened "Unknown feed" (the owner, forage.fyi/f/pds.ls).
+test('rows carry the kind of source they came from', async () => {
+  const lens = createLens({ transport: makeTransport([]) });
+  const author = await lens.feed({ kind: 'author', actor: 'pds.ls' });
+  assert.equal(author.feedKind, 'author');
+  assert.ok(author.posts.length > 0 && author.posts.every((p) => p.feedKind === 'author' && p.feedSlug === 'pds.ls'));
+  const feed = await lens.feed({ kind: 'feed', uri: WHATS_HOT });
+  assert.equal(feed.feedKind, 'feed');
+  assert.ok(feed.posts.every((p) => p.feedKind === 'feed'));
+});
+
 test('a session routes through the DPoP fetchHandler with a relative /xrpc path — no header building', async () => {
   const log = [];
   const lens = createLens({ session: oauthSession(log), transport: makeTransport([]) });

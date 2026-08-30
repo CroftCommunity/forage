@@ -58,7 +58,7 @@ export async function run() {
     await page.waitForSelector('.postrow');
     const threadHref = await page.evaluate(() =>
       [...document.querySelectorAll('.postrow')]
-        .filter((r) => !/\b0 comments\b/.test(r.innerText))
+        .filter((r) => !/\b0 comments\b/.test(r.querySelector('.actions a.replies')?.getAttribute('aria-label') || '')) // feed-row v1: the words are the control's name
         .map((r) => r.querySelector('.posttitle a')?.getAttribute('href'))
         .find(Boolean) ?? null);
     assert.ok(threadHref, 'the seeded board offers a thread with replies');

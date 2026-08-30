@@ -178,6 +178,7 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
   const text = record.text || '';
   const base = {
     id: post.uri, feedId: src.feedId, feedSlug: src.feedSlug, feedTitle: src.feedTitle,
+    ...(src.feedKind ? { feedKind: src.feedKind } : {}),
     format: external ? 'link' : 'text', tagId: null,
     nsfw: [...labels].some((l) => NSFW_LABELS.has(l)), spoiler: false,
     createdTs, createdSec: Math.floor(createdTs / 1000),
@@ -956,7 +957,10 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
 
   const srcCtx = (source, title) => {
     const slug = slugForSource(source);
-    return { feedId: `lens:${slug}`, feedSlug: slug, feedTitle: title || slug };
+    // feedKind rides along so a view can link a row back to the KIND of board
+    // it came from — an author board's rows link `/u/<handle>`, not a feed
+    // path nothing resolves (feed-row v1, 2026-08-30: forage.fyi/f/pds.ls)
+    return { feedId: `lens:${slug}`, feedSlug: slug, feedTitle: title || slug, feedKind: source.kind };
   };
 
   return {

@@ -39,6 +39,14 @@ export async function run() {
     const ids = await page.$$eval('.comment', (cs) => cs.map((c) => c.dataset.nodeId));
     assert.deepEqual(ids.sort(), [...NODE_IDS].sort(), 'every node in the fixture renders, quote included');
 
+    // feed-row v1 claim 6: the post's text at the head is text — one step up
+    // from the body (20px), body weight — not a 26px serif heading. The
+    // owner's phone (2026-08-30): a four-line post filled the screen above
+    // its picture.
+    const head = await page.$eval('#main h1', (h) => { const c = getComputedStyle(h); return { weight: c.fontWeight, size: parseFloat(c.fontSize) }; });
+    assert.equal(head.weight, '400', `the head's text is set bold (${head.weight}) — a post's text is not a heading`);
+    assert.ok(head.size <= 20, `the head's text is ${head.size}px — 20px is the step up from the body`);
+
     // Claim A (decision 7): the byline is ONE line at 390 with a real handle —
     // name · (⟳ quoted this ·) time, and ⋯ in the corner, on that line.
     const rows = await bylineRows(page);
