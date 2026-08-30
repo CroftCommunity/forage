@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forage Art Skins v1</title>
-<meta name="mock-version" content="1">
+<title>Forage Art Skins v2</title>
+<meta name="mock-version" content="2">
 <meta name="mock-baseline" content="forage@7a701c3">
 <meta name="mock-proposal" content="forage@3bf6bff">
 <style>
@@ -33,13 +33,13 @@ figcaption{font-size:11px;color:var(--page-muted);margin-top:4px}
 <body>
 <main>
 <h1>Forage — graphical skins: Surf and Nebula, each with a lighter and a darker side</h1>
-<p class="meta">Mock v1 · EXPERIMENTAL (branch <code>claude/art-skins</code>, stacked on the landed warm set) · Current frame <code>forage@7a701c3</code> (main) · Proposed frames <code>forage@3bf6bff</code> · every frame is a capture of the engine by <code>scripts/mock-snaps.mjs --skin</code> over the hermetic lens fixtures, signed out, 390×844 and 1280×900 · manifest: <code>snaps/art-skins/manifest.json</code></p>
+<p class="meta">Mock v2 · EXPERIMENTAL (branch <code>claude/art-skins</code>, stacked on the landed warm set) · Current frame <code>forage@7a701c3</code> (main) · Proposed frames <code>forage@3bf6bff</code> · every frame is a capture of the engine by <code>scripts/mock-snaps.mjs --skin</code> over the hermetic lens fixtures, signed out, 390×844 and 1280×900 · manifest: <code>snaps/art-skins/manifest.json</code></p>
 
 <p><b>What this shows.</b> The ask (owner, 2026-08-30): <i>"a couple not-just-color themes for like say surfing, ocean and beach vibes, thinking sunset and beach colors with some ocean … another that is like a space theme … themeing along graphical lines along with color."</i> Until now a skin could move colours, fonts and radii and nothing else — no token carried a picture. This branch adds four <b>art slots</b> to the token sheet (<code>--page-art</code>, <code>--band-art</code>, <code>--card-art</code>, <code>--accent-glow</code>), each painted <em>over</em> its solid token by <code>app.css</code>, and two families that use them. Everything you see is gradients and inline SVG — no image files yet — so it works today and is fully measured; your photos and badges drop into <code>/skins/art/&lt;family&gt;/</code> in the same slots.</p>
 
 <p><b>Read this before comparing.</b> The skin is the subject, so each frame is deliberately in a different skin. Text never sits on a picture: cards are opaque, every colour stop in a band or page gradient is graded against the ink on it (band at 4.5 — decision 7 from the warm set), and a translucent "glass" card like the space reference is the one thing deliberately <em>not</em> done, because text on glass over a nebula cannot be graded. The board fixture's pictures point at a test CDN and never load; the empty stages are the fixture.</p>
 
-<h2>Open decisions</h2>
+<h2>Decisions <small>— 1–6 locked on review, 2026-08-30: "yep I like all of it, let's pr and merge"</small></h2>
 <div class="tablewrap"><table>
 <tr><th>#</th><th>Decision</th><th>Proposed</th><th>Alternatives / what your assets would change</th></tr>
 <tr><td>1</td><td>The art slots as the mechanism</td><td>Four tokens, painted as background layers over the solid; <code>none</code> is byte-identical to today; gradients graded, <code>url()</code> same-repo or inline only</td><td>A per-skin component stylesheet (rejected: a skin that ships component CSS can hide a moderation notice — docs/SKINS.md)</td></tr>
@@ -106,6 +106,7 @@ figcaption{font-size:11px;color:var(--page-muted);margin-top:4px}
 <h2>Revisions</h2>
 <div class="tablewrap"><table>
 <tr><th>v</th><th>Date</th><th>What changed</th></tr>
+<tr><td>2</td><td>2026-08-30</td><td>Owner review: decisions 1–6 locked as proposed. No code change; frames stand at <code>forage@3bf6bff</code>.</td></tr>
 <tr><td>1</td><td>2026-08-30</td><td>First capture: Surf and Nebula, both sides, board (phone, desktop) + thread (phone), beside Forage light from main. Gradients and inline SVG only; asset slots defined (decision 6).</td></tr>
 </table></div>
 </main>

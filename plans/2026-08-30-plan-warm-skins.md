@@ -1,4 +1,4 @@
-# Plan: the warm set — five skin families with a lighter and a darker side
+# Plan: the warm set — five skin families with a lighter and a darker side, and the first graphical skins
 
 date: 2026-08-30
 status: BUILT on `claude/warm-skins` (worktree `worktrees/warm-skins/forage`); landing via PR — the owner merges. Unit gate 646/646; skins workflow green; captures in `plans/mocks/warm-skins.html`.
@@ -122,6 +122,42 @@ and MOCKS.md's "the page says which skin" rule needs the manifest to know.
 | 8 | Mock decisions 1–5 locked as proposed | same review: "I do like them all" — names, Seaglass, the serif display, the two radii, Apricot's band all stand |
 
 | 9 | The band floor is 4.5, not 3.0 | CI's per-skin axe pass on the first push: 18 violations, all masthead nav links on Apricot (band link 4.11) and Cornflower (white on `#4688CE`, 3.70). The masthead paints those links at 14px normal weight — body text to WCAG. The 3.0 "band" calibration belongs to the importer's gate, not to this surface; `test/skins.test.js` now grades every band pair at 4.5 and names the same four pairs axe did |
+
+## Graphical skins (added on review, 2026-08-30)
+
+The owner, after the warm set landed: *"a couple not-just-color themes for like say
+surfing, ocean and beach vibes, thinking sunset and beach colors with some ocean …
+another that is like a space theme … let's try to add those, themeing along graphical
+lines along with color. I can add some image assets in both categories."* Then, before the
+work: *"we should commit prior to this experimental image themeing in case we want to roll
+back"* — so it lives on `claude/art-skins`, stacked on the landed warm set (PR #35 is the
+rollback point), and landed as PR #36 on *"yep I like all of it, let's pr and merge"*.
+
+**Problem.** A skin could move colours, fonts and radii and nothing else. There was no token
+a picture could ride on, and adding component CSS to a skin is the one thing the model
+forbids (a skin that ships component CSS can hide a moderation notice).
+
+**Approach.** Four art slots in the token sheet — `--page-art`, `--band-art`, `--card-art`,
+`--accent-glow` — each a `<bg-image>` layer list painted OVER its solid token by `app.css`,
+so `none` is byte-identical to today (the passthrough test proves it). Two families, Surf and
+Nebula, both sides each, built from gradients and inline SVG so they ship and are measured
+now; the owner's images drop into `/skins/art/<family>/` in the same slots (asset spec on the
+mock, decision 6, and in `docs/SKINS.md` § Art slots).
+
+**Reasoning.** Text never sits on a picture — that is what makes graphical skins gradeable
+at all. Cards stay opaque hex; every colour stop in an art gradient is graded against the
+ink on it (band at 4.5 per decision 7); a `url()` is same-repo or inline only. The glass
+panels in the space reference are the one thing deliberately not done: text on a translucent
+card over a nebula cannot be graded, and the per-skin axe pass would be the only instrument.
+
+| # | Decision | Why |
+|---|---|---|
+| 10 | Art slots as background LAYERS over the solid token, defaults `none` | byte-identical default; a skin fills a slot with a gradient, an inline SVG, or a repo file — never a component rule |
+| 11 | The band is the banner slot; the page takes only a low-contrast texture | headings like "Discover" sit on the page ground, not on a card |
+| 12 | No translucent cards | ungradeable; the reference's glass look is the cost, accepted |
+| 13 | `url()` same-repo or inline only | a third-party url in a skin is a tracker wearing a palette |
+| 14 | Art files stay out of the SW shell | a large banner must not be able to fail `cache.addAll` |
+| 15 | Mock decisions 1–6 locked | owner: "yep I like all of it, let's pr and merge" |
 
 ## Owed
 

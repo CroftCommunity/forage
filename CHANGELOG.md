@@ -8,6 +8,13 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-08
 
+- 2026-08-30 **Two picture skins: Surf and Nebula.** Settings → Skin now offers **Surf** (sand,
+  a sunset band with a line of foam along its edge, ocean-blue links; *night swell* after dark)
+  and **Nebula** (a starfield with violet and teal nebula veils, an indigo-to-teal band, a soft
+  cyan glow on the wordmark; *observatory* on the light side), each with both sides. These are
+  the first skins that carry artwork, not only colour — and the artwork never sits under text:
+  cards stay solid, and every colour in a band or page gradient is checked against the text on
+  it. (plan 2026-08-30-plan-warm-skins § Graphical skins) [device: android]
 - 2026-08-30 **Five new skins, each with a lighter and a darker side.** Settings → Skin
   now offers **Rosewater** (blush paper and raspberry links; plum after dark), **Lavender**
   (lilac and violet; twilight after dark), **Apricot** (cream and terracotta; espresso

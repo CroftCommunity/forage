@@ -95,7 +95,9 @@ board)** ↔ **phpBB (after hours)**, **Classic BBS** (amber terminal),
 **Apricot** and **Seaglass**, inspired by the classic phpBB era's colour
 variants under our own values — and **Cornflower**, the phpBB blue on the same
 grammar beside the classic board, each with both sides
-(`plans/2026-08-30-plan-warm-skins.md`; captures in `plans/mocks/warm-skins.html`). Skins and modes stay independent
+(`plans/2026-08-30-plan-warm-skins.md`; captures in `plans/mocks/warm-skins.html`);
+and the first two **graphical** skins, **Surf** and **Nebula**, which fill the
+art slots (`docs/SKINS.md` § Art slots; captures in `plans/mocks/art-skins.html`). Skins and modes stay independent
 axes — the phpBB board in the Bluesky view is legal, just off-theme.
 
 New skins are cheap: one CSS file plus one registry line in `js/skins.js`.
