@@ -97,6 +97,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
 .kebab{margin-left:auto;flex:none;width:36px;height:36px;border-radius:50%;border:0;background:none;color:var(--muted);
   font-size:20px;line-height:1;cursor:pointer;display:grid;place-items:center;letter-spacing:1px}
 .kebab:hover,.kebab[aria-expanded="true"]{background:var(--card-2);color:var(--text)}
+.kebab.sm{width:32px;height:32px;font-size:17px;margin-top:-6px}
 
 /* ---- current post row, mirrors app.css ---- */
 .postrow{display:grid;grid-template-columns:40px 1fr;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
@@ -131,6 +132,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
 .menu{position:absolute;right:10px;top:44px;width:270px;background:var(--card);border:1px solid var(--border);
   border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.18);z-index:6;padding:6px;font-size:var(--t-sm)}
 .menu[hidden]{display:none}
+.c > .menu{top:34px;right:0}
 .mi{display:flex;align-items:center;gap:12px;width:100%;text-align:left;font:inherit;font-size:var(--t-sm);
   background:none;border:0;color:var(--text);padding:0 10px;min-height:42px;border-radius:8px;cursor:pointer}
 .mi:hover{background:var(--card-2)}
@@ -426,6 +428,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
       <div class="device phone"><div class="device-label">Phone · thread page · PROPOSED</div>
         <div class="screen app" data-phone data-skin="light" data-variant="proposed" data-thread>
           <div class="masthead"><span class="wordmark"><span class="glyph">🐦‍⬛</span>Forage</span><span class="back">‹ f/gardening</span></div>
+          <div class="sheetwrap">
           <div class="card threadhead">
             <div class="byline"><span class="av c2">f</span><span class="who">fern</span><span class="dot"></span><span>1d</span><span class="dot"></span><a class="board" href="#">f/gardening</a>
               <button class="kebab" aria-label="Post options">⋯</button></div>
@@ -464,22 +467,20 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
             <div class="proposed">
               <div class="c" data-c>
                 <div class="avcol"><span class="av c1">b</span><span class="line"></span></div>
-                <div class="byline"><span class="who">briar</span><span class="dot"></span><span>1d</span></div>
+                <div class="byline"><span class="who">briar</span><span class="dot"></span><span>1d</span><button class="kebab sm" aria-label="Options" aria-expanded="false" data-menu="m3">⋯</button></div>
                 <div class="ctext">Broad beans and a late row of spinach. The garlic can take a frost; the beans are the gamble.</div>
                 <div class="cact">
                   <button class="fold" data-fold aria-label="Collapse"><svg class="icon"><use href="#i-minus"/></svg></button>
                   <button class="cbtn like" aria-pressed="true" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">21</span></button>
-                  <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button>
-                  <button class="cbtn more" aria-label="Comment options">⋯</button></div>
+                  <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button></div>
                 <div class="kids">
                   <div class="c leaf">
                     <div class="avcol"><span class="av c5">s</span><span class="line"></span></div>
-                    <div class="byline"><span class="who">sage</span><span class="dot"></span><span>5h</span></div>
+                    <div class="byline"><span class="who">sage</span><span class="dot"></span><span>5h</span><button class="kebab sm" aria-label="Options">⋯</button></div>
                     <div class="ctext">Fleece over the beans and they will be fine.</div>
                     <div class="cact">
                       <button class="cbtn like" aria-pressed="false" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">4</span></button>
-                      <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button>
-                      <button class="cbtn more" aria-label="Comment options">⋯</button></div>
+                      <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button></div>
                     <div class="kids"></div>
                   </div>
                   <button class="more-replies"><svg class="icon"><use href="#i-plus"/></svg>2 more replies</button>
@@ -487,26 +488,37 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
               </div>
               <div class="c quote leaf">
                 <div class="avcol"><span class="av c2">j</span><span class="line"></span></div>
-                <div class="byline"><span class="who">juniper</span><span class="dot"></span><span class="kind"><svg class="icon"><use href="#i-repost"/></svg>quoted this</span><span class="dot"></span><span>6h</span></div>
+                <div class="byline"><span class="who">juniper</span><span class="dot"></span><span class="kind"><svg class="icon"><use href="#i-repost"/></svg>quoted this</span><span class="dot"></span><span>6h</span><button class="kebab sm" aria-label="Options">⋯</button></div>
                 <div class="qwall">Same question, one valley over — nobody here trusts the forecast either.
                   <a class="open" href="#">open its thread ↳</a></div>
                 <div class="cact">
                   <button class="cbtn like" aria-pressed="false" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">9</span></button>
-                  <button class="cbtn more" aria-label="Options">⋯</button></div>
+                  <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button>
+                  <button class="cbtn"><svg class="icon"><use href="#i-repost"/></svg>Repost</button></div>
                 <div class="kids"></div>
               </div>
               <div class="c leaf">
                 <div class="avcol"><span class="av c4">m</span><span class="line"></span></div>
-                <div class="byline"><span class="who">moss</span><span class="dot"></span><span>1d</span></div>
+                <div class="byline"><span class="who">moss</span><span class="dot"></span><span>1d</span><button class="kebab sm" aria-label="Options">⋯</button></div>
                 <div class="ctext">Nothing. It is a bog out there.</div>
                 <div class="cact">
                   <button class="cbtn like" aria-pressed="false" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">0</span></button>
-                  <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button>
-                  <button class="cbtn more" aria-label="Comment options">⋯</button></div>
+                  <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button></div>
                 <div class="kids"></div>
               </div>
             </div>
           </div>
+          <div class="scrim" hidden data-scrim="m3"></div><div class="menu" id="m3" hidden role="menu"><div class="sheet-title">Options <button class="sheet-close" aria-label="Close" data-close="m3">✕</button></div>
+              <button class="mi">Copy text<svg class="icon"><use href="#i-copy"/></svg></button>
+              <button class="mi">Copy link<svg class="icon"><use href="#i-link"/></svg></button>
+              <button class="mi">Open on bsky.app<svg class="icon"><use href="#i-ext"/></svg></button>
+              <div class="msep"></div>
+              <button class="mi">Hide for me<svg class="icon"><use href="#i-hide"/></svg></button>
+              <div class="msep"></div>
+              <button class="mi">Mute account<svg class="icon"><use href="#i-mute"/></svg></button>
+              <button class="mi">Block account<svg class="icon"><use href="#i-block"/></svg></button>
+              <button class="mi danger">Report<svg class="icon"><use href="#i-warn"/></svg></button>
+            </div></div>
           <div class="toast" data-toast></div>
         </div>
       </div>
@@ -554,32 +566,40 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
             <div class="proposed">
               <div class="c">
                 <div class="avcol"><span class="av c1">b</span><span class="line"></span></div>
-                <div class="byline"><span class="who">briar</span><span class="dot"></span><span>1d</span></div>
+                <div class="byline"><span class="who">briar</span><span class="dot"></span><span>1d</span><button class="kebab sm" aria-label="Options" aria-expanded="false" data-menu="m4">⋯</button></div>
+                <div class="menu" id="m4" hidden role="menu">
+              <button class="mi">Copy text<svg class="icon"><use href="#i-copy"/></svg></button>
+              <button class="mi">Copy link<svg class="icon"><use href="#i-link"/></svg></button>
+              <button class="mi">Open on bsky.app<svg class="icon"><use href="#i-ext"/></svg></button>
+              <div class="msep"></div>
+              <button class="mi">Hide for me<svg class="icon"><use href="#i-hide"/></svg></button>
+              <div class="msep"></div>
+              <button class="mi">Mute account<svg class="icon"><use href="#i-mute"/></svg></button>
+              <button class="mi">Block account<svg class="icon"><use href="#i-block"/></svg></button>
+              <button class="mi danger">Report<svg class="icon"><use href="#i-warn"/></svg></button>
+            </div>
                 <div class="ctext">Broad beans and a late row of spinach. The garlic can take a frost; the beans are the gamble.</div>
                 <div class="cact">
                   <button class="fold" data-fold aria-label="Collapse"><svg class="icon"><use href="#i-minus"/></svg></button>
                   <button class="cbtn like" aria-pressed="true" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">21</span></button>
-                  <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button>
-                  <button class="cbtn more" aria-label="Comment options">⋯</button></div>
+                  <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button></div>
                 <div class="kids">
                   <div class="c">
                     <div class="avcol"><span class="av c5">s</span><span class="line"></span></div>
-                    <div class="byline"><span class="who">sage</span><span class="dot"></span><span>5h</span></div>
+                    <div class="byline"><span class="who">sage</span><span class="dot"></span><span>5h</span><button class="kebab sm" aria-label="Options">⋯</button></div>
                     <div class="ctext">Fleece over the beans and they will be fine.</div>
                     <div class="cact">
                       <button class="fold" data-fold aria-label="Collapse"><svg class="icon"><use href="#i-minus"/></svg></button>
                       <button class="cbtn like" aria-pressed="false" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">4</span></button>
-                      <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button>
-                      <button class="cbtn more" aria-label="Comment options">⋯</button></div>
+                      <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button></div>
                     <div class="kids">
                       <div class="c leaf">
                         <div class="avcol"><span class="av c1">b</span><span class="line"></span></div>
-                        <div class="byline"><span class="who">briar</span><span class="dot"></span><span>4h</span></div>
+                        <div class="byline"><span class="who">briar</span><span class="dot"></span><span>4h</span><button class="kebab sm" aria-label="Options">⋯</button></div>
                         <div class="ctext">Fleece it is. Thank you.</div>
                         <div class="cact">
                           <button class="cbtn like" aria-pressed="false" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">2</span></button>
-                          <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button>
-                          <button class="cbtn more" aria-label="Comment options">⋯</button></div>
+                          <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button></div>
                         <div class="kids"></div>
                       </div>
                     </div>
@@ -589,22 +609,22 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
               </div>
               <div class="c quote leaf">
                 <div class="avcol"><span class="av c2">j</span><span class="line"></span></div>
-                <div class="byline"><span class="who">juniper</span><span class="dot"></span><span class="kind"><svg class="icon"><use href="#i-repost"/></svg>quoted this</span><span class="dot"></span><span>6h</span></div>
+                <div class="byline"><span class="who">juniper</span><span class="dot"></span><span class="kind"><svg class="icon"><use href="#i-repost"/></svg>quoted this</span><span class="dot"></span><span>6h</span><button class="kebab sm" aria-label="Options">⋯</button></div>
                 <div class="qwall">Same question, one valley over — nobody here trusts the forecast either.
                   <a class="open" href="#">open its thread ↳</a></div>
                 <div class="cact">
                   <button class="cbtn like" aria-pressed="false" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">9</span></button>
-                  <button class="cbtn more" aria-label="Options">⋯</button></div>
+                  <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button>
+                  <button class="cbtn"><svg class="icon"><use href="#i-repost"/></svg>Repost</button></div>
                 <div class="kids"></div>
               </div>
               <div class="c leaf">
                 <div class="avcol"><span class="av c4">m</span><span class="line"></span></div>
-                <div class="byline"><span class="who">moss</span><span class="dot"></span><span>1d</span></div>
+                <div class="byline"><span class="who">moss</span><span class="dot"></span><span>1d</span><button class="kebab sm" aria-label="Options">⋯</button></div>
                 <div class="ctext">Nothing. It is a bog out there.</div>
                 <div class="cact">
                   <button class="cbtn like" aria-pressed="false" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">0</span></button>
-                  <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button>
-                  <button class="cbtn more" aria-label="Comment options">⋯</button></div>
+                  <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button></div>
                 <div class="kids"></div>
               </div>
             </div>
@@ -620,10 +640,13 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
             <li><b>Collapse is ⊖ on the actions row</b>, and only on comments that have children. Collapsed, it becomes ⊕ and says how many it is hiding — the note the gutter writes today, moved onto the control.</li>
             <li><b>The elbow lands on the child's avatar</b>, which is why avatars in comments earn their 32px: they are the anchors the connector points at.</li>
             <li><b>Quotes keep the wall, lose the box.</b> The brand-green wall stays the grammar for quoted material (3q) but moves to the node's outer edge, left of the avatar — so it reads as "this whole entry is a different kind of thing", not as a box inside a comment. The tint goes everywhere.</li>
+            <li><b>Every node has ⋯ top-right</b>, exactly where the post has it: Copy text · Copy link · Open on bsky.app / Hide for me / Mute account · Block account / Report — hide a reply, or mute or block its author, from the comment or the quote. Try briar's.</li>
+            <li><b>A quote gets the full row</b> — like, Reply, Repost. You can reply to the quote or repost it; both are valid, and today's node offers neither.</li>
             <li><b>Two icons, two verbs.</b> The speech bubble means "open the comments" (a count); Reply is a return arrow. Reddit uses the bubble for both.</li></ul></div>
       <div class="callout"><h3>Trade-offs to talk through</h3>
         <ul><li>Losing the gutter loses the “click anywhere on the left to fold” affordance that the spec (§3.3) called the signature. The proposal bets that it was never discoverable on a phone and cost more mis-taps than it saved.</li>
             <li>Reddit fades the connector after the last child; here the last elbow is masked with the card colour, which breaks on a striped row background (<code>--row-odd/even</code>). The thread card is unstriped today, so this holds — worth a test.</li>
+            <li>Should a plain reply carry Repost too? On Bluesky a reply is a post and can be reposted; the row here shows it only on quotes, per the ask. Cheap to add, busier row.</li>
             <li>Deep threads: the connector nests 22px per level (16px on phone). Past depth 5 or so it wants the existing “continue this thread” stub sooner than 10.</li></ul></div>
       <div class="callout"><h3>Current, for the record</h3>
         <p>Memory-mode demo thread as it renders today on a phone and on desktop — every direct reply carries the rail.</p>
