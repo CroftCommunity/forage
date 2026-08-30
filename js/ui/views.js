@@ -13,6 +13,7 @@ import { frontiers } from '../../ledger/divergence.js';
 import { humanWait } from '../engines/limits.js';
 import { postRow, commentNode, vote, guestGate, focusComment, emptyState, gate, errorState, toast } from './components.js';
 import { densityDial, isCompact } from '../board-density.js';
+import * as cardSize from '../card-size.js';
 import { sortBar } from './sortbar.js';
 
 // A board scope for one feed. Derived, not spelled: the old literal was the
@@ -90,7 +91,7 @@ export function boardView(scope, title, query) {
   main.append(sortBar({
     sorts: SORTS.map((s) => [s, SORT_LABEL(s)]), sort, from,
     onChange: ({ sort: s, from: f }) => go(`${base}?sort=${s}${s === 'hot' || s === 'top' ? `&from=${f}` : ''}`),
-    extra: [el('span', { class: 'grow' }), densityDial(el)],
+    extra: [el('span', { class: 'grow' }), densityDial(el), cardSize.cardSizeDial(el)],
   }));
 
   if (!data.posts.length) {
@@ -646,8 +647,23 @@ export function settingsView() {
     const palette = skins.SKINS[skins.activeSkin()]?.palette ?? 'light';
     skins.setSkin(skins.resolveInFamily(skinSel.value, palette));
   });
+  // board-cards decision 7: the card size as four notches — a radiogroup of
+  // 44px buttons, because mobile-fit measures the control and a native radio
+  // is 13px. The board's dial is the same setting; this is where it is named.
+  const notches = el('div', { class: 'notches', role: 'radiogroup', 'aria-labelledby': 'pref-cardsize-label', id: 'pref-cardsize' },
+    ...cardSize.NOTCHES.map((n) => el('button', { type: 'button', role: 'radio', 'data-notch': String(n),
+      'aria-checked': String(cardSize.active() === n), 'aria-label': `Card size ${n}` }, String(n))));
+  notches.addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-notch]');
+    if (!b) return;
+    cardSize.set(Number(b.dataset.notch)); cardSize.apply();
+    for (const x of notches.querySelectorAll('button')) x.setAttribute('aria-checked', String(x === b));
+  });
   const themeCard = el('div', { class: 'card' },
     fieldRow('Skin', skinSel),
+    // a radiogroup is not labelable, so the label names it by id, not `for`
+    el('div', { class: 'field-row' }, el('label', { id: 'pref-cardsize-label' }, 'Card size'),
+      el('span', {}, notches, el('span', { class: 'xs muted', style: 'margin-left:8px' }, 'how much room a post takes — 1 is small, 4 is the full picture'))),
     // Say where the other half of the choice lives. Without this the picker
     // silently lost four rows and nothing tells you the toggle gained them.
     el('div', { class: 'xs muted', style: 'margin:-4px 0 8px' },

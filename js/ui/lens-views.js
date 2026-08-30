@@ -17,13 +17,13 @@ import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortW
 import { initSession, createAccountRoster, isOAuthCallback } from '../auth/session.js';
 import { hostById, featuredHosts, otherHosts, canCreateAccount } from '../auth/hosts.js';
 import { heroDismissed, dismissHero, EMBLEM } from '../hero.js';
-import * as mediaScale from '../media-scale.js';
+import { stage } from './stage.js';
 import * as lang from '../lang.js';
 import { density, densityDial } from '../board-density.js';
 import { sortBar } from './sortbar.js';
 import { sortItems } from '../engines/rank.js';
 import { POST_LIMITS, IMAGE_LIMITS, graphemes, withTag } from '../compose.js';
-import { MEDIA_SCALE } from '../media-scale.js';
+import { cardSizeDial } from '../card-size.js';
 import { settingsView } from './views.js';
 import { tagSubs, subscribeTag, normalizeTag } from '../tagsubs.js';
 // P5: the published half. Where a subscription is STORED is that module's
@@ -456,22 +456,24 @@ function verifiedBadge(p) {
 function mediaNode(p) {
   if (!p.media) return null;
   if (p.media.kind === 'images') {
-    return el('div', { class: 'media-strip' },
-      // 4i: an author who wrote alt text has named this link already — the img's
-      // alt IS the link's accessible name. Where they did not, we name what the
-      // link DOES and stop there. We do NOT invent a description of a picture
-      // nobody has described: a fabricated alt makes a screen reader worse while
-      // turning this gate green, which is the worst of both.
-      ...p.media.items.map((i) => el('a', {
-        href: i.full, target: '_blank', rel: 'noopener noreferrer',
-        ...(i.alt ? {} : { 'aria-label': 'Image, opens full size' }),
-      }, el('img', { src: i.thumb, alt: i.alt, loading: 'lazy' }))));
+    // board-cards decision 4: every picture stands on a stage (js/ui/stage.js).
+    // 4i: an author who wrote alt text has named this link already — the img's
+    // alt IS the link's accessible name. Where they did not, we name what the
+    // link DOES and stop there. We do NOT invent a description of a picture
+    // nobody has described: a fabricated alt makes a screen reader worse while
+    // turning this gate green, which is the worst of both.
+    return el('div', { class: 'stages' },
+      ...p.media.items.map((i) => stage({ kind: 'images', thumb: i.thumb, alt: i.alt, aspect: i.aspect, link: i.full,
+        linkLabel: i.alt ? null : 'Image, opens full size', linkAttrs: { target: '_blank', rel: 'noopener noreferrer' } })));
   }
   if (p.media.kind === 'video') {
     const link = `https://bsky.app/profile/${p.author}/post/${p.id.split('/').pop()}`;
-    return el('div', { class: 'media-strip' },
-      el('a', { href: link, target: '_blank', rel: 'noopener noreferrer', title: 'Video — plays on bsky.app' },
-        p.media.thumb ? el('img', { src: p.media.thumb, alt: '[video]', loading: 'lazy' }) : el('span', { class: 'tag' }, '▶ video')));
+    if (!p.media.thumb) {
+      return el('div', { class: 'media-strip' },
+        el('a', { href: link, target: '_blank', rel: 'noopener noreferrer', title: 'Video — plays on bsky.app' }, el('span', { class: 'tag' }, '▶ video')));
+    }
+    return stage({ kind: 'video', thumb: p.media.thumb, alt: '[video]', aspect: p.media.aspect, link,
+      linkAttrs: { target: '_blank', rel: 'noopener noreferrer', title: 'Video — plays on bsky.app' } });
   }
   if (p.media.kind === 'external') {
     // 4i: the thumbnail is DECORATIVE — alt='' is correct and stays. What the
@@ -520,29 +522,12 @@ function boardToolbar(onChange) {
     sorts: [['feed', 'Feed order'], ['hot', 'Hot'], ['new', 'New'], ['top', 'Top']],
     sort: boardSort, from: boardTimeframe,
     onChange: ({ sort, from }) => { boardSort = sort; boardTimeframe = from; drawBar(); onChange(); },
-    extra: [el('span', { class: 'grow' }), densityDial(el, () => { syncSlider(); onChange(); })],
+    // decision 7: the card size dial (1–4) stands where the 3t slider stood —
+    // a notch is a choice a thumb can make; the slider moved in visible jumps
+    extra: [el('span', { class: 'grow' }), densityDial(el, () => onChange()), cardSizeDial(el)],
   }));
-
-  // 3t: how big previews should be is a per-screen judgement, so it is a
-  // slider rather than a setting. Card view only — compact renders no media,
-  // and a media control over a board with none is a lie. Applying it writes
-  // ONE CSS custom property, so a drag never refetches or repaints the board.
-  const slider = el('input', { type: 'range', 'data-media-scale': '1',
-    min: String(MEDIA_SCALE.min), max: String(MEDIA_SCALE.max), step: String(MEDIA_SCALE.step),
-    value: String(mediaScale.active()), title: 'Preview size' });
-  const syncSlider = () => { slider.style.display = boardView() === 'card' ? '' : 'none'; };
-  syncSlider();
-  slider.addEventListener('input', () => { mediaScale.set(slider.value); applyMediaScale(); });
   drawBar();
-
-  return el('div', { class: 'row wrap', style: 'gap:6px;margin:6px 0;align-items:center', 'data-board-toolbar': '1' },
-    barHost,
-    el('div', { class: 'row', style: 'gap:6px;align-items:center;margin-left:auto' }, slider));
-}
-
-// 3t: the slider's ONE output — the board reads --media-max in CSS.
-function applyMediaScale() {
-  document.documentElement.style.setProperty('--media-max', mediaScale.cssValue());
+  return el('div', { class: 'row wrap', style: 'gap:6px;margin:6px 0;align-items:center', 'data-board-toolbar': '1' }, barHost);
 }
 
 // One board renderer: applies the window sort and the view mode.

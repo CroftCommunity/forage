@@ -7,11 +7,11 @@
 // Bump CACHE whenever you want to force a clean re-cache on the very next load
 // (asset URLs are hashless, so the name is the version).
 
-const CACHE = 'forage-v61';
+const CACHE = 'forage-v62';
 const SHELL = [
   '/', '/404.html', '/skins/bbs.css', '/skins/usenet.css', '/skins/usenet-dark.css', '/skins/forage-dark.css', '/skins/phpbb.css', '/skins/phpbb-dark.css',
   '/vendor/atproto-oauth-client-browser.js', '/js/auth/session.js', '/js/auth/hosts.js', '/js/skins.js',
-  '/js/version.js', '/js/mode.js', '/js/hero.js', '/js/media-scale.js', '/js/lang.js', '/js/compose.js', '/js/ui/mode-view.js', '/css/tokens.css', '/css/app.css',
+  '/js/version.js', '/js/mode.js', '/js/hero.js', '/js/card-size.js', '/js/ui/stage.js', '/js/lang.js', '/js/compose.js', '/js/ui/mode-view.js', '/css/tokens.css', '/css/app.css',
   '/js/main.js', '/js/router.js', '/js/store.js', '/js/storage.js', '/js/schema.js',
   '/js/reducers.js', '/js/selectors.js', '/js/personas.js', '/js/actions.js', '/js/util.js',
   '/js/board-density.js', '/js/last-board.js', '/js/rings.js', '/js/tagsubs.js', '/js/tagsubs-pds.js', '/js/lexicon.js', '/js/lexicons.js', '/js/tag-stats.js', '/js/trending-tags.js', '/js/hashtag-prefs.js', '/js/prng.js', '/js/devbar.js', '/js/engines/rank.js',

@@ -294,7 +294,7 @@ pins both from the fixtures, and null when the embed has none.
 the image loads, which is only possible if this field reached the DOM. That is the wire.
 **Validation:** Narrow.
 
-#### Phase 5b: `js/ui/stage.js` (decision 4)
+#### Phase 5b: `js/ui/stage.js` (decision 4) — ✅ shipped 2026-08-29 (with 5c)
 - **5b-i (RED):** `e2e/media-stage.workflow.mjs` (new, lens shim with four posts: portrait
   9:16, landscape 4:3, wide 16:9, video) — every `.stage` is the card's inner width; its
   height ≤ the cap for the current size; the `img` is centred (`left + width/2 ≈ stage
@@ -317,8 +317,14 @@ has no `.stage-back` and a black ground; `prefers-reduced-transparency` → no b
 `load` (`console.debug('forage: stage sized from the picture — no aspect on the embed')`) —
 the line that explains a layout jump if one is ever reported.
 **Validation:** Broad — D1's device look (or its deferral recorded).
+**Found in execution:** Playwright cannot emulate `prefers-reduced-transparency`, so the suite
+asserts the branch as WRITTEN (a media rule naming it that hides `.stage-back`), not as
+rendered. Images are answered with an empty body rather than aborted — an abort logs a
+resource error the harness collects as a failure. `apply()` writes `data-cardsize` on the
+root and the STYLESHEET owns the four notches' numbers (no pixel in JS); the retired slider
+was only ever applied on a drag, so a stored size now lands before first paint (`main.js`).
 
-#### Phase 5c: `mediaNode` draws the stage; card size 1–4 replaces the slider (decision 7)
+#### Phase 5c: `mediaNode` draws the stage; card size 1–4 replaces the slider (decision 7) — ✅ shipped 2026-08-29
 - **5c-i (RED):** `e2e/bluesky-view.workflow.mjs:591-610` — the slider assertions become
   size assertions: `select[data-size]` on the toolbar, choosing 1 lowers `.stage` height,
   4 raises it; `:647-675` — `.media-strip img` → `.stage img`; `e2e/density` — the toolbar's
