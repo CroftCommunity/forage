@@ -101,4 +101,52 @@ export async function run() {
     assert.equal(animName, 'none', 'reduced motion: the tint does not animate');
     assert.deepEqual(mem.errors(), []);
   } finally { await mem.close(); }
+
+  // ---- Phase 13: the lens — a reply uri resolves to its thread, focused ----
+  const ROOT = 'at://did:plc:aa/app.bsky.feed.post/root';
+  const REPLY = 'at://did:plc:bb/app.bsky.feed.post/reply';
+  const mk = (id, did, t, extra = {}) => ({ uri: `at://${did}/app.bsky.feed.post/${id}`, cid: 'c' + id,
+    author: { did, handle: did.slice(8) + '.test' }, record: { text: 'post ' + id, createdAt: t, ...extra }, indexedAt: t,
+    likeCount: 0, replyCount: 0, repostCount: 0 });
+  const ref = (uri) => ({ uri, cid: 'c' + uri.split('/').pop() });
+  const rootThread = { thread: { post: mk('root', 'did:plc:aa', '2026-08-26T10:00:00Z'), replies: [
+    { post: mk('other', 'did:plc:cc', '2026-08-26T10:30:00Z', { reply: { root: ref(ROOT), parent: ref(ROOT) } }), replies: [] },
+    { post: mk('reply', 'did:plc:bb', '2026-08-26T11:00:00Z', { reply: { root: ref(ROOT), parent: ref(ROOT) } }), replies: [] },
+  ] } };
+  const lens = await scenario('first-visit', { mode: 'bluesky', responses: {
+    'getTrendingTopics': { topics: [] },
+    [`getPostThread?uri=${encodeURIComponent(REPLY)}`]: { thread: { post: rootThread.thread.replies[1].post, replies: [] } },
+    [`getPostThread?uri=${encodeURIComponent(ROOT)}`]: rootThread,
+    'getQuotes': { posts: [] },
+  } });
+  try {
+    const { page } = lens;
+    // a pasted reply uri lands on the ROOT's thread with the reply focused
+    await page.goto(`${lens.origin}/p?uri=${encodeURIComponent(REPLY)}`);
+    await page.waitForSelector('.comment.focused');
+    assert.match(await page.locator('h1').innerText(), /post root/, 'the head is the root, not the reply');
+    assert.equal(await page.locator('.comment.focused').getAttribute('data-node-id'), REPLY);
+    assert.equal(await page.locator('.focus-bar').count(), 1);
+    // the view renders more than once at boot (session restore re-dispatches),
+    // so count by SHAPE: every reply fetch was followed by exactly one root fetch
+    const fetches = (u) => page.evaluate((needle) => window.__shimHits.filter((h) => h.url.includes('getPostThread') && h.url.includes(needle)).length, encodeURIComponent(u));
+    assert.ok(await fetches(REPLY) >= 1);
+    assert.equal(await fetches(ROOT), await fetches(REPLY), 'the reply, then its root — one root fetch per reply fetch');
+    // the way back is the root's own address
+    assert.equal(await page.locator('.focus-bar a').getAttribute('href'), `/p?uri=${encodeURIComponent(ROOT)}`);
+    // share on a lens comment writes /p?uri=<root>&focus=<reply>
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: lens.origin });
+    await page.locator(`.comment[data-node-id="${REPLY}"] button.share`).click();
+    await page.waitForSelector('text=Link copied');
+    assert.equal(await page.evaluate(() => navigator.clipboard.readText()),
+      `${lens.origin}/p?uri=${encodeURIComponent(ROOT)}&focus=${encodeURIComponent(REPLY)}`);
+    // an explicit &focus= on the root uri does the same thing with ONE fetch
+    await page.goto(`${lens.origin}/p?uri=${encodeURIComponent(ROOT)}&focus=${encodeURIComponent(REPLY)}`);
+    await page.waitForSelector('.comment.focused');
+    assert.equal(await page.locator('.comment.focused').getAttribute('data-node-id'), REPLY);
+    assert.equal(await fetches(REPLY), 0, 'a root uri with &focus= never fetches the reply');
+    assert.ok(await fetches(ROOT) >= 1);
+    assert.deepEqual(await lens.shimMisses(), []);
+    assert.deepEqual(lens.errors(), []);
+  } finally { await lens.close(); }
 }

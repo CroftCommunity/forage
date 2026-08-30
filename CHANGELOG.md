@@ -8,6 +8,12 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-08
 
+- 2026-08-29 **Every comment has an address.** The small ↗ at the end of a comment's action
+  row (and the ⋯ menu's Copy link) copies a permalink; opening one shows the whole thread
+  landed on that comment — marked, its ancestors open, its siblings folded, with a
+  "viewing one comment — see the whole thread" bar. In the Bluesky view a pasted reply link
+  now opens its thread from the top, focused on the reply, instead of the reply alone.
+  (plan 2026-08-29-plan-post-and-thread, branch E)
 - 2026-08-29 **Threads read like threads.** The full-height collapse gutter is gone: a
   comment's replies hang off its avatar on a rail, each reply drawing its own elbow, and a
   comment that has replies carries one ⊖ on its action row (⊕ *n replies hidden* when

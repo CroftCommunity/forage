@@ -508,3 +508,69 @@ test('2a: every thread node carries its own author avatar', () => {
   assert.equal(t.post.avatar, root.author.avatar, 'the head keeps its picture');
   assert.deepEqual(t.comments.map((c) => c.avatar), ['https://cdn.example/aa.jpg', null]);
 });
+
+// ---- Phase 13 (plan 2026-08-29 post-and-thread, decision 10): a reply uri resolves ----
+// /p?uri=<reply> used to open the reply as an orphan root. Now thread() notices
+// the fetched head is itself a reply (record.reply.root), refetches from the
+// ROOT, and returns focus = the reply — so the page is the whole thread, landed
+// on that comment.
+function threadTransport(map) {
+  const calls = [];
+  const transport = async (url) => {
+    calls.push(url);
+    const u = new URL(url);
+    const key = `${u.pathname.split('.').pop()}?${decodeURIComponent(u.searchParams.get('uri') || '')}`;
+    const hit = map[key] ?? (u.pathname.endsWith('getQuotes') ? { posts: [] } : null);
+    if (!hit) return { ok: false, status: 404, json: async () => ({ error: 'NotFound' }) };
+    return { ok: true, status: 200, json: async () => hit };
+  };
+  return { transport, calls, threads: () => calls.filter((c) => c.includes('getPostThread')) };
+}
+const mkPost = (id, extra = {}) => ({ uri: `at://did:plc:a/app.bsky.feed.post/${id}`, cid: 'c' + id,
+  author: { did: 'did:plc:a', handle: 'a.test' }, record: { text: id, createdAt: '2026-08-29T10:00:00Z', ...extra },
+  indexedAt: '2026-08-29T10:00:00Z', likeCount: 0, replyCount: 0 });
+const ROOT = 'at://did:plc:a/app.bsky.feed.post/root';
+const REPLY = 'at://did:plc:a/app.bsky.feed.post/reply';
+const DEEP = 'at://did:plc:a/app.bsky.feed.post/deep';
+const ref = (uri) => ({ uri, cid: 'c' + uri.split('/').pop() });
+const rootThread = { thread: { post: mkPost('root'), replies: [
+  { post: mkPost('reply', { reply: { root: ref(ROOT), parent: ref(ROOT) } }), replies: [
+    { post: mkPost('deep', { reply: { root: ref(ROOT), parent: ref(REPLY) } }), replies: [] } ] } ] } };
+
+test('13: a root uri is ONE getPostThread and no focus', async () => {
+  const { transport, threads } = threadTransport({ [`getPostThread?${ROOT}`]: rootThread });
+  const t = await createLens({ transport }).thread(ROOT, SRC);
+  assert.equal(threads().length, 1);
+  assert.equal(t.focus, undefined);
+  assert.equal(t.post.id, ROOT);
+});
+
+test('13: a depth-1 reply uri refetches from root and focuses the reply', async () => {
+  const { transport, threads } = threadTransport({
+    [`getPostThread?${REPLY}`]: { thread: { post: rootThread.thread.replies[0].post, replies: [] } },
+    [`getPostThread?${ROOT}`]: rootThread,
+  });
+  const t = await createLens({ transport }).thread(REPLY, SRC);
+  assert.equal(threads().length, 2, 'the reply, then its root');
+  assert.ok(threads()[1].includes(encodeURIComponent(ROOT)), 'the second fetch is the ROOT');
+  assert.equal(t.post.id, ROOT, 'the page is the whole thread');
+  assert.equal(t.focus, REPLY);
+});
+
+test('13: a depth-2 reply refetches the ROOT, not its parent', async () => {
+  const { transport, threads } = threadTransport({
+    [`getPostThread?${DEEP}`]: { thread: { post: rootThread.thread.replies[0].replies[0].post, replies: [] } },
+    [`getPostThread?${ROOT}`]: rootThread,
+  });
+  const t = await createLens({ transport }).thread(DEEP, SRC);
+  assert.equal(threads().length, 2);
+  assert.ok(threads()[1].includes(encodeURIComponent(ROOT)) && !threads()[1].includes(encodeURIComponent(REPLY)));
+  assert.equal(t.focus, DEEP);
+});
+
+test('13: the root fetch failing names the root uri, never a blank page', async () => {
+  const { transport } = threadTransport({
+    [`getPostThread?${REPLY}`]: { thread: { post: rootThread.thread.replies[0].post, replies: [] } },
+  });
+  await assert.rejects(() => createLens({ transport }).thread(REPLY, SRC), (e) => e.message.includes('root') && e.message.includes('404'));
+});

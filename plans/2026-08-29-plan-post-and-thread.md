@@ -1,10 +1,34 @@
 # Plan: posts, threads, and the ⋯ menu
 
-**Status:** Pass 1 rewritten to the phase-plan template 2026-08-29; **Pass 2 (gap analysis)
+**Status: EXECUTED 2026-08-29 — all fourteen phases shipped across five landings (forage
+PRs #19 A, #20 B, #21 C, #22 D, #23 E).** Owed: Phase 7's device run (haptics on the
+Samsung — no phone was attached). One deviation the owner may reverse: `From` defaults to
+All time on boards, not Today (Phase 11b). See § Outcome Summary and the close-out entry.
+
+## Outcome Summary
+
+| Phase | Landing | Outcome |
+|---|---|---|
+| 0 | A `b1961d8` | D1/D2 probed live; fixtures kept; D3 from fixtures; D4 deferred (no device) |
+| 1 | A `7e2f744` | byline on rows and comments; `timeAgo` pinned |
+| 2 | A `de7a867` | real avatars on posts, nodes, the masthead |
+| 3 | B `b09ede0` | the ⋯ menu (dialog: popover / sheet), memory groups by persona |
+| 4a | B `7c6850c` | bookmark, mute, mute-thread, block, repost writes; live suite |
+| 4b | B `cd552ac`… | the lens menu; muted words (O5), report sheet, local hide |
+| 6 | C `f6fd887`+`3d7b0b9` | one vote control, two layouts |
+| 7 | C `91ff471` | haptics module, vote hook, settings switch (device run owed) |
+| 8 | C `dbb1ca3`+`7634710` | rail + fold; gutter retired |
+| 9 | C `7f4a4da` | quote = walled comment with a live ⟳ |
+| 10 | D `3e91915`+`a0726a6` | Hot on engagement; Best retired |
+| 11 | D `2dded54`+… | the sort bar, both tiers; From defaults All time (deviation) |
+| 12 | E `8b492b6` | permalinks and `?focus=` on the memory thread |
+| 13 | E (this landing) | a reply uri resolves on the lens; lens permalinks; 13b live |
+
+**Original status:** Pass 1 rewritten to the phase-plan template 2026-08-29; **Pass 2 (gap analysis)
 applied the same day** — see Review Log. **Pass 3 (quality gates) applied the same day** — see
 Review Log. **Not started: Phase 0 first.** Open-question severities (O2–O8) **confirmed as recommended by the owner
 2026-08-29** ("accept all as recommended"): O5/O6/O8 PHASE-GATED, O2/O3/O4/O7 ADVISORY.
-**Progress tracker:** this Status line. last green: Phase 10 (branch D) — At every phase end append `last green: <phase> @ <sha>`;
+**Progress tracker:** this Status line. last green: Phase 13 (branch E) — EXECUTED — At every phase end append `last green: <phase> @ <sha>`;
 at every landing the CHANGELOG entry and the mock's `mock-baseline` sha are the markers.
 **Origin:** owner session 2026-08-29 — Reddit (web + Android) and Bluesky screenshots
 studied against Forage as it renders, worked through twelve revisions of a mock, and
@@ -876,7 +900,16 @@ re-order).
 
 ### Landing branch E — deep links
 
-#### Phase 12: `?focus=` on the memory thread
+#### Phase 12: `?focus=` on the memory thread — ✅ SHIPPED (branch E)
+**Delivered:** 12a and 12b in one commit under one suite (`e2e/deep-link`, RED first for
+both). `shareButton(url)` closes every comment's action row (`.cbtn.share`, 55% at rest,
+44px on a phone); `focusComment(container, id, { threadHref })` lives in `components.js`
+and works on the DETACHED tree (the view calls it before attaching; only the scroll waits a
+frame) — marks, expands the path, folds every sibling at each level through the fold's own
+button so its label stays honest, prepends the bar; a missing id warns and the bar says so.
+The tint is `@keyframes` on the text, `animation: none` under reduced motion (pinned with
+`emulateMedia`). `scroll-margin-top` keeps it under the sticky masthead. Both the share
+glyph and the menu's Copy link write `/f/<slug>/p/<post>?focus=<id>`.
 **Changes:**
 - [ ] `js/ui/views.js` — `threadView` reads `query.focus`; after paint: scroll the node
   into view, add `.focused` (tint via `--tint`, `animation` fading over 2s, honouring
@@ -909,7 +942,15 @@ in thread', id)`; the found case logs nothing.
 **Validation:** Moderate — phone: the focused node lands below the sticky masthead, not
 under it.
 
-#### Phase 13: `?focus=` on the lens, and a reply uri resolves
+#### Phase 13: `?focus=` on the lens, and a reply uri resolves — ✅ SHIPPED (branch E)
+**Delivered:** `lens.thread(uri)` refetches from `record.reply.root` when the head is a
+reply and returns `focus` (one `console.info`); a root fetch failure names the root uri. The
+lens thread calls `focusComment` with `query.focus ?? t.focus`; share and Copy link on a
+lens comment write `/p?uri=<root>&focus=<reply>`. Edges pinned in `test/lens.test.js`
+(root = one fetch; depth-1 and depth-2 both refetch the ROOT; explicit `&focus=` never
+fetches the reply). The browser case counts fetches by SHAPE (one root per reply fetch) —
+the view renders more than once at boot. **13b** is a read-only case in
+`lens-writes-live`, green on the real PDS.
 **Changes:**
 - [ ] `js/substrates/lens.js` — `thread(uri)`: when the fetched head is itself a reply
   (`record.reply?.root`), refetch from `root.uri` and return `{ …, focus: uri }`; the
@@ -1063,3 +1104,27 @@ the chain did not stop — the gate was READ and not HONOURED. Cause of the red:
 first only. Branch E's first commit fixes the second (`select[data-density]`), verified
 twice on `main`'s tree. Lesson for VERIFICATION.md's list: a landing chain must gate on the
 runner's **exit code**, never on a grep of its prose.
+
+### Close-out — 2026-08-29
+
+**Shipped:** every phase, 0 through 13, in five PRs landed the same day (A–E). Every landing
+carried its CHANGELOG entry and a mock re-capture (v13 → v17, baseline bumped each time);
+`npm test` 623/0 and `npm run workflows` 25 found / 0 failed at the last landing;
+`lens-writes-live` green on the real PDS with every write undone.
+
+**Stopped or skipped:** nothing skipped. Owed: Phase 7's device validation (no phone on this
+machine; the platform contract and the vibrate stub are the evidence so far). Not taken, as
+recommended: O2 (repost on plain replies).
+
+**Deviations, each recorded in its phase:** Delete stays the action-row control (memory has
+no delete write); a quote with children folds like any comment; `From` defaults to All time
+on boards (a Today default emptied the seeded gardening board); the lens thread re-sorts
+client-side. **Process:** branch D landed on a red gate — the chain grepped the runner's
+prose instead of honouring its exit code — and was fixed forward in E's first commit.
+
+**Discoveries worth keeping:** `invariants.test.js` sees only record writes, so procedure
+writes needed their own by-name pin; the AppView indexes a repost a beat after the PDS
+accepts it; `tagsub-pds-live` resolved `.env` wrongly from a worktree; the shaped reply
+count is `commentCount` on both tiers; `mobile-fit` exempts `.postmeta` as prose, so a tap
+target must not live there; a per-document `addInitScript` stub resets its counters on
+every navigation.
