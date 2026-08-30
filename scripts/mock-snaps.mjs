@@ -109,7 +109,7 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
   }
 
   // ---- lens:mock-board — the board, signed out (board-cards A–F, post-and-thread A/E) and signed in ----
-  if (wanted('board-lens')) {
+  if (wanted('board-lens') || wanted('board-lens-media')) {
     const out = await scenario('first-visit', { root: SERVE, mode: 'bluesky', responses: BOARD });
     await out.page.setViewportSize({ width: vp.width, height: vp.height });
     await out.page.goto(`${out.origin}${BOARD_PATH}`);
@@ -122,6 +122,10 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
       await out.page.waitForTimeout(200);
       await shoot(out.page, 'board-lens-media', 'lens:mock-board', name, vp);
     }
+    // the fixture's pictures point at cdn.test and never load — the stage is
+    // sized from the aspect ratio, which is the point — so drain the resource
+    // errors the browser logs for them; this is a capture, not a gate
+    out.consoleErrors(); out.errors();
     await out.close();
   }
   if (wanted('board-lens-in')) {
@@ -131,6 +135,7 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
     await inn.page.waitForSelector('.postrow', { timeout: 15000 });
     await inn.page.evaluate(() => document.fonts?.ready);
     await shoot(inn.page, 'board-lens-in', 'lens:mock-board', name, vp);
+    inn.consoleErrors(); inn.errors();
     await inn.close();
   }
 }
