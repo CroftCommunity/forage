@@ -55,7 +55,8 @@ kbd { background: var(--green-100); border: 1px solid var(--border); border-radi
 
 /* ---- Dev bar (§9) ---- */
 .devbar {
-  position: sticky; top: 0; z-index: 50;
+  /* scaffolding scrolls away; only the masthead pins (board-cards Phase 1) */
+  z-index: 50;
   background:
     repeating-linear-gradient(45deg, transparent, transparent 6px, var(--stripe) 6px, var(--stripe) 12px),
     var(--card);
@@ -80,6 +81,11 @@ kbd { background: var(--green-100); border: 1px solid var(--border); border-radi
 .devbar a.about:hover { background: var(--tint); text-decoration: none; border-color: var(--green-300); }
 
 /* ---- Header ---- */
+/* The masthead is PINNED (board-cards decision 9). `#masthost` is the render
+   pipeline's wrapper and it is `display: contents` on purpose: a sticky
+   element's range is its parent's box, and a wrapper exactly the masthead's
+   own height gave it a range of zero — the rule below sat dead since V1. */
+#masthost { display: contents; }
 .masthead {
   position: sticky; top: 0; z-index: 40;
   background: var(--band-fill); color: var(--band-ink);

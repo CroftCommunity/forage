@@ -75,6 +75,28 @@ async function assertBoth(page, label) {
   await assertTapTargets(page, label);
 }
 
+// Plan 2026-08-29 board-cards, Phase 1 (decision 9): the masthead is PINNED —
+// content scrolls under it, as on reddit. `.masthead` carried `position:
+// sticky` since V1 and it never held, because its host `#masthost` is a
+// wrapper exactly its own height: a sticky element's range is its parent's
+// box, so the range was zero and the rule was dead. This suite measured the
+// masthead's controls and never its position, which is how that shipped
+// unseen. The dev bar is scaffolding and must NOT pin — it scrolls away.
+const MASTHEAD_TOP = 0;
+async function assertMastheadPinned(page, label) {
+  const before = await page.evaluate(() => Math.round(document.querySelector('.masthead').getBoundingClientRect().top));
+  await page.evaluate(() => window.scrollBy(0, 600));
+  const { top, devTop, scrolled } = await page.evaluate(() => ({
+    top: Math.round(document.querySelector('.masthead').getBoundingClientRect().top),
+    devTop: document.querySelector('.devbar') ? Math.round(document.querySelector('.devbar').getBoundingClientRect().top) : null,
+    scrolled: window.scrollY,
+  }));
+  assert.ok(scrolled > 0, `${label}: the page did not scroll (${scrolled}) — the fixture is too short to test pinning`);
+  assert.equal(top, MASTHEAD_TOP, `${label}: masthead top after a 600px scroll is ${top} (was ${before}); it must stay pinned at ${MASTHEAD_TOP}`);
+  if (devTop !== null) assert.ok(devTop < 0, `${label}: the dev bar is scaffolding and must scroll away, but its top is ${devTop}`);
+  await page.evaluate(() => window.scrollTo(0, 0));
+}
+
 export async function run() {
   // ---- the bluesky population, guest surfaces ----
   // NB: replies must come from a DIFFERENT author than the root — same-author
@@ -107,6 +129,7 @@ export async function run() {
     await b.page.goto(`${b.origin}/f/whats-hot`);
     await b.page.waitForSelector('.postrow');
     await assertBoth(b.page, `feed board (long tokens) @${width}`);
+    await assertMastheadPinned(b.page, `feed board @${width}`);
 
     await b.page.goto(`${b.origin}/p?uri=${encodeURIComponent('at://did:plc:aa/app.bsky.feed.post/long1')}`);
     await b.page.waitForSelector('.comment');
@@ -120,6 +143,11 @@ export async function run() {
     await b.page.waitForSelector('text=Skin');
     await assertBoth(b.page, `/settings @${width}`);
   }
+  // Pinning is not a phone-only property — the laptop width too.
+  await b.page.setViewportSize({ width: 1280, height: 700 });
+  await b.page.goto(`${b.origin}/f/whats-hot`);
+  await b.page.waitForSelector('.postrow');
+  await assertMastheadPinned(b.page, 'feed board @1280');
   await b.close();
 
   // ---- the memory population, seeded ----
@@ -129,6 +157,7 @@ export async function run() {
     await m.page.goto(`${m.origin}/popular`);
     await m.page.waitForSelector('.postrow');
     await assertBoth(m.page, `memory popular @${width}`);
+    await assertMastheadPinned(m.page, `memory popular @${width}`);
 
     // pick a seeded thread that actually HAS comments (deep nesting is the
     // overflow risk we care about here)

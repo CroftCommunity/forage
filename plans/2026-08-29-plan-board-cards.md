@@ -3,7 +3,7 @@
 **Status:** Pass 1 written straight to the phase-plan template 2026-08-29; **Pass 2 (gap analysis)
 applied the same day** — every file:line below was read in the `board-cards` worktree at
 `411c40f`. **Pass 3 (quality gates) applied the same day.** Open-question severities O1–O5
-**confirmed as recommended by the owner 2026-08-29** ("accept all"). Not started; Phase 0 first.
+**confirmed as recommended by the owner 2026-08-29** ("accept all"). **Executing 2026-08-29** on `claude/board-cards-a`. Phase 0: D1 deferred to 5b (no device/adb attached); D2 answered (no `embed.video#view` in any fixture).
 **Progress tracker:** this Status line. At every phase end append `last green: <phase> @ <sha>`.
 **Origin:** the owner's review of forage.fyi after the post-and-thread landings (2026-08-29),
 with Reddit's front page as the reference; worked through four revisions of
@@ -171,7 +171,7 @@ code** (post-and-thread's D-landing lesson). Observability convention as in post
 
 ### Phase 0: Discovery — landing branch A
 
-- [ ] **D1: Does the blurred backdrop cost a phone anything?** Ten stages with
+- [ ] **D1 (DEFERRED 2026-08-29 — no device attached; re-run at 5b's validation): Does the blurred backdrop cost a phone anything?** Ten stages with
   `filter: blur(22px)` on a mid-range Android.
   - **Probe:** a one-page `scripts/probe-stage.html` with ten cards, opened over the LAN on
     the Samsung; scroll; read the frame timeline in DevTools remote.
@@ -179,7 +179,7 @@ code** (post-and-thread's D-landing lesson). Observability convention as in post
     flat darkened band (`prefers-reduced-transparency` also selects it).
   - **Disposition:** `throwaway`. **Needs the device** — deferred to Phase 5b's validation
     if none is attached, as post-and-thread D4 was.
-- [ ] **D2: Do video views in the fixtures carry `aspectRatio`?** `grep aspectRatio` over
+- [x] **D2 (answered 2026-08-29: NO fixture carries `embed.video#view` at all — `grep -ln` over `test/fixtures/atproto/*.json` is empty; 5a's unit test carries an inline video embed, and a video stage sizes from the thumbnail on load): Do video views in the fixtures carry `aspectRatio`?** `grep aspectRatio` over
   `test/fixtures/atproto/*.json` for `embed.video#view`; if absent, a video stage sizes
   from the thumbnail's natural size on load.
   - **Disposition:** `keep-as-fixture` (whatever fixture answers it drives 5a's unit test).
@@ -192,8 +192,8 @@ code** (post-and-thread's D-landing lesson). Observability convention as in post
 
 ### Landing branch A — quick wins
 
-#### Phase 1: the masthead pins (decision 9)
-**Changes:** `js/main.js` — `#masthost` becomes the sticky element (or `display: contents`);
+#### Phase 1: the masthead pins (decision 9) — ✅ shipped 2026-08-29
+**Changes:** `css/app.css` — `#masthost { display: contents }` (the wrapper was the masthead's own height, so the sticky range was zero; `main.js` untouched);
 `css/app.css` — `.devbar` loses `position: sticky`; `e2e/mobile-fit.workflow.mjs` — after
 `window.scrollBy(0, 600)` on a seeded board, `.masthead.getBoundingClientRect().top === 0`
 at 320/360/390 and 1280 (RED first).
