@@ -52,6 +52,7 @@ export const RESPONSES = {
   'getFeed?': FEED, 'getFeed': FEED,
   'getPostThread': { thread: { post: plain, replies: [] } },
   'getQuotes': { posts: [] },
+  'constellation.microcosm.blue/links?target=': { total: 0, linking_records: [] }, // the feed card's quote / starter-pack counts
   'describeRepo': { handle: 'me.test' },
   'getPreferences': { preferences: [] },
   'getProfile?actor=did%3Aplc%3Ame': { did: 'did:plc:me', handle: 'me.test', avatar: AV },

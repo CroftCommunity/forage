@@ -116,6 +116,12 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
     await out.page.waitForSelector('.postrow', { timeout: 15000 });
     await out.page.evaluate(() => document.fonts?.ready);
     await shoot(out.page, 'board-lens', 'lens:mock-board', name, vp);
+    // board-cards § D: the media stage — the portrait post scrolled to the top of the frame
+    if (wanted('board-lens-media')) {
+      await out.page.evaluate(() => document.querySelector('.postrow .media-stage, .postrow .stage, .postrow img')?.closest('.postrow')?.scrollIntoView({ block: 'start' }));
+      await out.page.waitForTimeout(200);
+      await shoot(out.page, 'board-lens-media', 'lens:mock-board', name, vp);
+    }
     await out.close();
   }
   if (wanted('board-lens-in')) {

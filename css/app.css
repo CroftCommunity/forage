@@ -291,12 +291,14 @@ button.avvote[aria-pressed="true"] { color: var(--boost); border-color: var(--bo
    handle is up to 30 characters, and at 390px it wrapped the time, "⟳ quoted this" and
    the ⋯ onto second and third lines (forage.fyi, owner screenshots 2026-08-30). The name
    is the only part that yields — it ellipsizes; everything after it keeps its width. */
-.comment > .comment-body > .byline { flex-wrap: nowrap; }
-.comment > .comment-body > .byline > .who { flex: 0 1 auto; min-width: 0; }
-.comment > .comment-body > .byline > :not(.who) { flex: none; white-space: nowrap; }
+.comment > .comment-body > .byline, .postrow .byline { flex-wrap: nowrap; }
+.comment > .comment-body > .byline > .who, .postrow .byline > .who { flex: 0 1 auto; min-width: 0; }
+.comment > .comment-body > .byline > :not(.who), .postrow .byline > :not(.who) { flex: none; white-space: nowrap; }
 /* the kind label ("⟳ quoted this") yields after the name does — at 320px nine deep there
-   is no room for both (e2e/mobile-fit's deep thread), and the time and ⋯ never yield */
-.comment > .comment-body > .byline > .kind { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+   is no room for both (e2e/mobile-fit's deep thread), and the time and ⋯ never yield.
+   `.postrow .byline` joined 2026-08-30 (mock-captures): the board row wrapped the same way
+   under a 30-character handle, found by the shipped capture for board-cards / § A. */
+.comment > .comment-body > .byline > .kind, .postrow .byline > .kind { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .byline .who.muted { color: var(--muted); }
 .byline .dot::before { content: "\b7"; }
 .av { width: 28px; height: 28px; border-radius: var(--radius-round); flex: none; display: grid; place-items: center; overflow: hidden;
