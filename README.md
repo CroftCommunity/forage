@@ -350,8 +350,9 @@ bsky.app. `/feeds` is feed discovery (searchable); every feed board carries its
 card.
 
 **Reading controls**, on every board: sort and timeframe (honestly scoped — they
-sort the *loaded* window, and say so), card or compact view, a slider for how
-large previews render, and content languages. A post declaring a language you do
+sort the *loaded* window, and say so), card or compact view, a four-notch card
+size (how much room a post takes, and how tall its pictures stand on their stage),
+and content languages. A post declaring a language you do
 not read is *annotated*, never hidden, until you choose otherwise — and when a
 filter does hide something, the board says how many and links to the setting.
 

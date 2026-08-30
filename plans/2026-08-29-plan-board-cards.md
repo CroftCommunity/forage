@@ -6,6 +6,7 @@ applied the same day** — every file:line below was read in the `board-cards` w
 **confirmed as recommended by the owner 2026-08-29** ("accept all"). **Executing 2026-08-29** on `claude/board-cards-a`. Phase 0: D1 deferred to 5b (no device/adb attached); D2 answered (no `embed.video#view` in any fixture).
 **Progress tracker:** this Status line. At every phase end append `last green: <phase> @ <sha>`.
 last green: Phase 1 @ f71a04d · Phase 2 @ 16edc2b · Phase 3 @ 509a3b9 · Phase 4 @ 490bfc0 · **branch A gated** (npm test 623/0, workflows 25/0) @ 6c4b508.
+Phase 5a @ 7372582 · 5b+5c @ db0a990 · Phase 6 @ 674b4f3 · **branch B gated** (see the landing commit).
 **Origin:** the owner's review of forage.fyi after the post-and-thread landings (2026-08-29),
 with Reddit's front page as the reference; worked through four revisions of
 `plans/mocks/board-cards.html` and **eight decisions locked on v5**. The mock is the picture;
@@ -284,7 +285,7 @@ visual judgement).
 
 ### Landing branch B — the stage
 
-#### Phase 5a: the lens shapes aspect ratios
+#### Phase 5a: the lens shapes aspect ratios — ✅ shipped 2026-08-29
 **Changes:** `js/substrates/lens.js:233-235` — `items[].aspect = {w,h}` from
 `image.aspectRatio` (null when absent); `video.aspect` likewise (D2); `test/lens.test.js` —
 pins both from the fixtures, and null when the embed has none.
@@ -294,7 +295,7 @@ pins both from the fixtures, and null when the embed has none.
 the image loads, which is only possible if this field reached the DOM. That is the wire.
 **Validation:** Narrow.
 
-#### Phase 5b: `js/ui/stage.js` (decision 4)
+#### Phase 5b: `js/ui/stage.js` (decision 4) — ✅ shipped 2026-08-29 (with 5c)
 - **5b-i (RED):** `e2e/media-stage.workflow.mjs` (new, lens shim with four posts: portrait
   9:16, landscape 4:3, wide 16:9, video) — every `.stage` is the card's inner width; its
   height ≤ the cap for the current size; the `img` is centred (`left + width/2 ≈ stage
@@ -317,8 +318,14 @@ has no `.stage-back` and a black ground; `prefers-reduced-transparency` → no b
 `load` (`console.debug('forage: stage sized from the picture — no aspect on the embed')`) —
 the line that explains a layout jump if one is ever reported.
 **Validation:** Broad — D1's device look (or its deferral recorded).
+**Found in execution:** Playwright cannot emulate `prefers-reduced-transparency`, so the suite
+asserts the branch as WRITTEN (a media rule naming it that hides `.stage-back`), not as
+rendered. Images are answered with an empty body rather than aborted — an abort logs a
+resource error the harness collects as a failure. `apply()` writes `data-cardsize` on the
+root and the STYLESHEET owns the four notches' numbers (no pixel in JS); the retired slider
+was only ever applied on a drag, so a stored size now lands before first paint (`main.js`).
 
-#### Phase 5c: `mediaNode` draws the stage; card size 1–4 replaces the slider (decision 7)
+#### Phase 5c: `mediaNode` draws the stage; card size 1–4 replaces the slider (decision 7) — ✅ shipped 2026-08-29
 - **5c-i (RED):** `e2e/bluesky-view.workflow.mjs:591-610` — the slider assertions become
   size assertions: `select[data-size]` on the toolbar, choosing 1 lowers `.stage` height,
   4 raises it; `:647-675` — `.media-strip img` → `.stage img`; `e2e/density` — the toolbar's
@@ -339,7 +346,7 @@ the line that explains a layout jump if one is ever reported.
 **Checkpoint:** *(Pass 3)* 5b and 5c are one CI-green point; commit 5b-ii and 5c together if
 5b-i cannot be made green alone.
 
-#### Phase 6: more than one picture (decision 5)
+#### Phase 6: more than one picture (decision 5) — ✅ shipped 2026-08-29
 - **6a (RED):** `e2e/media-stage` — a four-picture post: setting 1 → carousel (`[data-slide]`
   count 4, one visible, dots 4, `aria-live` region reads "picture 1 of 4"; → and ← keys
   move it; the arrows move it); setting 4 → `.stage-grid[data-count="4"]` with four `img`;
@@ -354,6 +361,11 @@ the live region carries the words; each slide keeps its own alt.
 every slide change; nothing logs.
 **Validation:** *(Pass 3)* Moderate — swipe on the Samsung (Playwright's touchscreen proves
 the handler, not the feel).
+**Found in execution:** the harness context has no `hasTouch`, so Playwright's `touchscreen`
+is unavailable; the swipe is pointer events (a finger and a mouse both send them) and the
+suite drives it with `mouse` — the handler is proven, the feel is the Samsung's. The rule
+(one → stage, ≤ setting → grid, more → carousel) is `layoutFor()` in `js/pictures.js`, a
+pure function with its own unit test, so the views cannot each re-derive it.
 **Done when:** `media-stage` green; `npm test` green.
 
 **Branch B lands:** `CHANGELOG.md`; mock baseline + snaps; `README.md:353`.

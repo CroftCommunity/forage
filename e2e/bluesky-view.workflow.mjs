@@ -585,29 +585,34 @@ export async function run() {
   assert.equal(await page.locator('[data-feed-header] [data-feed-favorite]').count(), 1,
     '3s: and the favorite star rides beside it');
 
-  // 3t: the image-size slider. It rides on the sort row, belongs to CARD view
-  // only (compact shows no media, so a media control there is a lie), and a
-  // drag resizes the board without refetching or repainting it.
-  await page.waitForSelector('[data-board-toolbar] [data-media-scale]');
-  const beforeH = await page.locator('.media-strip img').first()
-    .evaluate((n) => parseFloat(getComputedStyle(n).maxHeight));
-  await page.locator('[data-board-toolbar] [data-media-scale]').fill('440');
-  await page.locator('[data-board-toolbar] [data-media-scale]').dispatchEvent('input');
-  await page.waitForFunction(() => {
-    const img = document.querySelector('.media-strip img');
-    return img && parseFloat(getComputedStyle(img).maxHeight) > 400;
-  });
-  const afterH = await page.locator('.media-strip img').first()
-    .evaluate((n) => parseFloat(getComputedStyle(n).maxHeight));
-  assert.ok(afterH > beforeH, `the slider grows the preview (${beforeH}px → ${afterH}px)`);
+  // board-cards decision 7: the card SIZE — four notches, 4 as drawn — replaced
+  // the 3t drag slider (which on a phone moved in visible jumps). It rides on
+  // the sort row as the same pill as its neighbours, in card AND compact (it
+  // scales padding and title, not only the stage), and a change resizes the
+  // board through one root attribute — no refetch, no repaint of the rows.
+  await page.waitForSelector('[data-board-toolbar] select[data-size]');
+  assert.equal(await page.locator('[data-board-toolbar] [data-media-scale]').count(), 0, 'the slider is gone');
+  assert.ok(await page.locator('[data-board-toolbar] select[data-size]').evaluate((n) => n.classList.contains('pillsel')), 'the size dial is a pill like its neighbours');
+  assert.deepEqual(await page.locator('[data-board-toolbar] select[data-size]').evaluate((n) => [...n.options].map((o) => o.value)), ['1', '2', '3', '4']);
+  const stageH = () => page.locator('.stage').first().evaluate((n) => n.getBoundingClientRect().height);
+  const beforeH = await stageH();
+  await page.locator('[data-board-toolbar] select[data-size]').selectOption('1');
+  await page.waitForFunction(() => document.documentElement.getAttribute('data-cardsize') === '1');
+  const smallH = await stageH();
+  assert.ok(smallH < beforeH, `size 1 lowers the stage (${beforeH}px → ${smallH}px)`);
+  await page.locator('[data-board-toolbar] select[data-size]').selectOption('4');
+  await page.waitForFunction(() => document.documentElement.getAttribute('data-cardsize') === '4');
+  assert.ok(await stageH() > smallH, 'size 4 raises it again');
   // it is remembered on this device (a trending board is not restorable by URL
   // — its source registry is in-memory — so the preference itself is the check)
-  assert.equal(await page.evaluate(() => localStorage.getItem('forage.mediascale')), '440');
-  // and compact view hides it, because compact has no media to size
-  await page.locator('[data-board-toolbar] select').last().selectOption('compact');
-  await page.waitForSelector('[data-board-toolbar] [data-media-scale]', { state: 'hidden' });
-  await page.locator('[data-board-toolbar] select').last().selectOption('card');
-  await page.waitForSelector('[data-board-toolbar] [data-media-scale]');
+  assert.equal(await page.evaluate(() => localStorage.getItem('forage.cardsize')), '4');
+  assert.equal(await page.evaluate(() => localStorage.getItem('forage.mediascale')), null, 'nothing writes the retired key');
+  // and it stays in compact view: the size is about the card, not the media
+  await page.locator('[data-board-toolbar] select[data-density]').selectOption('compact');
+  await page.waitForSelector('.postrow.compact');
+  assert.equal(await page.locator('[data-board-toolbar] select[data-size]').count(), 1, 'the size dial stays in compact');
+  await page.locator('[data-board-toolbar] select[data-density]').selectOption('card');
+  await page.waitForSelector('.stage');
 
   // 3u: a post declaring a language you do not read is ANNOTATED, not hidden,
   // until you say otherwise. Then the filter hides it and SAYS it did — a
@@ -643,17 +648,18 @@ export async function run() {
   assert.ok(btext.indexOf('post tp1') < btext.indexOf('post tp2'), 'Top re-sorts by score');
   await page.locator('[data-board-toolbar] select').first().selectOption('feed');
 
-  // 3i segment: media renders in Card; image-only titles from alt; Compact drops it
-  await page.waitForSelector('.media-strip img');
+  // 3i segment: media renders in Card (on a STAGE since board-cards Phase 5);
+  // image-only titles from alt; Compact drops it
+  await page.waitForSelector('.stage img.stage-fore');
   await page.waitForSelector('text=a test image post');
   // The no-alt image post (tp4): its media renders, so the '[image]'
   // placeholder title must NOT print above it — the image is the content.
-  assert.ok(await page.locator('.media-strip img').count() >= 2,
+  assert.ok(await page.locator('.stage img.stage-fore').count() >= 2,
     'the no-alt image post still renders its image in card mode');
   assert.equal(await page.locator('.posttitle', { hasText: '[image]' }).count(), 0,
     'card mode never prints the literal [image] placeholder above a rendered image');
   await page.locator('[data-board-toolbar] select[data-density]').selectOption('compact');
-  await page.waitForFunction(() => !document.querySelector('.media-strip'));
+  await page.waitForFunction(() => !document.querySelector('.stage'));
   assert.ok(await page.locator('.postrow.compact').count() > 0, 'compact rows are compact');
   // Compact renders no media strip, but a placeholder-titled row still needs a
   // handle — a tiny thumbnail linking to the thread, not the literal '[image]'.
@@ -664,7 +670,7 @@ export async function run() {
   assert.ok(await page.locator('.posttitle a:has(img.title-thumb)').first()
     .getAttribute('aria-label'), 'the thumb link carries an accessible name');
   await page.locator('[data-board-toolbar] select[data-density]').selectOption('card');
-  await page.waitForSelector('.media-strip img');
+  await page.waitForSelector('.stage img.stage-fore');
   assert.equal(await page.locator('img.title-thumb').count(), 0,
     'card rows render the real media, never the compact thumb');
 
@@ -672,7 +678,7 @@ export async function run() {
   // now an image post's thread page rendered no image at all), and with the
   // media on the page the placeholder heading drops.
   await page.goto(`${s.origin}/p?uri=${encodeURIComponent('at://did:plc:cc/app.bsky.feed.post/tp4')}`);
-  await page.waitForSelector('.media-strip img');
+  await page.waitForSelector('.stage img.stage-fore');
   assert.equal(await page.locator('h1', { hasText: '[image]' }).count(), 0,
     'the thread head never prints the literal [image] above the rendered image');
 

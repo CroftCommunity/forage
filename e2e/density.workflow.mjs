@@ -44,6 +44,10 @@ async function assertOneDressing(page, label) {
     `${label}: the dial wears the same pill dressing as the sort selects`);
   assert.deepEqual(await dial.evaluate((s) => [...s.options].map((o) => o.textContent)), ['Card', 'Compact'],
     `${label}: the dial offers exactly the two densities`);
+  // board-cards Phase 5c: the card size dial (1–4) sits in the same row, same dressing
+  const size = page.locator('#main .sortbar select[data-size]');
+  assert.equal(await size.count(), 1, `${label}: the card size dial sits in the sort bar's row too`);
+  assert.ok(await size.evaluate((s) => s.classList.contains('pillsel')), `${label}: …as a pill`);
 }
 
 export async function run() {
