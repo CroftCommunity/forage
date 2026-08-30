@@ -8,6 +8,11 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-08
 
+- 2026-08-29 **Posts and comments open with a byline** — the author's picture (initials
+  until it loads, or when the account has none), their name, a bare time (`1d`), and a
+  ⋯ slot top-right, the same on a board row and on every comment; the masthead's account
+  control shows your real picture. The ⋯ does nothing yet — its menu is the next
+  landing. (plan 2026-08-29-plan-post-and-thread, branch A)
 - 2026-08-29 The sign-in sheet's front page is the servers you can join from here — Bluesky,
   Blacksky and, new, EuroSky (`eurosky.social`, open signups). Invite-only servers
   (Northsky) moved behind **Another provider**, next to the handle field, still with Sign

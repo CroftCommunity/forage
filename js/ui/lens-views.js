@@ -35,6 +35,11 @@ import { HASHTAG_SECTIONS, SECTION_IDS, sectionLabel, sectionEnabled, setSection
 
 let manager = null;        // null = not booted; 'unavailable' = origin has no OAuth client
 let session = null;        // the lens session shape, set after restore
+// Decision 8 (plan 2026-08-29 post-and-thread): the masthead shows the
+// account's picture. Fetched once per sign-in, fire-and-forget — a failure
+// leaves the initials stand-in, which is the loading state anyway.
+let sessionAvatarUrl = null;
+export function sessionAvatar() { return session ? sessionAvatarUrl : null; }
 let lens = createLens({});
 let bootPromise = null;   // the in-flight boot, SHARED — see bootAuth()
 // which feeds the account has saved (join state). Fetched ONCE per session
@@ -315,6 +320,9 @@ async function adoptSession(s) {
   } catch { /* keep the did */ }
   session = { did: s.did, handle, fetchHandler: (p, i) => manager.fetch(p, i) };
   lens = createLens({ session });
+  sessionAvatarUrl = null;
+  lens.profile(s.did).then((p) => { if (session?.did === s.did) { sessionAvatarUrl = p.avatar; rerender(); } })
+    .catch((e) => console.warn('forage: could not load your profile picture', e));
   savedFeedUris.clear();
   pinnedFeedUris.clear();
   savedFeedsPromise = null;

@@ -480,3 +480,31 @@ test('3i: video and recordWithMedia surface their media; external thumbs ride al
   assert.equal(untitled.media.kind, 'external');
   assert.equal(untitled.media.title, null, 'absent title is null, never the uri');
 });
+
+// ---- plan 2026-08-29 post-and-thread, Phase 2a: avatars are real ----------
+// The lens shaped `avatar` on profiles and feeds and never on a post or a
+// thread node, so the byline could only draw initials. Both fields are on
+// app.bsky.feed.defs#postView.author (profileViewBasic); the authed-thread
+// fixture carries one.
+test('2a: a post carries its author avatar, and null — never undefined — when the author has none', () => {
+  const root = fixture('wide-authed-thread-liked').thread.post;
+  assert.ok(root.author.avatar, 'fixture precondition: the root author has an avatar');
+  assert.equal(shapeLensPost(root, SRC).avatar, root.author.avatar);
+  const bare = { ...root, author: { did: root.author.did, handle: root.author.handle } };
+  assert.strictEqual(shapeLensPost(bare, SRC).avatar, null);
+});
+
+test('2a: every thread node carries its own author avatar', () => {
+  const root = fixture('wide-authed-thread-liked').thread.post;
+  const reply = (id, avatar) => ({ post: {
+    uri: `at://did:plc:${id}/app.bsky.feed.post/${id}`, cid: 'c' + id,
+    author: { did: `did:plc:${id}`, handle: `${id}.test`, ...(avatar ? { avatar } : {}) },
+    record: { text: 'r ' + id, createdAt: '2026-08-29T10:00:00Z' }, indexedAt: '2026-08-29T10:00:00Z',
+    likeCount: 0, replyCount: 0,
+  }, replies: [] });
+  const t = shapeLensThread({ thread: { post: root, replies: [
+    reply('aa', 'https://cdn.example/aa.jpg'), reply('bb', null),
+  ] } }, SRC);
+  assert.equal(t.post.avatar, root.author.avatar, 'the head keeps its picture');
+  assert.deepEqual(t.comments.map((c) => c.avatar), ['https://cdn.example/aa.jpg', null]);
+});

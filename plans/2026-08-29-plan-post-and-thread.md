@@ -4,7 +4,7 @@
 applied the same day** — see Review Log. **Pass 3 (quality gates) applied the same day** — see
 Review Log. **Not started: Phase 0 first.** Open-question severities (O2–O8) **confirmed as recommended by the owner
 2026-08-29** ("accept all as recommended"): O5/O6/O8 PHASE-GATED, O2/O3/O4/O7 ADVISORY.
-**Progress tracker:** this Status line. At every phase end append `last green: <phase> @ <sha>`;
+**Progress tracker:** this Status line. last green: Phase 2 (branch A) — At every phase end append `last green: <phase> @ <sha>`;
 at every landing the CHANGELOG entry and the mock's `mock-baseline` sha are the markers.
 **Origin:** owner session 2026-08-29 — Reddit (web + Android) and Bluesky screenshots
 studied against Forage as it renders, worked through twelve revisions of a mock, and
@@ -415,7 +415,12 @@ phone rule makes it 44 on `[data-phone]`; `mobile-fit` measures at 320/360/390 s
 kebab must be 44 there. Carry the mock's `.app[data-phone]` rule as a `@media
 (max-width: 480px)` rule).
 
-#### Phase 2: real avatars on posts, comments, and the masthead (lens)
+#### Phase 2: real avatars on posts, comments, and the masthead (lens) — ✅ SHIPPED (branch A)
+**Delivered:** 2a as specified. 2b touched `js/ui/lens-views.js` as well (the session's
+picture is fetched in `adoptSession` via `lens.profile(did)` and exposed as
+`sessionAvatar()`; `main.js` only draws it) — three files, still under the rule. The
+new sign-in read needed a fixture in `bluesky-view` (it holds every read to one) and the
+posture reads needed four in `avatar-nav` (which now asserts no shim misses).
 **Goal:** the avatar slot shows the account's picture wherever the lens has one; initials
 are the loading state.
 **Changes:**

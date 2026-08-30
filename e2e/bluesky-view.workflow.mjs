@@ -42,6 +42,8 @@ export async function run() {
     initScripts: [FAKE_SIGNED_IN],
     responses: {
       'describeRepo': { handle: 'me.test' },
+      // Phase 2 (plan 2026-08-29 post-and-thread): sign-in reads the profile once for the masthead picture
+      'getProfile?actor=did%3Aplc%3Ame': { did: 'did:plc:me', handle: 'me.test', displayName: 'Me' },
       'getPreferences': { preferences: [{ $type: 'app.bsky.actor.defs#mutedWordsPref',
         items: [{ value: 'kryptonite', targets: ['content'], actorTarget: 'all' }] }] },
       'getFeedGenerator?': { view: { uri: 'at://did:plc:trends/app.bsky.feed.generator/meadow1',

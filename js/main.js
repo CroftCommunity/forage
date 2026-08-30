@@ -102,11 +102,15 @@ function masthead() {
           const initials = name
             ? name.split('.')[0].slice(0, 2).toLowerCase()
             : '\u00b7\u00b7';
+          // Decision 8 (plan 2026-08-29 post-and-thread): the picture, when
+          // the account has one — initials stay underneath as the
+          // not-yet-loaded state, so nothing flashes and nothing shifts.
+          const avatar = lensViews.sessionAvatar();
           return el('a', {
             class: 'accountbtn', href: '/me', 'data-account': '1',
             'aria-label': name ? `${name} — your account and preferences` : 'Your account and preferences',
             title: name ? `${name} — account and preferences` : 'Account and preferences',
-          }, initials);
+          }, initials, avatar ? el('img', { src: avatar, alt: '' }) : null);
         })(),
         who === 'connecting' ? el('span', { class: 'small muted' }, '\u2026')
           : who ? null

@@ -144,8 +144,10 @@ routes gate with words.
 is a row with exactly one job — the two-half strip it replaced died of a control
 that was a tab AND a menu opener, so switching always opened a menu. On a phone
 the nav is a drawer, which costs no vertical space until opened. The masthead
-carries a hamburger, the skin toggle and ONE account control: a 44px stand-in
-avatar, because the bar fits a single row at 320px only just.
+carries a hamburger, the skin toggle and ONE account control: a 44px avatar —
+the account's own picture, initials underneath as the not-yet-loaded state (plan
+2026-08-29 post-and-thread, decision 8) — because the bar fits a single row at
+320px only just.
 
 **Everything in the nav is a BOARD**, and boards differ only in where the posts
 come from: a feed generator, a hashtag, or your own graph at some reach. There
