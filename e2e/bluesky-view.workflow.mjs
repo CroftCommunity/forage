@@ -147,7 +147,11 @@ export async function run() {
         replies: [
           { post: { ...post('bpart2', 'did:plc:bb', '2026-08-25T11:05:00Z').post,
             record: { text: 'the continuation 2/2', createdAt: '2026-08-25T11:05:00Z' } }, replies: [] },
-          { post: post('reply1', 'did:plc:aa', '2026-08-25T11:30:00Z').post, replies: [] },
+          // Phase 8: reply1 has a child, so a fold has something to hide
+          { post: post('reply1', 'did:plc:aa', '2026-08-25T11:30:00Z').post, replies: [
+            { post: { ...post('reply1a', 'did:plc:bb', '2026-08-25T11:35:00Z').post,
+              record: { text: 'a reply to reply1', createdAt: '2026-08-25T11:35:00Z' } }, replies: [] },
+          ] },
           { post: { ...post('myreply', 'did:plc:me', '2026-08-25T11:45:00Z').post,
             record: { text: 'a reply of my own', createdAt: '2026-08-25T11:45:00Z' } }, replies: [] },
         ],
@@ -252,36 +256,55 @@ export async function run() {
   assert.match(await qnode.innerText(), /post quote1/, 'the quote body renders in the thread');
   assert.ok(await qnode.locator('a:has-text("open its thread")').count(), 'a quote opens as its own room');
 
-  // 3q: the quote is WALLED — a left rule and its own tinted block — so it
-  // reads as a top-level thread on the post instead of blending into the
-  // replies beneath it. The replies keep the collapse gutter; never both.
-  const qbox = await qnode.evaluate((n) => {
-    const cs = getComputedStyle(n);
-    // :scope > — a quote's own chrome. Its nested replies (3r) legitimately
-    // carry gutters of their own; what must never happen is one node wearing
-    // both grammars.
-    return { wall: parseFloat(cs.borderLeftWidth), bg: cs.backgroundColor, gutters: n.querySelectorAll(':scope > .gutter').length };
+  // 3q: the quote is WALLED — a left rule — so it reads as a top-level thread
+  // on the post instead of blending into the replies beneath it.
+  //
+  // Phase 8 (plan 2026-08-29 post-and-thread, decision 2): the collapse
+  // GUTTER is retired. The grammar now: a comment WITH replies carries one ⊖
+  // (button[data-fold]) on its action row and a rail (.avcol > .line) under
+  // its avatar; a reply without children carries neither; a walled quote
+  // carries neither. Each child draws its own elbow (a ::before). Folding
+  // hides .kids and the button says how many it hid.
+  const chrome = (n) => ({
+    wall: parseFloat(getComputedStyle(n).borderLeftWidth),
+    folds: n.querySelectorAll(':scope > .cact > [data-fold]').length,
+    rails: n.querySelectorAll(':scope > .avcol > .line').length,
+    elbow: getComputedStyle(n, '::before').content !== 'none',
+    gutters: n.querySelectorAll('.gutter').length,
   });
+  const qbox = await qnode.evaluate(chrome);
   assert.ok(qbox.wall >= 2, `the quote carries a left wall (got ${qbox.wall}px)`);
-  assert.equal(qbox.gutters, 0, 'a walled quote has no collapse gutter — the two grammars stay distinct');
-  const replyBox = await page.locator('.card > .comment:not([data-kind="quote"])').first()
-    .evaluate((n) => ({ wall: parseFloat(getComputedStyle(n).borderLeftWidth), gutters: n.querySelectorAll(':scope > .gutter').length }));
-  assert.equal(replyBox.wall, 0, 'a reply is NOT walled');
-  assert.ok(replyBox.gutters >= 1, 'a reply keeps its collapse gutter');
+  assert.equal(qbox.folds, 0, 'a walled quote has no fold — the two grammars stay distinct');
+  assert.equal(qbox.rails, 0, 'and no rail');
+  assert.equal(qbox.gutters, 0, 'the gutter is gone everywhere');
+  const leaf = await page.locator('.comment[data-node-id$="/myreply"]').evaluate(chrome);
+  assert.equal(leaf.wall, 0, 'a reply is NOT walled');
+  assert.equal(leaf.folds, 0, 'a reply with no children has no fold');
+  assert.equal(leaf.rails, 0, 'and no rail');
+  assert.equal(leaf.elbow, false, 'a depth-0 reply has no elbow');
+  const parent = page.locator('.comment[data-node-id$="/reply1"]');
+  const parentChrome = await parent.evaluate(chrome);
+  assert.equal(parentChrome.folds, 1, 'a reply with children has exactly one fold');
+  assert.equal(parentChrome.rails, 1, 'and a rail under its avatar');
+  const child = await page.locator('.comment[data-node-id$="/reply1a"]').evaluate(chrome);
+  assert.equal(child.elbow, true, 'a nested reply draws its elbow off the rail');
+  assert.equal(await parent.locator(':scope > .avcol > .line').evaluate((n) => getComputedStyle(n).pointerEvents), 'none',
+    'the rail is a drawing, not a target');
 
-  // …and the gutter actually COLLAPSES. This was asserted nowhere until
-  // 2026-08-27, and it mattered from that day: score-threshold auto-collapse
-  // was retired (downvotes are gone, so no score can fall below a threshold),
-  // and it was the only collapse with behavioural coverage. Removing a feature
-  // must not leave the surviving one with LESS coverage than the pair had.
-  const foldTarget = page.locator('.card > .comment:not([data-kind="quote"])').first();
-  const bodyShown = () => foldTarget.locator(':scope > .comment-body > .comment-text').first().isVisible();
-  assert.equal(await bodyShown(), true, 'a reply starts open — nothing folds on its own now');
-  await foldTarget.locator(':scope > .gutter').first().click();
-  assert.equal(await bodyShown(), false, 'clicking the rail folds the subtree');
-  assert.match(await foldTarget.innerText(), /\[\+\]/, 'and says how much it hid');
-  await foldTarget.locator(':scope > .gutter').first().click();
-  assert.equal(await bodyShown(), true, 'clicking it again unfolds — a one-way collapse is a trap');
+  // …and the fold actually FOLDS. Behavioural coverage of the collapse has
+  // existed since 2026-08-27; retiring the gutter must not leave less.
+  const fold = parent.locator(':scope > .cact > [data-fold]');
+  const kidsShown = () => parent.locator(':scope > .kids').isVisible();
+  assert.equal(await kidsShown(), true, 'a reply starts open — nothing folds on its own now');
+  assert.equal(await fold.getAttribute('aria-expanded'), 'true');
+  await fold.click();
+  assert.equal(await kidsShown(), false, 'clicking ⊖ folds the replies');
+  assert.equal(await fold.getAttribute('aria-expanded'), 'false');
+  assert.match((await fold.innerText()).replace(/\s+/g, ' '), /1 reply hidden/, 'and says how much it hid');
+  assert.equal(await page.locator('.comment[data-node-id$="/myreply"] > .kids, .comment[data-node-id$="/myreply"] > .comment-text').first().isVisible(), true,
+    'folding one comment leaves its siblings alone');
+  await fold.click();
+  assert.equal(await kidsShown(), true, 'clicking it again unfolds — a one-way collapse is a trap');
   // and the body is styled at all — .cmeta/.cbody had no rules, so the node
   // used to render as default body text (2026-08-26)
   const qFont = await qnode.locator(':scope > .quote-body').evaluate((n) => parseFloat(getComputedStyle(n).fontSize));
