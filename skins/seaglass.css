@@ -1,0 +1,73 @@
+/* Seaglass (foam) — the warm set, plan 2026-08-30-plan-warm-skins. Light half
+   of the `seaglass` family; skins/seaglass-dark.css is the sibling.
+
+   The COOL one, on purpose: the ask was warmth AND diversity, and three warm
+   skins plus one mint is a set where four warm skins is a mood. Inspiration is
+   the white-and-mint prosilver descendants (Artodia's Air, and the Aero line
+   that followed), which paired a sea-green band with a coral or orange hover.
+   Kept: the coral hover, the rounder 10px corners those styles favoured, and
+   Trebuchet. Every value is ours; none was measured from a real style.
+
+   CONTRAST (measured by test/skins.test.js):
+     text        #1F3A36  on bg          #EEF7F4   11.21:1  body
+     text        #1F3A36  on card        #FFFFFF   12.23:1  body
+     text        #1F3A36  on row-even    #EEF7F4   11.21:1  body
+     text        #1F3A36  on row-head    #D8ECE5    9.93:1  body
+     text        #1F3A36  on nav-fill    #D8ECE5    9.93:1  body
+     muted       #4F6E68  on bg          #EEF7F4    5.11:1  body
+     link        #0B6B5C  on card        #FFFFFF    6.42:1  body
+     link        #0B6B5C  on nav-fill    #D8ECE5    5.21:1  body
+     link-hover  #B93E28  on card        #FFFFFF    5.55:1  body
+     brand-ink   #0B6B5C  on tint        #DDF0E9    5.41:1  body
+     band-ink    #FFFFFF  on band-fill   #117A6D    5.21:1  large/UI
+     band-link   #FFFFFF  on band-fill   #117A6D    5.21:1  large/UI
+     on-brand    #FFFFFF  on brand-fill  #117A6D    5.21:1  body
+     on-brand    #FFFFFF  on brand-fill-hover #0E6A5E    6.48:1  body
+     danger-ink  #8F2A22  on danger-tint #F8ECEA    7.21:1  body
+     tag chip: --gold-strong on mix(gold 18%, card)=#f5eddc  5.09
+     unread pill: white on --clay-600 #A24D2C  5.78
+*/
+:root {
+  --bg:          #EEF7F4;
+  --card:        #FFFFFF;
+  --card-2:      #E2F0EB;
+  --text:        #1F3A36;
+  --muted:       #4F6E68;
+  --border:      #CDE3DC;
+
+  --link:        #0B6B5C;
+  --link-hover:  #B93E28;
+  --brand-ink:   #0B6B5C;
+  --brand-fill:  #117A6D;
+  --brand-fill-hover: #0E6A5E;
+  --on-brand:    #FFFFFF;
+
+  --band-fill:   #117A6D;
+  --band-ink:    #FFFFFF;
+  --band-link:   #FFFFFF;
+  --band-brand:  #FFFFFF;
+  --nav-fill:    #D8ECE5;
+  --panel:       #FFFFFF;
+  --row-odd:     #FFFFFF;
+  --row-even:    #EEF7F4;
+  --row-head:    #D8ECE5;
+
+  --boost:       #0B6B5C;
+  --bury:        #B93E28;
+  --tint:        #DDF0E9;
+
+  --gold-500:    #C99A3C;
+  --gold-strong: #7A6110;
+  --danger:      #9E2F26;
+  --danger-ink:  #8F2A22;
+  --danger-tint: #F8ECEA;
+  --clay-600:    #A24D2C;
+  --stripe:      rgba(0,0,0,.03);
+
+  --font-body:   "Trebuchet MS", Verdana, Helvetica, Arial, sans-serif;
+  --font-display: "Trebuchet MS", Verdana, Helvetica, Arial, sans-serif;
+  --radius-card:  10px;
+  --radius-sm:    5px;
+  --card-shadow:  0 1px 3px rgba(20, 80, 70, .10);
+  --color-scheme: light;
+}

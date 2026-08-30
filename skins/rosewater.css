@@ -1,0 +1,79 @@
+/* Rosewater (blush) — the warm set, plan 2026-08-30-plan-warm-skins. Light
+   half of the `rosewater` family; skins/rosewater-dark.css is the sibling.
+
+   INSPIRATION, not import. The classic phpBB era shipped pink prosilver as a
+   matter of course — the ColorizeIt recolours and a long tail of "pink
+   prosilver" styles on the customisation database — and every one of them kept
+   prosilver's grammar: a filled masthead band, a pale tab strip under it, white
+   cards on a tinted ground, 7px corners, Verdana body. This skin keeps that
+   grammar and NONE of their hexes: every value below is ours, chosen for AA
+   first and for warmth second. Nothing here was measured from a real style,
+   which is why no value is marked MEASURED (contrast with skins/phpbb.css).
+
+   The one typographic move: Georgia for display. The pink boards of that era
+   reached for a serif wordmark more often than not, and it is what separates
+   "warm" from "prosilver with the hue slider moved".
+
+   CONTRAST (measured by test/skins.test.js, which recomputes every row):
+     text        #3D262E  on bg          #FBF1F3   12.53:1  body
+     text        #3D262E  on card        #FFFFFF   13.86:1  body
+     text        #3D262E  on row-even    #FBF1F3   12.53:1  body
+     text        #3D262E  on row-head    #F3D9E0   10.44:1  body
+     text        #3D262E  on nav-fill    #F3D9E0   10.44:1  body
+     muted       #75565F  on bg          #FBF1F3    5.83:1  body
+     link        #A8244F  on card        #FFFFFF    6.93:1  body
+     link        #A8244F  on nav-fill    #F3D9E0    5.22:1  body
+     link-hover  #7E1A3B  on card        #FFFFFF   10.01:1  body
+     brand-ink   #A8244F  on tint        #F7E1E7    5.57:1  body
+     band-ink    #FFFFFF  on band-fill   #B83A65    5.48:1  large/UI
+     band-link   #FFFFFF  on band-fill   #B83A65    5.48:1  large/UI
+     on-brand    #FFFFFF  on brand-fill  #B83A65    5.48:1  body
+     on-brand    #FFFFFF  on brand-fill-hover #A4325A    6.60:1  body
+     danger-ink  #8F2A22  on danger-tint #F8ECEA    7.21:1  body
+     tag chip: --gold-strong on mix(gold 18%, card)=#f8efdd  5.58
+     unread pill: white on --clay-600 #A24D2C  5.78
+*/
+:root {
+  --bg:          #FBF1F3;
+  --card:        #FFFFFF;
+  --card-2:      #F7E6EA;
+  --text:        #3D262E;
+  --muted:       #75565F;
+  --border:      #E9CDD4;
+
+  --link:        #A8244F;
+  --link-hover:  #7E1A3B;
+  --brand-ink:   #A8244F;
+  --brand-fill:  #B83A65;
+  --brand-fill-hover: #A4325A;
+  --on-brand:    #FFFFFF;
+
+  --band-fill:   #B83A65;
+  --band-ink:    #FFFFFF;
+  --band-link:   #FFFFFF;
+  --band-brand:  #FFFFFF;
+  --nav-fill:    #F3D9E0;
+  --panel:       #FFFFFF;
+  --row-odd:     #FFFFFF;
+  --row-even:    #FBF1F3;
+  --row-head:    #F3D9E0;
+
+  --boost:       #A8244F;
+  --bury:        #A24D2C;
+  --tint:        #F7E1E7;
+
+  --gold-500:    #D9A441;
+  --gold-strong: #7A5A0E;
+  --danger:      #9E2F26;
+  --danger-ink:  #8F2A22;
+  --danger-tint: #F8ECEA;
+  --clay-600:    #A24D2C;
+  --stripe:      rgba(0,0,0,.03);
+
+  --font-body:   Verdana, Helvetica, Arial, sans-serif;
+  --font-display: Georgia, "Times New Roman", serif;
+  --radius-card:  7px;
+  --radius-sm:    4px;
+  --card-shadow:  0 1px 3px rgba(120, 40, 70, .10);
+  --color-scheme: light;
+}

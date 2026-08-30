@@ -60,6 +60,15 @@ export const FAMILIES = Object.freeze({
   bbs: { label: 'Classic BBS' },
   usenet: { label: 'Usenet gray' },
   phpbb: { label: 'phpBB', prefersDensity: 'compact' },
+  // The warm set (plan 2026-08-30-plan-warm-skins). Every family above is cool
+  // or neutral; these four are drawn from the classic phpBB era's colour
+  // variants — the pink/purple/orange prosilver recolours, the coffee styles,
+  // the mint-and-white ones — under our own names and values. Each ships both
+  // palettes, so the toggle is live on all four.
+  rosewater: { label: 'Rosewater' },
+  lavender: { label: 'Lavender' },
+  apricot: { label: 'Apricot' },
+  seaglass: { label: 'Seaglass' },
 });
 
 export const SKINS = Object.freeze({
@@ -74,6 +83,16 @@ export const SKINS = Object.freeze({
   // a first-class entry, not tied to any mode.
   phpbb: { label: 'phpBB (classic board)', file: 'skins/phpbb.css', palette: 'light', family: 'phpbb' },
   'phpbb-dark': { label: 'phpBB (after hours)', file: 'skins/phpbb-dark.css', palette: 'dark', family: 'phpbb' },
+  // The warm set. Light is the bare family id, dark is `<family>-dark` — the
+  // convention the phpBB pair set, and test/skins.test.js pins it.
+  rosewater: { label: 'Rosewater (blush)', file: 'skins/rosewater.css', palette: 'light', family: 'rosewater' },
+  'rosewater-dark': { label: 'Rosewater (plum)', file: 'skins/rosewater-dark.css', palette: 'dark', family: 'rosewater' },
+  lavender: { label: 'Lavender (lilac)', file: 'skins/lavender.css', palette: 'light', family: 'lavender' },
+  'lavender-dark': { label: 'Lavender (twilight)', file: 'skins/lavender-dark.css', palette: 'dark', family: 'lavender' },
+  apricot: { label: 'Apricot (cream)', file: 'skins/apricot.css', palette: 'light', family: 'apricot' },
+  'apricot-dark': { label: 'Apricot (espresso)', file: 'skins/apricot-dark.css', palette: 'dark', family: 'apricot' },
+  seaglass: { label: 'Seaglass (foam)', file: 'skins/seaglass.css', palette: 'light', family: 'seaglass' },
+  'seaglass-dark': { label: 'Seaglass (deep water)', file: 'skins/seaglass-dark.css', palette: 'dark', family: 'seaglass' },
 });
 
 // ---- families -------------------------------------------------------------

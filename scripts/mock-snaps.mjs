@@ -12,6 +12,11 @@
 //       # Current frames come from the tree the owner is running, captured by
 //       # the branch that proposes to change it
 //   --out <dir>   somewhere other than plans/mocks/snaps
+//   --skin <id>   capture in a registered skin (a skin id, not a family) — the
+//                 file name and the manifest carry the id. MOCKS.md says compare
+//                 in ONE skin, and the default one; this flag is for the mock
+//                 where the skin IS the subject (warm-skins), and the page it
+//                 feeds must say so.
 //
 // Two populations, both hermetic (the same trees the workflows grade):
 //   memory:seeded    the e2e harness's seeded memory sandbox — board + thread
@@ -25,6 +30,7 @@ import { scenario } from '../e2e/harness/scenario.mjs';
 import { RESPONSES, FAKE_SIGNED_IN, THREAD_PATH, NODE_IDS } from '../e2e/harness/mock-thread.mjs';
 import { RESPONSES as BOARD, BOARD_PATH } from '../e2e/harness/mock-board.mjs';
 import { mergeManifest } from './lib/snaps-manifest.mjs';
+import { SKINS } from '../js/skins.js';
 import { execFileSync } from 'node:child_process';
 import { writeFileSync, mkdirSync, readFileSync, existsSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
@@ -41,6 +47,11 @@ const ONLY = opt('--only')?.split(',') ?? null;
 const wanted = (route) => !ONLY || ONLY.includes(route);
 const SERVE = resolve(opt('--serve') ?? ROOT);
 const OUT = resolve(opt('--out') ?? join(ROOT, 'plans', 'mocks', 'snaps'));
+const SKIN = opt('--skin');
+if (SKIN && !SKINS[SKIN]) { console.error(`--skin must be a registered skin id, not ${SKIN} (known: ${Object.keys(SKINS).join(', ')})`); process.exit(2); }
+// The pre-paint boot script in index.html reads this key and injects the sheet
+// before first paint — the same way e2e/skins.workflow.mjs dresses a page.
+const SKIN_INIT = SKIN ? [`try { localStorage.setItem('forage.skin', '${SKIN}'); } catch {}`] : [];
 
 // The standard frames (MOCKS.md § Viewports): fun/mocks has drawn at 390×844
 // since 2026-08-28; desktop is the width the e2e suite already uses.
@@ -50,7 +61,7 @@ const sha = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: SERVE }
 const dirty = execFileSync('git', ['status', '--porcelain', '--', 'js', 'css', 'skins', 'index.html'], { cwd: SERVE }).toString().trim();
 if (dirty) { console.error(`refusing: UI files are uncommitted in ${SERVE}, so the sha would name a tree these pixels are not from:\n` + dirty); process.exit(2); }
 const baseline = `forage@${sha}`;
-const suffix = AS ? `.${AS}` : '';
+const suffix = `${SKIN ? `.${SKIN}` : ''}${AS ? `.${AS}` : ''}`;
 
 mkdirSync(OUT, { recursive: true });
 const files = [];
@@ -58,13 +69,13 @@ const shoot = async (page, route, population, name, vp) => {
   if (!wanted(route)) return;
   const file = `${route}.${name}${suffix}.png`;
   await page.screenshot({ path: join(OUT, file) });
-  files.push({ file, route, viewport: name, ...vp, baseline, population });
+  files.push({ file, route, viewport: name, ...vp, baseline, population, ...(SKIN ? { skin: SKIN } : {}) });
 };
 
 for (const [name, vp] of Object.entries(VIEWPORTS)) {
   // ---- memory:seeded — the board and its deepest thread ----
   if (wanted('board') || wanted('thread')) {
-  const s = await scenario('seeded', { root: SERVE });
+  const s = await scenario('seeded', { root: SERVE, initScripts: SKIN_INIT });
   await s.page.setViewportSize({ width: vp.width, height: vp.height });
   await s.open('#/popular'); await s.waitForSeed();
   await s.page.reload(); await s.page.waitForSelector('.postrow', { timeout: 10000 });
@@ -82,7 +93,7 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
 
   // ---- lens:mock-thread — the Bluesky-view thread, signed in, under load ----
   if (wanted('thread-lens') || wanted('menu-lens') || wanted('focus-lens')) {
-  const l = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [FAKE_SIGNED_IN], responses: RESPONSES });
+  const l = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: RESPONSES });
   await l.page.setViewportSize({ width: vp.width, height: vp.height });
   await l.page.goto(`${l.origin}${THREAD_PATH}`);
   await l.page.waitForSelector('.comment[data-kind="quote"]', { timeout: 15000 }); // the quote cascade landed
@@ -110,7 +121,7 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
 
   // ---- lens:mock-board — the board, signed out (board-cards A–F, post-and-thread A/E) and signed in ----
   if (wanted('board-lens') || wanted('board-lens-media')) {
-    const out = await scenario('first-visit', { root: SERVE, mode: 'bluesky', responses: BOARD });
+    const out = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: SKIN_INIT, responses: BOARD });
     await out.page.setViewportSize({ width: vp.width, height: vp.height });
     await out.page.goto(`${out.origin}${BOARD_PATH}`);
     await out.page.waitForSelector('.postrow', { timeout: 15000 });
@@ -129,7 +140,7 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
     await out.close();
   }
   if (wanted('board-lens-in')) {
-    const inn = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [FAKE_SIGNED_IN], responses: BOARD });
+    const inn = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: BOARD });
     await inn.page.setViewportSize({ width: vp.width, height: vp.height });
     await inn.page.goto(`${inn.origin}${BOARD_PATH}`);
     await inn.page.waitForSelector('.postrow', { timeout: 15000 });
@@ -144,4 +155,4 @@ const manifestPath = join(OUT, 'manifest.json');
 const existing = existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, 'utf8')) : null;
 const manifest = mergeManifest(existing, { capturedAt: new Date().toLocaleDateString('sv-SE') /* local day, not UTC's */, files });
 writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
-console.log(`${baseline}${AS ? ` as ${AS}` : ''} — ${files.length} snaps in ${OUT}`);
+console.log(`${baseline}${SKIN ? ` in ${SKIN}` : ''}${AS ? ` as ${AS}` : ''} — ${files.length} snaps in ${OUT}`);

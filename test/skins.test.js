@@ -681,3 +681,69 @@ test('the tag chip clears AA in every skin — the floor applies to the ROLE, no
   assert.deepEqual(failures, [],
     `.tag fails AA in ${failures.length} skin(s):\n  ${failures.join('\n  ')}`);
 });
+
+// ---------------------------------------------------------------------------
+// The warm set (plan 2026-08-30-plan-warm-skins). Four families, each shipping
+// BOTH palettes, drawn from the classic phpBB era's colour variants — the pink,
+// purple and orange prosilver recolours, the coffee styles, the mint-and-white
+// ones — under our own names and values. Every existing family was cool or
+// neutral (the amber terminal is the one warm thing, and it is dark-only).
+// ---------------------------------------------------------------------------
+
+const WARM_SET = ['rosewater', 'lavender', 'apricot', 'seaglass'];
+
+test('warm set: rosewater, lavender, apricot and seaglass each ship a light AND a dark skin', () => {
+  const rows = families();
+  for (const fam of WARM_SET) {
+    assert.ok(FAMILIES[fam], `family ${fam} is registered`);
+    const row = rows.find((r) => r.id === fam);
+    assert.ok(row, `${fam} appears in the picker`);
+    // The phpBB pair set the id convention: light is the bare family id, dark is
+    // `<family>-dark`, so hrefs and the SW shell stay legible.
+    assert.equal(row.light, fam, `${fam}: its light skin is the bare id`);
+    assert.equal(row.dark, `${fam}-dark`, `${fam}: its dark skin is <family>-dark`);
+    assert.equal(row.sole, false, `${fam} has both sides, so the ☾/☀ toggle is live`);
+  }
+});
+
+// The floor applies to the ROLE (the tag-chip test above says why). Until now
+// only body text on the ground was graded for every skin, and only for the dark
+// ones; each file's header RECORDS the rest by hand. A recorded number nothing
+// recomputes is a comment. So: every pair the chrome actually paints, on every
+// registered skin, at the threshold that role earns — body text and links at
+// 4.5, band text at 3.0 (large/bold UI, the same calibration docs/SKINS.md
+// gives the importer's gate). A role a skin leaves as a passthrough (var(),
+// transparent) is skipped here, because its value is whatever the default
+// resolves to and the default is graded on its own.
+const ROLE_PAIRS = [
+  ['--text', '--bg', 4.5], ['--text', '--card', 4.5], ['--text', '--card-2', 4.5],
+  ['--text', '--row-even', 4.5], ['--text', '--row-head', 4.5], ['--text', '--nav-fill', 4.5],
+  ['--text', '--tint', 4.5],
+  ['--muted', '--bg', 4.5], ['--muted', '--card', 4.5],
+  ['--link', '--card', 4.5], ['--link', '--bg', 4.5], ['--link', '--row-even', 4.5], ['--link', '--nav-fill', 4.5],
+  ['--link-hover', '--card', 4.5],
+  ['--brand-ink', '--bg', 4.5], ['--brand-ink', '--tint', 4.5],
+  ['--band-ink', '--band-fill', 3.0], ['--band-link', '--band-fill', 3.0], ['--band-brand', '--band-fill', 3.0],
+  ['--on-brand', '--brand-fill', 4.5], ['--on-brand', '--brand-fill-hover', 4.5],
+  ['--danger-ink', '--danger-tint', 4.5], ['--danger', '--card', 4.5], ['--bury', '--card', 4.5],
+];
+
+test('every skin holds AA on every pair its chrome paints, at the threshold the role earns', () => {
+  const base = readFileSync(join(root, 'css/tokens.css'), 'utf8');
+  const subjects = [['default', base]];
+  for (const [id, s] of Object.entries(SKINS)) {
+    if (!s.file) continue;
+    subjects.push([id, base + '\n' + readFileSync(join(root, s.file), 'utf8')]);
+  }
+  const hex = (v) => typeof v === 'string' && /^#[0-9a-f]{3,6}$/i.test(v);
+  const failures = [];
+  for (const [id, css] of subjects) {
+    for (const [fgName, bgName, floor] of ROLE_PAIRS) {
+      const fg = tokenValue(css, fgName), bg = tokenValue(css, bgName);
+      if (!hex(fg) || !hex(bg)) continue;
+      const ratio = contrastOf(fg, bg);
+      if (ratio < floor) failures.push(`${id}: ${fgName} ${fg} on ${bgName} ${bg} = ${ratio.toFixed(2)} (floor ${floor})`);
+    }
+  }
+  assert.deepEqual(failures, [], `AA fails on ${failures.length} pair(s):\n  ${failures.join('\n  ')}`);
+});

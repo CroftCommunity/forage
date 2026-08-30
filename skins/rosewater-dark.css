@@ -1,0 +1,69 @@
+/* Rosewater (plum) — sibling of `rosewater`. HAND-AUTHORED, not inverted
+   (ADR-003; phpbb-dark.css says why a synthesised dark palette is the failure
+   mode this model removed). The ground is a deep plum rather than a gray with
+   pink links: the era's dark pink styles — where they existed at all — were
+   black with pink trim, and that reads as a goth board, not a warm one.
+
+   CONTRAST (measured by test/skins.test.js):
+     text        #F3E4E9  on bg          #2A1B22   13.37:1  body
+     text        #F3E4E9  on card        #35232C   11.96:1  body
+     text        #F3E4E9  on row-even    #3B2730   11.25:1  body
+     text        #F3E4E9  on row-head    #472F3A    9.84:1  body
+     text        #F3E4E9  on nav-fill    #331F29   12.48:1  body
+     muted       #C2A3AE  on bg          #2A1B22    7.15:1  body
+     link        #F2A2BC  on card        #35232C    7.47:1  body
+     link        #F2A2BC  on nav-fill    #331F29    7.80:1  body
+     link-hover  #FFC2D4  on card        #35232C    9.75:1  body
+     brand-ink   #F2A2BC  on tint        #4A2E3B    6.11:1  body
+     band-ink    #FFF3F6  on band-fill   #7E2A4C    8.35:1  large/UI
+     band-link   #FFD6E1  on band-fill   #7E2A4C    6.87:1  large/UI
+     on-brand    #FFFFFF  on brand-fill  #B83A65    5.48:1  body
+     on-brand    #FFFFFF  on brand-fill-hover #C9477A    4.50:1  body
+     danger-ink  #F0938A  on danger-tint #4A2626    5.79:1  body
+     tag chip: --gold-strong on mix(gold 18%, card)=#533a30  6.27
+     unread pill: white on --clay-600 #A24D2C  5.78
+*/
+:root {
+  --bg:          #2A1B22;
+  --card:        #35232C;
+  --card-2:      #402B35;
+  --text:        #F3E4E9;
+  --muted:       #C2A3AE;
+  --border:      #543B46;
+
+  --link:        #F2A2BC;
+  --link-hover:  #FFC2D4;
+  --brand-ink:   #F2A2BC;
+  --brand-fill:  #B83A65;
+  --brand-fill-hover: #C9477A;
+  --on-brand:    #FFFFFF;
+
+  --band-fill:   #7E2A4C;
+  --band-ink:    #FFF3F6;
+  --band-link:   #FFD6E1;
+  --band-brand:  #FFF3F6;
+  --nav-fill:    #331F29;
+  --panel:       #35232C;
+  --row-odd:     #35232C;
+  --row-even:    #3B2730;
+  --row-head:    #472F3A;
+
+  --boost:       #F2A2BC;
+  --bury:        #F0A886;
+  --tint:        #4A2E3B;
+
+  --gold-500:    #D9A441;
+  --gold-strong: #EBC46A;
+  --danger:      #F0938A;
+  --danger-ink:  #F0938A;
+  --danger-tint: #4A2626;
+  --clay-600:    #A24D2C;
+  --stripe:      rgba(255,255,255,.04);
+
+  --font-body:   Verdana, Helvetica, Arial, sans-serif;
+  --font-display: Georgia, "Times New Roman", serif;
+  --radius-card:  7px;
+  --radius-sm:    4px;
+  --card-shadow:  0 1px 3px rgba(0, 0, 0, .35);
+  --color-scheme: dark;
+}

@@ -24,17 +24,26 @@ Light and dark are not an axis. They are skins. A skin declares:
 
 ```js
 phpbb: { label: 'phpBB (classic board)', file: 'skins/phpbb.css',
-         palette: 'light', pairedWith: 'phpbb-dark' },
+         palette: 'light', family: 'phpbb' },
 ```
 
 - `palette` — `'light'` or `'dark'`. Required.
-- `pairedWith` — the opposite-palette twin. Optional; **absence is legal** and
-  is what disables the toggle.
+- `family` — the visual identity this skin is one side of, registered in
+  `FAMILIES`. The sibling is **derived** (the opposite-palette member of the
+  same family) and never declared; a family with one member is legal and is
+  what disables the toggle.
 
-`validatePairing()` refuses asymmetric, dangling, self-, and same-palette pairs,
-each naming the offending ids, and the suite runs it over the real registry.
-Bad pairing data is otherwise silent breakage: a toggle that lands nowhere, or
-bounces between two skins of the same tone.
+`validateFamilies()` refuses a skin in an unregistered family, a family with no
+members or with two of the same palette, and a family label that names a
+palette — each naming the offending ids — and the suite runs it over the real
+registry. Bad family data is otherwise silent breakage: a toggle that lands
+nowhere, or bounces between two skins of the same tone.
+
+Shipping families, 2026-08-30: Forage, Classic BBS (dark only), Usenet gray,
+phpBB, and the warm set — Rosewater, Lavender, Apricot, Seaglass — each of the
+last four with both sides (`plans/2026-08-30-plan-warm-skins.md`). The warm set
+is **inspired by** the classic era's colour variants, not imported: no value in
+those eight files was measured from a real style, and their headers say so.
 
 The file must be `skins/<id>.css`. The pre-paint boot script in `index.html` and
 `404.html` derives the href from the id by that convention (it cannot import the
