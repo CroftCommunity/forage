@@ -13,12 +13,15 @@ const TYPES = {
   '.png': 'image/png', '.webmanifest': 'application/manifest+json',
 };
 
-export async function serve() {
+// `root`: which tree to serve. Default is this checkout; scripts/mock-snaps.mjs
+// passes another checkout to capture a mock's CURRENT frames from the tree the
+// owner is running (main) with the branch's fixtures and script.
+export async function serve({ root = ROOT } = {}) {
   const server = createServer(async (req, res) => {
     const path = new URL(req.url, 'http://x').pathname;
     const rel = path === '/' ? '/index.html' : path;
-    const file = normalize(join(ROOT, rel));
-    if (!file.startsWith(ROOT)) { res.writeHead(403).end(); return; }
+    const file = normalize(join(root, rel));
+    if (!file.startsWith(root)) { res.writeHead(403).end(); return; }
     try {
       const body = await readFile(file);
       res.writeHead(200, { 'content-type': TYPES[extname(file)] || 'application/octet-stream' });
@@ -29,7 +32,7 @@ export async function serve() {
       // production, including the status code.
       if (extname(file)) { res.writeHead(404).end('not found'); return; }
       try {
-        const shell = await readFile(join(ROOT, '404.html'));
+        const shell = await readFile(join(root, '404.html'));
         res.writeHead(404, { 'content-type': 'text/html' });
         res.end(shell);
       } catch { res.writeHead(404).end('not found'); }
