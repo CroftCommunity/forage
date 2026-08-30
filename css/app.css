@@ -318,6 +318,13 @@ h1.posttext { font-family: var(--font-body); font-size: var(--t-lg); font-weight
 .head-actions .postmeta { flex: 1 1 auto; min-width: 0; }
 .head-actions .reply-right { flex: none; }
 .head-actions .vote { flex: none; white-space: nowrap; }
+/* feed-row v6: the head's top line — the byline with the breadcrumb pushed to the right,
+   one line like a row's; the name yields before anything else does */
+.head-byline { margin-bottom: 6px; }
+.head-byline .byline { flex-wrap: nowrap; }
+.head-byline .byline > .who { flex: 0 1 auto; min-width: 0; }
+.head-byline .byline > :not(.who) { flex: none; white-space: nowrap; }
+.head-byline .head-crumb { margin-left: auto; }
 /* the post being answered: its byline is one line like a row's (the ⋯ stays in the corner) */
 .reply-target .byline { flex-wrap: nowrap; }
 .reply-target .byline > .who { flex: 0 1 auto; min-width: 0; }

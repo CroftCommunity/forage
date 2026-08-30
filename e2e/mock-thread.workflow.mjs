@@ -133,6 +133,31 @@ export async function run() {
     });
     assert.ok(geo.rightGap <= 4, `Reply is not at the right end of its row (gap ${geo.rightGap}px)`);
     assert.ok(geo.sameLine, 'Reply shares the line with the like pill');
+    // feed-row v6 (owner: "move the name here to the human display name in the top
+    // left and put the f/threads content on the top right"): the head opens with
+    // a byline — avatar, the chosen name, the mark, the time — and the board's
+    // breadcrumb sits at the right end of that same line; the like row no
+    // longer carries the author
+    const hb = await page.evaluate(() => {
+      const card = document.querySelector('#main .card'); const cs = getComputedStyle(card); const cr = card.getBoundingClientRect();
+      const left = cr.left + parseFloat(cs.paddingLeft), right = cr.right - parseFloat(cs.paddingRight);
+      const who = card.querySelector('.head-byline .who'); const crumb = card.querySelector('.head-byline .head-crumb');
+      if (!who || !crumb) return { who: !!who, crumb: !!crumb };
+      const w = who.getBoundingClientRect(), c = crumb.getBoundingClientRect(), av = card.querySelector('.head-byline .av')?.getBoundingClientRect();
+      const kebab = card.querySelector('.head-byline .kebab').getBoundingClientRect(); // the ⋯ keeps the corner (post-and-thread decision 7)
+      const text = card.querySelector('h1').getBoundingClientRect();
+      return { who: true, crumb: true, shown: who.textContent.trim(), handle: who.dataset.handle,
+        avLeftGap: av ? Math.round(av.left - left) : null, crumbRightGap: Math.round(kebab.left - c.right), kebabRightGap: Math.round(right - kebab.right),
+        sameLine: Math.abs((w.top + w.height / 2) - (c.top + c.height / 2)) <= 3, aboveText: c.bottom <= text.top,
+        authorInLikeRow: !!card.querySelector('.head-actions a[href^="/u/"]') };
+    });
+    assert.ok(hb.who && hb.crumb, `the head opens with a byline and carries the breadcrumb (who ${hb.who}, crumb ${hb.crumb})`);
+    assert.equal(hb.shown, 'The Quiet Cartographer', 'the head shows the chosen name');
+    assert.equal(hb.handle, 'quietcartographer.bsky.social', 'the handle rides as data (and the tooltip)');
+    assert.ok(hb.avLeftGap !== null && hb.avLeftGap <= 2, `the byline starts at the card's left edge (avatar ${hb.avLeftGap}px in)`);
+    assert.ok(hb.crumbRightGap <= 10 && hb.kebabRightGap <= 2, `f/thread is not right-aligned beside the ⋯ (${hb.crumbRightGap}px from the ⋯, ⋯ ${hb.kebabRightGap}px from the edge)`);
+    assert.ok(hb.sameLine && hb.aboveText, 'name and breadcrumb share the top line, above the text');
+    assert.equal(hb.authorInLikeRow, false, 'the like row no longer repeats the author');
     const pillH = await page.$eval('#main .head-actions [data-vote]', (b) => b.getBoundingClientRect().height);
     assert.ok(pillH <= 44, `the like pill was squeezed onto two lines by the row (height ${Math.round(pillH)}px)`);
     await headReply.click();

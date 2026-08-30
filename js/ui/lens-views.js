@@ -2394,11 +2394,23 @@ export function lensThreadView(params, query) {
     // composer is gone — the page shows the post above the box instead
     const replyLink = el('a', { class: 'btn sm primary reply-right', 'data-reply-open': '1',
       href: replyPath(p.id, p.id, src.feedSlug === 'thread' ? null : src.feedSlug) }, 'Reply');
+    // feed-row v6 (owner, 2026-08-30: "move the name here to the human display
+    // name in the top left and put the f/threads content on the top right"):
+    // the head opens like a row — avatar · chosen name · mark · time on the
+    // left, the board's breadcrumb (and NSFW) at the right end of that line,
+    // then the text, then the like row (count of replies · Reply)
+    const headProvider = providerMark.enabled() ? providerMark.providerOf(p.author) : null;
     const head = el('div', { class: 'card', style: 'display:flex;gap:10px' },
-      el('div', {},
-      el('div', { class: 'row wrap', style: 'gap:6px' },
-        el('a', { href: `/f/${src.feedSlug}`, class: 'xs' }, `f/${src.feedSlug}`),
-        p.nsfw ? el('span', { class: 'chip badge-nsfw' }, 'NSFW') : null),
+      el('div', { style: 'flex:1;min-width:0' },
+      el('div', { class: 'head-byline' },
+        byline({ name: p.author, ts: p.createdTs, avatar: p.avatar || null,
+          whoNode: p.author ? whoNode(p.author, p.authorName, verifiedBadge(p), `/u/${encodeURIComponent(p.author)}`) : el('span', { class: 'who muted' }, '[removed]'),
+          mark: headProvider ? providerMarkNode(headProvider, providerMark.markLabel(headProvider, p.author)) : null,
+          after: [
+            el('a', { href: `/f/${src.feedSlug}`, class: 'xs head-crumb' }, `f/${src.feedSlug}`),
+            p.nsfw ? el('span', { class: 'chip badge-nsfw' }, 'NSFW') : null,
+          ],
+          menu: () => lensMenuGroups(p, { kind: 'post' }) })),
       // The placeholder heading ('[image]', '[video]') drops when the media
       // renders below — the picture is the thing the heading stood in for.
       // A real title (text or alt-derived) keeps its heading above the media.
@@ -2409,10 +2421,7 @@ export function lensThreadView(params, query) {
       p.placeholderTitle && p.media ? null : el('h1', p.format === 'link' ? {} : { class: 'posttext' }, p.title.slice(0, 300)),
       el('div', { class: 'actions head-actions' },
         vote('post', p.id, p, !!session, { onVote: lensVote(p), onGuest: session ? null : openAuthSheet }), // Phase 6c: the head's pill
-        el('div', { class: 'postmeta' },
-          // feed-row v2: the chosen name, the handle in the tooltip
-          p.author ? el('a', { href: `/u/${encodeURIComponent(p.author)}` }, whoNode(p.author, p.authorName)) : '[muted]',
-          ` · ${timeAgo(p.createdTs)} ago · ${plural(p.commentCount, 'reply', 'replies')}`),
+        el('div', { class: 'postmeta' }, plural(p.commentCount, 'reply', 'replies')), // the author and the time moved up into the byline (v6)
         replyLink),
       // The post's own media, at full board size — until 2026-08-28 an image
       // post's thread page rendered no image at all.

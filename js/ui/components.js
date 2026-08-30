@@ -251,9 +251,11 @@ function stewardItems(type, subject) {
 // away as the name's tooltip, and in the accessible name. A row with no chosen
 // name shows the handle. `data-handle` is the stable hook for tests and
 // tooling, since the text is no longer the handle.
-export function whoNode(author, authorName, badge = '') {
+// `href` makes it a link (the thread head's name opens the profile) and keeps
+// it a direct `.who` child of the byline, so the one-line rules still apply.
+export function whoNode(author, authorName, badge = '', href = null) {
   const name = authorName || author;
-  return el('span', { class: 'who', 'data-handle': author,
+  return el(href ? 'a' : 'span', { class: 'who', 'data-handle': author, ...(href ? { href } : {}),
     ...(authorName ? { title: `@${author}`, 'aria-label': `${authorName} (@${author})` } : {}) }, name, badge || '');
 }
 

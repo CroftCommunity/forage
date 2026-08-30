@@ -20,9 +20,12 @@
 const AV = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 const WH = 'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot';
 
+// feed-row v6: the names people chose — the head shows the root's; a long one on a
+// comment keeps the byline's one-line claim honest
+const NAMES = { 'quietcartographer.bsky.social': 'The Quiet Cartographer', 'averyveryverylonghandle.bsky.social': 'A Very, Very, Very Long Display Name Indeed' };
 const post = (rkey, did, handle, ts, text, { likes = 0, replies = 0, reposts = 0, embed = null } = {}) => ({
   uri: `at://${did}/app.bsky.feed.post/${rkey}`, cid: `cid-${rkey}`,
-  author: { did, handle, avatar: AV },
+  author: { did, handle, avatar: AV, ...(NAMES[handle] ? { displayName: NAMES[handle] } : {}) },
   record: { text, createdAt: ts, ...(embed ? { embed } : {}) }, indexedAt: ts,
   replyCount: replies, repostCount: reposts, likeCount: likes,
 });
