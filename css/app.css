@@ -339,13 +339,15 @@ dialog.menu::backdrop { background: transparent; }
 /* ---- Comments: the rail and the fold (plan 2026-08-29 post-and-thread, decision 2) ---- */
 .comment { position: relative; display: grid; grid-template-columns: 32px 1fr; column-gap: 10px; padding: 8px 0 2px; }
 .comment-body { display: contents; }
-.comment > .avcol { grid-column: 1; grid-row: 1 / span 2; display: flex; flex-direction: column; align-items: center; }
+.comment > .avcol { grid-column: 1; grid-row: 1 / span 3; display: flex; flex-direction: column; align-items: center; }
 .comment > .avcol .line { flex: 1; width: 2px; margin-top: 4px; background: var(--border); pointer-events: none; }
 .comment.leaf > .avcol .line, .comment.collapsed > .avcol .line { display: none; }
 .comment > .comment-body > .byline { grid-column: 2; }
 .comment > .comment-body > .comment-text { grid-column: 2; }
-/* the vote stack sits in the avatar column ON the action row's line, the rail passing behind it */
-.comment > .comment-body > .avvote { grid-column: 1; grid-row: 3; align-self: end; justify-self: center; position: relative; z-index: 1; margin-bottom: 5px; }
+/* the vote stack sits in the avatar column at the vertical MIDDLE of the comment's body — text
+   through action row, below the avatar — the rail passing behind it (owner, 2026-08-29; it was
+   parked on the action row's line before) */
+.comment > .comment-body > .avvote { grid-column: 1; grid-row: 2 / span 2; align-self: center; justify-self: center; position: relative; z-index: 1; }
 .comment > .comment-body > .comment-actions { grid-column: 2; grid-row: 3; }
 .comment > .kids { grid-column: 1 / span 2; padding-left: 22px; }
 /* each child draws its own elbow: from the rail into its avatar's left edge, turning at the avatar's centre;

@@ -16,6 +16,16 @@ below are the landings of that month, and everything earlier is in `git log`.
   Card/Compact dial wears the sort bar's pill dressing in the same row. And the top bar is
   pinned — it stays put while the board scrolls under it (it was meant to since the first
   version; the rule had nowhere to stick). (plan 2026-08-29-plan-board-cards, branch A)
+- 2026-08-29 **A reply's arrow likes again, from the middle of the reply.** In the Bluesky
+  view, signed in, pressing the count-over-arrow under a reply's avatar did nothing — it was
+  the read-only count wearing the button's clothes, and a second press could not have
+  un-liked anyway (the reply carried no like rkey). Now it is the same real like the post's
+  pill is, both ways. The stack also moved from the bottom of the avatar column to the
+  vertical middle of the reply's body. And shrinking the window past the sidebar breakpoint
+  no longer leaves the sidebar sitting open as an undimmed drawer — it closes until you
+  press ☰. Opening a post from a board now lands at the top of the thread instead of at
+  the board's scroll offset. And an author's picture is their picture — not their picture
+  under two initials. (claude/thread-vote)
 - 2026-08-29 **Every comment has an address.** The small ↗ at the end of a comment's action
   row (and the ⋯ menu's Copy link) copies a permalink; opening one shows the whole thread
   landed on that comment — marked, its ancestors open, its siblings folded, with a

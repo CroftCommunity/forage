@@ -89,8 +89,20 @@ export async function run() {
     assert.equal(await s.page.locator('.navscrim:visible').count(), 0,
       'switching boards opens nothing you did not ask for');
 
-    // ---- 3. tap targets, at the floor the gate enforces ----
+    // ---- 2b. narrowing the window does not leave the sidebar open as a drawer ----
+    // The nav is visible at desktop width by design. Shrink the window past
+    // the breakpoint and it becomes the fixed drawer — which must then be
+    // CLOSED, with no scrim, until the burger is pressed. Observed by the
+    // owner (2026-08-29): the drawer sat open over the column, undimmed,
+    // with the burger claiming it was shut.
+    assert.equal(await s.page.locator('[data-nav="1"]:visible').count(), 1, 'wide: the nav is a sidebar');
     await s.page.setViewportSize({ width: 390, height: 800 });
+    await s.page.waitForSelector('[data-nav="1"]:visible', { state: 'hidden' });
+    assert.equal(await s.page.locator('.navscrim:visible').count(), 0, 'no scrim either — nothing is open');
+    assert.equal(await s.page.locator('.navburger[aria-expanded="false"]').count(), 1,
+      'and the burger agrees with what is on screen');
+
+    // ---- 3. tap targets, at the floor the gate enforces ----
     await s.page.goto(`${s.origin}/r/mut`);
     await s.page.waitForSelector('.navburger');
     const small = await s.page.$$eval('.navburger, [data-nav-item]', (els) => els

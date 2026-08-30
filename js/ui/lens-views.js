@@ -2346,7 +2346,10 @@ export function lensThreadView(params, query) {
             el('a', { class: 'btn', href: `/f/${src.feedSlug}` }, 'Back to the board')));
         })),
       replyHost));
-    const ctx = { ...LENS_PERMS, locked: true, // vote/save/mod still gate; replying does not
+    const ctx = { ...LENS_PERMS, locked: true, // save/mod still gate; replying does not
+      // A reply's stack is the same like the head's pill is (owner, 2026-08-29:
+      // signed in, the comment arrow did nothing — it was the guest span).
+      canVote: !!session, onVote: (n) => lensVote(n),
       onGuest: session ? null : openAuthSheet, // board-cards decision 1: a guest's vote stack is the door too
       menuGroups: (n) => lensMenuGroups(n, { kind: 'comment' }), // 4b: the ⋯ on every reply
       permalink: (n) => `${location.origin}/p?uri=${encodeURIComponent(p.id)}&focus=${encodeURIComponent(n.id)}`, // decision 10

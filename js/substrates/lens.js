@@ -307,6 +307,7 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
     createdTs: p.createdTs, createdSec: p.createdSec, edited: false,
     removed: false, deleted: false,
     likes: p.likes, myVote: p.myVote, saved: p.saved, cid: p.cid,
+    likeUri: p.likeUri, // the unlike input, as on the head post — dropped here until 2026-08-29
     repostCount: p.repostCount, repostUri: p.repostUri,
     body: p.body, author: p.author, authorId: p.authorId, avatar: p.avatar,
     ...(p.maskedRemoved ? { maskedRemoved: true, title: p.title } : { removedReason: '' }),
