@@ -284,7 +284,7 @@ visual judgement).
 
 ### Landing branch B — the stage
 
-#### Phase 5a: the lens shapes aspect ratios
+#### Phase 5a: the lens shapes aspect ratios — ✅ shipped 2026-08-29
 **Changes:** `js/substrates/lens.js:233-235` — `items[].aspect = {w,h}` from
 `image.aspectRatio` (null when absent); `video.aspect` likewise (D2); `test/lens.test.js` —
 pins both from the fixtures, and null when the embed has none.

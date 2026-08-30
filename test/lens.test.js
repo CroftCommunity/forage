@@ -412,6 +412,49 @@ test('3i: an images embed becomes post.media with thumbs+alts; an image-only pos
   assert.equal(p.title, 'a heron mid-strike', 'an image-only post titles from its alt text');
 });
 
+// ---- board-cards Phase 5a: the shaper carries the embed's aspect ratio ----
+// The media stage (decision 4) sizes its frame BEFORE the picture loads, so a
+// board never jumps as images arrive. That is only possible if the ratio the
+// PDS already sends (`aspectRatio {width,height}` on images#view and, when the
+// uploader's client set it, on video#view) reaches the DOM. Absent, zero, or
+// not-a-number reads as null — never NaN, never a coerced string.
+const IMG = (extra) => ({ thumb: 'https://cdn/t.jpg', fullsize: 'https://cdn/f.jpg', alt: '', ...extra });
+const shapeImages = (images) => shapeLensPost(qPost('asp', 'did:plc:a', '2026-08-26T00:00:00Z', {
+  record: { text: 'x', createdAt: '2026-08-26T00:00:00Z' },
+  embed: { $type: 'app.bsky.embed.images#view', images } }), QSRC).media;
+
+test('5a: an image with aspectRatio shapes to aspect {w,h}; one without shapes to null', () => {
+  const m = shapeImages([IMG({ aspectRatio: { width: 1600, height: 900 } }), IMG({})]);
+  assert.deepEqual(m.items[0].aspect, { w: 1600, h: 900 });
+  assert.equal(m.items[1].aspect, null, 'no aspectRatio on the embed → null, so the stage sizes on load');
+});
+
+test('5a: a zero or non-numeric aspectRatio is null, never NaN or a string', () => {
+  const m = shapeImages([
+    IMG({ aspectRatio: { width: 800, height: 0 } }),
+    IMG({ aspectRatio: { width: '800', height: '600' } }), // seen on old records
+    IMG({ aspectRatio: { width: 0, height: 600 } }),
+  ]);
+  assert.deepEqual(m.items.map((i) => i.aspect), [null, null, null]);
+});
+
+test('5a: the real fixtures carry the ratio through (D3)', () => {
+  const feed = shapeLensFeed(fixture('wide-getFeed'), QSRC);
+  const withMedia = feed.posts.filter((p) => p.media?.kind === 'images');
+  assert.ok(withMedia.length > 0, 'the wide feed fixture has image posts');
+  assert.ok(withMedia.every((p) => p.media.items.every((i) => i.aspect && i.aspect.w > 0 && i.aspect.h > 0)),
+    'every image in the fixture reaches the DOM with its ratio');
+});
+
+test('5a: a video view shapes its aspect the same way (D2: no fixture carries one, so this is the fixture)', () => {
+  const vid = (extra) => shapeLensPost(qPost('vid', 'did:plc:a', '2026-08-26T00:00:00Z', {
+    record: { text: 'x', createdAt: '2026-08-26T00:00:00Z' },
+    embed: { $type: 'app.bsky.embed.video#view', cid: 'bafy', playlist: 'https://v/p.m3u8', thumbnail: 'https://cdn/v.jpg', ...extra } }), QSRC).media;
+  assert.deepEqual(vid({ aspectRatio: { width: 1080, height: 1920 } }).aspect, { w: 1080, h: 1920 });
+  assert.equal(vid({}).aspect, null, 'a video with no ratio sizes from its thumbnail on load');
+  assert.equal(vid({}).kind, 'video');
+});
+
 test('3i: image-only with NO alt falls back to a named placeholder title', () => {
   const p = shapeLensPost(qPost('img2', 'did:plc:a', '2026-08-26T00:00:00Z', {
     record: { text: '', createdAt: '2026-08-26T00:00:00Z' },

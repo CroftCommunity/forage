@@ -159,6 +159,17 @@ const maskedByViewer = (post) =>
 
 // One bsky post view -> our post shape. `src` names the Feed this lens
 // surface renders as: { feedId, feedSlug, feedTitle }.
+// board-cards Phase 5a: the embed's `aspectRatio {width,height}` as `{w,h}`, so
+// the media stage can size its frame BEFORE the picture loads. Absent, zero, or
+// not a number (string widths exist on old records) is null — never NaN, never
+// a coerced string — and a null stage sizes from the picture on load instead.
+function aspectOf(ar) {
+  const w = ar?.width, h = ar?.height;
+  if (typeof w !== 'number' || typeof h !== 'number') return null;
+  if (!(w > 0) || !(h > 0)) return null;
+  return { w, h };
+}
+
 export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
   const record = post.record || {};
   const createdTs = Date.parse(record.createdAt || post.indexedAt);
@@ -230,9 +241,9 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
     : undefined;
   const mediaEmb = emb?.$type === 'app.bsky.embed.recordWithMedia#view' ? emb.media : emb;
   const media = mediaEmb?.$type === 'app.bsky.embed.images#view'
-    ? { kind: 'images', items: (mediaEmb.images || []).map((i) => ({ thumb: i.thumb, full: i.fullsize, alt: i.alt || '' })) }
+    ? { kind: 'images', items: (mediaEmb.images || []).map((i) => ({ thumb: i.thumb, full: i.fullsize, alt: i.alt || '', aspect: aspectOf(i.aspectRatio) })) }
     : mediaEmb?.$type === 'app.bsky.embed.video#view'
-      ? { kind: 'video', thumb: mediaEmb.thumbnail || null }
+      ? { kind: 'video', thumb: mediaEmb.thumbnail || null, aspect: aspectOf(mediaEmb.aspectRatio) }
       : mediaEmb?.$type === 'app.bsky.embed.external#view' && mediaEmb.external?.thumb
         // 4i: `title` rides along because it is the external card's only human
         // name, and the view needs one — an <a> around a decorative thumbnail
