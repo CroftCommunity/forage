@@ -431,9 +431,11 @@ The running app has **modes** — named routing tables over the same capabilitie
   (the official OAuth flow via the vendored `@atproto/oauth-client-browser`,
   drift-checked in `test/vendor.test.js`): you authorize on your own server, no
   credentials touch Forage, and the session survives reloads. The masthead keeps
-  the one-tap Bluesky path; the sidebar card's **Use another server** opens the
-  host sheet, which offers Bluesky and Blacksky (open signups), Northsky (invite
-  only), and a handle field for any other atproto host. Forage has no accounts
+  the one-tap Bluesky path; the sidebar card's **Use another provider** opens the
+  host sheet ("Choose your atmo provider", *atmo* glossed as a Personal Data Server
+  provider in the open social Atmosphere), whose front page offers the open-signup hosts — Bluesky, Blacksky
+  and EuroSky — and whose **Another provider** panel carries the invite-only ones
+  (Northsky, sign-in only) above a handle field for any other atproto host. Forage has no accounts
   of its own — `js/auth/hosts.js` is the registry and
   `e2e/hosts-live.workflow.mjs` (LIVE=1) is what notices when a host's posture
   changes. Works on forage.fyi and localhost (the OAuth client is origin-bound;

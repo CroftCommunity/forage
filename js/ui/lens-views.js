@@ -15,7 +15,7 @@ import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortW
   feedCardModel, threadNodeStyle, feedPath, parseFeedRoute, sessionGateMessage, canDelete, sourceLabel,
   sortFeeds, filterFeeds, platforms, liveFeeds } from '../substrates/lens.js';
 import { initSession, createAccountRoster, isOAuthCallback } from '../auth/session.js';
-import { hostById, featuredHosts, canCreateAccount } from '../auth/hosts.js';
+import { hostById, featuredHosts, otherHosts, canCreateAccount } from '../auth/hosts.js';
 import { heroDismissed, dismissHero, EMBLEM } from '../hero.js';
 import * as mediaScale from '../media-scale.js';
 import * as lang from '../lang.js';
@@ -108,20 +108,25 @@ async function beginSignIn(handle, options) {
 // visitor needs and a sighted mouse user never notices missing.
 //
 // Built FRESH per open and removed on close: the rows are static, but the
-// "Another server" field is not, and a lingering singleton would carry a
+// "Another provider" field is not, and a lingering singleton would carry a
 // half-typed handle from one visit into the next.
+const ATMO_GLOSS = 'A Personal Data Server provider in the open social Atmosphere';
+
 function authSheet() {
   const titleId = 'authsheet-title';
   const dialog = el('dialog', { class: 'authsheet', 'data-auth-sheet': '1', 'aria-labelledby': titleId });
   const close = el('button', { type: 'button', class: 'sheet-x', 'aria-label': 'Close' }, '✕');
   close.addEventListener('click', () => dialog.close());
 
-  const list = el('div', { class: 'sheet-list' });
-  for (const h of featuredHosts()) {
+  // One row shape for both panels. The two-direction rule (open offers Create,
+  // invite-only shows the WORDS in the create slot) is a property of the host,
+  // not of the panel it sits on — so a host that changes posture moves panels
+  // and changes its controls in one edit to the registry.
+  const hostRow = (h) => {
     const actions = el('div', { class: 'sheet-actions' });
     if (canCreateAccount(h)) {
       const create = el('button', { type: 'button', class: 'btn primary sm', 'data-host-create': '1' }, 'Create account');
-      // prompt=create is not decoration: driven end to end against both open
+      // prompt=create is not decoration: driven end to end against the open
       // hosts (Phase 0 D1), it lands in the registration wizard rather than the
       // sign-in screen. Without that evidence this button and the one beside it
       // would be two routes to the same page wearing different words.
@@ -137,17 +142,23 @@ function authSheet() {
     const go = el('button', { type: 'button', class: 'btn sm', 'data-host-signin': '1' }, 'Sign in');
     go.addEventListener('click', () => beginSignIn(h.entryway));
     actions.append(go);
-    list.append(el('div', { class: 'sheet-row', 'data-host-row': h.id },
-      el('span', { class: 'sheet-host' }, h.label), actions));
-  }
+    return el('div', { class: 'sheet-row', 'data-host-row': h.id },
+      el('span', { class: 'sheet-host' }, h.label), actions);
+  };
+
+  // The front page is the hosts a newcomer can JOIN from here (owner,
+  // 2026-08-29). Invite-only hosts are one tap in, below.
+  const list = el('div', { class: 'sheet-list' }, ...featuredHosts().map(hostRow));
 
   // Everything not on the short list reaches the same seam. The list is an
   // editorial convenience, not a boundary — this is what keeps it from being
-  // one.
+  // one. The panel carries the invite-only hosts first (a member of one still
+  // signs in by name, and the words in the create slot say why there is no
+  // Create), then the handle field for any atproto host at all.
   const handle = el('input', { type: 'text', id: 'sheet-other-handle', 'data-host-other-handle': '1',
     placeholder: 'you.example.com', autocapitalize: 'none', autocorrect: 'off', spellcheck: 'false' });
-  const form = el('form', { class: 'sheet-other', hidden: true },
-    el('label', { for: 'sheet-other-handle', class: 'xs muted' }, 'Your handle on any atproto server'),
+  const form = el('form', { class: 'sheet-other-form' },
+    el('label', { for: 'sheet-other-handle', class: 'xs muted' }, 'Your handle on any atmo provider'),
     el('div', { class: 'row', style: 'gap:6px;margin-top:4px' }, handle,
       el('button', { type: 'submit', class: 'btn primary sm', 'data-host-other-go': '1' }, 'Continue')));
   form.addEventListener('submit', (e) => {
@@ -156,15 +167,23 @@ function authSheet() {
     if (!v) return toast('Enter your handle — for example you.example.com.', 'err');
     beginSignIn(v);
   });
-  const other = el('button', { type: 'button', class: 'btn sm sheet-more', 'data-host-other': '1' }, 'Another server');
-  other.addEventListener('click', () => { other.hidden = true; form.hidden = false; handle.focus(); });
+  const panel = el('div', { class: 'sheet-other', hidden: true },
+    el('div', { class: 'sheet-list' }, ...otherHosts().map(hostRow)), form);
+  const other = el('button', { type: 'button', class: 'btn sm sheet-more', 'data-host-other': '1' }, 'Another provider');
+  other.addEventListener('click', () => { other.hidden = true; panel.hidden = false; handle.focus(); });
 
   dialog.append(
     el('div', { class: 'row spread' },
-      el('h2', { id: titleId, style: 'margin:0' }, 'Choose your server'), close),
+      // "atmo" is the owner's word (2026-08-29) for a home on the open social
+      // Atmosphere. The gloss is a native <abbr title>: it hovers on a desktop
+      // and assistive tech reads it, but touch cannot hover — so the sentence
+      // below says the same thing in plain sight, and the tooltip is a bonus,
+      // not the only copy of the definition.
+      el('h2', { id: titleId, style: 'margin:0' }, 'Choose your ',
+        el('abbr', { class: 'sheet-gloss', title: ATMO_GLOSS }, 'atmo'), ' provider'), close),
     el('p', { class: 'xs muted' },
-      'Forage has no accounts of its own. You sign in with an account on an atproto server — Bluesky is one of many, and each sets its own rules.'),
-    list, other, form);
+      `Forage has no accounts of its own. You sign in with an account from an atmo provider — ${ATMO_GLOSS.charAt(0).toLowerCase()}${ATMO_GLOSS.slice(1)}. Bluesky is one of many, and each sets its own rules.`),
+    list, other, panel);
   return dialog;
 }
 
@@ -203,7 +222,7 @@ function heroCard() {
     el('div', { class: 'hero-copy' },
       el('strong', { class: 'hero-head' }, 'Forage the open web.'),
       el('p', { class: 'small' },
-        'Your Bluesky as a forum — feeds are boards, threads are threads. Forage has no accounts of its own: you bring one from Bluesky or any other atproto server.'),
+        'Your Bluesky as a forum — feeds are boards, threads are threads. Forage has no accounts of its own: you bring one from Bluesky or any other atmo provider.'),
       cta));
   return card;
 }
@@ -702,7 +721,7 @@ function sessionCard() {
   const btn = el('button', { class: 'btn primary sm' }, 'Sign in with Bluesky');
   const go = async () => {
     const handle = id.value.trim().replace(/^@+/, '');
-    if (!handle) return toast('Enter your Bluesky handle.', 'err');
+    if (!handle) return toast('Enter your handle — for example you.bsky.social.', 'err');
     try { await manager.signIn(handle); } catch (e) { toast('Sign-in failed: ' + e.message, 'err'); }
   };
   btn.addEventListener('click', go);
@@ -714,7 +733,7 @@ function sessionCard() {
   // so a visitor whose server is not Bluesky stops depending on a hero that
   // exists on one page and can be dismissed forever.
   const more = el('button', { type: 'button', class: 'btn sm sheet-open', 'data-open-auth-sheet': '1' },
-    'Use another server →');
+    'Use another provider →');
   more.addEventListener('click', () => openAuthSheet());
   return el('div', { class: 'card' },
     el('h2', {}, 'Sign in with Bluesky'),
@@ -893,7 +912,7 @@ export function lensHomeView() {
       // where the answer to "what would an account get me" actually lives —
       // once, in prose, instead of six muted nags across every surface.
       ...(session ? [] : [el('p', { class: 'small', 'data-account-adds': '1' },
-        'With an account you get your own ring — following, mutuals, and one step past them — plus joining and favouriting feeds, liking posts, and posting and replying. Forage has no accounts of its own; you bring one from Bluesky or any other atproto server.')]),
+        'With an account you get your own ring — following, mutuals, and one step past them — plus joining and favouriting feeds, liking posts, and posting and replying. Forage has no accounts of its own; you bring one from Bluesky or any other atmo provider.')]),
       el('div', { class: 'row wrap', style: 'gap:6px' },
         ...(session ? [] : [chip('guest search: needs sign-in (DL-014)', 'searchPosts is 403 unauthenticated — probe-verified')]),
         chip('saves: deferred (DL-015)', 'Bookmarks are not public API surface yet'))),

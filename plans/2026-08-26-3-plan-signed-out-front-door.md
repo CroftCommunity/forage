@@ -419,7 +419,7 @@ asked.
 **Settled with the owner (2026-08-26):** open-signup hosts get `[Create account] [Sign in]`;
 invite-only hosts get the words *invite only* **in the create slot** with Sign in beside
 them, so the column stays aligned and the words explain the missing button; the list is
-capped with the remainder behind **Another server**; never rendered signed in.
+capped with the remainder behind **Another provider**; never rendered signed in.
 **Call chain:** hero button (Phase D) or masthead → `openAuthSheet()` →
 `<dialog>.showModal()` → row click → `manager.signIn(entryway, { prompt })`. In this phase
 the trigger is a temporary control on the signed-out home so the chain is live before D
@@ -571,6 +571,11 @@ someday-SVG.
   markup), so it is ActivityPub and this client cannot speak to it at all. `muni.town` is
   not a PDS either. Both recorded in `js/auth/hosts.js` so neither is re-proposed.
   Registry updated and re-verified against the network the same day.
+  **AMENDED 2026-08-29 (owner):** `eurosky.social` added (open signups, OAuth with
+  `prompt=create`, probed 2026-08-29), and invite-only hosts moved OFF the front page onto
+  the "Another provider" panel above the handle field — the first screen is now only the
+  servers a newcomer can join from here. `featuredHosts()`/`otherHosts()` derive both
+  panels from posture, so a host that changes posture moves panels in one registry edit.
   ~~Original: Which hosts, and how many, in the capped list?
   Currently four (2 open, 2 invite-only). *Rationale: more is more welcoming and more
   scrolling; the cap is settled, the membership is not.*
@@ -795,7 +800,7 @@ point.
   were right, axe found nothing, because a transparent modal has no contrast problem. Now
   one selector for one element.
 - **`[hidden]` does not hide a `.btn`.** The UA styles `[hidden]` at element specificity
-  and the touch-floor block sets `display: inline-flex` on `.btn`, so "Another server"
+  and the touch-floor block sets `display: inline-flex` on `.btn`, so "Another provider"
   stayed on screen above the field it had just revealed. Fixed with the normalize-style
   `[hidden] { display: none !important }` rather than per-component, because the next
   `hidden` toggle in this codebase would hit the identical rule. This one got a RED

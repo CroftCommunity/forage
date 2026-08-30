@@ -18,6 +18,14 @@
 //   - prompt=create:   driven end to end through the vendored client (Phase 0
 //                      D1). All four ADVERTISE it; the two open ones were
 //                      observed landing in the registration wizard.
+//   - eurosky.social:  added 2026-08-29 (owner). describeServer says open
+//                      signups (phone verification, no invite code); the OAuth
+//                      document advertises prompt=create and transition:generic.
+//                      `eurosky.tech` is the project site and `portal.eurosky.tech`
+//                      the account portal — NEITHER is the PDS; the entryway is
+//                      `eurosky.social` (`pds.eurosky.social` resolves to the
+//                      same server, same DID). Recorded so the first guess is
+//                      not repeated.
 // `blacksky.community` is NOT a PDS — the Blacksky host is `blacksky.app`.
 // Recorded because it was the first guess and it was wrong.
 // e2e/hosts-live.workflow.mjs (LIVE=1) is what notices when any of this rots.
@@ -27,14 +35,17 @@ export const SIGNUP = Object.freeze({ OPEN: 'open', INVITE: 'invite' });
 export const HOSTS = Object.freeze([
   Object.freeze({ id: 'bsky', label: 'Bluesky', entryway: 'https://bsky.social', signups: SIGNUP.OPEN }),
   Object.freeze({ id: 'blacksky', label: 'Blacksky', entryway: 'https://blacksky.app', signups: SIGNUP.OPEN }),
+  Object.freeze({ id: 'eurosky', label: 'EuroSky', entryway: 'https://eurosky.social', signups: SIGNUP.OPEN }),
   Object.freeze({ id: 'northsky', label: 'Northsky', entryway: 'https://northsky.social', signups: SIGNUP.INVITE }),
 ]);
-// MEMBERSHIP is the owner's, settled 2026-08-27: two open-signup hosts and ONE
-// invite-only, chosen for reputation rather than for count. The invite-only row
-// is not filler — it is the only place on the front door that shows a newcomer
-// the network is plural and that servers set their own rules, which is the idea
-// Forage is built on. Everything else reaches the same code path through
-// "Another server", which takes a handle on any atproto host.
+// MEMBERSHIP is the owner's: settled 2026-08-27 at two open-signup hosts and
+// ONE invite-only, chosen for reputation rather than for count; EuroSky added
+// 2026-08-29. The same day the owner moved the invite-only host OFF the front
+// page: the sheet's first screen is now the hosts a newcomer can actually join
+// from here, and invite-only hosts sit on the "Another provider" panel beside the
+// handle field, where a member still gets Sign in and the words that explain
+// the missing Create. The plurality lesson survives — the panel is one tap
+// away and the sheet's intro copy says it out loud.
 //
 // `zio.blue` was probed and is a real, OAuth-speaking PDS; it is out because
 // three names is a small reviewable editorial commitment and four was not
@@ -44,11 +55,15 @@ export const HOSTS = Object.freeze([
 // Recorded so neither is re-proposed.
 
 // The owner settled the SHAPE — capped, with everything else reachable through
-// "Another server", which takes a handle on any atproto host. MEMBERSHIP is
-// still an open question in the plan, so this cap is deliberately a mechanism
-// and not a curated top-four.
+// "Another provider", which takes a handle on any atproto host. The split between
+// the two panels is POSTURE, not position in the list: featured = open signups
+// (capped), other = invite-only. Both are derived from one registry so a host
+// cannot fall off both panels by being edited in one place.
 export const FEATURED_CAP = 4;
-export function featuredHosts(list = HOSTS) { return list.slice(0, FEATURED_CAP); }
+export function featuredHosts(list = HOSTS) {
+  return list.filter((h) => h.signups === SIGNUP.OPEN).slice(0, FEATURED_CAP);
+}
+export function otherHosts(list = HOSTS) { return list.filter((h) => h.signups === SIGNUP.INVITE); }
 
 export function hostById(id, list = HOSTS) {
   const h = list.find((x) => x.id === id);
