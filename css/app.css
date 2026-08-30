@@ -450,7 +450,9 @@ dialog.menu::backdrop { background: transparent; }
    sits inside its own tinted block. .cmeta/.cbody had no rules at all before
    this, which is why the node rendered as unstyled body text (2026-08-26). */
 /* deep links (decision 10): the addressed comment, its bar, and the quiet share glyph */
-.cbtn.share { margin-left: auto; opacity: .55; }
+.cbtn.share { margin-left: auto; opacity: .7; }
+.cbtn.share .glyph { display: inline-flex; width: 1.15em; height: 1.15em; }
+.cbtn.share .glyph svg { width: 100%; height: 100%; }
 .cbtn.share:hover, .cbtn.share:focus-visible { opacity: 1; }
 .comment.focused { scroll-margin-top: 88px; }
 .comment.focused > .comment-body > .comment-text { border-radius: var(--radius-sm); animation: focus-tint 2s ease-out; }

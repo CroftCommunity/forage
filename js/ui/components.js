@@ -357,9 +357,15 @@ export function postRow(p, viewerCanVote, opts = {}) {
 // ---------- deep links (plan 2026-08-29 post-and-thread, decision 10) ----------
 // Every comment has an address; the share glyph copies it. Quiet at rest
 // (55%), full hit area, always the LAST thing on the action row.
+// feed-row v3 (owner, 2026-08-30: "I really don't like that bottom right share
+// icon"): the ↗ text glyph read as "external link" and sat tiny at 55%; the
+// glyph is now the share icon board-cards v5 drew — a tray with an arrow up out
+// of it, the shape bsky.app and iOS use — at text size, one weight with the
+// other three. Recorded alternative: a chain link (the button DOES copy a link).
+const SHARE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>';
 export function shareButton(url, what = 'comment') {
   const b = el('button', { type: 'button', class: 'cbtn share', 'aria-label': `Copy link to this ${what}`, title: 'Copy link' },
-    el('span', { 'aria-hidden': 'true' }, '\u2197'));
+    el('span', { class: 'glyph', 'aria-hidden': 'true', html: SHARE_ICON }));
   b.addEventListener('click', () => copy(url, 'Link'));
   return b;
 }
