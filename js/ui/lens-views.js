@@ -1309,6 +1309,104 @@ function deleteControl(post, onDone) {
 // as a draft in this browser (js/drafts.js), keyed by the post answered: Cancel
 // keeps it, Send clears it, Discard throws it away. Text only in v4: the image
 // strip composerCard carries is not on a reply box (recorded on the mock, O7).
+// The image picker, shared by the composer and the reply page (feed-row v6;
+// it closes O7). Alt text is REQUIRED — probe-verified, the server refuses a
+// record whose image omits it — and a blank alt would pass the server while
+// leaving the post unreadable to anyone using a screen reader, so Send stays
+// disabled until every attached image is described. Files are held here and
+// uploaded on Send, not on select: an unreferenced blob is garbage-collected
+// within minutes, so uploading early risks it expiring mid-compose. `gif`
+// adds a second door that takes a .gif from the device — GIF SEARCH (Tenor
+// through a proxy, as bsky.app does) is an external API nobody here has
+// verified, so it is the recorded follow-on, not a button that does nothing.
+const ICON = {
+  image: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/></svg>',
+  gif: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><text x="12" y="15.5" text-anchor="middle" font-size="8" font-weight="700" font-family="system-ui,sans-serif" fill="currentColor" stroke="none">GIF</text></svg>',
+  emoji: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5c1 1.2 2.2 1.8 3.5 1.8s2.5-.6 3.5-1.8"/><path d="M9 9.5h.01M15 9.5h.01" stroke-width="2.6"/></svg>',
+};
+function imagePicker({ onChange, gif = false }) {
+  const picked = [];
+  const strip = el('div', { class: 'row wrap', style: 'gap:8px;margin-top:8px' });
+  const input = (kind, accept) => {
+    const i = el('input', { type: 'file', accept, multiple: true, style: 'display:none', 'data-image-input': kind });
+    i.addEventListener('change', () => {
+      for (const f of [...i.files]) {
+        if (picked.length >= IMAGE_LIMITS.count) { toast(`A post holds ${IMAGE_LIMITS.count} images.`, 'err'); break; }
+        if (f.size > IMAGE_LIMITS.bytes) { toast(`${f.name} is ${Math.round(f.size / 1000)}kB and the limit is ${IMAGE_LIMITS.bytes / 1000}kB.`, 'err'); continue; }
+        const entry = { file: f, alt: '', url: URL.createObjectURL(f), aspectRatio: null };
+        // the dimensions come free from the preview we are about to draw, and
+        // sending them stops a viewer's feed jumping as the image loads
+        const probe = new Image();
+        probe.onload = () => { entry.aspectRatio = { width: probe.naturalWidth, height: probe.naturalHeight }; };
+        probe.src = entry.url;
+        picked.push(entry);
+      }
+      i.value = '';
+      drawStrip(); onChange();
+    });
+    return i;
+  };
+  const imageInput = input('image', 'image/*');
+  const gifInput = gif ? input('gif', 'image/gif') : null;
+  const imageButton = el('button', { type: 'button', class: 'cbtn iconbtn', 'data-attach-image': '1', 'aria-label': 'Add image', title: 'Add image', html: ICON.image });
+  imageButton.addEventListener('click', () => imageInput.click());
+  const gifButton = gif ? el('button', { type: 'button', class: 'cbtn iconbtn', 'data-attach-gif': '1', 'aria-label': 'Add a GIF from your device', title: 'Add a GIF from your device', html: ICON.gif }) : null;
+  gifButton?.addEventListener('click', () => gifInput.click());
+  const drawStrip = () => {
+    strip.replaceChildren(imageInput, gifInput, ...picked.map((p, i) => {
+      // aria-label, not the placeholder alone: a placeholder is not a reliable
+      // accessible name — it disappears the moment someone types
+      const alt = el('input', { type: 'text', 'data-image-alt': String(i),
+        'aria-label': `Alt text for image ${i + 1} of ${picked.length} (required)`,
+        placeholder: 'Describe this image (required)', value: p.alt });
+      alt.addEventListener('input', () => { p.alt = alt.value; onChange(); });
+      const drop = el('button', { type: 'button', class: 'btn sm', 'data-image-remove': String(i), title: 'Remove this image' }, '×');
+      drop.addEventListener('click', () => { URL.revokeObjectURL(p.url); picked.splice(i, 1); drawStrip(); onChange(); });
+      return el('div', { class: 'card', style: 'padding:6px;min-width:180px;flex:1' },
+        el('div', { class: 'row', style: 'gap:6px;align-items:center' }, el('img', { src: p.url, alt: '', class: 'thumb' }), drop),
+        alt);
+    }));
+  };
+  drawStrip();
+  return { picked, strip, imageInput, imageButton, gifButton,
+    undescribed: () => picked.some((p) => !p.alt.trim()),
+    revoke: () => { for (const p of picked) URL.revokeObjectURL(p.url); } };
+}
+
+// The remaining-count ring (bsky.app's): the number, and a ring that fills as
+// the 300 graphemes go; red past the limit.
+function countRing() {
+  const num = el('span', { class: 'n', 'data-count': '1' }, String(POST_LIMITS.graphemes));
+  const R = 8, C = 2 * Math.PI * R;
+  const ring = el('span', { class: 'count-ring', 'data-count-ring': '1', 'aria-hidden': 'true',
+    html: `<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="${R}" fill="none" stroke="currentColor" stroke-opacity=".25" stroke-width="2"/><circle class="arc" cx="10" cy="10" r="${R}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C}" transform="rotate(-90 10 10)"/></svg>` });
+  const arc = ring.querySelector('.arc');
+  const node = el('span', { class: 'count', 'data-remaining': '1', role: 'status' }, num, ring);
+  return { node, paint(left) {
+    const used = Math.min(1, Math.max(0, (POST_LIMITS.graphemes - left) / POST_LIMITS.graphemes));
+    arc.setAttribute('stroke-dashoffset', String(C * (1 - used)));
+    num.textContent = String(left);
+    node.classList.toggle('over', left < 0);
+    node.setAttribute('aria-label', left >= 0 ? `${left} characters left` : `${-left} characters over`);
+  } };
+}
+
+// A small emoji palette (feed-row v6): a button, a grid of common emoji, and
+// an insert at the caret. Hermetic — no picker library, no network.
+const EMOJI = ['😀', '😂', '🥲', '😍', '🤔', '😮', '😢', '😡', '🙏', '👍', '👎', '👏', '🙌', '❤️', '💔', '🔥', '✨', '🎉', '💯', '👀', '🌱', '🌿', '🍄', '🌻', '🐸', '🐦', '🥧', '☕', '🍞', '🧀', '📚', '🎵', '🚲', '🏕️', '🌧️', '☀️', '⭐', '✅', '❓', '‼️'];
+function emojiButton(textarea, onInsert) {
+  const palette = el('div', { class: 'emoji-palette', 'data-emoji-palette': '1', role: 'group', 'aria-label': 'Emoji', hidden: '' },
+    ...EMOJI.map((e) => { const b = el('button', { type: 'button', class: 'emoji', 'aria-label': e }, e); b.addEventListener('click', () => {
+      const s = textarea.selectionStart ?? textarea.value.length, t = textarea.selectionEnd ?? s;
+      textarea.value = textarea.value.slice(0, s) + e + textarea.value.slice(t);
+      textarea.selectionStart = textarea.selectionEnd = s + e.length;
+      palette.hidden = true; btn.setAttribute('aria-expanded', 'false'); textarea.focus(); onInsert();
+    }); return b; }));
+  const btn = el('button', { type: 'button', class: 'cbtn iconbtn', 'data-emoji': '1', 'aria-label': 'Add emoji', title: 'Add emoji', 'aria-expanded': 'false', html: ICON.emoji });
+  btn.addEventListener('click', () => { palette.hidden = !palette.hidden; btn.setAttribute('aria-expanded', String(!palette.hidden)); });
+  return { btn, palette };
+}
+
 const replyPath = (parentUri, rootUri, fromSlug) =>
   `/reply?uri=${encodeURIComponent(parentUri)}&root=${encodeURIComponent(rootUri)}${fromSlug ? `&from=${encodeURIComponent(fromSlug)}` : ''}`;
 
@@ -1316,11 +1414,15 @@ function replyBox({ parentUri, replyTo, onDone, onCancel, quick = false, autofoc
   const stored = drafts.load(parentUri);
   const box = el('textarea', { rows: quick ? '3' : '6', 'data-composer-text': '1', placeholder: 'Write your reply…', 'aria-label': 'Your reply' });
   if (stored) box.value = stored.text;
-  const remaining = el('span', { class: 'xs muted', 'data-remaining': '1' });
+  const count = countRing();
   const status = el('span', { class: 'xs muted', 'data-draft-status': '1' });
   const discard = el('button', { type: 'button', class: 'linkish xs', 'data-draft-discard': '1' }, 'Discard draft');
   const send = el('button', { type: 'button', class: 'btn sm primary', 'data-send': '1' }, 'Send');
   const cancel = el('button', { type: 'button', class: 'btn sm', 'data-cancel': '1' }, 'Cancel');
+  // the page's box carries the tools (image · GIF · emoji, bottom-left, bsky's
+  // row — owner 2026-08-30); the quick box stays a text box with its count
+  const pics = quick ? null : imagePicker({ onChange: () => sync(), gif: true });
+  const emoji = quick ? null : emojiButton(box, () => sync());
   const paintDraft = (d) => {
     status.textContent = d ? `Draft saved in this browser · ${new Date(d.savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '';
     discard.hidden = !d;
@@ -1329,29 +1431,47 @@ function replyBox({ parentUri, replyTo, onDone, onCancel, quick = false, autofoc
   let timer = null;
   const sync = () => {
     const left = POST_LIMITS.graphemes - graphemes(box.value.trim());
-    remaining.textContent = left >= 0 ? `${left} left` : `${-left} over`;
-    remaining.classList.toggle('over', left < 0);
-    send.disabled = left < 0 || !box.value.trim();
+    count.paint(left);
+    const hasContent = box.value.trim() || pics?.picked.length;
+    const undescribed = pics?.undescribed() ?? false;
+    send.disabled = left < 0 || !hasContent || undescribed;
+    send.title = undescribed ? 'Every image needs alt text before this can be sent' : '';
   };
   box.addEventListener('input', () => { sync(); clearTimeout(timer); timer = setTimeout(() => paintDraft(drafts.save(parentUri, box.value)), 400); });
   sync();
   discard.addEventListener('click', () => { clearTimeout(timer); drafts.clear(parentUri); box.value = ''; sync(); paintDraft(null); box.focus(); });
-  cancel.addEventListener('click', () => { clearTimeout(timer); if (box.value.trim()) drafts.save(parentUri, box.value); onCancel?.(); });
+  cancel.addEventListener('click', () => { clearTimeout(timer); if (box.value.trim()) drafts.save(parentUri, box.value); pics?.revoke(); onCancel?.(); });
   send.addEventListener('click', async () => {
     send.disabled = true; clearTimeout(timer);
     try {
-      await lens.publish({ text: box.value, replyTo, images: [], langs: lang.active().slice(0, 1),
+      // upload NOW, adjacent to the post — an unreferenced blob expires within minutes
+      const images = [];
+      for (const pc of pics?.picked ?? []) {
+        send.replaceChildren(`Uploading ${images.length + 1}/${pics.picked.length}…`);
+        images.push({ blob: await lens.uploadImage(pc.file), alt: pc.alt.trim(), aspectRatio: pc.aspectRatio });
+      }
+      send.replaceChildren('Send');
+      await lens.publish({ text: box.value, replyTo, images, langs: lang.active().slice(0, 1),
         navLang: typeof navigator !== 'undefined' ? navigator.language : null });
+      pics?.revoke();
       drafts.clear(parentUri);
       toast('Reply sent — it is on your Bluesky account too.', 'ok');
       onDone?.();
     } catch (e) { toast('Reply failed: ' + e.message, 'err'); send.disabled = false; }
   });
+  const tools = quick ? null : el('div', { class: 'reply-tools' }, pics.imageButton, pics.gifButton, emoji.btn);
   const card = el('div', { class: 'card reply-box' + (quick ? ' quick' : ''), 'data-composer': '1', ...(quick ? { 'data-quick': '1' } : {}) },
+    quick ? null : el('div', { class: 'row spread', style: 'align-items:center;margin-bottom:6px' }, cancel, send),
     box,
-    el('div', { class: 'row spread wrap', style: 'gap:8px;align-items:center;margin-top:6px' },
-      el('div', { class: 'row wrap', style: 'gap:8px;align-items:center' }, remaining, status, discard),
-      el('div', { class: 'row', style: 'gap:6px' }, cancel, send)));
+    pics?.strip ?? null,
+    emoji?.palette ?? null,
+    quick
+      ? el('div', { class: 'row spread wrap', style: 'gap:8px;align-items:center;margin-top:6px' },
+        el('div', { class: 'row wrap', style: 'gap:8px;align-items:center' }, status, discard),
+        el('div', { class: 'row', style: 'gap:8px;align-items:center' }, count.node, cancel, send))
+      : el('div', { class: 'reply-bar' },
+        tools,
+        el('div', { class: 'reply-bar-right' }, status, discard, count.node)));
   if (autofocus) queueMicrotask(() => box.focus());
   return card;
 }
@@ -1400,64 +1520,14 @@ function composerCard({ tag, replyTo, onDone }) {
     tag ? `#${tag} is added for you if you don’t write it.` : '');
   const send = el('button', { class: 'btn sm primary' }, replyTo ? 'Reply' : 'Post');
   const cancel = el('button', { class: 'btn sm' }, 'Cancel');
-  // Phase 3: images. Alt text is REQUIRED — probe-verified, the server refuses
-  // a record whose image omits it — and a blank alt would pass the server while
-  // leaving the post unreadable to anyone using a screen reader, so Post stays
-  // disabled until every attached image is described. Files are held here and
-  // uploaded on Post, not on select: an unreferenced blob is garbage-collected
-  // within minutes, so uploading early risks it expiring mid-compose.
-  const picked = [];
-  const strip = el('div', { class: 'row wrap', style: 'gap:8px;margin-top:8px' });
-  const filePicker = el('input', { type: 'file', accept: 'image/*', multiple: true, style: 'display:none' });
-  const attach = el('button', { class: 'btn sm', 'data-attach-image': '1' }, 'Add image');
-  attach.addEventListener('click', () => filePicker.click());
-
-  const drawStrip = () => {
-    strip.replaceChildren(...picked.map((p, i) => {
-      // aria-label, not the placeholder alone: a placeholder is not a reliable
-      // accessible name — it disappears the moment someone types, and screen
-      // readers treat it inconsistently. Alt text is REQUIRED to post, so an
-      // unnamed control here blocks publishing rather than just annoying.
-      // Named per image because the strip repeats this input once per attachment.
-      const alt = el('input', { type: 'text', 'data-image-alt': String(i),
-        'aria-label': `Alt text for image ${i + 1} of ${picked.length} (required)`,
-        placeholder: 'Describe this image (required)', value: p.alt });
-      alt.addEventListener('input', () => { p.alt = alt.value; sync(); });
-      const drop = el('button', { class: 'btn sm', title: 'Remove this image' }, '×');
-      drop.addEventListener('click', () => { picked.splice(i, 1); drawStrip(); sync(); });
-      return el('div', { class: 'card', style: 'padding:6px;min-width:180px;flex:1' },
-        el('div', { class: 'row', style: 'gap:6px;align-items:center' },
-          el('img', { src: p.url, alt: '', class: 'thumb' }), drop),
-        alt);
-    }));
-  };
-  filePicker.addEventListener('change', () => {
-    for (const f of [...filePicker.files]) {
-      if (picked.length >= IMAGE_LIMITS.count) {
-        toast(`A post holds ${IMAGE_LIMITS.count} images.`, 'err');
-        break;
-      }
-      if (f.size > IMAGE_LIMITS.bytes) {
-        toast(`${f.name} is ${Math.round(f.size / 1000)}kB and the limit is ${IMAGE_LIMITS.bytes / 1000}kB.`, 'err');
-        continue;
-      }
-      const entry = { file: f, alt: '', url: URL.createObjectURL(f), aspectRatio: null };
-      // the dimensions come free from the preview we are about to draw, and
-      // sending them stops a viewer's feed jumping as the image loads
-      const probe = new Image();
-      probe.onload = () => { entry.aspectRatio = { width: probe.naturalWidth, height: probe.naturalHeight }; };
-      probe.src = entry.url;
-      picked.push(entry);
-    }
-    filePicker.value = '';
-    drawStrip();
-    sync();
-  });
+  // Phase 3: images — the picker is shared with the reply box (feed-row v6);
+  // alt text is REQUIRED and Post stays disabled until every image has it
+  const pics = imagePicker({ onChange: () => sync() });
+  const picked = pics.picked, strip = pics.strip, filePicker = pics.imageInput, attach = pics.imageButton;
 
   const card = el('div', { class: 'card', 'data-composer': '1', style: 'margin-top:8px' },
     box,
     strip,
-    filePicker,
     el('div', { class: 'row spread wrap', style: 'gap:8px;align-items:center;margin-top:6px' },
       el('div', { class: 'row', style: 'gap:8px;align-items:center' }, remaining, note),
       el('div', { class: 'row', style: 'gap:6px' }, attach, cancel, send)));

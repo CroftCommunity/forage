@@ -167,7 +167,34 @@ export async function run() {
     assert.ok(tb <= 4, `the answered post's ⋯ left its byline (${Math.round(tb)}px off the line)`);
     const pageBox = page.locator('[data-composer]:not([data-quick])');
     assert.equal(await pageBox.count(), 1, 'one box, the page’s');
+    // feed-row v6 claims 19–21 (owner: "a 300char count thing like in bsky,
+    // bottom right … image, gif, emoji selectors like at the bottom left"):
+    // the count (with its ring) sits right, the three tools sit left; the
+    // emoji palette inserts at the caret; an image needs alt text before Send
+    const bar = await pageBox.evaluate((b) => {
+      const box = b.getBoundingClientRect(); const mid = box.left + box.width / 2;
+      const x = (sel) => { const e = b.querySelector(sel); if (!e) return null; const r = e.getBoundingClientRect(); return r.left + r.width / 2; };
+      return { mid, count: x('[data-count]'), ring: !!b.querySelector('[data-count-ring]'), img: x('[data-attach-image]'), gif: x('[data-attach-gif]'), emoji: x('[data-emoji]'),
+        gifAccept: b.querySelector('[data-image-input="gif"]')?.getAttribute('accept') ?? null, countText: b.querySelector('[data-count]')?.textContent.trim() };
+    });
+    assert.ok(bar.count !== null && bar.count > bar.mid && bar.ring, `the count sits bottom-right with its ring (x ${Math.round(bar.count ?? -1)} vs mid ${Math.round(bar.mid)})`);
+    assert.equal(bar.countText, '300', 'an empty box has 300 left');
+    for (const [k, v] of Object.entries({ img: bar.img, gif: bar.gif, emoji: bar.emoji })) assert.ok(v !== null && v < bar.mid, `${k} selector sits bottom-left (x ${v})`);
+    assert.equal(bar.gifAccept, 'image/gif', 'the GIF selector takes a .gif from the device');
+    await pageBox.locator('[data-emoji]').click();
+    await pageBox.locator('[data-emoji-palette] button').first().click();
+    const firstEmoji = await pageBox.locator('textarea').inputValue();
+    assert.ok(firstEmoji.length > 0 && /\p{Extended_Pictographic}/u.test(firstEmoji), `the palette inserted an emoji (${JSON.stringify(firstEmoji)})`);
+    assert.equal(await pageBox.locator('[data-count]').innerText(), '299', 'one emoji is one grapheme off the count');
+    await pageBox.locator('[data-image-input="image"]').setInputFiles({ name: 'one.png', mimeType: 'image/png',
+      buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64') });
+    await pageBox.locator('[data-image-alt]').waitFor();
+    assert.equal(await pageBox.locator('[data-send]').isDisabled(), true, 'an image without alt text cannot be sent');
+    await pageBox.locator('[data-image-alt]').fill('one pixel');
+    assert.equal(await pageBox.locator('[data-send]').isDisabled(), false, 'described, it can');
+    await pageBox.locator('[data-image-remove]').click();
     await pageBox.locator('textarea').fill('a draft, not yet sent');
+    assert.equal(await pageBox.locator('[data-count]').innerText(), '279', 'the count follows the text');
     await page.waitForFunction((k) => !!localStorage.getItem(k), `forage.draft:${ROOT}`);
     await page.reload();
     await page.waitForSelector('[data-composer] textarea');
