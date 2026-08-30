@@ -205,7 +205,7 @@ suite is the instrument.
 **Validation:** Narrow, plus one look at 320 wide that the bar still holds one row (E144).
 **Checkpoint:** *(Pass 3)* the first commit of branch A; `mobile-fit` is the whole gate.
 
-#### Phase 2: one toolbar dressing (decision 3)
+#### Phase 2: one toolbar dressing (decision 3) — ✅ shipped 2026-08-29
 **Changes:** `js/board-density.js` — `densityDial` gets `class: 'pillsel'` and its label
 "Card" / "Compact" reads as `Card` only (the axis is obvious from the options);
 `js/ui/lens-views.js` — `boardToolbar` row order bar · viewSel; `js/ui/views.js` — board row

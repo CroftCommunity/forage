@@ -52,7 +52,10 @@ export function setDensity(v) {
 // The dial itself, so both boards offer the same control rather than each
 // growing its own copy that drifts.
 export function densityDial(el, onPicked) {
+  // `.pillsel`: the same dressing as the sort selects beside it (board-cards
+  // decision 3) — one control family, not a pill next to a bare native select.
   const sel = el('select', {
+    class: 'pillsel',
     'data-density': '1',
     'aria-label': 'Board density',
     title: 'Card shows previews and media; Compact is dense rows',

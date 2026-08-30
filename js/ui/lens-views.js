@@ -19,7 +19,7 @@ import { hostById, featuredHosts, otherHosts, canCreateAccount } from '../auth/h
 import { heroDismissed, dismissHero, EMBLEM } from '../hero.js';
 import * as mediaScale from '../media-scale.js';
 import * as lang from '../lang.js';
-import { density, setDensity, DENSITIES } from '../board-density.js';
+import { density, densityDial } from '../board-density.js';
 import { sortBar } from './sortbar.js';
 import { sortItems } from '../engines/rank.js';
 import { POST_LIMITS, IMAGE_LIMITS, graphemes, withTag } from '../compose.js';
@@ -512,17 +512,16 @@ function boardToolbar(onChange) {
   // the feed itself is ranked by its generator (DL-010); Hot is engagement
   // over that window (decision 9), From applies to Hot and Top.
   // rebuilt on every change so From appears the moment a windowed sort is chosen
+  // The density dial is the SHARED one (js/board-density.js), drawn inside the
+  // sort bar's row so both populations show one control family (board-cards
+  // decision 3). Redrawn with the bar — it is cheap and reads its own state.
   const barHost = el('div', { style: 'display:contents' });
   const drawBar = () => barHost.replaceChildren(sortBar({
     sorts: [['feed', 'Feed order'], ['hot', 'Hot'], ['new', 'New'], ['top', 'Top']],
     sort: boardSort, from: boardTimeframe,
     onChange: ({ sort, from }) => { boardSort = sort; boardTimeframe = from; drawBar(); onChange(); },
+    extra: [el('span', { class: 'grow' }), densityDial(el, () => { syncSlider(); onChange(); })],
   }));
-  drawBar();
-  const viewSel = el('select', { 'data-density': '1', 'aria-label': 'Board density',
-    title: 'Card shows previews and media; Compact is dense rows' },
-    ...DENSITIES.map(([v, l]) =>
-      el('option', { value: v, selected: boardView() === v || false }, l)));
 
   // 3t: how big previews should be is a per-screen judgement, so it is a
   // slider rather than a setting. Card view only — compact renders no media,
@@ -534,14 +533,10 @@ function boardToolbar(onChange) {
   const syncSlider = () => { slider.style.display = boardView() === 'card' ? '' : 'none'; };
   syncSlider();
   slider.addEventListener('input', () => { mediaScale.set(slider.value); applyMediaScale(); });
+  drawBar();
 
-  viewSel.addEventListener('change', () => {
-    setDensity(viewSel.value);
-    syncSlider();
-    onChange();
-  });
   return el('div', { class: 'row wrap', style: 'gap:6px;margin:6px 0;align-items:center', 'data-board-toolbar': '1' },
-    barHost, viewSel,
+    barHost,
     el('div', { class: 'row', style: 'gap:6px;align-items:center;margin-left:auto' }, slider));
 }
 
