@@ -282,8 +282,10 @@ export async function run() {
     assert.equal(await page.locator('.tabs .tab').count(), 0, 'no sort tabs remain on a board');
     assert.deepEqual(await sortOptions(), ['Hot', 'New', 'Top', 'Rising'],
       'the board offers four sorts and Controversial is not one');
-    assert.equal(await page.evaluate(() => document.querySelector('select[data-from]').value), 'day',
-      'a board defaults to From: Today');
+    // From defaults to All time: Hot's decay is the recency window, and a
+    // Today default emptied the seeded board (its flagship thread is 2d old)
+    assert.equal(await page.evaluate(() => document.querySelector('select[data-from]').value), 'all',
+      'a board defaults to From: All time');
 
     // …and each remaining sort still renders a board. A sort list that lost a
     // member and quietly broke its neighbours would pass the assertion above.

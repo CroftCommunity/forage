@@ -13,6 +13,7 @@ import { frontiers } from '../../ledger/divergence.js';
 import { humanWait } from '../engines/limits.js';
 import { postRow, commentNode,  vote, emptyState, gate, errorState, toast } from './components.js';
 import { densityDial, isCompact } from '../board-density.js';
+import { sortBar } from './sortbar.js';
 
 // A board scope for one feed. Derived, not spelled: the old literal was the
 // length of 'field:' and the rename silently cut a character off every slug.
@@ -22,10 +23,6 @@ const V = () => store.getPersonaId();
 const S = () => store.getState();
 const NOW = () => store.nowSec(); // the one place views resolve the clock
 
-function tabs(items, active) {
-  return el('div', { class: 'tabs' }, ...items.map(([label, href]) =>
-    el('a', { class: 'tab' + (label.toLowerCase() === active ? ' active' : ''), href }, label)));
-}
 
 // ---------- sidebar builders ----------
 function feedsSidebar() {
@@ -56,12 +53,22 @@ function limitsSidebar() {
 // Controversial is gone with downvotes (plan 2026-08-27-1) — it was the only
 // sort DEFINED by the up/down split, so it has no one-sided form.
 const SORTS = ['hot', 'new', 'top', 'rising'];
+const SORT_LABEL = (s) => s[0].toUpperCase() + s.slice(1);
+// Best is retired (decision 9): an old ?sort=best or a stored preference falls to hot
+const normSort = (s, allowed) => (allowed.includes(s) ? s : 'hot');
 // A row's ⋯ menu needs the permissions of the row's OWN feed — /popular mixes
 // feeds, and a steward of one is a member of the next.
 const rowPerms = (p) => ({ ...sel.permissions(S(), V(), p.feedId, NOW()), viewerId: V() });
 export function boardView(scope, title, query) {
-  const sort = query.sort || (S().users[V()]?.prefs?.defaultSort ?? 'hot');
-  const data = sel.board(S(), V(), scope, sort, 'all', NOW());
+  const sort = normSort(query.sort || (S().users[V()]?.prefs?.defaultSort ?? 'hot'), SORTS);
+  // decision 9: From applies to Hot as it does to Top. The DEFAULT is All
+  // time, not the plan's Today: Hot's decay is already a recency window, and
+  // a Today default on top of it emptied the demo's own board — its flagship
+  // thread is two days old (found by the post-menu suite, 2026-08-29). Today
+  // is one tap away in the bar.
+  const windowed = sort === 'hot' || sort === 'top';
+  const from = windowed ? (query.from || 'all') : 'all';
+  const data = sel.board(S(), V(), scope, sort, from, NOW());
   const main = el('div', {});
 
   // Logged-out banner with the primary tagline (acceptance §12).
@@ -80,10 +87,11 @@ export function boardView(scope, title, query) {
       ? el('a', { class: 'btn primary sm', href: `/submit?f=${scope.slice(FEED_SCOPE.length)}` }, '+ New post') : null));
 
   const base = scope.startsWith('feed:') ? `/f/${scope.slice(FEED_SCOPE.length)}` : `/${scope}`;
-  main.append(el('div', { class: 'row spread wrap' },
-    el('div', { class: 'tabs' }, ...SORTS.map((s) =>
-      el('a', { class: 'tab' + (s === sort ? ' active' : ''), href: `${base}?sort=${s}` }, s[0].toUpperCase() + s.slice(1)))),
-    densityDial(el)));
+  main.append(sortBar({
+    sorts: SORTS.map((s) => [s, SORT_LABEL(s)]), sort, from,
+    onChange: ({ sort: s, from: f }) => go(`${base}?sort=${s}${s === 'hot' || s === 'top' ? `&from=${f}` : ''}`),
+    extra: [el('span', { class: 'grow' }), densityDial(el)],
+  }));
 
   if (!data.posts.length) {
     main.append(emptyState('Nothing growing here yet',
@@ -137,7 +145,10 @@ export function feedView(params, query) {
 
 // ---------- thread ----------
 export function threadView(params, query) {
-  const t = sel.thread(S(), V(), params.id, 'hot', NOW());
+  const tSort = normSort(query.sort || 'hot', ['hot', 'top', 'new']);
+  // a thread is one conversation: From defaults to All time here
+  const tFrom = tSort === 'new' ? 'all' : (query.from || 'all');
+  const t = sel.thread(S(), V(), params.id, tSort, NOW(), tFrom);
   if (!t) return { main: emptyState('No such post', 'This post does not exist.'), side: null };
   const p = t.post;
   const main = el('div', {});
@@ -185,9 +196,10 @@ export function threadView(params, query) {
   // from a description reliably misses.
   // Best is retired (plan 2026-08-29 post-and-thread, decision 9): Hot, on
   // engagement, is the thread's default; an old ?sort=best falls to it (O7).
-  const sortRow = tabs([['Hot', `/f/${p.feedSlug}/p/${p.id}?sort=hot`], ['Top', `/f/${p.feedSlug}/p/${p.id}?sort=top`],
-    ['New', `/f/${p.feedSlug}/p/${p.id}?sort=new`]],
-    (query.sort === 'best' ? 'hot' : (query.sort || 'hot')));
+  const sortRow = sortBar({
+    sorts: [['hot', 'Hot'], ['top', 'Top'], ['new', 'New']], sort: tSort, from: tFrom,
+    onChange: ({ sort: s, from: f }) => go(`/f/${p.feedSlug}/p/${p.id}?sort=${s}${s === 'new' ? '' : `&from=${f}`}`),
+  });
   main.append(el('div', { class: 'card' },
     el('div', { class: 'row spread' }, el('h2', {}, plural(t.total, 'comment')), null), sortRow,
     ...(t.comments.length ? t.comments.map((c) => commentNode(c, ctx)) : [el('div', { class: 'muted small' }, 'No comments yet.')])));

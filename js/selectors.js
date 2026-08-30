@@ -144,11 +144,10 @@ export function board(state, viewerId, scope, sort = 'hot', timeframe = 'all', n
     return true;
   });
 
-  // `top` alone now — the timeframe window applied to the two score-ranked
-  // sorts, and controversial is gone (plan 2026-08-27-1). Not in that plan's
-  // declared write-set for this phase, but a dead sort name left in a live
-  // condition is precisely the residue the change exists to remove.
-  if (timeframe !== 'all' && sort === 'top') {
+  // The window applies to the score-ranked sorts: top, and — since plan
+  // 2026-08-29 post-and-thread (decision 9) — hot, whose signal is engagement
+  // over each item's own timestamp. New has no window; rising has its own.
+  if (timeframe !== 'all' && (sort === 'top' || sort === 'hot')) {
     const cutoff = now * 1000 - timeframeMs(timeframe);
     posts = posts.filter((p) => p.createdTs >= cutoff);
   }
@@ -168,7 +167,7 @@ function timeframeMs(tf) {
 }
 
 // ---- thread (post + comment tree) ----
-export function thread(state, viewerId, postId, sort = 'hot', now) {
+export function thread(state, viewerId, postId, sort = 'hot', now, timeframe = 'all') {
   const post = state.posts[postId];
   if (!post) return null;
   const perms = permissions(state, viewerId, post.feedId, now);
@@ -183,7 +182,11 @@ export function thread(state, viewerId, postId, sort = 'hot', now) {
       c, likes: tally(state, 'comment', c.id).likes,
       createdSec: Math.floor(c.createdTs / 1000),
     }));
-    const sorted = sortItems(kids, sort, now);
+    // 11b: `From` windows the top-level comments only — a reply keeps its
+    // parent, and a parent keeps every reply
+    const windowed = parentKey === 'root' && timeframe !== 'all' && (sort === 'top' || sort === 'hot')
+      ? kids.filter((c) => c.createdTs >= now * 1000 - timeframeMs(timeframe)) : kids;
+    const sorted = sortItems(windowed, sort, now);
     return sorted.map(({ c }) => {
       const shaped = shapeComment(state, viewerId, c, perms);
       const node = { ...shaped, depth,
