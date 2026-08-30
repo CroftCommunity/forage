@@ -695,6 +695,13 @@ function lensSidebar() {
   return feedsCard;
 }
 
+// board-cards decision 6: the rail — the guest's sign-in card first, then the
+// Feeds card, then Trending last (the home page draws Trending in its column
+// and passes trending: false). One order, so seven views cannot each invent one.
+function lensRail({ trending = true } = {}) {
+  return [session ? null : sessionCard(), lensSidebar(), trending ? trendingRail() : null];
+}
+
 function sessionCard() {
   if (manager === null) { bootAuth(); return el('div', { class: 'card' }, el('div', { class: 'xs muted' }, 'Connecting sign-in…')); }
   if (manager === 'unavailable') {
@@ -746,7 +753,7 @@ function sessionCard() {
   const more = el('button', { type: 'button', class: 'btn sm sheet-open', 'data-open-auth-sheet': '1' },
     'Use another provider →');
   more.addEventListener('click', () => openAuthSheet());
-  return el('div', { class: 'card' },
+  return el('div', { class: 'card', 'data-signin-card': '1' },
     el('h2', {}, 'Sign in with Bluesky'),
     el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
       'The official OAuth flow — you authorize on your own server; no credentials touch Forage. Unlocks your saved feeds as Feeds, Following, and search.'),
@@ -931,7 +938,7 @@ export function lensHomeView() {
       el('h2', {}, 'Browse'),
       el('div', { class: 'stack' },
         ...CURATED.map((c) => el('div', {}, el('a', { href: `/f/${c.slug}` }, `f/${sourceLabel(c)}`), el('span', { class: 'xs muted' }, ` — ${c.kind}`))))));
-  return { main, side: session ? null : el('div', { class: 'side' }, sessionCard()) };
+  return { main, side: el('div', { class: 'side' }, ...lensRail({ trending: false })) };
 }
 
 // 3v: /f/ has two shapes. A creator-qualified path (/f/@handle/rkey) is the
@@ -952,7 +959,7 @@ export function lensFeedView(params) {
   }
 
   const host = el('div', {}, skeleton(6));
-  const side = el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar());
+  const side = el('div', { class: 'side' }, ...lensRail());
   lens.resolveFeed({ handle: route.handle, rkey: route.rkey })
     .then((info) => {
       const entry = { slug: route.rkey, humanSlug: slugifyFeedName(info.title), title: info.title,
@@ -1057,7 +1064,7 @@ function feedBoardView(entry, preInfo) {
       if (m) a.setAttribute('href', `/p?uri=${encodeURIComponent(m[1])}&from=${entry.slug}`);
     }
   }).catch((e) => main.replaceChildren(emptyState('Lens fetch failed', e.message)));
-  return { main, side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()) };
+  return { main, side: el('div', { class: 'side' }, ...lensRail()) };
 }
 
 // 3e/3q: a quote-response rendered as thread continuation. 3q gives it a left
@@ -1482,7 +1489,7 @@ export function lensUserView(params) {
       repaint();
     })
     .catch((e) => main.replaceChildren(emptyState('Profile fetch failed', e.message)));
-  return { main, side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()) };
+  return { main, side: el('div', { class: 'side' }, ...lensRail()) };
 }
 
 // 3j/3p: the feed's ONE box. It used to be two — this card and a separate
@@ -1996,7 +2003,7 @@ export function lensFeedsView() {
         controls),
       countLine,
       results),
-    side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()),
+    side: el('div', { class: 'side' }, ...lensRail()),
   };
 }
 
@@ -2035,7 +2042,7 @@ export function lensHashtagView(params) {
   if (!session) {
     return { main: emptyState(`#${tag} needs a session`,
       'Hashtag boards ride search, which Bluesky gates behind sign-in (DL-021). Sign in and this becomes a live board.'),
-      side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()) };
+      side: el('div', { class: 'side' }, ...lensRail()) };
   }
   const heading = () => el('div', { class: 'row spread', style: 'align-items:center;gap:8px' },
     el('h1', { style: 'margin:0' }, `#${tag}`), tagSubButton(tag));
@@ -2068,7 +2075,7 @@ export function lensHashtagView(params) {
       });
   };
   load(true);
-  return { main, side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()) };
+  return { main, side: el('div', { class: 'side' }, ...lensRail()) };
 }
 
 // 3g: the trending rail — unspecced API; absent WITH WORDS when it breaks,
@@ -2382,5 +2389,5 @@ export function lensThreadView(params, query) {
     const bar = focus ? focusComment(commentsCard, focus, { threadHref: `/p?uri=${encodeURIComponent(p.id)}` }) : null;
     main.replaceChildren(...[bar, head, t.comments.length ? commentsCard : emptyState('No replies', 'Nothing below this post yet.')].filter(Boolean));
   }).catch((e) => main.replaceChildren(emptyState('Lens fetch failed', e.message)));
-  return { main, side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()) };
+  return { main, side: el('div', { class: 'side' }, ...lensRail()) };
 }

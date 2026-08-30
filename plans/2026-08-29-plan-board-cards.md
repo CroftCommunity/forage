@@ -3,10 +3,11 @@
 **Status:** Pass 1 written straight to the phase-plan template 2026-08-29; **Pass 2 (gap analysis)
 applied the same day** — every file:line below was read in the `board-cards` worktree at
 `411c40f`. **Pass 3 (quality gates) applied the same day.** Open-question severities O1–O5
-**confirmed as recommended by the owner 2026-08-29** ("accept all"). **Executing 2026-08-29** on `claude/board-cards-a`. Phase 0: D1 deferred to 5b (no device/adb attached); D2 answered (no `embed.video#view` in any fixture).
+**confirmed as recommended by the owner 2026-08-29** ("accept all"). **EXECUTED 2026-08-29→30, all phases; landed as three PRs (A #25, B #27, C — see Outcome Summary).** Phase 0: D1 deferred to 5b (no device/adb attached); D2 answered (no `embed.video#view` in any fixture).
 **Progress tracker:** this Status line. At every phase end append `last green: <phase> @ <sha>`.
 last green: Phase 1 @ f71a04d · Phase 2 @ 16edc2b · Phase 3 @ 509a3b9 · Phase 4 @ 490bfc0 · **branch A gated** (npm test 623/0, workflows 25/0) @ 6c4b508.
 Phase 5a @ 7372582 · 5b+5c @ db0a990 · Phase 6 @ 674b4f3 · **branch B gated** (see the landing commit).
+Phase 7b @ 3ab6178 · 7c + branch C gated (see the landing commit).
 **Origin:** the owner's review of forage.fyi after the post-and-thread landings (2026-08-29),
 with Reddit's front page as the reference; worked through four revisions of
 `plans/mocks/board-cards.html` and **eight decisions locked on v5**. The mock is the picture;
@@ -374,7 +375,7 @@ pure function with its own unit test, so the views cannot each re-derive it.
 
 ### Landing branch C — the column and the rail
 
-#### Phase 7: 200 / 680 / 300, the rail optional and quieter (decision 6)
+#### Phase 7: 200 / 680 / 300, the rail optional and quieter (decision 6) — ✅ shipped 2026-08-30
 - **7a (RED):** `e2e/mobile-fit` — no horizontal overflow at 320/360/390 with the rail on
   and off; `e2e/guest-surface` — signed out, the rail carries the sign-in card; signed in it
   does not; `e2e/bluesky-view` — the rail's feeds list is the same three sources
@@ -393,8 +394,39 @@ green.
 **Observability:** *(Pass 3)* none — layout; the suites and the look are the instrument.
 **Validation:** Moderate — the Samsung at 390 (one column) and the laptop at 1280.
 **Checkpoint:** *(Pass 3)* 7b before 7c: the CSS alone must not break `mobile-fit`.
+**Found in execution:** the lens views already handed the shell a side column — `.shell.with-nav`
+declared two tracks, so the rail wrapped UNDER the nav; the fix was tracks, not a new surface.
+`.shell[data-rail=off]`'s selector outranks the phone breakpoints, so the off state is restated
+inside them (a two-track grid at 320 overflowed; `mobile-fit` caught it on the first run).
+SEVEN views compose the side, not five (`lensRail()` is now the one order). The Side panel
+switch is asserted from `guest-surface`, not `bluesky-view`: a trending board is not
+restorable by URL, so `/settings` cannot go back to it.
 
 **Branch C lands:** `CHANGELOG.md`; mock baseline + snaps.
+
+## Outcome Summary
+
+All eight decisions landed, 2026-08-29→30, on forage main in three PRs: **A** (#25 — Phases
+0–4: the pinned masthead, one toolbar dressing, the guest's door + Sign in in the ⋯, the
+post action row with share), **B** (#27 — 5a–6: aspect shaping, the media stage, card size
+1–4 replacing the slider, pictures shown at once with the carousel and grids), **C** (Phase
+7: the 200/680/300 column with an optional, quieter rail). Every phase RED-first; each
+landing gated on `npm test` + `npm run workflows` by the runner's exit code (A: 623/0 +
+25/0; B: 633/0 + 26/0; C: see its PR).
+
+**Owed / deferred:** D1 (the blur's cost on a mid-range phone) — no device was attached in
+either session; `prefers-reduced-transparency` and `.stage[data-flat]` are the written
+fallback, and the Samsung look at each of the four card sizes (5c's Broad validation) is
+still owed. Phase 6's swipe is proven as a handler (pointer events via `mouse`), not as a
+feel.
+
+**Deviations from the plan as written:** the replies pill keeps the words ("12 comments")
+beside its glyph rather than the mock's bare number (five thread pickers and a screen
+reader read the noun); the guest's door is drawn from the VIEWER (`onGuest`), not from
+`canVote` — `LENS_PERMS.canVote` is frozen false because lens comment likes were never
+wired, a pre-existing gap now recorded; the media-scale slider was only ever applied on a
+drag, so a stored card size now lands before first paint. Every other "found in execution"
+note sits under its phase.
 
 ## Open Questions
 
