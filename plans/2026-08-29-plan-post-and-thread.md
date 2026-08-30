@@ -374,7 +374,13 @@ restructure later phases; log any change in the Review Log).
 
 ### Landing branch A — the header line
 
-#### Phase 1: the byline on rows and comments (memory tier)
+#### Phase 1: the byline on rows and comments (memory tier) — ✅ SHIPPED (branch A)
+**Delivered:** as specified, plus two suites the Documentation Impact grep missed:
+`e2e/ring-tabs.workflow.mjs:108` pinned the literal copy `by aa.test` (now reads
+`.byline .who`), and `e2e/density.workflow.mjs:59` holds compact rows >25% shorter than
+card — the byline added equal height to both, so compact draws it tighter
+(`.postrow.compact .byline/.av/.kebab`). `test/util.test.js` added (timeAgo boundaries).
+The like count left the comment header (the vote carries it; Phase 6).
 **Goal:** every post row and comment opens the same way: avatar slot · name · `1d` ·
 ⋯ slot, top-right.
 **Changes:**

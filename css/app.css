@@ -236,6 +236,24 @@ kbd { background: var(--green-100); border: 1px solid var(--border); border-radi
 .posttitle a { color: var(--text); }
 .postmeta { color: var(--muted); font-size: var(--t-xs); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 2px; }
 .postmeta .domain { color: var(--link); }
+/* the byline — avatar slot · who · bare time · ⋯ (plan 2026-08-29 post-and-thread) */
+.byline { display: flex; align-items: center; gap: 8px; font-size: var(--t-xs); color: var(--muted); min-width: 0; flex-wrap: wrap; }
+.byline .who { color: var(--text); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.byline .who.muted { color: var(--muted); }
+.byline .dot::before { content: "\b7"; }
+.av { width: 28px; height: 28px; border-radius: var(--radius-round); flex: none; display: grid; place-items: center; overflow: hidden;
+  font-size: 11px; font-weight: 600; color: var(--on-brand); background: var(--brand-fill); }
+.av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.kebab { margin-left: auto; flex: none; width: 36px; height: 36px; border-radius: var(--radius-round); border: 0; background: none;
+  color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer; display: grid; place-items: center; }
+.kebab:hover, .kebab[aria-expanded="true"] { background: var(--card-2); color: var(--text); }
+.comment .kebab { width: 32px; height: 32px; margin-top: -4px; margin-bottom: -4px; }
+/* compact rows keep the same header, drawn tighter — density.workflow.mjs holds
+   compact to >25% shorter than card, and the byline must not eat that margin */
+.postrow.compact .byline { font-size: 0.75em; gap: 6px; }
+.postrow.compact .av { width: 18px; height: 18px; font-size: 9px; }
+.postrow.compact .kebab { width: 28px; height: 28px; font-size: 16px; margin-top: -6px; margin-bottom: -6px; }
+@media (max-width: 480px) { .kebab, .comment .kebab, .postrow.compact .kebab { width: 44px; height: 44px; margin-top: -8px; margin-bottom: -8px; } }
 .clamp { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; color: var(--muted); font-size: var(--t-sm); margin-top: 4px; }
 .thumb { width: 72px; height: 54px; border-radius: var(--radius-sm); object-fit: cover; background: var(--green-100); }
 .pinned-row { background: color-mix(in srgb, var(--gold-500) 6%, transparent); }
@@ -254,7 +272,6 @@ kbd { background: var(--green-100); border: 1px solid var(--border); border-radi
 /* ---- Comments + the signature collapse gutter (§3.3) ---- */
 .comment { position: relative; }
 .comment-body { padding: var(--s2) 0 var(--s2) calc(var(--gutter-hit) + 6px); }
-.comment-meta { font-size: var(--t-xs); color: var(--muted); display: flex; gap: 8px; align-items: center; }
 .comment-text { font-size: var(--t-sm); margin: 4px 0; }
 .comment-actions { display: flex; gap: var(--s3); font-size: var(--t-xs); color: var(--muted); }
 .comment-actions button { background: none; border: none; color: var(--muted); cursor: pointer; padding: 0; font-size: var(--t-xs); }
@@ -413,7 +430,6 @@ input[type="range"][data-media-scale] { width: 110px; accent-color: var(--brand)
 .postrow { min-width: 0; }
 .postrow > div { min-width: 0; }
 .postmeta { flex-wrap: wrap; }
-.comment-meta { flex-wrap: wrap; }
 .masthead { flex-wrap: wrap; }
 .media-strip img { max-width: 100%; height: auto; }
 @media (max-width: 480px) {
