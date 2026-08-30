@@ -40,8 +40,11 @@ export async function run() {
     const rowKebab = await openFirst(page, '.postrow');
     assert.equal(await menus(page), 1, 'pressing ⋯ opens exactly one menu');
     assert.equal(await rowKebab.getAttribute('aria-expanded'), 'true');
-    assert.deepEqual(await labels(page), ['Copy text', 'Copy link'], 'a guest sees only what a guest can do');
-    assert.equal(await seps(page), 0, 'one group, no rule');
+    // board-cards decision 8: …plus the one door, behind a rule, saying why
+    // the rest is missing. In the sandbox it can only say so (O1: a toast
+    // naming the dev bar); on the lens it opens the sign-in sheet.
+    assert.deepEqual(await labels(page), ['Copy text', 'Copy link', 'Sign in to like, save and reply'], 'a guest sees what a guest can do, and the door');
+    assert.equal(await seps(page), 1, 'two groups: the actions, then the door');
     await page.keyboard.press('Escape');
     await page.waitForTimeout(150);
     assert.equal(await menus(page), 0, 'Esc closes it');
@@ -62,7 +65,7 @@ export async function run() {
     await page.goto(`${mem.origin}${threadHref}`);
     await page.waitForSelector('.comment');
     await openFirst(page, '.comment');
-    assert.deepEqual(await labels(page), ['Copy text', 'Copy link']);
+    assert.deepEqual(await labels(page), ['Copy text', 'Copy link', 'Sign in to like, save and reply']);
     // a second press while open must close, never stack a second menu
     await page.mouse.click(5, 5);
     await page.waitForTimeout(150);

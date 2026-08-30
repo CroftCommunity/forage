@@ -238,6 +238,11 @@ kbd { background: var(--green-100); border: 1px solid var(--border); border-radi
 button.vote { cursor: pointer; }
 button.vote:hover { color: var(--text); border-color: var(--muted); }
 button.vote[aria-pressed="true"] { color: var(--boost); border-color: var(--boost); }
+/* the guest's door (board-cards decision 1): dashed says "not yet", the person
+   glyph says who is missing; the count stays as legible as the live pill's */
+.vote[data-guest], .avvote[data-guest] { border-style: dashed; }
+.vote .glyph, .avvote .glyph { display: inline-flex; width: 1.05em; height: 1.05em; }
+.vote .glyph svg, .avvote .glyph svg { width: 100%; height: 100%; }
 .avvote { display: inline-flex; flex-direction: column; align-items: center; gap: 1px; width: 26px; padding: 3px 0 2px;
   border: 1px solid var(--border); border-radius: var(--radius-chip); background: var(--card); color: var(--muted);
   font: inherit; font-size: 12px; font-weight: 600; line-height: 1; cursor: default; }

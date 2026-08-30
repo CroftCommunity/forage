@@ -11,7 +11,7 @@ import * as version from '../version.js';
 import { go } from '../router.js';
 import { frontiers } from '../../ledger/divergence.js';
 import { humanWait } from '../engines/limits.js';
-import { postRow, commentNode, vote, focusComment, emptyState, gate, errorState, toast } from './components.js';
+import { postRow, commentNode, vote, guestGate, focusComment, emptyState, gate, errorState, toast } from './components.js';
 import { densityDial, isCompact } from '../board-density.js';
 import { sortBar } from './sortbar.js';
 
@@ -187,6 +187,7 @@ export function threadView(params, query) {
 
   // comments
   const ctx = { canVote: t.perms.canVote, canComment: t.perms.canComment, canReport: t.perms.canReport,
+    onGuest: t.perms.loggedIn ? null : guestGate, // board-cards decision 1: a guest's stack is a door
     canModerate: t.perms.canModerate, locked: t.locked, feedId: p.feedId, feedSlug: p.feedSlug,
     // Phase 3: the ⋯ menu decides Save / Report / steward items from these
     loggedIn: t.perms.loggedIn, viewerId: V() };

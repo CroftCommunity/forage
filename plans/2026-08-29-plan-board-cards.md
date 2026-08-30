@@ -221,7 +221,7 @@ sort pills (`mobile-fit` measures `select`); the dial's `change` still calls `se
 **Validation:** *(Pass 3)* Narrow — the suites are sufficient; this is dressing.
 **Done when:** `density`, `mobile-fit` green.
 
-#### Phase 3: the guest's like is a door; Sign in in the guest's ⋯ (decisions 1, 8)
+#### Phase 3: the guest's like is a door; Sign in in the guest's ⋯ (decisions 1, 8) — ✅ shipped 2026-08-29
 - **3a (RED):** `e2e/guest-surface.workflow.mjs` — a guest sees `button[data-vote][data-guest]`
   on every row, named `/\d+ likes? — sign in to like/`, with a person glyph and **no** arrow;
   clicking it opens `dialog.authsheet` (lens) — asserted; the count text is unchanged after
@@ -241,6 +241,12 @@ sort pills (`mobile-fit` measures `select`); the dial's `change` still calls `se
 list is now `Copy text · Copy link · Sign in…` — its exact-list assertion changes in 3a).
 **Edges:** signed in, no `[data-guest]` anywhere; the guest button's `aria-pressed` is
 absent (it is not a toggle); the tooltip is `title`, the name carries the count.
+**Found in execution:** `LENS_PERMS.canVote` is frozen `false` — lens COMMENT likes were
+never wired, so a signed-in reader's comment stack is read-only. The door is therefore a
+claim about the VIEWER, not about `canVote`: `vote()` draws it only when the caller passes
+`onGuest`, and every caller passes it as `session ? null : openAuthSheet` (lens) or
+`loggedIn ? null : guestGate` (sandbox). `no-downvote` pins both: signed out nothing is
+read-only, signed in nothing is a door.
 **Done when:** a guest's tap opens the sheet on the lens and the toast in memory;
 `guest-surface`, `post-menu`, `no-downvote` green.
 **Observability:** *(Pass 3)* the guest tap logs nothing on success (the sheet IS the

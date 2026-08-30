@@ -75,7 +75,9 @@ const downvotes = (page) => page.evaluate(() => ({
   // button[data-vote] with aria-pressed; a guest gets the same element as a
   // read-only span. `.vote.boost` / `.cvote` are gone with the two old
   // implementations that this suite existed to keep in step.
-  boosts: document.querySelectorAll('button[data-vote]').length,
+  // board-cards Phase 3 (decision 1): a guest's pill is a BUTTON too — a
+  // door to sign-in, `[data-guest]` — so the live vote is the button WITHOUT it.
+  boosts: document.querySelectorAll('button[data-vote]:not([data-guest])').length,
   // The owner's vocabulary call, 2026-08-27: a like here is a PROMOTION, not an
   // affection — "Like/Promote", not "like/love". So the word may be "like" and
   // the shape must stay an upward arrow. A heart says the other thing, and a
@@ -87,12 +89,17 @@ const downvotes = (page) => page.evaluate(() => ({
   // been "fixed" by deleting the pin.
   hearts: [...document.querySelectorAll('*')]
     .filter((n) => !n.children.length && /[♥❤🤍💚🖤]/u.test(n.textContent)).length,
-  voteNames: [...new Set([...document.querySelectorAll('button[data-vote]')]
+  voteNames: [...new Set([...document.querySelectorAll('button[data-vote]:not([data-guest])')]
     .map((b) => b.getAttribute('aria-label') ?? b.getAttribute('title') ?? '(unnamed)'))],
+  guestNames: [...new Set([...document.querySelectorAll('button[data-vote][data-guest]')]
+    .map((n) => n.getAttribute('aria-label') ?? '(unnamed)'))],
+  guestArrows: [...document.querySelectorAll('button[data-vote][data-guest]')].filter((b) => b.textContent.includes('▲')).length,
+  // signed in but unable to vote THIS subject (the lens's comment stack), the
+  // count stays a read-only fact — a door for someone already inside is a lie
   readonlyNames: [...new Set([...document.querySelectorAll('[data-vote][data-readonly]')]
     .map((n) => n.getAttribute('aria-label') ?? '(unnamed)'))],
   // every pressed state is a real boolean, never a class
-  pressed: [...document.querySelectorAll('button[data-vote]')].map((b) => b.getAttribute('aria-pressed')),
+  pressed: [...document.querySelectorAll('button[data-vote]:not([data-guest])')].map((b) => b.getAttribute('aria-pressed')),
 }));
 
 async function assertNone(page, label, { expectBoosts }) {
@@ -108,8 +115,18 @@ async function assertNone(page, label, { expectBoosts }) {
   for (const n of seen.voteNames) {
     assert.match(n, /^Like$/, `${label}: the vote control is named "Like", not ${JSON.stringify(n)}`);
   }
+  for (const n of seen.guestNames) {
+    assert.match(n, /^\d[\d,.]*[km]? likes? — sign in to like$/, `${label}: the guest's door names the count in likes and the way in: ${JSON.stringify(n)}`);
+  }
   for (const n of seen.readonlyNames) {
-    assert.match(n, /^\d+ likes?$/, `${label}: the read-only count names itself in likes: ${JSON.stringify(n)}`);
+    assert.match(n, /^\d[\d,.]*[km]? likes?$/, `${label}: the read-only count names itself in likes: ${JSON.stringify(n)}`);
+  }
+  if (!expectBoosts) assert.equal(seen.readonlyNames.length, 0, `${label}: signed out, nothing is read-only — every count is a door`);
+  assert.equal(seen.guestArrows, 0, `${label}: the guest's door carries no arrow — an arrow is an action a guest cannot take`);
+  if (!expectBoosts) {
+    assert.ok(seen.guestNames.length > 0, `${label}: signed out, the guest's door must be there — the count is a fact and the pill is the way in`);
+  } else {
+    assert.equal(seen.guestNames.length, 0, `${label}: signed in, no guest door`);
   }
   for (const p of seen.pressed) {
     assert.ok(p === 'true' || p === 'false', `${label}: aria-pressed is a boolean on every vote: ${JSON.stringify(p)}`);

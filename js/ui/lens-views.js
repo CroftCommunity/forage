@@ -633,6 +633,7 @@ const lensRow = (p, view = 'card') => {
     : null;
   return postRow(p, !!session, {
     onVote: lensVote(p),
+    onGuest: session ? null : openAuthSheet, // board-cards decision 1: the guest's pill is the door
     menuGroups: (row) => lensMenuGroups(row, { kind: 'post' }), // 4b
     aboveNode: kindContext(p),
     // 3i: never duplicate the title — a preview renders only when it adds
@@ -1173,7 +1174,8 @@ function lensMenuGroups(p, { kind }) {
     { label: 'Copy link', icon: '🔗', onSelect: () => copyText(link, 'Link') },
     { label: 'Open on bsky.app', icon: '↗', onSelect: () => window.open(`https://bsky.app/profile/${encodeURIComponent(p.author)}/post/${rkey}`, '_blank', 'noopener') },
   ];
-  if (!session) return [first];
+  // board-cards decision 8: the guest's menu ends with the door, behind a rule
+  if (!session) return [first, [{ label: 'Sign in to like, save and reply', icon: '\u2192', onSelect: () => openAuthSheet() }]];
   first.push({ label: p.saved ? 'Unsave' : 'Save', icon: '☆', onSelect: async () => {
     try { await lens.bookmark(p.id, p.cid, !p.saved); p.saved = !p.saved; toast(p.saved ? 'Saved.' : 'Removed from saved.', 'ok'); rerender(); }
     catch (e) { console.warn('forage: bookmark refused', e); toast(e.message, 'err'); }
@@ -2311,7 +2313,7 @@ export function lensThreadView(params, query) {
       // A real title (text or alt-derived) keeps its heading above the media.
       p.placeholderTitle && p.media ? null : el('h1', {}, p.title.slice(0, 300)),
       el('div', { class: 'foot' },
-        vote('post', p.id, p, !!session, { onVote: lensVote(p) }), // Phase 6c: the head's pill
+        vote('post', p.id, p, !!session, { onVote: lensVote(p), onGuest: session ? null : openAuthSheet }), // Phase 6c: the head's pill
         el('div', { class: 'postmeta' },
           p.author ? el('a', { href: `/u/${encodeURIComponent(p.author)}` }, p.author) : '[muted]',
           ` · ${timeAgo(p.createdTs)} ago · ${plural(p.commentCount, 'reply', 'replies')}`)),
@@ -2344,6 +2346,7 @@ export function lensThreadView(params, query) {
         })),
       replyHost));
     const ctx = { ...LENS_PERMS, locked: true, // vote/save/mod still gate; replying does not
+      onGuest: session ? null : openAuthSheet, // board-cards decision 1: a guest's vote stack is the door too
       menuGroups: (n) => lensMenuGroups(n, { kind: 'comment' }), // 4b: the ⋯ on every reply
       permalink: (n) => `${location.origin}/p?uri=${encodeURIComponent(p.id)}&focus=${encodeURIComponent(n.id)}`, // decision 10
       authorHref: (n) => `/u/${encodeURIComponent(n.author)}`, // 3k: authors reach OUR profile page (which links out)

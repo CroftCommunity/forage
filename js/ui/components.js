@@ -50,10 +50,33 @@ export function gate(msg) {
 // This folds `voteBox` and `miniVote` — two implementations of one idea, and
 // the named risk of every earlier vote change — into one. e2e/no-downvote
 // visits a row AND a comment for exactly that reason.
-export function vote(subjectType, id, data, canVote, { layout = 'pill', onVote = null } = {}) {
+//
+// board-cards decision 1 (2026-08-29): a reader who cannot vote gets the same
+// PILL as a DOOR — a button, dashed, a person glyph where the arrow would be,
+// named with the count and "sign in to like" — whose tap calls `onGuest` (the
+// lens opens the sign-in sheet; the sandbox toasts). It replaced a read-only
+// span dressed exactly like the live pill, which read as a button and ignored
+// the touch: the owner's first finding on the live site. The count stays the
+// fact it is; the arrow stays an action, so it is not drawn for a guest.
+const PERSON_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>';
+//
+// `onGuest` is passed ONLY for a guest. A signed-in reader who cannot vote a
+// subject (the lens's comment stack: LENS_PERMS.canVote is false, comment likes
+// are not wired) keeps the read-only count — a door for someone already inside
+// would be a lie. The door is a claim about the viewer, so the caller makes it.
+export const guestGate = () => toast('Log in to vote.', 'err'); // the sandbox's answer (O1) — the same words as actions.setVote's gate
+export function vote(subjectType, id, data, canVote, { layout = 'pill', onVote = null, onGuest = null } = {}) {
   const n = el('span', { class: 'n' }, fmtScore(data.likes));
   const arrow = el('span', { class: 'arrow', 'aria-hidden': 'true' }, '\u25B2');
   const cls = layout === 'stack' ? 'avvote' : 'vote';
+  if (!canVote && onGuest) {
+    const person = el('span', { class: 'glyph', 'aria-hidden': 'true', html: PERSON_GLYPH });
+    const door = el('button', { type: 'button', class: cls, 'data-vote': subjectType, 'data-guest': '1',
+      'aria-label': `${plural(data.likes, 'like')} \u2014 sign in to like`, title: 'Sign in to like' },
+      ...(layout === 'stack' ? [n, person] : [person, n]));
+    door.addEventListener('click', onGuest);
+    return door;
+  }
   const parts = layout === 'stack' ? [n, arrow] : [arrow, n];
   if (!canVote) {
     // role="img" + aria-label: a bare "12" says nothing about twelve of what
@@ -169,7 +192,12 @@ export function memoryMenuGroups({ type, subject, text, link, perms = {}, viewer
     },
   }) }] : [];
   const steward = perms.canModerate ? stewardItems(type, subject) : [];
-  return [first, report, steward];
+  // board-cards decision 8: a guest's menu ends with ONE item that says why the
+  // rest is missing. The sandbox has personas, not a sign-in (O1), so it can
+  // only say so; the lens's menu (lens-views.js) opens the sign-in sheet.
+  const door = perms.loggedIn ? [] : [{ label: 'Sign in to like, save and reply', icon: '\u2192',
+    onSelect: () => toast('Log in to like, save and reply \u2014 switch persona in the dev bar above.', 'err') }];
+  return [first, report, steward, door];
 }
 
 // The report sheet (4b): reasons as radios, an optional detail line, Send —
@@ -272,7 +300,9 @@ export function postRow(p, viewerCanVote, opts = {}) {
   // Decision 1: the vote is a pill on the action row; the left column is gone
   // (the byline carries the avatar). `.foot` is NOT `.postmeta`, on purpose —
   // mobile-fit exempts .postmeta as prose, and a tap target must be measured.
-  right.append(el('div', { class: 'foot' }, vote('post', p.id, p, viewerCanVote, { onVote: opts.onVote }), meta));
+  right.append(el('div', { class: 'foot' }, vote('post', p.id, p, viewerCanVote, { onVote: opts.onVote,
+    // the lens passes its sheet; a sandbox row decides from its feed-scoped perms
+    onGuest: opts.onGuest ?? (opts.perms?.(p)?.loggedIn ? null : guestGate) }), meta));
   return el('div', { class: 'postrow' + (p.pinned ? ' pinned-row' : '') + (opts.compact ? ' compact' : '') }, right);
 }
 
@@ -383,7 +413,7 @@ export function commentNode(node, ctx) {
   const actionsRow = el('div', { class: 'comment-actions' });
   // the vote stack is a grid sibling in the avatar column, on the action row's
   // line, the rail passing behind it (decision 1)
-  const voteEl = node.maskedRemoved || node.deleted ? null : vote('comment', node.id, node, ctx.canVote, { layout: 'stack' });
+  const voteEl = node.maskedRemoved || node.deleted ? null : vote('comment', node.id, node, ctx.canVote, { layout: 'stack', onGuest: ctx.onGuest });
   if (fold) actionsRow.append(fold);
   if (!node.maskedRemoved && !node.deleted) {
     if (ctx.canComment && !ctx.locked) actionsRow.append(replyButton(node, ctx));
