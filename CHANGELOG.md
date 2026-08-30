@@ -8,6 +8,12 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-08
 
+- 2026-08-30 **The column and the rail.** The page is a 680px column of posts with a slim
+  navigation on the left and a quieter panel on the right — suggestions, feeds, and the
+  sign-in card when you are signed out; nothing sold. Settings → *Side panel* turns the
+  panel off, and the column takes the middle. On narrower screens the panel folds under the
+  posts; on a phone the sign-in card leads and the suggestions follow. (plan
+  2026-08-29-plan-board-cards, branch C)
 - 2026-08-29 **Pictures stand on a stage.** A picture in a card fills the card's width on a
   framed stage — centred, whole (never cropped), a blurred copy of itself behind it, black
   bands for video — instead of a small thumbnail in a half-empty tile; the frame is sized
