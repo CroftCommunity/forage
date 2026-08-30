@@ -151,10 +151,14 @@ winning rule, and any later declaration deliberately discarded is warned about.
 
 ### The contrast gate
 
-Each pair is graded at the threshold appropriate to it: body text at 4.5, band
-text and band links at 3.0 (they are large/bold UI). Grading bands at 4.5
-refuses prosilver's own shipping values — that is a miscalibrated gate, not a
-finding.
+Every pair is graded at 4.5, the band included. The gate first graded bands
+at 3.0 (WCAG's large-text floor) because prosilver's own band measures 3.41
+and 3.70 under white — and that was the miscalibration: forage's masthead
+paints its nav links at 14px normal weight, body text to WCAG and to axe, and
+CI's per-skin axe pass refused a hand-authored skin at exactly prosilver's
+`#4688CE` (2026-08-30). So importing prosilver verbatim now exits non-zero on
+the band, which is the finding `skins/phpbb.css` and `skins/cornflower.css`
+each answered by hand with `#3A78BC`.
 
 Exit codes are part of the contract: **non-zero** on an unresolved role or a
 failed gate. `--allow-contrast-failures` emits anyway. A warning printed beside
