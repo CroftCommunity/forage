@@ -11,7 +11,7 @@ import * as version from '../version.js';
 import { go } from '../router.js';
 import { frontiers } from '../../ledger/divergence.js';
 import { humanWait } from '../engines/limits.js';
-import { postRow, commentNode, vote, focusComment, emptyState, gate, errorState, toast } from './components.js';
+import { postRow, commentNode, vote, guestGate, focusComment, emptyState, gate, errorState, toast } from './components.js';
 import { densityDial, isCompact } from '../board-density.js';
 import { sortBar } from './sortbar.js';
 
@@ -167,7 +167,7 @@ export function threadView(params, query) {
         el('h1', {}, p.maskedRemoved ? '[removed by stewards]' : p.title),
         p.format === 'link' && p.url ? el('div', {}, el('a', { href: p.url, target: '_blank', rel: 'noopener noreferrer', class: 'domain' }, `${p.url} (${domainOf(p.url)})`)) : null,
         p.body && !p.maskedRemoved ? el('div', { class: 'small', html: mdLite(p.body) }) : null,
-        el('div', { class: 'foot' },
+        el('div', { class: 'actions' },
           vote('post', p.id, p, t.perms.canVote), // Phase 6c: the head's pill, the row's control
           el('div', { class: 'postmeta' },
             p.author ? el('a', { href: `/u/${p.author}` }, p.author) : el('span', { class: 'muted' }, '[removed]'),
@@ -187,6 +187,7 @@ export function threadView(params, query) {
 
   // comments
   const ctx = { canVote: t.perms.canVote, canComment: t.perms.canComment, canReport: t.perms.canReport,
+    onGuest: t.perms.loggedIn ? null : guestGate, // board-cards decision 1: a guest's stack is a door
     canModerate: t.perms.canModerate, locked: t.locked, feedId: p.feedId, feedSlug: p.feedSlug,
     // Phase 3: the ⋯ menu decides Save / Report / steward items from these
     loggedIn: t.perms.loggedIn, viewerId: V() };

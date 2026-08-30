@@ -31,7 +31,40 @@ const medianRowHeight = (page) => page.evaluate(() => {
   return hs[Math.floor(hs.length / 2)] ?? 0;
 });
 
+// board-cards Phase 2 (decision 3): the sort pills and the Card/Compact dial
+// are ONE control family — the owner read the two dressings (a pill beside a
+// bare native select) as a mismatch. The dial is a `.pillsel` inside the
+// `.sortbar` row in BOTH populations, and its options are exactly the two
+// densities: an exact array, because `contains` would miss a third option
+// creeping in.
+async function assertOneDressing(page, label) {
+  const dial = page.locator('#main .sortbar select[data-density]');
+  assert.equal(await dial.count(), 1, `${label}: the density dial sits in the sort bar's row`);
+  assert.ok(await dial.evaluate((s) => s.classList.contains('pillsel')),
+    `${label}: the dial wears the same pill dressing as the sort selects`);
+  assert.deepEqual(await dial.evaluate((s) => [...s.options].map((o) => o.textContent)), ['Card', 'Compact'],
+    `${label}: the dial offers exactly the two densities`);
+}
+
 export async function run() {
+  // ---- the lens board wears the same dressing ---------------------------
+  const lens = await scenario('first-visit', { responses: { 'getFeed': { feed: [{ post: {
+    uri: 'at://did:plc:aa/app.bsky.feed.post/one', cid: 'cid-one',
+    author: { did: 'did:plc:aa', handle: 'aa.test' },
+    record: { text: 'one post', createdAt: '2026-08-26T10:00:00Z' }, indexedAt: '2026-08-26T10:00:00Z',
+    replyCount: 0, repostCount: 0, likeCount: 1,
+  } }] } } });
+  try {
+    await lens.page.goto(`${lens.origin}/f/whats-hot`);
+    await lens.page.waitForSelector('.postrow');
+    await assertOneDressing(lens.page, 'lens board');
+    // and the dial still changes the rows — the class is dressing, the density is the point
+    await lens.page.locator('#main .sortbar select[data-density]').selectOption('compact');
+    await lens.page.waitForFunction(() => document.querySelector('.postrow.compact'));
+  } finally {
+    await lens.close();
+  }
+
   // ---- the sandbox board honours the preference ------------------------
   // Set the preference the way a reader does — once — rather than via an
   // initScript, which re-applies on EVERY navigation and would silently
@@ -45,6 +78,10 @@ export async function run() {
     await mem.page.waitForSelector('.postrow');
     assert.ok(await rowsAreCompact(mem.page),
       'the sandbox board renders compact rows when the reader has chosen compact');
+    // board-cards Phase 4: compact rows KEEP the action row (like · replies ·
+    // share) — density trims the preview, never the actions
+    assert.equal(await mem.page.locator('.postrow.compact .actions > button.share').count(),
+      await mem.page.locator('.postrow.compact').count(), 'every compact row keeps its action row');
     const compactH = await medianRowHeight(mem.page);
 
     // and the control is reachable from the board itself, not only from the
@@ -53,6 +90,7 @@ export async function run() {
     assert.equal(await dial.count(), 1, 'the sandbox board offers the density dial');
     // Phase 11: the dial sits beside the sort bar, in the same row
     assert.equal(await mem.page.locator('#main .sortbar select[data-sort]').count(), 1, 'the sort bar is there beside it');
+    await assertOneDressing(mem.page, 'memory board');
     await dial.selectOption('card');
     await mem.page.waitForFunction(() =>
       [...document.querySelectorAll('.postrow')].some((r) => !r.classList.contains('compact')));

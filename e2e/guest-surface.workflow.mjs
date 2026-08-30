@@ -64,10 +64,22 @@ const seen = (page) => page.evaluate(() => ({
     ?? [...document.querySelectorAll('.card')].map((c) => c.innerText.replace(/\n+/g, ' ')).find((t) => /ring/i.test(t)) ?? null,
   favorite: document.querySelectorAll('[data-feed-favorite]').length,
   joinLeave: [...document.querySelectorAll('button')].filter((b) => /^(Join|Leave)$/.test(b.textContent.trim())).length,
-  // Phase 6: one vote control — a button when you can vote, a read-only
-  // span carrying the same count when you cannot
-  voteArrows: document.querySelectorAll('button[data-vote]').length,
-  scores: [...document.querySelectorAll('[data-vote][data-readonly] .n')].map((v) => v.textContent.trim()).filter(Boolean),
+  // board-cards Phase 3 (decision 1): one vote control — a LIVE button when you
+  // can vote, and for a guest the same pill as a DOOR: `button[data-vote]
+  // [data-guest]`, a person glyph and no arrow, named with the count and
+  // "sign in to like", whose tap opens the sign-in sheet. The read-only span
+  // it replaces looked exactly like the live pill and ignored the touch —
+  // the owner's first finding on the live site.
+  voteArrows: document.querySelectorAll('button[data-vote]:not([data-guest])').length,
+  guestDoors: [...document.querySelectorAll('button[data-vote][data-guest]')].map((b) => ({
+    name: b.getAttribute('aria-label'), title: b.getAttribute('title'),
+    arrow: b.textContent.includes('\u25B2'), glyph: !!b.querySelector('svg'),
+    pressed: b.getAttribute('aria-pressed'),
+  })),
+  scores: [...document.querySelectorAll('button[data-vote][data-guest] .n')].map((v) => v.textContent.trim()).filter(Boolean),
+  // board-cards decision 2: share is for everyone — a guest can copy a link
+  shares: document.querySelectorAll('.postrow .actions > button.share').length,
+  rows: document.querySelectorAll('.postrow').length,
 }));
 
 export async function run() {
@@ -91,16 +103,39 @@ export async function run() {
 
     assert.equal(board.favorite, 0, 'no favorite star for a guest');
     assert.equal(board.joinLeave, 0, 'no Join/Leave for a guest');
-    assert.equal(board.voteArrows, 0, 'no vote arrows for a guest');
+    assert.equal(board.voteArrows, 0, 'no live vote arrows for a guest');
     assert.ok(board.scores.length && board.scores.some((s) => s.length),
       `the SCORE survives — the arrow is an action, the number is a fact: ${JSON.stringify(board.scores)}`);
+    const rows = await out.page.locator('.postrow').count();
+    assert.equal(board.guestDoors.length, rows, `every row carries the guest's door (${board.guestDoors.length} of ${rows})`);
+    assert.equal(board.shares, rows, `every row carries a share, signed out (${board.shares} of ${rows})`);
+    for (const d of board.guestDoors) {
+      assert.match(d.name, /^\d[\d,.]*[km]? likes? — sign in to like$/, `the door is named with the count and the way in: ${JSON.stringify(d.name)}`);
+      assert.equal(d.title, 'Sign in to like', 'the tooltip says the one thing');
+      assert.equal(d.arrow, false, 'no arrow — the arrow is an action a guest cannot take');
+      assert.equal(d.glyph, true, 'a person glyph instead');
+      assert.equal(d.pressed, null, 'it is a door, not a toggle: no aria-pressed');
+    }
+    // tapping the door opens the sign-in sheet, and the count does not move
+    const countBefore = board.scores[0];
+    await out.page.locator('button[data-vote][data-guest]').first().click();
+    await out.page.waitForSelector('dialog.authsheet[open]');
+    assert.equal(await out.page.locator('button[data-vote][data-guest] .n').first().textContent(), countBefore, 'the count is unchanged after the tap');
+    await out.page.keyboard.press('Escape');
+    await out.page.waitForFunction(() => !document.querySelector('dialog.authsheet[open]'));
     // Phase 4b (plan 2026-08-29 post-and-thread): the ⋯ shows a guest the
-    // three things a guest can do, and never a Save it cannot perform.
+    // three things a guest can do, and never a Save it cannot perform —
+    // and (board-cards decision 8) a last group with ONE item that says why
+    // the rest is missing and opens the sheet.
     await out.page.locator('.postrow .byline button.kebab').first().click();
     await out.page.waitForTimeout(150);
     assert.deepEqual(await out.page.$$eval('[role="menu"] [role="menuitem"] > span:first-child', (els) => els.map((e) => e.textContent.trim())),
-      ['Copy text', 'Copy link', 'Open on bsky.app'], 'a guest\'s lens menu');
+      ['Copy text', 'Copy link', 'Open on bsky.app', 'Sign in to like, save and reply'], 'a guest\'s lens menu');
+    assert.equal(await out.page.locator('[role="menu"] .msep').count(), 1, 'the door sits behind a rule');
+    await out.page.locator('[role="menuitem"]:has-text("Sign in to like, save and reply")').click();
+    await out.page.waitForSelector('dialog.authsheet[open]');
     await out.page.keyboard.press('Escape');
+    await out.page.waitForFunction(() => !document.querySelector('dialog.authsheet[open]'));
   } finally { await out.close(); }
 
   // ---------- signed IN: all of it comes back ----------
@@ -118,11 +153,13 @@ export async function run() {
     await inn.page.waitForTimeout(300);
     const board = await seen(inn.page);
     assert.ok(board.voteArrows > 0, 'signed in, the boost arrow is back');
+    assert.equal(board.guestDoors.length, 0, 'signed in, no guest door anywhere');
     assert.equal(board.favorite, 1, 'signed in, the favorite star is back');
     await inn.page.locator('.postrow .byline button.kebab').first().click();
     await inn.page.waitForTimeout(150);
     const items = await inn.page.$$eval('[role="menu"] [role="menuitem"] > span:first-child', (els) => els.map((e) => e.textContent.trim()));
     assert.ok(items.includes('Save') && items.includes('Report'), `signed in, the menu is the full list: ${JSON.stringify(items)}`);
+    assert.ok(!items.some((i) => /^Sign in/.test(i)), 'signed in, no Sign in item');
     await inn.page.keyboard.press('Escape');
   } finally { await inn.close(); }
 }

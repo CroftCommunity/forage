@@ -8,6 +8,14 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-08
 
+- 2026-08-29 **The board's small honesties.** Signed out, the like count is a pill you can
+  press: a person glyph instead of the arrow, "Sign in to like" on hover, and a tap opens the
+  sign-in sheet instead of doing nothing; the ⋯ on every post and comment ends with *Sign in
+  to like, save and reply*. Every post now carries the same ↗ share as a comment, last on its
+  action row, beside a replies pill that opens the thread and a repost count. The
+  Card/Compact dial wears the sort bar's pill dressing in the same row. And the top bar is
+  pinned — it stays put while the board scrolls under it (it was meant to since the first
+  version; the rule had nowhere to stick). (plan 2026-08-29-plan-board-cards, branch A)
 - 2026-08-29 **Every comment has an address.** The small ↗ at the end of a comment's action
   row (and the ⋯ menu's Copy link) copies a permalink; opening one shows the whole thread
   landed on that comment — marked, its ancestors open, its siblings folded, with a

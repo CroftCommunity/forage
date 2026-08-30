@@ -19,7 +19,7 @@ import { hostById, featuredHosts, otherHosts, canCreateAccount } from '../auth/h
 import { heroDismissed, dismissHero, EMBLEM } from '../hero.js';
 import * as mediaScale from '../media-scale.js';
 import * as lang from '../lang.js';
-import { density, setDensity, DENSITIES } from '../board-density.js';
+import { density, densityDial } from '../board-density.js';
 import { sortBar } from './sortbar.js';
 import { sortItems } from '../engines/rank.js';
 import { POST_LIMITS, IMAGE_LIMITS, graphemes, withTag } from '../compose.js';
@@ -512,17 +512,16 @@ function boardToolbar(onChange) {
   // the feed itself is ranked by its generator (DL-010); Hot is engagement
   // over that window (decision 9), From applies to Hot and Top.
   // rebuilt on every change so From appears the moment a windowed sort is chosen
+  // The density dial is the SHARED one (js/board-density.js), drawn inside the
+  // sort bar's row so both populations show one control family (board-cards
+  // decision 3). Redrawn with the bar — it is cheap and reads its own state.
   const barHost = el('div', { style: 'display:contents' });
   const drawBar = () => barHost.replaceChildren(sortBar({
     sorts: [['feed', 'Feed order'], ['hot', 'Hot'], ['new', 'New'], ['top', 'Top']],
     sort: boardSort, from: boardTimeframe,
     onChange: ({ sort, from }) => { boardSort = sort; boardTimeframe = from; drawBar(); onChange(); },
+    extra: [el('span', { class: 'grow' }), densityDial(el, () => { syncSlider(); onChange(); })],
   }));
-  drawBar();
-  const viewSel = el('select', { 'data-density': '1', 'aria-label': 'Board density',
-    title: 'Card shows previews and media; Compact is dense rows' },
-    ...DENSITIES.map(([v, l]) =>
-      el('option', { value: v, selected: boardView() === v || false }, l)));
 
   // 3t: how big previews should be is a per-screen judgement, so it is a
   // slider rather than a setting. Card view only — compact renders no media,
@@ -534,14 +533,10 @@ function boardToolbar(onChange) {
   const syncSlider = () => { slider.style.display = boardView() === 'card' ? '' : 'none'; };
   syncSlider();
   slider.addEventListener('input', () => { mediaScale.set(slider.value); applyMediaScale(); });
+  drawBar();
 
-  viewSel.addEventListener('change', () => {
-    setDensity(viewSel.value);
-    syncSlider();
-    onChange();
-  });
   return el('div', { class: 'row wrap', style: 'gap:6px;margin:6px 0;align-items:center', 'data-board-toolbar': '1' },
-    barHost, viewSel,
+    barHost,
     el('div', { class: 'row', style: 'gap:6px;align-items:center;margin-left:auto' }, slider));
 }
 
@@ -638,6 +633,8 @@ const lensRow = (p, view = 'card') => {
     : null;
   return postRow(p, !!session, {
     onVote: lensVote(p),
+    onGuest: session ? null : openAuthSheet, // board-cards decision 1: the guest's pill is the door
+    permalink: `${location.origin}/p?uri=${encodeURIComponent(p.id)}`, // decision 2: the row's share
     menuGroups: (row) => lensMenuGroups(row, { kind: 'post' }), // 4b
     aboveNode: kindContext(p),
     // 3i: never duplicate the title — a preview renders only when it adds
@@ -1178,7 +1175,8 @@ function lensMenuGroups(p, { kind }) {
     { label: 'Copy link', icon: '🔗', onSelect: () => copyText(link, 'Link') },
     { label: 'Open on bsky.app', icon: '↗', onSelect: () => window.open(`https://bsky.app/profile/${encodeURIComponent(p.author)}/post/${rkey}`, '_blank', 'noopener') },
   ];
-  if (!session) return [first];
+  // board-cards decision 8: the guest's menu ends with the door, behind a rule
+  if (!session) return [first, [{ label: 'Sign in to like, save and reply', icon: '\u2192', onSelect: () => openAuthSheet() }]];
   first.push({ label: p.saved ? 'Unsave' : 'Save', icon: '☆', onSelect: async () => {
     try { await lens.bookmark(p.id, p.cid, !p.saved); p.saved = !p.saved; toast(p.saved ? 'Saved.' : 'Removed from saved.', 'ok'); rerender(); }
     catch (e) { console.warn('forage: bookmark refused', e); toast(e.message, 'err'); }
@@ -2315,8 +2313,8 @@ export function lensThreadView(params, query) {
       // renders below — the picture is the thing the heading stood in for.
       // A real title (text or alt-derived) keeps its heading above the media.
       p.placeholderTitle && p.media ? null : el('h1', {}, p.title.slice(0, 300)),
-      el('div', { class: 'foot' },
-        vote('post', p.id, p, !!session, { onVote: lensVote(p) }), // Phase 6c: the head's pill
+      el('div', { class: 'actions' },
+        vote('post', p.id, p, !!session, { onVote: lensVote(p), onGuest: session ? null : openAuthSheet }), // Phase 6c: the head's pill
         el('div', { class: 'postmeta' },
           p.author ? el('a', { href: `/u/${encodeURIComponent(p.author)}` }, p.author) : '[muted]',
           ` · ${timeAgo(p.createdTs)} ago · ${plural(p.commentCount, 'reply', 'replies')}`)),
@@ -2349,6 +2347,7 @@ export function lensThreadView(params, query) {
         })),
       replyHost));
     const ctx = { ...LENS_PERMS, locked: true, // vote/save/mod still gate; replying does not
+      onGuest: session ? null : openAuthSheet, // board-cards decision 1: a guest's vote stack is the door too
       menuGroups: (n) => lensMenuGroups(n, { kind: 'comment' }), // 4b: the ⋯ on every reply
       permalink: (n) => `${location.origin}/p?uri=${encodeURIComponent(p.id)}&focus=${encodeURIComponent(n.id)}`, // decision 10
       authorHref: (n) => `/u/${encodeURIComponent(n.author)}`, // 3k: authors reach OUR profile page (which links out)

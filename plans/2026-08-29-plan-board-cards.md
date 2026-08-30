@@ -3,8 +3,9 @@
 **Status:** Pass 1 written straight to the phase-plan template 2026-08-29; **Pass 2 (gap analysis)
 applied the same day** — every file:line below was read in the `board-cards` worktree at
 `411c40f`. **Pass 3 (quality gates) applied the same day.** Open-question severities O1–O5
-**confirmed as recommended by the owner 2026-08-29** ("accept all"). Not started; Phase 0 first.
+**confirmed as recommended by the owner 2026-08-29** ("accept all"). **Executing 2026-08-29** on `claude/board-cards-a`. Phase 0: D1 deferred to 5b (no device/adb attached); D2 answered (no `embed.video#view` in any fixture).
 **Progress tracker:** this Status line. At every phase end append `last green: <phase> @ <sha>`.
+last green: Phase 1 @ f71a04d · Phase 2 @ 16edc2b · Phase 3 @ 509a3b9 · Phase 4 @ 490bfc0 · **branch A gated** (npm test 623/0, workflows 25/0) @ 6c4b508.
 **Origin:** the owner's review of forage.fyi after the post-and-thread landings (2026-08-29),
 with Reddit's front page as the reference; worked through four revisions of
 `plans/mocks/board-cards.html` and **eight decisions locked on v5**. The mock is the picture;
@@ -171,7 +172,7 @@ code** (post-and-thread's D-landing lesson). Observability convention as in post
 
 ### Phase 0: Discovery — landing branch A
 
-- [ ] **D1: Does the blurred backdrop cost a phone anything?** Ten stages with
+- [ ] **D1 (DEFERRED 2026-08-29 — no device attached; re-run at 5b's validation): Does the blurred backdrop cost a phone anything?** Ten stages with
   `filter: blur(22px)` on a mid-range Android.
   - **Probe:** a one-page `scripts/probe-stage.html` with ten cards, opened over the LAN on
     the Samsung; scroll; read the frame timeline in DevTools remote.
@@ -179,7 +180,7 @@ code** (post-and-thread's D-landing lesson). Observability convention as in post
     flat darkened band (`prefers-reduced-transparency` also selects it).
   - **Disposition:** `throwaway`. **Needs the device** — deferred to Phase 5b's validation
     if none is attached, as post-and-thread D4 was.
-- [ ] **D2: Do video views in the fixtures carry `aspectRatio`?** `grep aspectRatio` over
+- [x] **D2 (answered 2026-08-29: NO fixture carries `embed.video#view` at all — `grep -ln` over `test/fixtures/atproto/*.json` is empty; 5a's unit test carries an inline video embed, and a video stage sizes from the thumbnail on load): Do video views in the fixtures carry `aspectRatio`?** `grep aspectRatio` over
   `test/fixtures/atproto/*.json` for `embed.video#view`; if absent, a video stage sizes
   from the thumbnail's natural size on load.
   - **Disposition:** `keep-as-fixture` (whatever fixture answers it drives 5a's unit test).
@@ -192,8 +193,8 @@ code** (post-and-thread's D-landing lesson). Observability convention as in post
 
 ### Landing branch A — quick wins
 
-#### Phase 1: the masthead pins (decision 9)
-**Changes:** `js/main.js` — `#masthost` becomes the sticky element (or `display: contents`);
+#### Phase 1: the masthead pins (decision 9) — ✅ shipped 2026-08-29
+**Changes:** `css/app.css` — `#masthost { display: contents }` (the wrapper was the masthead's own height, so the sticky range was zero; `main.js` untouched);
 `css/app.css` — `.devbar` loses `position: sticky`; `e2e/mobile-fit.workflow.mjs` — after
 `window.scrollBy(0, 600)` on a seeded board, `.masthead.getBoundingClientRect().top === 0`
 at 320/360/390 and 1280 (RED first).
@@ -205,7 +206,7 @@ suite is the instrument.
 **Validation:** Narrow, plus one look at 320 wide that the bar still holds one row (E144).
 **Checkpoint:** *(Pass 3)* the first commit of branch A; `mobile-fit` is the whole gate.
 
-#### Phase 2: one toolbar dressing (decision 3)
+#### Phase 2: one toolbar dressing (decision 3) — ✅ shipped 2026-08-29
 **Changes:** `js/board-density.js` — `densityDial` gets `class: 'pillsel'` and its label
 "Card" / "Compact" reads as `Card` only (the axis is obvious from the options);
 `js/ui/lens-views.js` — `boardToolbar` row order bar · viewSel; `js/ui/views.js` — board row
@@ -221,7 +222,7 @@ sort pills (`mobile-fit` measures `select`); the dial's `change` still calls `se
 **Validation:** *(Pass 3)* Narrow — the suites are sufficient; this is dressing.
 **Done when:** `density`, `mobile-fit` green.
 
-#### Phase 3: the guest's like is a door; Sign in in the guest's ⋯ (decisions 1, 8)
+#### Phase 3: the guest's like is a door; Sign in in the guest's ⋯ (decisions 1, 8) — ✅ shipped 2026-08-29
 - **3a (RED):** `e2e/guest-surface.workflow.mjs` — a guest sees `button[data-vote][data-guest]`
   on every row, named `/\d+ likes? — sign in to like/`, with a person glyph and **no** arrow;
   clicking it opens `dialog.authsheet` (lens) — asserted; the count text is unchanged after
@@ -241,6 +242,12 @@ sort pills (`mobile-fit` measures `select`); the dial's `change` still calls `se
 list is now `Copy text · Copy link · Sign in…` — its exact-list assertion changes in 3a).
 **Edges:** signed in, no `[data-guest]` anywhere; the guest button's `aria-pressed` is
 absent (it is not a toggle); the tooltip is `title`, the name carries the count.
+**Found in execution:** `LENS_PERMS.canVote` is frozen `false` — lens COMMENT likes were
+never wired, so a signed-in reader's comment stack is read-only. The door is therefore a
+claim about the VIEWER, not about `canVote`: `vote()` draws it only when the caller passes
+`onGuest`, and every caller passes it as `session ? null : openAuthSheet` (lens) or
+`loggedIn ? null : guestGate` (sandbox). `no-downvote` pins both: signed out nothing is
+read-only, signed in nothing is a door.
 **Done when:** a guest's tap opens the sheet on the lens and the toast in memory;
 `guest-surface`, `post-menu`, `no-downvote` green.
 **Observability:** *(Pass 3)* the guest tap logs nothing on success (the sheet IS the
@@ -248,7 +255,7 @@ feedback); if `openAuthSheet` is unavailable (`manager === 'unavailable'`) the s
 toast speaks — the pill never fails silently, which was the whole complaint.
 **Validation:** Moderate — a phone look: the dashed pill reads as "not yet", not "broken".
 
-#### Phase 4: the post action row — replies · reposts · share (decision 2)
+#### Phase 4: the post action row — replies · reposts · share (decision 2) — ✅ shipped 2026-08-29
 - **4a (RED):** `e2e/deep-link.workflow.mjs` — a post row's action row ends with
   `button.share[aria-label="Copy link to this post"]` (memory: `/f/<slug>/p/<id>`; lens:
   `/p?uri=`), clipboard asserted; `e2e/guest-surface` — the share is present signed out;
@@ -259,6 +266,11 @@ toast speaks — the pill never fails silently, which was the whole complaint.
 **Edges:** the reply pill's count is `commentCount` and links to the thread; the repost pill
 is a **count**, not a write, on rows (O2 of post-and-thread stays); compact rows: the row
 still >25% shorter than card.
+**Found in execution:** the replies pill keeps the WORDS ("12 comments") beside its glyph —
+five suites pick a thread by that text, and a screen reader wants the noun; the mock's bare
+number was the one place the plan follows the suites over the picture. The two thread heads
+(`views.js`, `lens-views.js`) also drew `.foot` and are `.actions` now (the class test
+caught the orphan).
 **Observability:** *(Pass 3)* the clipboard failure path is the existing `copy()`
 (`console.warn('forage: clipboard write failed')` + toast) — reused, not duplicated.
 **Validation:** *(Pass 3)* Moderate — one phone look at a compact board: the pill row does
