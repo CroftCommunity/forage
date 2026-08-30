@@ -116,6 +116,20 @@ export async function run() {
     await s.page.waitForSelector('dialog[data-auth-sheet][open]');
     assert.equal(await open(s.page), true, 'the trigger opens the sheet');
 
+    // ---- the words (owner, 2026-08-29): "atmo provider", glossed --------
+    // The gloss is a native <abbr title>, which hovers on a desktop and is read
+    // by assistive tech; touch cannot hover, so the intro sentence carries the
+    // same definition in plain sight and nobody depends on the tooltip.
+    const words = await s.page.evaluate(() => {
+      const d = document.querySelector('dialog[data-auth-sheet]');
+      const abbr = d.querySelector('h2 abbr');
+      return { title: d.querySelector('h2').innerText.replace(/\s+/g, ' ').trim(),
+        gloss: abbr && abbr.getAttribute('title'), intro: d.querySelector('p').innerText };
+    });
+    assert.equal(words.title, 'Choose your atmo provider');
+    assert.equal(words.gloss, 'A Personal Data Server provider in the open social Atmosphere');
+    assert.match(words.intro, /Personal Data Server/, 'the definition is visible without hovering');
+
     // ---- the front page is the OPEN registry, capped, in order -----------
     const front = await rows(s.page, 'dialog[data-auth-sheet] > .sheet-list');
     assert.deepEqual(front.map((r) => r.id), OPEN.map((h) => h.id),
@@ -143,7 +157,7 @@ export async function run() {
     const other = await rows(s.page, '.sheet-other');
     for (const h of INVITE) {
       const row = other.find((r) => r.id === h.id);
-      assert.ok(row.visible, `${h.id} shows once Another server is opened`);
+      assert.ok(row.visible, `${h.id} shows once Another provider is opened`);
       assert.equal(row.create, false,
         `${h.id} is invite-only — no create control, because the button would land on a screen that asks for a code`);
       assert.ok(row.signin, `${h.id} is still somewhere you can SIGN IN`);
@@ -220,7 +234,7 @@ export async function run() {
     // and only a screenshot showed it. Asserted here because "the field
     // appeared" is true either way.
     assert.equal(await u.page.locator('[data-host-other]').isVisible(), false,
-      'Another server hides itself once it has revealed its field');
+      'Another provider hides itself once it has revealed its field');
     await u.page.fill('[data-host-other-handle]', '@someone.zio.blue');
     await u.page.click('[data-host-other-go]');
     assert.deepEqual(await u.page.evaluate(() => window.__signInCalls),

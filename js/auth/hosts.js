@@ -42,7 +42,7 @@ export const HOSTS = Object.freeze([
 // ONE invite-only, chosen for reputation rather than for count; EuroSky added
 // 2026-08-29. The same day the owner moved the invite-only host OFF the front
 // page: the sheet's first screen is now the hosts a newcomer can actually join
-// from here, and invite-only hosts sit on the "Another server" panel beside the
+// from here, and invite-only hosts sit on the "Another provider" panel beside the
 // handle field, where a member still gets Sign in and the words that explain
 // the missing Create. The plurality lesson survives — the panel is one tap
 // away and the sheet's intro copy says it out loud.
@@ -55,7 +55,7 @@ export const HOSTS = Object.freeze([
 // Recorded so neither is re-proposed.
 
 // The owner settled the SHAPE — capped, with everything else reachable through
-// "Another server", which takes a handle on any atproto host. The split between
+// "Another provider", which takes a handle on any atproto host. The split between
 // the two panels is POSTURE, not position in the list: featured = open signups
 // (capped), other = invite-only. Both are derived from one registry so a host
 // cannot fall off both panels by being edited in one place.

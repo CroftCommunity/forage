@@ -108,8 +108,10 @@ async function beginSignIn(handle, options) {
 // visitor needs and a sighted mouse user never notices missing.
 //
 // Built FRESH per open and removed on close: the rows are static, but the
-// "Another server" field is not, and a lingering singleton would carry a
+// "Another provider" field is not, and a lingering singleton would carry a
 // half-typed handle from one visit into the next.
+const ATMO_GLOSS = 'A Personal Data Server provider in the open social Atmosphere';
+
 function authSheet() {
   const titleId = 'authsheet-title';
   const dialog = el('dialog', { class: 'authsheet', 'data-auth-sheet': '1', 'aria-labelledby': titleId });
@@ -156,7 +158,7 @@ function authSheet() {
   const handle = el('input', { type: 'text', id: 'sheet-other-handle', 'data-host-other-handle': '1',
     placeholder: 'you.example.com', autocapitalize: 'none', autocorrect: 'off', spellcheck: 'false' });
   const form = el('form', { class: 'sheet-other-form' },
-    el('label', { for: 'sheet-other-handle', class: 'xs muted' }, 'Your handle on any atproto server'),
+    el('label', { for: 'sheet-other-handle', class: 'xs muted' }, 'Your handle on any atmo provider'),
     el('div', { class: 'row', style: 'gap:6px;margin-top:4px' }, handle,
       el('button', { type: 'submit', class: 'btn primary sm', 'data-host-other-go': '1' }, 'Continue')));
   form.addEventListener('submit', (e) => {
@@ -167,14 +169,20 @@ function authSheet() {
   });
   const panel = el('div', { class: 'sheet-other', hidden: true },
     el('div', { class: 'sheet-list' }, ...otherHosts().map(hostRow)), form);
-  const other = el('button', { type: 'button', class: 'btn sm sheet-more', 'data-host-other': '1' }, 'Another server');
+  const other = el('button', { type: 'button', class: 'btn sm sheet-more', 'data-host-other': '1' }, 'Another provider');
   other.addEventListener('click', () => { other.hidden = true; panel.hidden = false; handle.focus(); });
 
   dialog.append(
     el('div', { class: 'row spread' },
-      el('h2', { id: titleId, style: 'margin:0' }, 'Choose your server'), close),
+      // "atmo" is the owner's word (2026-08-29) for a home on the open social
+      // Atmosphere. The gloss is a native <abbr title>: it hovers on a desktop
+      // and assistive tech reads it, but touch cannot hover — so the sentence
+      // below says the same thing in plain sight, and the tooltip is a bonus,
+      // not the only copy of the definition.
+      el('h2', { id: titleId, style: 'margin:0' }, 'Choose your ',
+        el('abbr', { class: 'sheet-gloss', title: ATMO_GLOSS }, 'atmo'), ' provider'), close),
     el('p', { class: 'xs muted' },
-      'Forage has no accounts of its own. You sign in with an account on an atproto server — Bluesky is one of many, and each sets its own rules.'),
+      `Forage has no accounts of its own. You sign in with an account from an atmo provider — ${ATMO_GLOSS.charAt(0).toLowerCase()}${ATMO_GLOSS.slice(1)}. Bluesky is one of many, and each sets its own rules.`),
     list, other, panel);
   return dialog;
 }
@@ -725,7 +733,7 @@ function sessionCard() {
   // so a visitor whose server is not Bluesky stops depending on a hero that
   // exists on one page and can be dismissed forever.
   const more = el('button', { type: 'button', class: 'btn sm sheet-open', 'data-open-auth-sheet': '1' },
-    'Use another server →');
+    'Use another provider →');
   more.addEventListener('click', () => openAuthSheet());
   return el('div', { class: 'card' },
     el('h2', {}, 'Sign in with Bluesky'),
