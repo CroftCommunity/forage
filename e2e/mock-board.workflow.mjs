@@ -22,6 +22,8 @@ const rows = (page) => page.evaluate(() => [...document.querySelectorAll('.postr
     whoFits: who.right <= time.left,
     guestDoor: !!r.querySelector('.actions button[data-vote][data-guest]'),
     share: !!r.querySelector('.actions button.share'),
+    stage: r.querySelector('.stage')?.dataset.stage ?? null,
+    pictures: r.querySelectorAll('.stage').length,
   };
 }));
 
@@ -42,6 +44,13 @@ export async function run() {
       assert.ok(r.guestDoor, `${r.who}: signed out, the like pill is a button that opens sign-in`);
       assert.ok(r.share, `${r.who}: share on the action row`);
     }
+    // board-cards decision D: a picture post stands on a stage, sized from its
+    // aspect ratio before any bytes arrive (the images are fenced here) — a
+    // portrait as one stage, four pictures as more than one
+    const byWho = Object.fromEntries(list.map((r) => [r.who, r]));
+    assert.ok(byWho['erislovesgardens.bsky.social']?.stage, 'the portrait post stands on a stage');
+    assert.ok(byWho['misterhooperspecial.bsky.social']?.pictures >= 1, 'the four-picture post stands on a stage too');
+    assert.equal(byWho['quietcartographer.bsky.social']?.pictures, 0, 'a text post has no stage and no empty frame');
     assert.deepEqual(await s.shimMisses(), []);
     assert.deepEqual(s.errors(), []);
   } finally { await s.close(); }

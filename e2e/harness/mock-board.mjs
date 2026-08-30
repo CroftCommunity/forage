@@ -18,7 +18,11 @@ const T = (h) => `2026-08-30T${String(h).padStart(2, '0')}:00:00Z`;
 const post = (rkey, did, handle, ts, text, { likes = 0, replies = 0, reposts = 0, embed = null, reply = null } = {}) => ({
   uri: `at://${did}/app.bsky.feed.post/${rkey}`, cid: `cid-${rkey}`,
   author: { did, handle, avatar: AV },
-  record: { text, createdAt: ts, ...(embed ? { embed } : {}), ...(reply ? { reply } : {}) }, indexedAt: ts,
+  record: { text, createdAt: ts, ...(reply ? { reply } : {}) }, indexedAt: ts,
+  // the hydrated embed (#view) sits on the POST, beside the record — the raw
+  // record's embed is the blob ref, which the lens never reads (a fixture that
+  // put it in the record rendered no stage at all, 2026-08-30)
+  ...(embed ? { embed } : {}),
   replyCount: replies, repostCount: reposts, likeCount: likes,
 });
 const img = (n, aspectRatio) => ({ thumb: `https://cdn.test/${n}-thumb.jpg`, fullsize: `https://cdn.test/${n}.jpg`, alt: `picture ${n}`, aspectRatio });
