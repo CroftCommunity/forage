@@ -276,6 +276,46 @@ export function postRow(p, viewerCanVote, opts = {}) {
   return el('div', { class: 'postrow' + (p.pinned ? ' pinned-row' : '') + (opts.compact ? ' compact' : '') }, right);
 }
 
+// ---------- deep links (plan 2026-08-29 post-and-thread, decision 10) ----------
+// Every comment has an address; the share glyph copies it. Quiet at rest
+// (55%), full hit area, always the LAST thing on the action row.
+export function shareButton(url, what = 'comment') {
+  const b = el('button', { type: 'button', class: 'cbtn share', 'aria-label': `Copy link to this ${what}`, title: 'Copy link' },
+    el('span', { 'aria-hidden': 'true' }, '\u2197'));
+  b.addEventListener('click', () => copy(url, 'Link'));
+  return b;
+}
+
+// Opening a permalink renders the WHOLE thread and lands on the comment:
+// marked, its ancestors expanded, its siblings folded, a bar saying so with a
+// way back. Works on a detached tree (the view calls it before attaching);
+// only the scroll waits for a frame. Returns the bar to prepend.
+export function focusComment(container, id, { threadHref }) {
+  const back = el('a', { href: threadHref }, 'see the whole thread');
+  const target = container.querySelector(`[data-node-id="${CSS.escape(id)}"]`);
+  if (!target) {
+    console.warn('forage: focus id not in thread', id);
+    return el('div', { class: 'focus-bar', role: 'status' }, 'That comment isn\u2019t in this thread \u2014 ', back);
+  }
+  target.classList.add('focused');
+  // the path from the root to the target: expand each step, fold what is beside it
+  const path = [];
+  for (let n = target; n && n !== container; n = n.parentElement?.closest('.comment')) path.unshift(n);
+  const setFolded = (node, folded) => {
+    const fold = node.querySelector(':scope > .comment-body > .comment-actions > [data-fold]');
+    const is = node.classList.contains('collapsed');
+    if (fold && is !== folded) fold.click();      // keeps the fold's own label honest
+    else if (!fold) node.classList.toggle('collapsed', folded); // a leaf: hide its text only
+  };
+  for (const step of path) {
+    setFolded(step, false);
+    const level = step.parentElement; // .kids, or the comments container
+    for (const sib of level.querySelectorAll(':scope > .comment')) if (sib !== step) setFolded(sib, true);
+  }
+  requestAnimationFrame(() => target.scrollIntoView({ block: 'start' }));
+  return el('div', { class: 'focus-bar', role: 'status' }, 'Viewing one comment \u2014 ', back);
+}
+
 // ---------- comment tree: the rail and the fold (plan 2026-08-29 post-and-thread, decision 2) ----------
 // A comment is a grid: avatar column | byline / text / action row, with its
 // replies (.kids) spanning both columns below. A comment WITH replies draws a
@@ -330,7 +370,7 @@ export function commentNode(node, ctx) {
     menu: node.maskedRemoved || node.deleted ? null
       : ctx.menuGroups ? () => ctx.menuGroups(node)
       : () => memoryMenuGroups({ type: 'comment', subject: node, text: node.body,
-        link: `/f/${ctx.feedSlug}/p/${node.postId}`, perms: ctx, viewerId: ctx.viewerId ?? null }),
+        link: `/f/${ctx.feedSlug}/p/${node.postId}?focus=${encodeURIComponent(node.id)}`, perms: ctx, viewerId: ctx.viewerId ?? null }),
     after: [
       ctx.bylineExtra?.(node) || null, // the lens: "⟳ quoted this" on a quote
       node.edited ? el('span', { class: 'muted' }, 'edited') : null,
@@ -353,6 +393,10 @@ export function commentNode(node, ctx) {
     // rows are untouched.
     const extra = ctx.extraActions?.(node);
     if (extra) actionsRow.append(...[].concat(extra).filter(Boolean));
+    // decision 10: the permalink — the lens supplies its own address (Phase 13)
+    const permalink = ctx.permalink ? ctx.permalink(node)
+      : `${location.origin}/f/${ctx.feedSlug}/p/${node.postId}?focus=${encodeURIComponent(node.id)}`;
+    actionsRow.append(shareButton(permalink));
   }
 
   // .comment-body is display:contents — its children sit in the comment's

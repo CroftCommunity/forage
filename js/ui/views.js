@@ -11,7 +11,7 @@ import * as version from '../version.js';
 import { go } from '../router.js';
 import { frontiers } from '../../ledger/divergence.js';
 import { humanWait } from '../engines/limits.js';
-import { postRow, commentNode,  vote, emptyState, gate, errorState, toast } from './components.js';
+import { postRow, commentNode, vote, focusComment, emptyState, gate, errorState, toast } from './components.js';
 import { densityDial, isCompact } from '../board-density.js';
 import { sortBar } from './sortbar.js';
 
@@ -200,9 +200,16 @@ export function threadView(params, query) {
     sorts: [['hot', 'Hot'], ['top', 'Top'], ['new', 'New']], sort: tSort, from: tFrom,
     onChange: ({ sort: s, from: f }) => go(`/f/${p.feedSlug}/p/${p.id}?sort=${s}${s === 'new' ? '' : `&from=${f}`}`),
   });
-  main.append(el('div', { class: 'card' },
+  const commentsCard = el('div', { class: 'card' },
     el('div', { class: 'row spread' }, el('h2', {}, plural(t.total, 'comment')), null), sortRow,
-    ...(t.comments.length ? t.comments.map((c) => commentNode(c, ctx)) : [el('div', { class: 'muted small' }, 'No comments yet.')])));
+    ...(t.comments.length ? t.comments.map((c) => commentNode(c, ctx)) : [el('div', { class: 'muted small' }, 'No comments yet.')]));
+  // decision 10: a permalink lands on its comment, in context — the bar's way
+  // back keeps the sort and drops only the focus
+  if (query.focus) {
+    const back = `/f/${p.feedSlug}/p/${p.id}?sort=${tSort}${tSort === 'new' ? '' : `&from=${tFrom}`}`;
+    main.prepend(focusComment(commentsCard, query.focus, { threadHref: back }));
+  }
+  main.append(commentsCard);
 
   return { main, side: el('div', { class: 'side' }, feedsSidebar()) };
 }
