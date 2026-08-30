@@ -120,6 +120,24 @@ none needs code before the run, and each may need code after it. Claim `testbed-
   a like buzzes once on the flip to on, never on off; Settings → Buzz on like stops it.
   `navigator.vibrate` is stubbed in `e2e/no-downvote`; the buzz itself was never felt.
 
+## Mock alignment — post-and-thread v18 (2026-08-30)
+
+Found by capturing the engine beside the drawing (`plans/mocks/post-and-thread.html` v18
+§ C, "What the captures found"). Decided shape, not yet built:
+
+- **Byline word order.** Shipped: *name · time · ⟳ quoted this*; the drawing (decision 5's
+  header) has *name · ⟳ quoted this · time*. `byline()` in `js/ui/components.js` appends
+  `after` past the time; the kind label wants to precede it. One line, plus the
+  thread-byline workflow's `last`/`time` expectations.
+- **The lens head's title.** A Bluesky post has no title, so `/p` renders the whole text
+  as the `h1` — at 390px that is eight lines of display type before the first reply
+  (`snaps/thread-lens.phone.current.png`). Decide the head's shape for a title-less post
+  (body type with the byline above, as bsky.app does) and draw it as a captured Proposed
+  frame, not a sketch.
+- **The memory tier's Reply.** The memory population's inline `.reply-form` predates the
+  lens composer; the two look different on the same action row. Fold it into the same
+  `.reply-host` mount so one component serves both tiers.
+
 ## Ledgered (see `ledger/divergence.js`)
 
 - ~~DL-013 boost-as-like~~ — SHIPPED 2026-08-25 (plan 2026-08-25-1, 3c): boosts

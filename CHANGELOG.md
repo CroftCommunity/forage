@@ -8,6 +8,12 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-08
 
+- 2026-08-30 **A reply's name holds its line, and every reply offers Reply.** In a thread, a
+  long Bluesky handle no longer wraps the byline onto two or three lines and pushes the ⋯
+  down with it: the name shortens with an ellipsis and the time and ⋯ stay where they are.
+  Every reply and quote in a Bluesky-view thread now has ↩ Reply on its action row, and the
+  composer opens under the one you answered (before, only the post itself offered Reply).
+  (plan 2026-08-29-plan-post-and-thread, mock v18 — the alignment pass)
 - 2026-08-30 **Content languages follow your browser until you choose.** A fresh device
   now filters boards to the languages your browser asks for (among the eight Forage lists;
   a browser asking for others filters nothing), the board still says how many posts that
