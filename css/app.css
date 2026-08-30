@@ -367,6 +367,18 @@ dialog.menu::backdrop { background: transparent; }
    "collapsible reply", so these must not look alike — the wall is static and
    sits inside its own tinted block. .cmeta/.cbody had no rules at all before
    this, which is why the node rendered as unstyled body text (2026-08-26). */
+/* deep links (decision 10): the addressed comment, its bar, and the quiet share glyph */
+.cbtn.share { margin-left: auto; opacity: .55; }
+.cbtn.share:hover, .cbtn.share:focus-visible { opacity: 1; }
+.comment.focused { scroll-margin-top: 88px; }
+.comment.focused > .comment-body > .comment-text { border-radius: var(--radius-sm); animation: focus-tint 2s ease-out; }
+@keyframes focus-tint { from { background: var(--tint); box-shadow: 0 0 0 6px var(--tint); } to { background: transparent; box-shadow: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .comment.focused { animation: none; }
+  .comment.focused > .comment-body > .comment-text { animation: none; background: var(--tint); box-shadow: 0 0 0 6px var(--tint); }
+}
+.focus-bar { background: var(--tint); color: var(--text); font-size: var(--t-sm); padding: 8px 12px; border-radius: var(--radius-card); margin-bottom: var(--s3); }
+@media (max-width: 480px) { .cbtn { min-height: 44px; } }
 /* Phase 9 (decision 5): a quote is a walled COMMENT — the brand rule on the node's own
    outer edge, outside the avatar; no tint, no box */
 .comment.quote { border-left: 3px solid var(--brand-ink); padding-left: 10px; margin: 4px 0; }

@@ -124,4 +124,12 @@ export async function run() {
   }
   const mine = await get('com.atproto.repo.listRecords', { repo: TEST_DID, collection: 'app.bsky.feed.repost', limit: 50 });
   assert.deepEqual(mine.records, [], 'no repost record remains in the test account — the last line is the cleanup');
+
+  // ---- 13b (read-only): a real reply uri resolves to its root's thread, focused ----
+  const th = await get('app.bsky.feed.getPostThread', { uri: SUBJECT_POST, depth: 1 });
+  const reply = (th.thread.replies || []).find((r) => r.post)?.post;
+  assert.ok(reply, 'the subject post has a reply to resolve');
+  const t = await lens.thread(reply.uri, { feedId: 'lens:thread', feedSlug: 'thread', feedTitle: 'Thread' });
+  assert.equal(t.post.id, SUBJECT_POST, 'the page is the root');
+  assert.equal(t.focus, reply.uri, 'focused on the reply');
 }

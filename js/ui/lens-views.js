@@ -7,7 +7,7 @@
 // sign-in survives reloads. The lens consumes { did, handle, fetchHandler }.
 
 import { el, timeAgo, fmtScore, domainOf, plural } from '../util.js';
-import { postRow, commentNode, vote, skeleton, emptyState, toast, reportSheet } from './components.js';
+import { postRow, commentNode, vote, focusComment, skeleton, emptyState, toast, reportSheet } from './components.js';
 import { navTree } from './nav.js';
 import { LADDER, RUNG_IDS, labelFor } from '../rings.js';
 import { lastBoard, setLastBoard, landingBoard, DIRECTORY } from '../last-board.js';
@@ -1169,7 +1169,10 @@ function muteWordSheet() {
 
 function lensMenuGroups(p, { kind }) {
   const rkey = String(p.id).split('/').pop();
-  const link = `${location.origin}/p?uri=${encodeURIComponent(kind === 'comment' ? p.id : p.id)}`;
+  // decision 10: a comment's link is its root's thread, focused on it
+  const link = kind === 'comment' && p.postId && p.postId !== p.id
+    ? `${location.origin}/p?uri=${encodeURIComponent(p.postId)}&focus=${encodeURIComponent(p.id)}`
+    : `${location.origin}/p?uri=${encodeURIComponent(p.id)}`;
   const first = [
     { label: 'Copy text', icon: '⧉', onSelect: () => copyText(p.body || p.title || '', 'Text') },
     { label: 'Copy link', icon: '🔗', onSelect: () => copyText(link, 'Link') },
@@ -2347,6 +2350,7 @@ export function lensThreadView(params, query) {
       replyHost));
     const ctx = { ...LENS_PERMS, locked: true, // vote/save/mod still gate; replying does not
       menuGroups: (n) => lensMenuGroups(n, { kind: 'comment' }), // 4b: the ⋯ on every reply
+      permalink: (n) => `${location.origin}/p?uri=${encodeURIComponent(p.id)}&focus=${encodeURIComponent(n.id)}`, // decision 10
       authorHref: (n) => `/u/${encodeURIComponent(n.author)}`, // 3k: authors reach OUR profile page (which links out)
       nodeRenderer: (n, c) => lensNode(n, c), // 3r: a quote nested under a reply is still a quote
       // phase 2: a reply you regret is the commoner case than a post you
@@ -2378,7 +2382,11 @@ export function lensThreadView(params, query) {
     };
     paintComments(t.comments);
     onCascade = (next) => paintComments(next.comments); // the cascade landed — redraw the list in place
-    main.replaceChildren(head, t.comments.length ? commentsCard : emptyState('No replies', 'Nothing below this post yet.'));
+    // decision 10: ?focus= (or a reply uri, resolved by the substrate) lands on
+    // its comment; the way back is the root's own address
+    const focus = query.focus ? decodeURIComponent(query.focus) : t.focus;
+    const bar = focus ? focusComment(commentsCard, focus, { threadHref: `/p?uri=${encodeURIComponent(p.id)}` }) : null;
+    main.replaceChildren(...[bar, head, t.comments.length ? commentsCard : emptyState('No replies', 'Nothing below this post yet.')].filter(Boolean));
   }).catch((e) => main.replaceChildren(emptyState('Lens fetch failed', e.message)));
   return { main, side: el('div', { class: 'side' }, session ? null : sessionCard(), lensSidebar()) };
 }

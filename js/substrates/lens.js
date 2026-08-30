@@ -1005,10 +1005,29 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
     // a quote reporting no replies and no quotes is never asked about.
     async thread(uri, src, { onCascade } = {}) {
       const source = src || { feedId: 'lens:thread', feedSlug: 'thread', feedTitle: 'Thread' };
-      const [data, quotesRes] = await Promise.all([
+      let [data, quotesRes] = await Promise.all([
         get('app.bsky.feed.getPostThread', { uri, depth: 10 }),
         get('app.bsky.feed.getQuotes', { uri, limit: 50 }).catch(() => null), // degrade, never break the thread
       ]);
+      // Phase 13 (plan 2026-08-29 post-and-thread, decision 10): a reply uri
+      // used to open as an orphan root. If the fetched head is itself a reply,
+      // the page is its ROOT's thread and the reply is the focus — Reddit's
+      // shape, one meaning of "the thread". The response's own parent chain is
+      // still discarded; the root refetch is the whole thread from the top.
+      let focus;
+      const rootUri = data.thread?.post?.record?.reply?.root?.uri;
+      if (rootUri && rootUri !== uri) {
+        console.info(`forage: /p opened on a reply — showing its thread from ${rootUri}`);
+        try {
+          [data, quotesRes] = await Promise.all([
+            get('app.bsky.feed.getPostThread', { uri: rootUri, depth: 10 }),
+            get('app.bsky.feed.getQuotes', { uri: rootUri, limit: 50 }).catch(() => null),
+          ]);
+        } catch (e) {
+          throw new Error(`lens: this reply's root (${rootUri}) could not be loaded — ${e.message}`);
+        }
+        focus = uri;
+      }
       const entries = (quotesRes?.posts || []).map((post) => ({ post }));
       const shape = () => {
         const t = shapeLensThread(data, source, { quotes: entries, posture });
@@ -1039,7 +1058,7 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
         // deliberately un-awaited: the caller already has a thread to draw
         expand(entries, 0).catch(() => {}); // a cascade failure never breaks the thread
       }
-      return shape();
+      return focus ? { ...shape(), focus } : shape();
     },
 
     // The lens Feeds list: pinned/saved feeds + lists from preferences,
