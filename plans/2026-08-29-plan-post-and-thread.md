@@ -4,7 +4,7 @@
 applied the same day** — see Review Log. **Pass 3 (quality gates) applied the same day** — see
 Review Log. **Not started: Phase 0 first.** Open-question severities (O2–O8) **confirmed as recommended by the owner
 2026-08-29** ("accept all as recommended"): O5/O6/O8 PHASE-GATED, O2/O3/O4/O7 ADVISORY.
-**Progress tracker:** this Status line. last green: Phase 2 (branch A) — At every phase end append `last green: <phase> @ <sha>`;
+**Progress tracker:** this Status line. last green: Phase 3 (branch B) — At every phase end append `last green: <phase> @ <sha>`;
 at every landing the CHANGELOG entry and the mock's `mock-baseline` sha are the markers.
 **Origin:** owner session 2026-08-29 — Reddit (web + Android) and Bluesky screenshots
 studied against Forage as it renders, worked through twelve revisions of a mock, and
@@ -456,7 +456,15 @@ mock's baseline bumped.
 
 ### Landing branch B — the ⋯ menu
 
-#### Phase 3: the menu component, wired to the memory tier
+#### Phase 3: the menu component, wired to the memory tier — ✅ SHIPPED (branch B)
+**Delivered:** 3a/3b as specified, plus a **3c** (`js/ui/views.js`: the thread `ctx` gains
+`loggedIn`/`viewerId`, and every `postRow` caller passes `perms: rowPerms` — a row's menu
+needs its OWN feed's permissions, `/popular` mixes feeds). The menu is a native `<dialog>`
+(the authsheet pattern) — popover pinned beside the kebab on desktop, bottom sheet under
+480px, one element. **Memory has no Delete write** (`post.deletedByAuthor` exists in the
+reducer with no action), so on your own post the menu drops Report and adds nothing;
+Delete-on-own is the lens's (4b, `deletePost`). `sw.js` SHELL gained `menu.js` (CACHE
+v59); `board-density.test.js`'s regex loosened to allow another key beside `compact`.
 **Goal:** one menu, popover on desktop and sheet on the phone, groups declared as data;
 the memory tier's Save · Hide · Report (and steward items, Delete on your own) move
 into it and out of the action row.

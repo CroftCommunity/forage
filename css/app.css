@@ -248,6 +248,32 @@ kbd { background: var(--green-100); border: 1px solid var(--border); border-radi
   color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer; display: grid; place-items: center; }
 .kebab:hover, .kebab[aria-expanded="true"] { background: var(--card-2); color: var(--text); }
 .comment .kebab { width: 32px; height: 32px; margin-top: -4px; margin-bottom: -4px; }
+/* the ⋯ menu (js/ui/menu.js): ONE <dialog> — a popover pinned beside the kebab
+   on a desktop, a bottom sheet on a phone. Same element, CSS moves the box. */
+dialog.menu { border: 1px solid var(--border); border-radius: var(--radius-card); padding: 4px;
+  background: var(--card); color: var(--text); box-shadow: var(--card-shadow);
+  position: fixed; width: 270px; max-width: calc(100vw - 16px); }
+dialog.menu::backdrop { background: transparent; }
+.menu .sheet-title { display: none; }
+.mi { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; text-align: left;
+  min-height: 40px; padding: 8px 12px; border: 0; background: none; color: var(--text); font-size: var(--t-sm);
+  border-radius: var(--radius-sm); cursor: pointer; }
+.mi:hover, .mi:focus-visible { background: var(--card-2); }
+.mi.danger { color: var(--danger); }
+.mi-icon { color: var(--muted); font-size: var(--t-xs); }
+.msep { height: 1px; background: var(--border); margin: 4px 4px; }
+.sheet-close { width: 36px; height: 36px; border-radius: var(--radius-round); border: 0; background: var(--card-2);
+  color: var(--text); font-size: var(--t-md); cursor: pointer; }
+@media (max-width: 480px) {
+  dialog.menu { left: 0; right: 0; bottom: 0; top: auto; margin: 0; width: 100%; max-width: 100%;
+    border: 0; border-top: 1px solid var(--border);
+    border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+    padding: var(--s3) var(--s3) calc(var(--s3) + env(safe-area-inset-bottom, 0px)); }
+  dialog.menu::backdrop { background: var(--scrim); }
+  .menu .sheet-title { display: flex; align-items: center; justify-content: space-between; padding: 0 4px 8px; font-weight: 600; }
+  .mi { min-height: 44px; }
+  .sheet-close { width: 44px; height: 44px; }
+}
 /* compact rows keep the same header, drawn tighter — density.workflow.mjs holds
    compact to >25% shorter than card, and the byline must not eat that margin */
 .postrow.compact .byline { font-size: 0.75em; gap: 6px; }

@@ -2,6 +2,7 @@
 
 import { el, esc, mdLite, timeAgo, domainOf, fmtScore, plural } from '../util.js';
 import * as actions from '../actions.js';
+import { openMenu } from './menu.js';
 
 // ---------- toasts ----------
 export function toast(msg, kind = '') {
@@ -123,7 +124,7 @@ function initials(name) {
   return n ? n.slice(0, 2).toLowerCase() : '··';
 }
 
-export function byline({ name, whoNode, ts, avatar = null, after = [] }) {
+export function byline({ name, whoNode, ts, avatar = null, after = [], menu = null }) {
   const av = el('span', { class: 'av', 'aria-hidden': 'true' }, initials(name));
   if (avatar) av.append(el('img', { src: avatar, alt: '', loading: 'lazy' }));
   return el('div', { class: 'byline' },
@@ -132,7 +133,65 @@ export function byline({ name, whoNode, ts, avatar = null, after = [] }) {
     el('span', { class: 'dot' }),
     el('span', { 'data-time': '1', title: new Date(ts).toLocaleString() }, timeAgo(ts)),
     ...after.filter(Boolean),
-    el('button', { class: 'kebab', type: 'button', 'aria-label': `More, by ${name || '[removed]'}`, 'aria-expanded': 'false' }, '⋯'));
+    kebabFor(name, menu));
+}
+
+function kebabFor(name, menu) {
+  const b = el('button', { class: 'kebab', type: 'button', 'aria-label': `More, by ${name || '[removed]'}`,
+    'aria-haspopup': 'menu', 'aria-expanded': 'false' }, '⋯');
+  // Groups are computed at press time, not render time, so Save/Unsave reads
+  // the store as it is now. `menu` is a function returning groups (see
+  // memoryMenuGroups) — the lens supplies its own in Phase 4b.
+  if (menu) b.addEventListener('click', () => openMenu({ anchor: b, groups: menu() }));
+  return b;
+}
+
+// ---------- the ⋯ menu's memory-tier contents (decision 3) ----------
+// Groups, separators only, destructive last. Only items the persona can USE —
+// the guest-surface rule — so a guest gets the two things anyone can do.
+async function copy(text, what) {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast(`${what} copied.`, 'ok');
+  } catch (e) {
+    console.warn('forage: clipboard write failed', e);
+    toast(`Could not copy the ${what.toLowerCase()} — your browser refused the clipboard.`, 'err');
+  }
+}
+
+export function memoryMenuGroups({ type, subject, text, link, perms = {}, viewerId = null }) {
+  const own = viewerId && subject.authorId === viewerId;
+  const url = `${location.origin}${link}`;
+  const first = [
+    { label: 'Copy text', icon: '⧉', onSelect: () => copy(text, 'Text') },
+    { label: 'Copy link', icon: '🔗', onSelect: () => copy(url, 'Link') },
+  ];
+  if (perms.loggedIn) {
+    first.push({ label: subject.saved ? 'Unsave' : 'Save', icon: '☆',
+      onSelect: async () => { try { await actions.setSave(type, subject.id, !subject.saved); } catch {} } });
+  }
+  const report = perms.canReport && !own ? [{ label: 'Report', icon: '⚑', danger: true, onSelect: async () => {
+    const reason = prompt('Report reason (Spam, Incivility, Off-topic, Rule violation):', 'Spam');
+    if (!reason) return;
+    try { await actions.report(type, subject.id, subject.feedId ?? perms.feedId, reason, ''); toast('Report filed.', 'ok'); } catch {}
+  } }] : [];
+  const steward = perms.canModerate ? stewardItems(type, subject) : [];
+  return [first, report, steward];
+}
+
+function stewardItems(type, subject) {
+  const act = (label, evType, extra = {}) => ({ label, onSelect: async () => {
+    const reason = evType === 'mod.removed' ? (prompt('Removal reason:', 'Rule violation') || '') : '';
+    if (evType === 'mod.removed' && !reason) return;
+    try { await actions.mod(evType, { subjectType: type, subjectId: subject.id, reason, ...extra }); toast('Done.', 'ok'); } catch {}
+  } });
+  const out = [];
+  if (type === 'post') {
+    out.push(subject.locked ? act('Unlock', 'mod.unlocked') : act('Lock', 'mod.locked'));
+    out.push(subject.pinned ? act('Unpin', 'mod.unpinned') : act('Pin', 'mod.pinned'));
+  }
+  out.push(subject.removed ? act('Approve', 'mod.approved') : act('Remove', 'mod.removed'));
+  return out;
 }
 
 // ---------- post row (feed) ----------
@@ -176,6 +235,13 @@ export function postRow(p, viewerCanVote, opts = {}) {
       whoNode: p.author
         ? el('span', { class: 'who' }, p.author, opts.authorBadge || '')
         : el('span', { class: 'who muted' }, '[removed]'),
+      // `opts.menuGroups(p)` (the lens, Phase 4b) or `opts.perms(p)` (memory:
+      // the feed-scoped permissions for this row's feed) — a row with neither
+      // gets a guest's menu, which is the safe default.
+      menu: opts.menuGroups ? () => opts.menuGroups(p)
+        : () => memoryMenuGroups({ type: 'post', subject: p, link,
+          text: [p.title, p.body].filter(Boolean).join('\n\n'),
+          perms: opts.perms?.(p) ?? {}, viewerId: opts.perms?.(p)?.viewerId ?? null }),
     }),
     el('div', { class: 'row wrap', style: 'gap:6px;align-items:center' }, ...postBadges(p)),
     title,
@@ -210,6 +276,10 @@ export function commentNode(node, ctx) {
   const note = el('span', { class: 'collapse-note' });
   const meta = byline({
     name: node.author, whoNode: author, ts: node.createdTs, avatar: node.avatar || null,
+    menu: node.maskedRemoved || node.deleted ? null
+      : ctx.menuGroups ? () => ctx.menuGroups(node)
+      : () => memoryMenuGroups({ type: 'comment', subject: node, text: node.body,
+        link: `/f/${ctx.feedSlug}/p/${node.postId}`, perms: ctx, viewerId: ctx.viewerId ?? null }),
     after: [
       node.edited ? el('span', { class: 'muted' }, 'edited') : null,
       node.removed && ctx.canModerate ? el('span', { class: 'chip badge-nsfw' }, 'removed') : null,
@@ -224,9 +294,7 @@ export function commentNode(node, ctx) {
     const vb = miniVote('comment', node.id, node, ctx.canVote);
     actionsRow.append(vb.up, vb.score);
     if (ctx.canComment && !ctx.locked) actionsRow.append(replyButton(node, ctx));
-    actionsRow.append(saveButton('comment', node.id, node.saved, ctx));
-    if (ctx.canReport) actionsRow.append(reportButton('comment', node.id, ctx));
-    if (ctx.canModerate) actionsRow.append(...modButtons('comment', node, ctx));
+    // Save, Report and the steward actions live in the ⋯ menu now (Phase 3).
     // Phase 2: the lens hangs its own controls here (delete-your-own-reply).
     // Returns nodes or nothing; the memory tier passes no extraActions, so its
     // rows are untouched.
@@ -315,34 +383,3 @@ function replyButton(node, ctx) {
   return btn;
 }
 
-function saveButton(type, id, saved, ctx) {
-  const btn = el('button', {}, saved ? 'unsave' : 'save');
-  btn.addEventListener('click', async () => {
-    try { await actions.setSave(type, id, !saved); } catch {}
-  });
-  return btn;
-}
-
-function reportButton(type, id, ctx) {
-  const btn = el('button', {}, 'report');
-  btn.addEventListener('click', async () => {
-    const reason = prompt('Report reason (Spam, Incivility, Off-topic, Rule violation):', 'Spam');
-    if (!reason) return;
-    try { await actions.report(type, id, ctx.feedId, reason, ''); toast('Report filed.', 'ok'); } catch {}
-  });
-  return btn;
-}
-
-function modButtons(type, node, ctx) {
-  const mk = (label, evType, extra = {}, cls = '') => {
-    const b = el('button', { class: cls }, label);
-    b.addEventListener('click', async () => {
-      const reason = evType === 'mod.removed' ? (prompt('Removal reason:', 'Rule violation') || '') : '';
-      if (evType === 'mod.removed' && !reason) return;
-      try { await actions.mod(evType, { subjectType: type, subjectId: node.id, reason, ...extra }); toast('Done.', 'ok'); } catch {}
-    });
-    return b;
-  };
-  if (node.removed) return [mk('approve', 'mod.approved')];
-  return [mk('remove', 'mod.removed', {}, 'danger')];
-}

@@ -75,7 +75,7 @@ test('the sandbox board actually passes compact through to the row', () => {
   // views.js honouring the preference is the whole point; asserting the import
   // alone would pass while the value went nowhere.
   const views = src('js/ui/views.js');
-  assert.match(views, /postRow\([^)]*\{\s*compact:\s*isCompact\(\)\s*\}/,
+  assert.match(views, /postRow\([^)]*\{[^}]*compact:\s*isCompact\(\)\s*\}/,
     'js/ui/views.js must pass { compact } to postRow');
   assert.match(views, /densityDial\(/, 'and offer the dial on the board');
 });
