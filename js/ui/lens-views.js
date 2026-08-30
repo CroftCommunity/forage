@@ -2397,11 +2397,15 @@ export function lensThreadView(params, query) {
         ...orderComments(comments).map((n) => lensNode(n, ctx)));
     };
     paintComments(t.comments);
-    onCascade = (next) => paintComments(next.comments); // the cascade landed — redraw the list in place
     // decision 10: ?focus= (or a reply uri, resolved by the substrate) lands on
     // its comment; the way back is the root's own address
     const focus = query.focus ? decodeURIComponent(query.focus) : t.focus;
-    const bar = focus ? focusComment(commentsCard, focus, { threadHref: `/p?uri=${encodeURIComponent(p.id)}` }) : null;
+    const threadHref = `/p?uri=${encodeURIComponent(p.id)}`;
+    const bar = focus ? focusComment(commentsCard, focus, { threadHref }) : null;
+    // the cascade landed — redraw the list in place, and land on the focused
+    // comment AGAIN: the repaint is a fresh tree, and the first focus went with
+    // the old one (mock v20 claim F, found by the shipped capture 2026-08-30)
+    onCascade = (next) => { paintComments(next.comments); if (focus) focusComment(commentsCard, focus, { threadHref }); };
     main.replaceChildren(...[bar, head, t.comments.length ? commentsCard : emptyState('No replies', 'Nothing below this post yet.')].filter(Boolean));
   }).catch((e) => main.replaceChildren(emptyState('Lens fetch failed', e.message)));
   return { main, side: el('div', { class: 'side' }, ...lensRail()) };

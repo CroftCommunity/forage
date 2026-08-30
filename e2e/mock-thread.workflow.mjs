@@ -83,6 +83,17 @@ export async function run() {
       assert.ok(st.inColumn, `${st.id}: the stack is centred in the avatar column`);
       assert.ok(st.middle, `${st.id}: the stack sits at the vertical middle of the body`);
     }
+    // Claim F (decision 10, mock v19 § F): a deep link lands on ITS comment and
+    // stays there — the quote cascade repaints the list after the first paint,
+    // and the focus must survive that repaint (found by the shipped capture,
+    // 2026-08-30: the bar said "Viewing one comment" over a thread with no
+    // focused comment; e2e/deep-link never saw it because its fixture has no quotes).
+    await page.goto(`${s.origin}${THREAD_PATH}&focus=${encodeURIComponent(NODE_IDS[2])}`);
+    await page.waitForSelector('.comment[data-kind="quote"]'); // the cascade has repainted
+    await page.waitForTimeout(300);
+    const focused = await page.$$eval('.comment.focused', (cs) => cs.map((c) => c.dataset.nodeId));
+    assert.deepEqual(focused, [NODE_IDS[2]], 'after the cascade repaint, the deep-linked comment is still the focused one');
+    assert.equal(await page.locator('.focus-bar').count(), 1, 'and the bar over it says so, once');
     assert.deepEqual(await s.shimMisses(), []);
     assert.deepEqual(s.errors(), []);
   } finally { await s.close(); }
