@@ -4,7 +4,7 @@
 applied the same day** — see Review Log. **Pass 3 (quality gates) applied the same day** — see
 Review Log. **Not started: Phase 0 first.** Open-question severities (O2–O8) **confirmed as recommended by the owner
 2026-08-29** ("accept all as recommended"): O5/O6/O8 PHASE-GATED, O2/O3/O4/O7 ADVISORY.
-**Progress tracker:** this Status line. last green: Phase 7 (branch C) — At every phase end append `last green: <phase> @ <sha>`;
+**Progress tracker:** this Status line. last green: Phase 8b (branch C) — At every phase end append `last green: <phase> @ <sha>`;
 at every landing the CHANGELOG entry and the mock's `mock-baseline` sha are the markers.
 **Origin:** owner session 2026-08-29 — Reddit (web + Android) and Bluesky screenshots
 studied against Forage as it renders, worked through twelve revisions of a mock, and
@@ -699,7 +699,11 @@ the call must stay inside the click handler, not after the `await`.
 like-on.
 **Validation:** Broad — the device (D4's page is the pattern), both switch states.
 
-#### Phase 8a: the thread suites move to the new grammar (RED)
+#### Phase 8a: the thread suites move to the new grammar (RED) — ✅ SHIPPED (branch C)
+**Delivered:** `bluesky-view` and `mobile-fit` as specified (a nested reply `reply1a` was
+added to the thread fixture so a fold has something to hide). **`scenarios/comment-tree-
+collapse.js` was not changed**: it is a conformance scenario whose assertions are
+`threadNode` shape probes, not DOM — there was never a gutter in it to rewrite.
 **Goal:** the three files that pin the gutter now describe the rail + ⊖ grammar. This
 phase ends RED on purpose.
 **Changes:**
@@ -718,7 +722,14 @@ selector timeout — a timeout is a wrong-selector bug in the test, not RED).
 **Validation:** read the failure output in full (VERIFICATION.md: never through
 `tail`).
 
-#### Phase 8b: the rail and ⊖/⊕, the gutter removed (GREEN)
+#### Phase 8b: the rail and ⊖/⊕, the gutter removed (GREEN) — ✅ SHIPPED (branch C)
+**Delivered:** the comment is a grid (`.avcol` | byline / text / action row; `.kids`
+spanning both), `.comment-body` kept as `display: contents` so every suite's
+`> .comment-body > .byline` selector survived; the comment's avatar moved from the byline
+into the column (`thread-byline`, `avatar-nav` read it there now); the vote stack is a grid
+sibling in the column on the action row's line. The fold counts ALL descendants (Reddit's
+count). `.children` → `.kids`; the three "§3.3" comments and every `gutter` rule are gone;
+`lens-views.js` needed no change (its `quoteNode` still renders its own box until Phase 9).
 **Goal:** 8a goes green.
 **Changes:**
 - [ ] `js/ui/components.js` — `commentNode`: avatar column carries `.line` when the

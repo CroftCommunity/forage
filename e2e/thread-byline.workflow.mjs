@@ -24,7 +24,10 @@ const bylines = (page, scope) => page.evaluate((scope) =>
     const kids = [...b.children];
     return {
       count: all,
+      // a row's byline opens with the avatar; a comment's avatar is the head of
+      // its own column (Phase 8b), so its byline opens with the name
       first: kids[0]?.className ?? null,
+      colAv: n.querySelectorAll(':scope > .avcol > .av').length,
       last: `${kids.at(-1)?.tagName.toLowerCase()}.${kids.at(-1)?.className}`,
       kebabName: kids.at(-1)?.getAttribute('aria-label') ?? null,
       time: b.querySelector('[data-time]')?.textContent.trim() ?? null,
@@ -33,11 +36,12 @@ const bylines = (page, scope) => page.evaluate((scope) =>
     };
   }), scope);
 
-function assertByline(list, label) {
+function assertByline(list, label, { avatarIn = 'byline' } = {}) {
   assert.ok(list.length > 0, `${label}: nothing rendered to check`);
   for (const b of list) {
     assert.equal(b.count, 1, `${label}: exactly one .byline per node, got ${b.count}`);
-    assert.equal(b.first, 'av', `${label}: the byline opens with the avatar slot`);
+    if (avatarIn === 'byline') assert.equal(b.first, 'av', `${label}: the byline opens with the avatar slot`);
+    else { assert.equal(b.colAv, 1, `${label}: the avatar heads its own column`); assert.equal(b.first, 'who', `${label}: and the byline opens with the name`); }
     assert.equal(b.last, 'button.kebab', `${label}: and closes with the ⋯ button`);
     assert.match(b.kebabName ?? '', /^More, by .+/, `${label}: the kebab names its author, so two never share a name: ${b.kebabName}`);
     assert.match(b.time ?? '', TIME, `${label}: bare time, got ${JSON.stringify(b.time)}`);
@@ -62,7 +66,7 @@ export async function run() {
     assert.ok(threadHref, 'the seeded board must offer a thread with replies');
     await page.goto(`${mem.origin}${threadHref}`);
     await page.waitForSelector('.comment');
-    assertByline(await bylines(page, '.comment'), 'comments');
+    assertByline(await bylines(page, '.comment'), 'comments', { avatarIn: 'column' });
 
     // The kebab must clear the phone tap floor: 44px at 390 wide (mobile-fit
     // measures the whole page; this is the one control this suite adds).

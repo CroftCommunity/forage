@@ -267,7 +267,7 @@ export async function run() {
   // hides .kids and the button says how many it hid.
   const chrome = (n) => ({
     wall: parseFloat(getComputedStyle(n).borderLeftWidth),
-    folds: n.querySelectorAll(':scope > .cact > [data-fold]').length,
+    folds: n.querySelectorAll(':scope > .comment-body > .comment-actions > [data-fold]').length,
     rails: n.querySelectorAll(':scope > .avcol > .line').length,
     elbow: getComputedStyle(n, '::before').content !== 'none',
     gutters: n.querySelectorAll('.gutter').length,
@@ -293,7 +293,7 @@ export async function run() {
 
   // …and the fold actually FOLDS. Behavioural coverage of the collapse has
   // existed since 2026-08-27; retiring the gutter must not leave less.
-  const fold = parent.locator(':scope > .cact > [data-fold]');
+  const fold = parent.locator(':scope > .comment-body > .comment-actions > [data-fold]');
   const kidsShown = () => parent.locator(':scope > .kids').isVisible();
   assert.equal(await kidsShown(), true, 'a reply starts open — nothing folds on its own now');
   assert.equal(await fold.getAttribute('aria-expanded'), 'true');
@@ -301,7 +301,7 @@ export async function run() {
   assert.equal(await kidsShown(), false, 'clicking ⊖ folds the replies');
   assert.equal(await fold.getAttribute('aria-expanded'), 'false');
   assert.match((await fold.innerText()).replace(/\s+/g, ' '), /1 reply hidden/, 'and says how much it hid');
-  assert.equal(await page.locator('.comment[data-node-id$="/myreply"] > .kids, .comment[data-node-id$="/myreply"] > .comment-text').first().isVisible(), true,
+  assert.equal(await page.locator('.comment[data-node-id$="/myreply"] > .comment-body > .comment-text').first().isVisible(), true,
     'folding one comment leaves its siblings alone');
   await fold.click();
   assert.equal(await kidsShown(), true, 'clicking it again unfolds — a one-way collapse is a trap');

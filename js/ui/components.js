@@ -108,11 +108,17 @@ function initials(name) {
   return n ? n.slice(0, 2).toLowerCase() : '··';
 }
 
-export function byline({ name, whoNode, ts, avatar = null, after = [], menu = null }) {
+export function avatarSlot(name, avatar = null) {
   const av = el('span', { class: 'av', 'aria-hidden': 'true' }, initials(name));
   if (avatar) av.append(el('img', { src: avatar, alt: '', loading: 'lazy' }));
+  return av;
+}
+
+// `avatar: false` draws no slot — a comment's avatar lives in its own column
+// (decision 1 + 2, Phase 8b), a row's opens the byline.
+export function byline({ name, whoNode, ts, avatar = null, after = [], menu = null }) {
   return el('div', { class: 'byline' },
-    av,
+    avatar === false ? null : avatarSlot(name, avatar),
     whoNode,
     el('span', { class: 'dot' }),
     el('span', { 'data-time': '1', title: new Date(ts).toLocaleString() }, timeAgo(ts)),
@@ -270,30 +276,51 @@ export function postRow(p, viewerCanVote, opts = {}) {
   return el('div', { class: 'postrow' + (p.pinned ? ' pinned-row' : '') + (opts.compact ? ' compact' : '') }, right);
 }
 
-// ---------- comment tree with the signature collapse gutter (§3.3) ----------
+// ---------- comment tree: the rail and the fold (plan 2026-08-29 post-and-thread, decision 2) ----------
+// A comment is a grid: avatar column | byline / text / action row, with its
+// replies (.kids) spanning both columns below. A comment WITH replies draws a
+// rail (.line) down from its avatar and carries ONE fold (⊖) on its action row;
+// each child draws its own elbow off the rail in CSS. A comment without
+// replies has neither — forty direct replies to a post no longer look nested
+// under nothing. The old full-height collapse gutter was never discoverable
+// on a phone and cost mis-taps; it is retired, deliberately, and a later
+// session that "restores" it is undoing a decision.
+//
+// No auto-collapse: the score-threshold fold was a downvote feature and is
+// retired (2026-08-27); the fold here is manual.
 const CHILD_PAGE = 20; // "load N more replies" threshold
 
 export function commentNode(node, ctx) {
-  // No auto-collapse. The score-threshold fold was a downvote feature and is
-  // retired (2026-08-27); the MANUAL gutter below is what remains, and it is
-  // the one people actually use.
-  const wrap = el('div', { class: 'comment', 'data-node-id': node.id });
+  const hasKids = (node.children || []).length > 0 || (node.deferred || 0) > 0;
+  const wrap = el('div', { class: 'comment' + (hasKids ? '' : ' leaf'), 'data-node-id': node.id });
 
-  const gutter = el('button', { class: 'gutter', 'aria-label': 'Collapse thread', title: 'Collapse' });
-  gutter.addEventListener('click', () => {
-    const collapsing = !wrap.classList.contains('collapsed');
-    wrap.classList.toggle('collapsed');
-    note.textContent = collapsing ? ` [+] ${countDesc(node)} hidden` : '';
-  });
+  const avcol = el('div', { class: 'avcol' }, avatarSlot(node.author, node.avatar || null),
+    hasKids ? el('span', { class: 'line', 'aria-hidden': 'true' }) : null);
+
+  let fold = null;
+  if (hasKids) {
+    const hidden = countDesc(node);
+    const lbl = el('span', { class: 'lbl' });
+    fold = el('button', { type: 'button', class: 'fold', 'data-fold': '1', 'aria-expanded': 'true',
+      'aria-label': 'Collapse replies', title: 'Collapse replies' }, el('span', { class: 'glyph', 'aria-hidden': 'true' }, '\u2296'), lbl);
+    fold.addEventListener('click', () => {
+      const collapsing = !wrap.classList.contains('collapsed');
+      wrap.classList.toggle('collapsed', collapsing);
+      fold.setAttribute('aria-expanded', String(!collapsing));
+      fold.querySelector('.glyph').textContent = collapsing ? '\u2295' : '\u2296';
+      lbl.textContent = collapsing ? ` ${plural(hidden, 'reply', 'replies')} hidden` : '';
+      const name = collapsing ? `Show ${plural(hidden, 'reply', 'replies')}` : 'Collapse replies';
+      fold.setAttribute('aria-label', name); fold.setAttribute('title', name);
+    });
+  }
 
   const author = node.author
     ? (ctx.authorHref
       ? el('a', { class: 'who', href: ctx.authorHref(node), target: '_blank', rel: 'noopener noreferrer', title: 'Profiles live on bsky.app — Forage is a lens' }, node.author)
       : el('a', { class: 'who', href: `/u/${node.author}` }, node.author))
     : el('span', { class: 'who removed-stub' }, node.deleted ? '[deleted]' : '[removed]');
-  const note = el('span', { class: 'collapse-note' });
   const meta = byline({
-    name: node.author, whoNode: author, ts: node.createdTs, avatar: node.avatar || null,
+    name: node.author, whoNode: author, ts: node.createdTs, avatar: false,
     menu: node.maskedRemoved || node.deleted ? null
       : ctx.menuGroups ? () => ctx.menuGroups(node)
       : () => memoryMenuGroups({ type: 'comment', subject: node, text: node.body,
@@ -301,15 +328,17 @@ export function commentNode(node, ctx) {
     after: [
       node.edited ? el('span', { class: 'muted' }, 'edited') : null,
       node.removed && ctx.canModerate ? el('span', { class: 'chip badge-nsfw' }, 'removed') : null,
-      note,
     ],
   });
 
   const text = el('div', { class: 'comment-text', html: node.maskedRemoved || node.deleted ? esc(node.body) : mdLite(node.body) });
 
   const actionsRow = el('div', { class: 'comment-actions' });
+  // the vote stack is a grid sibling in the avatar column, on the action row's
+  // line, the rail passing behind it (decision 1)
+  const voteEl = node.maskedRemoved || node.deleted ? null : vote('comment', node.id, node, ctx.canVote, { layout: 'stack' });
+  if (fold) actionsRow.append(fold);
   if (!node.maskedRemoved && !node.deleted) {
-    actionsRow.append(vote('comment', node.id, node, ctx.canVote, { layout: 'stack' }));
     if (ctx.canComment && !ctx.locked) actionsRow.append(replyButton(node, ctx));
     // Save, Report and the steward actions live in the ⋯ menu now (Phase 3).
     // Phase 2: the lens hangs its own controls here (delete-your-own-reply).
@@ -319,10 +348,12 @@ export function commentNode(node, ctx) {
     if (extra) actionsRow.append(...[].concat(extra).filter(Boolean));
   }
 
-  const bodyWrap = el('div', { class: 'comment-body' }, meta, text, actionsRow);
-  const childrenWrap = el('div', { class: 'children' });
+  // .comment-body is display:contents — its children sit in the comment's
+  // grid, and every suite's `> .comment-body > .byline` keeps working
+  const bodyWrap = el('div', { class: 'comment-body' }, meta, text, voteEl, actionsRow);
+  const childrenWrap = el('div', { class: 'kids' });
 
-  wrap.append(gutter, bodyWrap, childrenWrap);
+  wrap.append(avcol, bodyWrap, childrenWrap);
 
   // render children with paging + continuation stubs
   renderChildren(childrenWrap, node, ctx);
