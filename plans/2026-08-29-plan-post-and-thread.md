@@ -1,6 +1,6 @@
 # Plan: posts, threads, and the ⋯ menu
 
-**Status:** drafted 2026-08-29, not started. Four phases; none begun.
+**Status:** drafted 2026-08-29, not started. Four phases; none begun. **O1 resolved 2026-08-29** (owner) — phase 3 is unblocked.
 **Origin:** owner session 2026-08-29 — Reddit (web + Android) and Bluesky screenshots
 studied against Forage as it renders, worked through twelve revisions of a mock, and
 **ten decisions locked on `plans/mocks/post-and-thread.html` v12** (landed `b091566`).
@@ -76,7 +76,16 @@ does not re-open it as if undecided.
    owner now wants the picture, and the loading-state initials keep the no-flash property.
 9. **Sort is one control bar, not tabs, on boards and threads** — `Sort ▾` and `From ▾`
    pills adapted from the lens `boardToolbar` selects, every sort on every board whatever
-   its age (Reddit withholds; we don't). **Best is redefined** — see O1.
+   its age (Reddit withholds; we don't). **"Best" is retired; the thread's default is
+   Hot, and Hot's signal is engagement — likes + replies + reposts** (owner, 2026-08-29:
+   *"I don't like Best … Hot is fine and likes+replies … and across reposts too"*). One
+   score, `hot(likes + replies + reposts, createdSec)`, the existing decay; the same
+   definition on a board, where it replaces likes-only Hot. **`From` applies to Hot as it
+   does to Top, default Today** — a filter over the loaded window by each item's own
+   timestamp, so it needs nothing from Jetstream. *Why not a Wilson bound:* with no
+   denominator that means "disapproval", a confidence interval on a count is just a
+   monotone reshaping of the count — the finding that started this. *Not taken:* keeping
+   the word Best for any formula.
 10. **Deep links, Reddit's shape:** every comment has a permalink; the share glyph copies
     it; opening one renders the whole thread, scrolls to the comment, tints it briefly,
     expands its ancestors, and shows a "viewing one comment — see the whole thread" bar.
@@ -100,6 +109,12 @@ Measured in this session, not remembered:
 - The six skins reference neither `.vote.boost` nor `.gutter` (grep: 0 hits each) — the
   "six skins style it" note in `components.js:73` is a claim the skins do not bear out.
   They set `--boost`; the new controls should read that token and nothing else.
+- The lens shapes `likeCount` and `replyCount` (`js/substrates/lens.js:173,185`);
+  `repostCount` is on the same `app.bsky.feed.defs#postView` and is **not shaped yet** —
+  one field, phase 3's first RED. Memory-mode comments carry likes and children already.
+- A last-day window on Hot is the loaded-window filter Top already has (`timeframeMs`,
+  `js/selectors.js:166`), keyed on each item's timestamp; Jetstream v2 is the frontier
+  for re-ranking the whole feed live (E139, `lens.js:440`) and is **not** needed for it.
 - Bluesky bookmarks are XRPC procedures with no record type (`docs/LEXICON-REGISTER.md`).
   **Not yet verified:** the three procedures against the live lexicon — nothing in the
   repo calls them. Phase 1 writes the probe before the code (External APIs rule).
@@ -146,9 +161,13 @@ before landing (CHANGELOGS.md), `scripts/mock-snaps.mjs` re-run after landing so
 - **Mobile-fit:** the phone frame at 390 with three levels of nesting (22px per level)
   must not overflow; measure element geometry, not `scrollWidth` (MOBILE-FIRST.md).
 
-### Phase 3 — the sort bar, and what Best means (decision 9; O1 first)
+### Phase 3 — the sort bar, and Hot on engagement (decision 9)
 
-- Blocked on **O1**. Once decided: one `sortBar` component replacing `tabs()` on boards and
+- `rank.js`: `hot()` takes an engagement count; `sortItems` computes
+  `likes + replies + reposts` per item; `best` is removed (its callers move to `hot`),
+  and the rank tests pin that a reply with 3 likes and 4 replies outranks one with 5
+  likes and none at equal age. `repostCount` shaped on the lens.
+- One `sortBar` component replacing `tabs()` on boards and
   threads and `boardToolbar`'s sort/timeframe selects on the lens; density and preview
   size stay at its right end on the lens board.
 - Every sort on every board; timeframe list unified (the memory tier has `hour`, the lens
@@ -168,10 +187,9 @@ before landing (CHANGELOGS.md), `scripts/mock-snaps.mjs` re-run after landing so
 
 ## Open questions (gates inside known work — TRACKING.md)
 
-- **O1 (blocks phase 3): what Best means without downvotes.** Three candidates on the
-  mock: Wilson on likes/(likes+replies); Hot applied to comments (likes with decay);
-  retire the word and default threads to Top. Owner's call; the rank test suite is where
-  the chosen formula gets its RED.
+- ~~**O1: what Best means without downvotes.**~~ **Resolved 2026-08-29 (owner):** Best
+  is retired; Hot on likes + replies + reposts, `From` default Today. Recorded under
+  decision 9.
 - **O2 (phase 2, non-blocking): Repost on plain replies too?** On Bluesky a reply is a
   post and repostable; the mock shows ⟳ only on quotes. Cheap to add, busier row.
 - **O3 (phase 2, non-blocking): haptics under `prefers-reduced-motion`?** It is not
@@ -182,3 +200,4 @@ before landing (CHANGELOGS.md), `scripts/mock-snaps.mjs` re-run after landing so
 ## Review Log
 
 - 2026-08-29 — drafted from mock v12 after the owner locked all ten decisions.
+- 2026-08-29 — O1 resolved by the owner the same day; phase 3 unblocked, `repostCount` shaping added to Verified assumptions.
