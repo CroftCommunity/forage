@@ -1,0 +1,47 @@
+/* Surf (night swell) — DRAFT */
+:root {
+  --bg:          #0E2233;
+  --page-art:    linear-gradient(180deg, #1A3247 0, #0E2233 320px);
+  --card:        #163445;
+  --card-2:      #1D4054;
+  --text:        #EAF3F7;
+  --muted:       #A9BFCB;
+  --border:      #2B4D60;
+
+  --link:        #F4B77A;
+  --link-hover:  #FFD4A3;
+  --brand-ink:   #F4B77A;
+  --brand-fill:  #C24E3A;
+  --brand-fill-hover: #AD4432;
+  --on-brand:    #FFFFFF;
+
+  --band-fill:   #3B2A55;
+  --band-art:    url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 120 10%27 preserveAspectRatio=%27none%27%3E%3Cpath d=%27M0 7 Q15 1 30 7 T60 7 T90 7 T120 7 V10 H0Z%27 fill=%27%23ffffff%27 fill-opacity=%27.85%27/%3E%3C/svg%3E") left bottom / 120px 8px repeat-x, linear-gradient(90deg, #2A2148 0%, #5A2E58 40%, #A2405C 75%, #C24E3A 100%);
+  --band-ink:    #FFF3E6;
+  --band-link:   #FFE1C2;
+  --band-brand:  #FFF3E6;
+  --nav-fill:    #12293C;
+  --panel:       #163445;
+  --row-odd:     #163445;
+  --row-even:    #1A3B4E;
+  --row-head:    #21475C;
+
+  --boost:       #F4B77A;
+  --bury:        #F0A886;
+  --tint:        #1F4458;
+
+  --gold-500:    #D4A94E;
+  --gold-strong: #E2BC64;
+  --danger:      #F0938A;
+  --danger-ink:  #F0938A;
+  --danger-tint: #45262A;
+  --clay-600:    #A24D2C;
+  --stripe:      rgba(255,255,255,.04);
+
+  --font-body:   ui-rounded, "Trebuchet MS", Verdana, Helvetica, sans-serif;
+  --font-display: ui-rounded, "Trebuchet MS", Verdana, Helvetica, sans-serif;
+  --radius-card:  12px;
+  --radius-sm:    6px;
+  --card-shadow:  0 2px 8px rgba(0, 0, 0, .40);
+  --color-scheme: dark;
+}

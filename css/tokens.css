@@ -112,6 +112,21 @@
      skin (a light scrim over a dark skin does not read as "behind"); a skin
      that wants a different veil now has somewhere to say so. */
   --scrim:        rgba(0, 0, 0, .55);
+  /* ---- the ART slots (graphical skins, plan 2026-08-30-plan-warm-skins) ----
+     A skin could move colours, fonts and radii and nothing else: a picture had
+     no token to ride on. Each slot is a <bg-image> LAYER LIST that app.css
+     paints OVER the solid token it belongs to (`var(--page-art), var(--bg)`),
+     so `none` renders byte-identically to today and a skin can put a gradient,
+     an inline SVG, or a file under /skins/art/ there. The solid beneath stays
+     the graded surface: text never sits on a picture — a gradient's every
+     colour stop is graded against the ink on it by test/skins.test.js, and a
+     url() must be a low-contrast texture or a veiled banner (docs/SKINS.md).
+     --accent-glow is a text-shadow for the wordmark and the active nav item:
+     the neon that a space skin is made of, and nothing on a light skin. */
+  --page-art:     none;
+  --band-art:     none;
+  --card-art:     none;
+  --accent-glow:  none;
 
   --radius-sm:    4px;
   --radius-media: 8px;
