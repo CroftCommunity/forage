@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forage Post &amp; Thread Proposals v8</title>
-<meta name="mock-version" content="8">
+<title>Forage Post &amp; Thread Proposals v9</title>
+<meta name="mock-version" content="9">
 <meta name="mock-baseline" content="forage@9eb0074">
 <style>
 :root{
@@ -179,10 +179,12 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
 /* the like sits in the avatar column ON the action row's line: the arrow is level with Reply and ⟳,
    the count rides above it, and both mask the rail passing behind */
 .avvote{grid-column:1;grid-row:3;align-self:center;justify-self:center;position:relative;z-index:1;display:flex;align-items:center;justify-content:center;
-  width:32px;height:36px;border:0;border-radius:8px;background:var(--card);color:var(--muted);font:inherit;font-size:var(--t-xs);font-weight:600;
+  width:32px;height:36px;border:0;border-radius:8px;background:none;color:var(--muted);font:inherit;font-size:var(--t-xs);font-weight:600;
   cursor:pointer;font-variant-numeric:tabular-nums;line-height:1}
-.avvote .icon{width:1.4em;height:1.4em}
-.avvote .n{position:absolute;left:0;right:0;top:-13px;text-align:center;background:var(--card);padding:1px 0}
+/* the rail passes BEHIND the count and the arrow: each wears only a tight halo of card colour, so the line
+   shows above the count, between count and arrow, and continues below into the children */
+.avvote .icon{width:1.4em;height:1.4em;background:var(--card);border-radius:3px}
+.avvote .n{position:absolute;left:50%;transform:translateX(-50%);top:-13px;background:var(--card);padding:1px 3px;border-radius:3px}
 .avvote:hover{color:var(--text)}
 .avvote[aria-pressed="true"]{color:var(--boost)}
 .avvote[aria-pressed="true"] .icon{fill:currentColor}
@@ -273,7 +275,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
 
 <div class="wrap">
   <header>
-    <div class="eyebrow">Forage · mock · post-and-thread <b>v8</b> · baseline forage@9eb0074 · 2026-08-29</div>
+    <div class="eyebrow">Forage · mock · post-and-thread <b>v9</b> · baseline forage@9eb0074 · 2026-08-29</div>
     <h1>Posts, threads, and the ⋯ menu</h1>
     <p class="sub"><b>Six proposals (A–F) and ten open decisions</b>, made to be talked through — not code. The purpose:
       make a Forage thread read the way the Reddit and Bluesky screenshots in <code>~/Downloads/new/Photos-1-001</code> read —
@@ -305,7 +307,8 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
     <div class="eyebrow">Revisions</div>
     <div class="tablewrap"><table>
       <tr><th style="width:36px">v</th><th>What changed</th><th>Commit</th></tr>
-      <tr><td>8</td><td>Comment like: count above the arrow, and the arrow sits on the action row’s line, level with Reply and ⟳</td><td><i>this</i></td></tr>
+      <tr><td>9</td><td>The rail runs behind the count and the arrow and out the other side — one continuous line from avatar to children</td><td><i>this</i></td></tr>
+      <tr><td>8</td><td>Comment like: count above the arrow, and the arrow sits on the action row’s line, level with Reply and ⟳</td><td><code>678abab</code></td></tr>
       <tr><td>7</td><td>Comment like moves under the avatar (arrow over count); “open its thread ↳” dropped from quotes — the ⋯ already opens it on bsky.app</td><td><code>84be286</code></td></tr>
       <tr><td>6</td><td>Repost on quotes is icon-only; a small share at the bottom-right of every comment; F — deep links to comments (decision 10)</td><td><code>93fe28b</code></td></tr>
       <tr><td>5</td><td>Versioned (MOCKS.md); blurb + decisions on top; captured phone/desktop snaps of today; real avatars (8) and the sort bar (E, 9) added</td><td><code>df40aeb</code></td></tr>
