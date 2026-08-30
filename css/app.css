@@ -484,7 +484,7 @@ input[type="range"][data-media-scale] { width: 110px; accent-color: var(--brand)
    same element by two selectors, where the more specific one won and the sheet
    rendered see-through over the page. Caught by looking at it; no assertion in
    this repo can see a transparent modal. */
-dialog.authsheet {
+dialog.authsheet, dialog.sheet {
   border: 0; padding: var(--s4); color: var(--text);
   background: var(--card);
   border-top: 1px solid var(--border);
@@ -493,7 +493,15 @@ dialog.authsheet {
   width: 100%; max-width: 100%; max-height: 92dvh; overflow-y: auto;
   box-shadow: var(--card-shadow);
 }
-dialog.authsheet::backdrop { background: var(--scrim); }
+dialog.authsheet::backdrop, dialog.sheet::backdrop { background: var(--scrim); }
+/* a generic sheet (the report sheet, the mute-word sheet — 4b): the authsheet's
+   box on a phone, a centred dialog on a desktop */
+@media (min-width: 481px) {
+  dialog.sheet { position: fixed; inset: 0; margin: auto; width: min(420px, calc(100vw - 32px)); height: fit-content;
+    border: 1px solid var(--border); border-radius: var(--radius-card); }
+}
+.sheet-actions { display: flex; gap: var(--s3); justify-content: flex-end; margin-top: var(--s3); }
+.sheet-row input[type="radio"] { width: 20px; height: 20px; margin: 0 8px 0 0; }
 .sheet-x { background: none; border: 0; color: var(--muted); cursor: pointer;
   font-size: var(--t-md); line-height: 1; padding: 4px 8px; }
 .sheet-x:hover { color: var(--text); }

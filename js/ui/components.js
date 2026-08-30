@@ -170,13 +170,45 @@ export function memoryMenuGroups({ type, subject, text, link, perms = {}, viewer
     first.push({ label: subject.saved ? 'Unsave' : 'Save', icon: '☆',
       onSelect: async () => { try { await actions.setSave(type, subject.id, !subject.saved); } catch {} } });
   }
-  const report = perms.canReport && !own ? [{ label: 'Report', icon: '⚑', danger: true, onSelect: async () => {
-    const reason = prompt('Report reason (Spam, Incivility, Off-topic, Rule violation):', 'Spam');
-    if (!reason) return;
-    try { await actions.report(type, subject.id, subject.feedId ?? perms.feedId, reason, ''); toast('Report filed.', 'ok'); } catch {}
-  } }] : [];
+  const report = perms.canReport && !own ? [{ label: 'Report', icon: '⚑', danger: true, onSelect: () => reportSheet({
+    what: type === 'post' ? 'this post' : 'this comment',
+    reasons: [['Spam', 'Spam'], ['Incivility', 'Incivility'], ['Off-topic', 'Off-topic'], ['Rule violation', 'Rule violation']],
+    onSubmit: async ({ reason, detail }) => {
+      await actions.report(type, subject.id, subject.feedId ?? perms.feedId, reason, detail);
+      toast('Report filed.', 'ok');
+    },
+  }) }] : [];
   const steward = perms.canModerate ? stewardItems(type, subject) : [];
   return [first, report, steward];
+}
+
+// The report sheet (4b): reasons as radios, an optional detail line, Send —
+// a native <dialog>, the menu's pattern; replaces the prompt() both tiers had.
+export function reportSheet({ reasons, onSubmit, what = 'this' }) {
+  const name = `report-${Math.random().toString(36).slice(2, 8)}`;
+  const radios = reasons.map(([value, label], i) => el('label', { class: 'sheet-row' },
+    el('input', { type: 'radio', name, value, ...(i === 0 ? { checked: '' } : {}) }), el('span', {}, label)));
+  const detail = el('textarea', { class: 'form', rows: '2', placeholder: 'Anything the reviewer should know (optional)' });
+  const send = el('button', { type: 'button', class: 'btn primary' }, 'Send report');
+  const cancel = el('button', { type: 'button', class: 'btn' }, 'Cancel');
+  const dialog = el('dialog', { class: 'sheet', 'aria-label': `Report ${what}` },
+    el('div', { class: 'row spread' }, el('strong', {}, `Report ${what}`),
+      el('button', { type: 'button', class: 'sheet-x', 'aria-label': 'Close' }, '✕')),
+    el('div', { class: 'sheet-list' }, ...radios), detail,
+    el('div', { class: 'sheet-actions' }, cancel, send));
+  dialog.querySelector('.sheet-x').addEventListener('click', () => dialog.close());
+  cancel.addEventListener('click', () => dialog.close());
+  send.addEventListener('click', async () => {
+    const reason = dialog.querySelector(`input[name="${name}"]:checked`)?.value;
+    if (!reason) return;
+    send.disabled = true;
+    try { await onSubmit({ reason, detail: detail.value.trim() }); dialog.close(); }
+    catch (e) { send.disabled = false; console.warn('forage: report failed', e); toast(e.message || 'The report was not sent.', 'err'); }
+  });
+  dialog.addEventListener('close', () => dialog.remove());
+  document.body.append(dialog);
+  dialog.showModal();
+  return dialog;
 }
 
 function stewardItems(type, subject) {

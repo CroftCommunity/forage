@@ -4,7 +4,7 @@
 applied the same day** — see Review Log. **Pass 3 (quality gates) applied the same day** — see
 Review Log. **Not started: Phase 0 first.** Open-question severities (O2–O8) **confirmed as recommended by the owner
 2026-08-29** ("accept all as recommended"): O5/O6/O8 PHASE-GATED, O2/O3/O4/O7 ADVISORY.
-**Progress tracker:** this Status line. last green: Phase 4a (branch B) — At every phase end append `last green: <phase> @ <sha>`;
+**Progress tracker:** this Status line. last green: Phase 4b (branch B) — At every phase end append `last green: <phase> @ <sha>`;
 at every landing the CHANGELOG entry and the mock's `mock-baseline` sha are the markers.
 **Origin:** owner session 2026-08-29 — Reddit (web + Android) and Bluesky screenshots
 studied against Forage as it renders, worked through twelve revisions of a mock, and
@@ -565,7 +565,19 @@ argument in the test's own voice, do not bump the number.
 read back via `getBookmarks` / `getMutes` / `getBlocks`, then undone — *(Pass 3)* as
 `LIVE=1` on 4a-iv, not by hand.
 
-#### Phase 4b: the lens menu
+#### Phase 4b: the lens menu — ✅ SHIPPED (branch B)
+**Delivered:** the full decided list on rows and replies (`lensMenuGroups`), guest = three
+items (`guest-surface` gates it). Two more writes were needed and argued: **O5 taken** —
+`muteWord()` writes Bluesky's `mutedWordsPref` (third `putPreferences`, under the marker;
+`withMutedWord` pure, lexicon-verified shape), and **Report** files
+`com.atproto.moderation.createReport` (seventh procedure, strongRef subject, six reasons
+mapped to `reasonType`) — shim-tested only: a live report against a real post is not a
+fixture anyone should create. `Hide for me` is device-local (`forage.hidden`, applied in the
+shape layer via `posture.hiddenUris`; the substrate never touches localStorage). The report
+`prompt()` became a `<dialog class="sheet">` on both tiers. **Delete stays the two-press
+control in the action row** (bluesky-view pins it); own posts simply carry no Mute/Block/
+Report. The shaped field is `threadMute`, not `threadMuted` — `lens-posture.test` pins that
+no string containing "muted" reaches a shaped board.
 **Goal:** the ⋯ on a lens post or comment carries the full decided list, each item live.
 **Changes:**
 - [ ] `js/ui/lens-views.js` — `LENS_PERMS`/ctx supply the menu groups: Copy text, Copy
