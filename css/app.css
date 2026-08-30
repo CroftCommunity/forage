@@ -1,4 +1,4 @@
-/* Forage app styles. Quiet everywhere; distinctiveness spent on the collapse gutter (§3.3). */
+/* Forage app styles. Quiet everywhere; the thread rail and the brand green carry the identity. */
 
 /* Native chrome (scrollbars, form controls, caret) follows the active palette.
    Applied here rather than in tokens.css so that a SKIN, which may only assign
@@ -42,7 +42,6 @@ a:hover { text-decoration: underline; color: var(--link-hover); }
 p a,
 .clamp a,
 .comment-text a,
-.collapse-note a,
 .notice a,
 .empty a,
 .frontier-item a,
@@ -159,7 +158,7 @@ kbd { background: var(--green-100); border: 1px solid var(--border); border-radi
      a third of a phone screen for controls no user taps. The CSS and the gate
      have to agree about this or one of them is lying. */
   .devbar button, .devbar select { min-height: 0; min-width: 0; }
-  button:not(.gutter):not(.devbar *), .btn, .btn.sm, .tab,
+  button:not(.devbar *), .btn, .btn.sm, .tab,
   select:not(.devbar *), .format-tabs .ft {
     min-height: 44px; min-width: 44px;
   }
@@ -185,8 +184,8 @@ kbd { background: var(--green-100); border: 1px solid var(--border); border-radi
   .masthead nav a, .masthead .who a { min-width: 44px; justify-content: center; }
   /* Icon-only, and the smallest things on the page — padding, not a bigger
      glyph, so the arrows look the same and the thumb has somewhere to land. */
-  .vote, .cvote { min-width: 44px; min-height: 44px; }
-  .votebox { gap: 0; }
+  button.vote { min-width: 44px; min-height: 44px; }
+  button.avvote { min-height: 44px; justify-content: flex-end; }
 }
 
 /* ---- Buttons ---- */
@@ -219,19 +218,27 @@ kbd { background: var(--green-100); border: 1px solid var(--border); border-radi
 .badge-locked { color: var(--muted); }
 
 /* ---- Feed / post rows ---- */
-.postrow { display: grid; grid-template-columns: 40px 1fr; gap: var(--s3); padding: var(--s3) 0;
+.postrow { display: block; padding: var(--s3) var(--s2);
   border-bottom: 1px solid var(--border); }
 .postrow:nth-child(odd) { background: var(--row-odd); }
 .postrow:nth-child(even) { background: var(--row-even); }
 .postrow:last-child { border-bottom: 0; }
-.votebox { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.vote {
-  border: none; background: none; cursor: pointer; color: var(--ink-soft);
-  font-size: 18px; line-height: 1; padding: 2px 4px; border-radius: var(--radius-sm);
-}
-.vote:hover { background: var(--green-100); }
-.vote.boost.on { color: var(--boost); }
-.score { font-size: var(--t-sm); font-weight: 600; }
+/* the vote — one control, two layouts (plan 2026-08-29 post-and-thread, decision 1) */
+.foot { display: flex; flex-wrap: wrap; gap: var(--s3); align-items: center; margin-top: 4px; }
+.n { font-variant-numeric: tabular-nums; }
+.vote { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--border); border-radius: var(--radius-chip);
+  background: var(--card); color: var(--muted); padding: 3px 10px; font: inherit; font-size: var(--t-xs); font-weight: 600;
+  line-height: 1.2; cursor: default; }
+button.vote { cursor: pointer; }
+button.vote:hover { color: var(--text); border-color: var(--muted); }
+button.vote[aria-pressed="true"] { color: var(--boost); border-color: var(--boost); }
+.avvote { display: inline-flex; flex-direction: column; align-items: center; gap: 1px; width: 26px; padding: 3px 0 2px;
+  border: 1px solid var(--border); border-radius: var(--radius-chip); background: var(--card); color: var(--muted);
+  font: inherit; font-size: 12px; font-weight: 600; line-height: 1; cursor: default; }
+.avvote .arrow { font-size: 14px; }
+button.avvote { cursor: pointer; }
+button.avvote:hover { color: var(--text); border-color: var(--muted); }
+button.avvote[aria-pressed="true"] { color: var(--boost); border-color: var(--boost); }
 .posttitle { font-size: var(--t-md); font-weight: 600; }
 .posttitle a { color: var(--text); }
 .postmeta { color: var(--muted); font-size: var(--t-xs); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 2px; }
@@ -248,6 +255,15 @@ kbd { background: var(--green-100); border: 1px solid var(--border); border-radi
   color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer; display: grid; place-items: center; }
 .kebab:hover, .kebab[aria-expanded="true"] { background: var(--card-2); color: var(--text); }
 .comment .kebab { width: 32px; height: 32px; margin-top: -4px; margin-bottom: -4px; }
+/* a settings switch (the haptics toggle, decision 6): a button[role=switch] on the tap floor */
+.switch { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px 0 8px;
+  border: 1px solid var(--border); border-radius: var(--radius-chip); background: var(--card); color: var(--text);
+  font: inherit; font-size: var(--t-xs); font-weight: 600; cursor: pointer; }
+.switch::before { content: ""; width: 28px; height: 16px; border-radius: var(--radius-chip); background: var(--border); flex: none; }
+.switch[aria-checked="true"] { border-color: var(--boost); }
+.switch[aria-checked="true"]::before { background: var(--boost); }
+.switch-state { min-width: 2em; }
+@media (max-width: 480px) { .switch { min-height: 44px; } }
 /* the ⋯ menu (js/ui/menu.js): ONE <dialog> — a popover pinned beside the kebab
    on a desktop, a bottom sheet on a phone. Same element, CSS moves the box. */
 dialog.menu { border: 1px solid var(--border); border-radius: var(--radius-card); padding: 4px;
@@ -295,30 +311,33 @@ dialog.menu::backdrop { background: transparent; }
 .tab { padding: 6px 12px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; font-size: var(--t-sm); background: none; border-top: 0; border-left: 0; border-right: 0; }
 .tab.active { color: var(--brand); border-bottom-color: var(--brand); font-weight: 600; }
 
-/* ---- Comments + the signature collapse gutter (§3.3) ---- */
-.comment { position: relative; }
-.comment-body { padding: var(--s2) 0 var(--s2) calc(var(--gutter-hit) + 6px); }
+/* ---- Comments: the rail and the fold (plan 2026-08-29 post-and-thread, decision 2) ---- */
+.comment { position: relative; display: grid; grid-template-columns: 32px 1fr; column-gap: 10px; padding: 8px 0 2px; }
+.comment-body { display: contents; }
+.comment > .avcol { grid-column: 1; grid-row: 1 / span 2; display: flex; flex-direction: column; align-items: center; }
+.comment > .avcol .line { flex: 1; width: 2px; margin-top: 4px; background: var(--border); pointer-events: none; }
+.comment.leaf > .avcol .line, .comment.collapsed > .avcol .line { display: none; }
+.comment > .comment-body > .byline { grid-column: 2; }
+.comment > .comment-body > .comment-text { grid-column: 2; }
+/* the vote stack sits in the avatar column ON the action row's line, the rail passing behind it */
+.comment > .comment-body > .avvote { grid-column: 1; grid-row: 3; align-self: end; justify-self: center; position: relative; z-index: 1; margin-bottom: 5px; }
+.comment > .comment-body > .comment-actions { grid-column: 2; grid-row: 3; }
+.comment > .kids { grid-column: 1 / span 2; padding-left: 22px; }
+/* each child draws its own elbow: from the rail into its avatar's left edge, turning at the avatar's centre;
+   a child that is not the last continues the rail below its elbow */
+.kids > .comment::before { content: ""; position: absolute; left: -7px; top: 0; width: 7px; height: 25px;
+  border-left: 2px solid var(--border); border-bottom: 2px solid var(--border); border-radius: 0 0 0 10px; pointer-events: none; }
+.kids > .comment:not(:last-child)::after { content: ""; position: absolute; left: -7px; top: 25px; bottom: 0; width: 2px; background: var(--border); pointer-events: none; }
+.comment.collapsed > .kids, .comment.collapsed > .comment-body > .comment-text { display: none; }
+.fold { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 0 8px; border-radius: var(--radius-chip); border: 0;
+  background: none; color: var(--muted); font: inherit; font-size: var(--t-xs); cursor: pointer; white-space: nowrap; }
+.fold .glyph { font-size: 16px; line-height: 1; }
+.fold .lbl:empty { display: none; }
+.fold:hover, .fold:focus-visible { background: var(--card-2); color: var(--text); }
 .comment-text { font-size: var(--t-sm); margin: 4px 0; }
-.comment-actions { display: flex; gap: var(--s3); font-size: var(--t-xs); color: var(--muted); }
+.comment-actions { display: flex; gap: var(--s3); align-items: center; min-height: 36px; font-size: var(--t-xs); color: var(--muted); }
 .comment-actions button { background: none; border: none; color: var(--muted); cursor: pointer; padding: 0; font-size: var(--t-xs); }
 .comment-actions button:hover { color: var(--brand); }
-.children { margin-left: var(--gutter-hit); }
-
-/* the gutter: a 2px line at rest, 24px hit target, fills green on hover */
-.gutter {
-  position: absolute; left: 0; top: 0; bottom: 0; width: var(--gutter-hit);
-  cursor: pointer; background: none; border: none; padding: 0;
-  display: flex; justify-content: center;
-}
-.gutter::before {
-  content: ""; width: var(--gutter-rule); height: 100%;
-  background: var(--line); border-radius: var(--radius-sm); transition: background .12s ease, width .12s ease;
-}
-.gutter:hover::before, .gutter:focus-visible::before { background: var(--brand-ink); width: 3px; }
-.comment.collapsed > .comment-body > .comment-text,
-.comment.collapsed > .comment-body > .comment-actions,
-.comment.collapsed > .children { display: none; }
-.collapse-note { font-size: var(--t-xs); color: var(--muted); }
 /* Phase 2: an armed delete. The colour change IS the second thought — the
    button you are about to press is visibly not the one you pressed. */
 .btn.danger { color: var(--danger, #b4432b); border-color: var(--danger, #b4432b); font-weight: 600; }
@@ -335,20 +354,24 @@ dialog.menu::backdrop { background: transparent; }
 .btn.star[aria-pressed="true"] { color: var(--brand); border-color: var(--brand); }
 
 /* 3q: a quote-response at the top of a thread. The WALL is the grammar for
-   quoted material (see .feed-blurb); the green gutter next door means
+   quoted material (see .feed-blurb); the grey rail next door means
    "collapsible reply", so these must not look alike — the wall is static and
    sits inside its own tinted block. .cmeta/.cbody had no rules at all before
    this, which is why the node rendered as unstyled body text (2026-08-26). */
-.quote-node { border-left: 3px solid var(--brand-ink); padding: var(--s2) 0 var(--s2) 12px; margin: var(--s2) 0; background: var(--card-2); border-radius: 0 var(--radius-card) var(--radius-card) 0; }
-.quote-meta { font-size: var(--t-xs); color: var(--muted); }
-.quote-body { font-size: var(--t-sm); margin: 4px 0; overflow-wrap: anywhere; }
-.quote-open { margin-top: 2px; }
-.continue-stub { font-size: var(--t-xs); margin-left: var(--gutter-hit); padding: 6px 0; }
-.loadmore { font-size: var(--t-xs); margin-left: var(--gutter-hit); padding: 4px 0; }
+/* Phase 9 (decision 5): a quote is a walled COMMENT — the brand rule on the node's own
+   outer edge, outside the avatar; no tint, no box */
+.comment.quote { border-left: 3px solid var(--brand-ink); padding-left: 10px; margin: 4px 0; }
+.kids > .comment.quote::before, .kids > .comment.quote::after { left: -10px; }
+.kind { display: inline-flex; align-items: center; gap: 2px; color: var(--muted); }
+.cbtn { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 0 8px; border-radius: var(--radius-chip); border: 0;
+  background: none; color: var(--muted); font: inherit; font-size: var(--t-xs); cursor: default; }
+button.cbtn { cursor: pointer; }
+button.cbtn:hover, button.cbtn:focus-visible { background: var(--card-2); color: var(--text); }
+button.cbtn[aria-pressed="true"] { color: var(--boost); }
+.continue-stub { font-size: var(--t-xs); padding: 6px 0; }
+.loadmore { font-size: var(--t-xs); padding: 4px 0; }
 
 /* ---- Vote control on comments ---- */
-.cvote { border: none; background: none; cursor: pointer; color: var(--ink-soft); font-size: 13px; padding: 0 2px; }
-.cvote.boost.on { color: var(--boost); }
 
 /* ---- Notices ---- */
 .notice { border: 1px solid var(--border); border-radius: var(--radius-card); padding: var(--s3); margin-bottom: var(--s3); font-size: var(--t-sm); }
@@ -432,9 +455,7 @@ hr.rule { border: none; border-top: 1px solid var(--border); margin: var(--s4) 0
    elements ignore however tight the row gets. Shrinking the text alone left
    "compact" only ~17% denser than card, which is not a second density so much
    as a slightly smaller one. */
-.postrow.compact .votebox { gap: 0; }
-.postrow.compact .vote { font-size: 12px; padding: 0 2px; }
-.postrow.compact .score { font-size: var(--t-xs); line-height: 1.1; }
+.postrow.compact .vote { padding: 1px 8px; }
 .media-strip { display: flex; gap: 6px; margin: 6px 0; flex-wrap: wrap; }
 /* 3t: --media-max is the slider's one output; 220px is what shipped, so an
    untouched board looks exactly as it did. */
@@ -459,8 +480,7 @@ input[type="range"][data-media-scale] { width: 110px; accent-color: var(--brand)
 .masthead { flex-wrap: wrap; }
 .media-strip img { max-width: 100%; height: auto; }
 @media (max-width: 480px) {
-  .children { margin-left: 10px; }
-  .comment-body { padding-left: calc(var(--gutter-hit) - 4px); }
+  .comment > .kids { padding-left: 14px; }
   .shell { padding: var(--s2); }
 }
 .feed-avatar { width: 40px; height: 40px; border-radius: var(--radius-card); border: 1px solid var(--border); flex: none; }

@@ -43,18 +43,12 @@ async function assertTapTargets(page, label) {
     // words, and it would not ship in a production build. Holding it to the
     // product's touch floor would fail the gate on something no user ever taps.
     const isScaffolding = (el) => !!el.closest('.devbar');
-    // The collapse gutter is a RAIL, not a button-shaped target: 24px wide by
-    // the full height of the subtree it collapses — measured at 24x2160 on a
-    // deep thread. Its area is enormous and it is trivially easy to hit; only
-    // its narrow dimension trips a width check. Widening it to 44 would cost
-    // 20px of horizontal space PER NESTING LEVEL at 320px, which breaks the
-    // deep threads it exists to manage. Exempted deliberately and recorded, not
-    // silently skipped — this one is a judgement call and the owner should see
-    // it as such.
-    const isRail = (el) => el.classList.contains('gutter');
+    // The collapse gutter's rail exemption is GONE with the gutter (plan
+    // 2026-08-29 post-and-thread, Phase 8): the fold is a button on the
+    // action row, 44px like everything else, and the rail is a drawing.
     const out = [];
     for (const el of document.querySelectorAll(sel)) {
-      if (inProse(el) || isScaffolding(el) || isRail(el)) continue;
+      if (inProse(el) || isScaffolding(el)) continue;
       const r = el.getBoundingClientRect();
       if (r.width === 0 && r.height === 0) continue;      // not rendered
       if (r.width < floor || r.height < floor) {

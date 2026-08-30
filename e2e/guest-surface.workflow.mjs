@@ -64,8 +64,10 @@ const seen = (page) => page.evaluate(() => ({
     ?? [...document.querySelectorAll('.card')].map((c) => c.innerText.replace(/\n+/g, ' ')).find((t) => /ring/i.test(t)) ?? null,
   favorite: document.querySelectorAll('[data-feed-favorite]').length,
   joinLeave: [...document.querySelectorAll('button')].filter((b) => /^(Join|Leave)$/.test(b.textContent.trim())).length,
-  voteArrows: document.querySelectorAll('.vote.boost, .cvote').length,
-  scores: [...document.querySelectorAll('.votebox')].map((v) => v.textContent.replace(/[▲▼\s]/g, '')).filter(Boolean),
+  // Phase 6: one vote control — a button when you can vote, a read-only
+  // span carrying the same count when you cannot
+  voteArrows: document.querySelectorAll('button[data-vote]').length,
+  scores: [...document.querySelectorAll('[data-vote][data-readonly] .n')].map((v) => v.textContent.trim()).filter(Boolean),
 }));
 
 export async function run() {

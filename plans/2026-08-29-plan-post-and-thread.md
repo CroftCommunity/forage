@@ -4,7 +4,7 @@
 applied the same day** — see Review Log. **Pass 3 (quality gates) applied the same day** — see
 Review Log. **Not started: Phase 0 first.** Open-question severities (O2–O8) **confirmed as recommended by the owner
 2026-08-29** ("accept all as recommended"): O5/O6/O8 PHASE-GATED, O2/O3/O4/O7 ADVISORY.
-**Progress tracker:** this Status line. last green: Phase 4b (branch B) — At every phase end append `last green: <phase> @ <sha>`;
+**Progress tracker:** this Status line. last green: Phase 9 (branch C) — At every phase end append `last green: <phase> @ <sha>`;
 at every landing the CHANGELOG entry and the mock's `mock-baseline` sha are the markers.
 **Origin:** owner session 2026-08-29 — Reddit (web + Android) and Bluesky screenshots
 studied against Forage as it renders, worked through twelve revisions of a mock, and
@@ -605,7 +605,16 @@ no string containing "muted" reaches a shaped board.
 
 ### Landing branch C — threading, the vote, haptics, the quote
 
-#### Phase 6: one vote component (pill on posts, count-over-arrow on comments)
+#### Phase 6: one vote component (pill on posts, count-over-arrow on comments) — ✅ SHIPPED (branch C)
+**Delivered:** 6a as its own RED commit; 6b and 6c in ONE commit (a red CI between them
+served nobody). `vote(subject, id, data, canVote, { layout, onVote })` — `button[data-vote]`
+with a real `aria-pressed`, or a read-only `span[role=img]` for a reader who cannot vote.
+The post row lost its 40px left column: the pill sits in a new `.foot` row beside
+`.postmeta` (NOT inside it — mobile-fit exempts `.postmeta` as prose, and a tap target must
+be measured). The comment stack sits at the head of the action row until 8b moves it into
+the avatar column. The "refused vote reverts to the original count" edge is driven by the
+dev bar's Fail Next, not a banned persona — the banned persona could vote on the chosen
+thread. `lens-views` still comments on `voteBox` at `:395`; prose only.
 **Goal:** `voteBox` and `miniVote` fold into one `vote(subject, data, { layout })`; the
 post layout is the pill `▲ 35`, the comment layout the outlined count-over-arrow in the
 avatar column; the pressed state fills the arrow in `--boost`.
@@ -645,7 +654,13 @@ toggling; a guest sees counts only; (2) `node e2e/run.mjs no-downvote guest-surf
 density` green, `npm test` green.
 **Validation:** Moderate — phone-width: the stack is 44px tall under 480px.
 
-#### Phase 7: haptics
+#### Phase 7: haptics — ✅ SHIPPED (branch C; device validation owed)
+**Delivered:** 7a/7b as specified, O3 taken (reduced-motion → no buzz, unit-pinned). The
+switch is a `button[role=switch]` (`#pref-haptics`, `.switch`) on `settingsView`, not a
+checkbox — a 13px checkbox failed the tap floor at 320 (`mobile-fit`). `no-downvote` stubs
+`navigator.vibrate` per document and pins one buzz per like-on, none per like-off, none
+when switched off. **Owed:** the Samsung run ("a like buzzes and the switch stops it") —
+D4 was deferred for want of a device; the platform contract is the only evidence so far.
 **Goal:** a like or promote buzzes on devices that can; one switch on `/me`; default on.
 **Changes:**
 - [ ] `js/haptics.js` (new) — `buzz()` reads `forage.haptics` (default `'on'`), calls
@@ -684,7 +699,11 @@ the call must stay inside the click handler, not after the `await`.
 like-on.
 **Validation:** Broad — the device (D4's page is the pattern), both switch states.
 
-#### Phase 8a: the thread suites move to the new grammar (RED)
+#### Phase 8a: the thread suites move to the new grammar (RED) — ✅ SHIPPED (branch C)
+**Delivered:** `bluesky-view` and `mobile-fit` as specified (a nested reply `reply1a` was
+added to the thread fixture so a fold has something to hide). **`scenarios/comment-tree-
+collapse.js` was not changed**: it is a conformance scenario whose assertions are
+`threadNode` shape probes, not DOM — there was never a gutter in it to rewrite.
 **Goal:** the three files that pin the gutter now describe the rail + ⊖ grammar. This
 phase ends RED on purpose.
 **Changes:**
@@ -703,7 +722,14 @@ selector timeout — a timeout is a wrong-selector bug in the test, not RED).
 **Validation:** read the failure output in full (VERIFICATION.md: never through
 `tail`).
 
-#### Phase 8b: the rail and ⊖/⊕, the gutter removed (GREEN)
+#### Phase 8b: the rail and ⊖/⊕, the gutter removed (GREEN) — ✅ SHIPPED (branch C)
+**Delivered:** the comment is a grid (`.avcol` | byline / text / action row; `.kids`
+spanning both), `.comment-body` kept as `display: contents` so every suite's
+`> .comment-body > .byline` selector survived; the comment's avatar moved from the byline
+into the column (`thread-byline`, `avatar-nav` read it there now); the vote stack is a grid
+sibling in the column on the action row's line. The fold counts ALL descendants (Reddit's
+count). `.children` → `.kids`; the three "§3.3" comments and every `gutter` rule are gone;
+`lens-views.js` needed no change (its `quoteNode` still renders its own box until Phase 9).
 **Goal:** 8a goes green.
 **Changes:**
 - [ ] `js/ui/components.js` — `commentNode`: avatar column carries `.line` when the
@@ -733,7 +759,15 @@ off its avatar; ⊖ folds them; (2) `node e2e/run.mjs bluesky-view mobile-fit` g
 `npm test` green (css-classes: no orphan `.gutter` literal).
 **Validation:** Moderate — phone look at three nesting levels.
 
-#### Phase 9: the quote node
+#### Phase 9: the quote node — ✅ SHIPPED (branch C)
+**Delivered:** `quoteNode` renders through `commentNode` with three ctx hooks
+(`bylineExtra` → "⟳ quoted this", `extraActions` → the Repost glyph, `continueStub` → the
+cascade's own address); the wall is `.comment.quote`'s own left edge; `.quote-*` rules are
+gone. The Repost glyph is LIVE (O6 taken in 4a-iii): `repostControl` toggles
+`lens.repost`/`unrepost` optimistically with `aria-pressed`, a read-only count for a guest.
+**One 8a assertion changed:** a quote with children now folds like any comment (decision 2
+applies to it — the "no fold, no rail" wording pre-dated Phase 9); the two grammars stay
+distinct in the wall, not in the fold. O2 (repost on plain replies) stays not taken.
 **Goal:** a quote-response is a comment with a wall: avatar header, wall on the outer
 edge, no tint, no "open its thread", full action row (vote stack, Reply, ⟳ glyph, share).
 **Changes:**

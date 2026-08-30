@@ -147,7 +147,11 @@ export async function run() {
         replies: [
           { post: { ...post('bpart2', 'did:plc:bb', '2026-08-25T11:05:00Z').post,
             record: { text: 'the continuation 2/2', createdAt: '2026-08-25T11:05:00Z' } }, replies: [] },
-          { post: post('reply1', 'did:plc:aa', '2026-08-25T11:30:00Z').post, replies: [] },
+          // Phase 8: reply1 has a child, so a fold has something to hide
+          { post: post('reply1', 'did:plc:aa', '2026-08-25T11:30:00Z').post, replies: [
+            { post: { ...post('reply1a', 'did:plc:bb', '2026-08-25T11:35:00Z').post,
+              record: { text: 'a reply to reply1', createdAt: '2026-08-25T11:35:00Z' } }, replies: [] },
+          ] },
           { post: { ...post('myreply', 'did:plc:me', '2026-08-25T11:45:00Z').post,
             record: { text: 'a reply of my own', createdAt: '2026-08-25T11:45:00Z' } }, replies: [] },
         ],
@@ -205,13 +209,13 @@ export async function run() {
   assert.match(zeroRow, /\b0 comments\b/, `no replies is "0 comments", never "0 comment": ${zeroRow}`);
 
   // 3c segment: boost the top post — a REAL like write, optimistically painted
-  const scoreBefore = await row.locator('.score').innerText();
-  await row.locator('button.boost').click();
+  const scoreBefore = await row.locator('[data-vote] .n').innerText();
+  await row.locator('button[data-vote]').click();
   await page.waitForFunction((prev) => {
     const r = [...document.querySelectorAll('.postrow')].find((x) => x.innerText.includes('post b1'));
-    return r && r.querySelector('.score').innerText !== prev;
+    return r && r.querySelector('[data-vote] .n').innerText !== prev;
   }, scoreBefore);
-  assert.ok(await row.locator('button.boost.on').count(), 'boost paints on');
+  assert.ok(await row.locator('button[data-vote][aria-pressed="true"]').count(), 'boost paints on');
   const hits = await page.evaluate(() => window.__shimHits.filter((h) => h.url.includes('createRecord')));
   assert.equal(hits.length, 1, 'exactly one like create hit the wire');
   const body = JSON.parse(hits[0].body);
@@ -221,7 +225,7 @@ export async function run() {
   assert.equal(body.record.subject.cid, 'cid-b1');
 
   // unboost: the exact rkey dies
-  await row.locator('button.boost').click();
+  await row.locator('button[data-vote]').click();
   await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('deleteRecord')));
   const del = await page.evaluate(() => JSON.parse(window.__shimHits.find((h) => h.url.includes('deleteRecord')).body));
   assert.deepEqual(del, { repo: 'did:plc:me', collection: 'app.bsky.feed.like', rkey: '3w3like' });
@@ -248,43 +252,77 @@ export async function run() {
   await page.waitForSelector('text=post reply1');
   await page.waitForSelector('[data-kind="quote"]');
   const qnode = page.locator('[data-kind="quote"][data-depth="0"]');
-  assert.match(await qnode.innerText(), /❝/, 'the quote marker distinguishes the kind');
-  assert.match(await qnode.innerText(), /post quote1/, 'the quote body renders in the thread');
-  assert.ok(await qnode.locator('a:has-text("open its thread")').count(), 'a quote opens as its own room');
+  // Phase 9 (plan 2026-08-29 post-and-thread, decision 5): a quote is a
+  // COMMENT with a wall — the byline says what it is, the body reads at
+  // comment scale, it carries the vote stack and a repost control, and the
+  // "open its thread" link is gone (the ⋯ has Open on bsky.app; decision 10
+  // gives it an address).
+  const qByline = qnode.locator(':scope > .comment-body > .byline');
+  assert.match((await qByline.innerText()).replace(/\s+/g, ' '), /quoted this/, 'the byline names the kind');
+  assert.match(await qnode.locator(':scope > .comment-body > .comment-text').innerText(), /post quote1/, 'the quote body renders in the thread');
+  assert.equal(await qnode.locator('a:has-text("open its thread")').count(), 0, 'no "open its thread" — the ⋯ carries Open on bsky.app');
+  assert.equal(await qnode.locator(':scope > .comment-body > [data-vote]').count(), 1, 'the quote carries the vote stack');
+  const repostBtn = qnode.locator(':scope > .comment-body > .comment-actions > [data-repost]');
+  assert.equal(await repostBtn.count(), 1, 'and a repost control — the glyph alone, no word');
+  assert.equal(await repostBtn.getAttribute('aria-pressed'), 'false');
+  assert.match(await repostBtn.getAttribute('aria-label'), /^Repost$/, 'named for a screen reader');
+  assert.equal(await qnode.locator(':scope > .avcol > .av').count(), 1, 'the avatar heads its column like any comment');
 
-  // 3q: the quote is WALLED — a left rule and its own tinted block — so it
-  // reads as a top-level thread on the post instead of blending into the
-  // replies beneath it. The replies keep the collapse gutter; never both.
-  const qbox = await qnode.evaluate((n) => {
-    const cs = getComputedStyle(n);
-    // :scope > — a quote's own chrome. Its nested replies (3r) legitimately
-    // carry gutters of their own; what must never happen is one node wearing
-    // both grammars.
-    return { wall: parseFloat(cs.borderLeftWidth), bg: cs.backgroundColor, gutters: n.querySelectorAll(':scope > .gutter').length };
+  // 3q: the quote is WALLED — a left rule — so it reads as a top-level thread
+  // on the post instead of blending into the replies beneath it.
+  //
+  // Phase 8 (plan 2026-08-29 post-and-thread, decision 2): the collapse
+  // GUTTER is retired. The grammar now: a comment WITH replies carries one ⊖
+  // (button[data-fold]) on its action row and a rail (.avcol > .line) under
+  // its avatar; a reply without children carries neither; a walled quote
+  // carries neither. Each child draws its own elbow (a ::before). Folding
+  // hides .kids and the button says how many it hid.
+  const chrome = (n) => ({
+    wall: parseFloat(getComputedStyle(n).borderLeftWidth),
+    folds: n.querySelectorAll(':scope > .comment-body > .comment-actions > [data-fold]').length,
+    rails: n.querySelectorAll(':scope > .avcol > .line').length,
+    elbow: getComputedStyle(n, '::before').content !== 'none',
+    gutters: n.querySelectorAll('.gutter').length,
+    kids: n.querySelectorAll(':scope > .kids > *').length,
   });
+  const qbox = await qnode.evaluate(chrome);
   assert.ok(qbox.wall >= 2, `the quote carries a left wall (got ${qbox.wall}px)`);
-  assert.equal(qbox.gutters, 0, 'a walled quote has no collapse gutter — the two grammars stay distinct');
-  const replyBox = await page.locator('.card > .comment:not([data-kind="quote"])').first()
-    .evaluate((n) => ({ wall: parseFloat(getComputedStyle(n).borderLeftWidth), gutters: n.querySelectorAll(':scope > .gutter').length }));
-  assert.equal(replyBox.wall, 0, 'a reply is NOT walled');
-  assert.ok(replyBox.gutters >= 1, 'a reply keeps its collapse gutter');
+  // Phase 9 made the quote a comment, so decision 2 applies to it too: a fold
+  // and a rail iff it has replies of its own, never a gutter
+  assert.equal(qbox.folds, qbox.kids ? 1 : 0, `a quote folds iff it has children (${qbox.kids})`);
+  assert.equal(qbox.rails, qbox.folds, 'and the rail comes with the fold');
+  assert.equal(qbox.gutters, 0, 'the gutter is gone everywhere');
+  const leaf = await page.locator('.comment[data-node-id$="/myreply"]').evaluate(chrome);
+  assert.equal(leaf.wall, 0, 'a reply is NOT walled');
+  assert.equal(leaf.folds, 0, 'a reply with no children has no fold');
+  assert.equal(leaf.rails, 0, 'and no rail');
+  assert.equal(leaf.elbow, false, 'a depth-0 reply has no elbow');
+  const parent = page.locator('.comment[data-node-id$="/reply1"]');
+  const parentChrome = await parent.evaluate(chrome);
+  assert.equal(parentChrome.folds, 1, 'a reply with children has exactly one fold');
+  assert.equal(parentChrome.rails, 1, 'and a rail under its avatar');
+  const child = await page.locator('.comment[data-node-id$="/reply1a"]').evaluate(chrome);
+  assert.equal(child.elbow, true, 'a nested reply draws its elbow off the rail');
+  assert.equal(await parent.locator(':scope > .avcol > .line').evaluate((n) => getComputedStyle(n).pointerEvents), 'none',
+    'the rail is a drawing, not a target');
 
-  // …and the gutter actually COLLAPSES. This was asserted nowhere until
-  // 2026-08-27, and it mattered from that day: score-threshold auto-collapse
-  // was retired (downvotes are gone, so no score can fall below a threshold),
-  // and it was the only collapse with behavioural coverage. Removing a feature
-  // must not leave the surviving one with LESS coverage than the pair had.
-  const foldTarget = page.locator('.card > .comment:not([data-kind="quote"])').first();
-  const bodyShown = () => foldTarget.locator(':scope > .comment-body > .comment-text').first().isVisible();
-  assert.equal(await bodyShown(), true, 'a reply starts open — nothing folds on its own now');
-  await foldTarget.locator(':scope > .gutter').first().click();
-  assert.equal(await bodyShown(), false, 'clicking the rail folds the subtree');
-  assert.match(await foldTarget.innerText(), /\[\+\]/, 'and says how much it hid');
-  await foldTarget.locator(':scope > .gutter').first().click();
-  assert.equal(await bodyShown(), true, 'clicking it again unfolds — a one-way collapse is a trap');
+  // …and the fold actually FOLDS. Behavioural coverage of the collapse has
+  // existed since 2026-08-27; retiring the gutter must not leave less.
+  const fold = parent.locator(':scope > .comment-body > .comment-actions > [data-fold]');
+  const kidsShown = () => parent.locator(':scope > .kids').isVisible();
+  assert.equal(await kidsShown(), true, 'a reply starts open — nothing folds on its own now');
+  assert.equal(await fold.getAttribute('aria-expanded'), 'true');
+  await fold.click();
+  assert.equal(await kidsShown(), false, 'clicking ⊖ folds the replies');
+  assert.equal(await fold.getAttribute('aria-expanded'), 'false');
+  assert.match((await fold.innerText()).replace(/\s+/g, ' '), /1 reply hidden/, 'and says how much it hid');
+  assert.equal(await page.locator('.comment[data-node-id$="/myreply"] > .comment-body > .comment-text').first().isVisible(), true,
+    'folding one comment leaves its siblings alone');
+  await fold.click();
+  assert.equal(await kidsShown(), true, 'clicking it again unfolds — a one-way collapse is a trap');
   // and the body is styled at all — .cmeta/.cbody had no rules, so the node
   // used to render as default body text (2026-08-26)
-  const qFont = await qnode.locator(':scope > .quote-body').evaluate((n) => parseFloat(getComputedStyle(n).fontSize));
+  const qFont = await qnode.locator(':scope > .comment-body > .comment-text').evaluate((n) => parseFloat(getComputedStyle(n).fontSize));
   const rootFont = await page.evaluate(() => parseFloat(getComputedStyle(document.body).fontSize));
   assert.ok(qFont < rootFont, `the quote body reads at comment scale (${qFont}px < ${rootFont}px)`);
 

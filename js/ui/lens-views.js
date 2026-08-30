@@ -7,7 +7,7 @@
 // sign-in survives reloads. The lens consumes { did, handle, fetchHandler }.
 
 import { el, timeAgo, fmtScore, domainOf, plural } from '../util.js';
-import { postRow, commentNode, voteBox, skeleton, emptyState, toast, reportSheet } from './components.js';
+import { postRow, commentNode, vote, skeleton, emptyState, toast, reportSheet } from './components.js';
 import { navTree } from './nav.js';
 import { LADDER, RUNG_IDS, labelFor } from '../rings.js';
 import { lastBoard, setLastBoard, landingBoard, DIRECTORY } from '../last-board.js';
@@ -1069,27 +1069,50 @@ function feedBoardView(entry, preInfo) {
 // below it (which carry the green collapse gutter instead). The ❝ marker keeps
 // the distinction in words; the node still opens as its own thread, because
 // the conversation genuinely branched into a new room.
+// Phase 9 (plan 2026-08-29 post-and-thread, decision 5): a quote-response
+// renders THROUGH commentNode — avatar column, byline, vote stack, the same
+// action row — with a wall on its outer edge and two additions: the byline
+// says "⟳ quoted this", and the action row carries a Repost glyph (O6: a real
+// write, 4a-iii). No tint, no "open its thread" (the ⋯ has Open on bsky.app).
 function quoteNode(node, ctx) {
-  const kids = el('div', { class: 'quote-children' });
-  const box = el('div', { class: 'comment quote-node', 'data-kind': 'quote', 'data-depth': String(node.depth) },
-    el('div', { class: 'quote-meta' },
-      el('span', { title: 'A quote-response: this author quoted the post above' }, '❝ '),
-      node.author ? el('a', { href: `/u/${encodeURIComponent(node.author)}` }, node.author) : '[muted]',
-      el('span', { class: 'muted' },
-        ` quoted ${node.depth ? 'that' : 'this'} · ${timeAgo(node.createdTs)} ago · ${plural(node.likes, 'like')}`)),
-    el('div', { class: 'quote-body' }, node.maskedRemoved ? el('span', { class: 'muted' }, node.title || '[muted]') : node.body),
-    el('div', { class: 'xs quote-open' },
-      el('a', { href: `/p?uri=${encodeURIComponent(node.quoteUri)}` }, 'open its thread ↳')),
-    kids);
-  // 3r: a quote collects its own replies and its own quotes — the cascade
-  // renders through the SAME dispatch, so a wall nests inside a wall and a
-  // gutter nests inside a wall, each keeping its own grammar.
-  for (const k of node.children || []) kids.append(lensNode(k, ctx));
-  if (node.deferred > 0) {
-    kids.append(el('a', { class: 'continue-stub', href: `/p?uri=${encodeURIComponent(node.quoteUri)}` },
-      `→ ${node.deferred} more quote${node.deferred === 1 ? '' : 's'} of this, in its own thread`));
+  return commentNode(node, {
+    ...ctx,
+    bylineExtra: (n) => (n.kind === 'quote'
+      ? el('span', { class: 'kind', title: 'A quote-response: this author quoted the post above' },
+        el('span', { 'aria-hidden': 'true' }, '\u27F3 '), `quoted ${n.depth ? 'that' : 'this'}`)
+      : ctx.bylineExtra?.(n) || null),
+    extraActions: (n) => [].concat(ctx.extraActions?.(n) || [], n.kind === 'quote' ? [repostControl(n)] : []),
+    continueStub: (n) => (n.kind === 'quote'
+      ? el('a', { class: 'continue-stub', href: `/p?uri=${encodeURIComponent(n.quoteUri)}` },
+        `→ ${n.deferred} more quote${n.deferred === 1 ? '' : 's'} of this, in its own thread`)
+      : ctx.continueStub?.(n) || null),
+  });
+}
+
+// 4a-iii / Phase 9: the Repost glyph — icon only, a count beside it, pressed
+// when it is your repost. Optimistic like the vote; a refusal reverts.
+function repostControl(p) {
+  const n = el('span', { class: 'n' }, fmtScore(p.repostCount || 0));
+  if (!session) {
+    return el('span', { class: 'cbtn', 'data-repost': '1', 'data-readonly': '1', role: 'img',
+      'aria-label': plural(p.repostCount || 0, 'repost') }, el('span', { 'aria-hidden': 'true' }, '\u27F3'), n);
   }
-  return box;
+  const b = el('button', { type: 'button', class: 'cbtn', 'data-repost': '1', 'aria-pressed': String(!!p.repostUri),
+    'aria-label': 'Repost', title: 'Repost' }, el('span', { 'aria-hidden': 'true' }, '\u27F3'), n);
+  b.addEventListener('click', async () => {
+    const was = p.repostUri, count = p.repostCount || 0;
+    const on = !was;
+    p.repostCount = count + (on ? 1 : -1); n.textContent = fmtScore(p.repostCount);
+    b.setAttribute('aria-pressed', String(on));
+    try {
+      if (on) { const { repostUri } = await lens.repost(p.id, p.cid); p.repostUri = repostUri; }
+      else { await lens.unrepost(was); p.repostUri = null; }
+    } catch (e) {
+      p.repostCount = count; n.textContent = fmtScore(count); b.setAttribute('aria-pressed', String(!!was));
+      console.warn('forage: repost refused', e); toast(e.message, 'err');
+    }
+  });
+  return b;
 }
 
 // 3r: one dispatch for every thread node. The substrate says which kind it is;
@@ -2273,7 +2296,6 @@ export function lensThreadView(params, query) {
       }));
     };
     const head = el('div', { class: 'card', style: 'display:flex;gap:10px' },
-      voteBox('post', p.id, p, !!session, 'col', lensVote(p)),
       el('div', {},
       el('div', { class: 'row wrap', style: 'gap:6px' },
         el('a', { href: `/f/${src.feedSlug}`, class: 'xs' }, `f/${src.feedSlug}`),
@@ -2282,9 +2304,11 @@ export function lensThreadView(params, query) {
       // renders below — the picture is the thing the heading stood in for.
       // A real title (text or alt-derived) keeps its heading above the media.
       p.placeholderTitle && p.media ? null : el('h1', {}, p.title.slice(0, 300)),
-      el('div', { class: 'postmeta' },
-        p.author ? el('a', { href: `/u/${encodeURIComponent(p.author)}` }, p.author) : '[muted]',
-        ` · ${plural(p.likes, 'like')} · ${timeAgo(p.createdTs)} ago · ${plural(p.commentCount, 'reply', 'replies')}`),
+      el('div', { class: 'foot' },
+        vote('post', p.id, p, !!session, { onVote: lensVote(p) }), // Phase 6c: the head's pill
+        el('div', { class: 'postmeta' },
+          p.author ? el('a', { href: `/u/${encodeURIComponent(p.author)}` }, p.author) : '[muted]',
+          ` · ${timeAgo(p.createdTs)} ago · ${plural(p.commentCount, 'reply', 'replies')}`)),
       // The post's own media, at full board size — until 2026-08-28 an image
       // post's thread page rendered no image at all.
       p.media && !p.maskedRemoved ? mediaNode(p) : null,

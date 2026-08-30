@@ -6,11 +6,12 @@ import * as store from '../store.js';
 import * as sel from '../selectors.js';
 import * as actions from '../actions.js';
 import * as skins from '../skins.js';
+import * as haptics from '../haptics.js';
 import * as version from '../version.js';
 import { go } from '../router.js';
 import { frontiers } from '../../ledger/divergence.js';
 import { humanWait } from '../engines/limits.js';
-import { postRow, commentNode, voteBox, emptyState, gate, errorState, toast } from './components.js';
+import { postRow, commentNode,  vote, emptyState, gate, errorState, toast } from './components.js';
 import { densityDial, isCompact } from '../board-density.js';
 
 // A board scope for one feed. Derived, not spelled: the old literal was the
@@ -144,7 +145,6 @@ export function threadView(params, query) {
   // post card
   const head = el('div', { class: 'card' },
     el('div', { class: 'row', style: 'gap:12px;align-items:flex-start' },
-      voteBox('post', p.id, p, t.perms.canVote),
       el('div', { class: 'grow' },
         el('div', { class: 'row wrap', style: 'gap:6px' },
           el('a', { href: `/f/${p.feedSlug}`, class: 'xs' }, `f/${p.feedSlug}`),
@@ -156,13 +156,15 @@ export function threadView(params, query) {
         el('h1', {}, p.maskedRemoved ? '[removed by stewards]' : p.title),
         p.format === 'link' && p.url ? el('div', {}, el('a', { href: p.url, target: '_blank', rel: 'noopener noreferrer', class: 'domain' }, `${p.url} (${domainOf(p.url)})`)) : null,
         p.body && !p.maskedRemoved ? el('div', { class: 'small', html: mdLite(p.body) }) : null,
-        el('div', { class: 'postmeta' },
-          p.author ? el('a', { href: `/u/${p.author}` }, p.author) : el('span', { class: 'muted' }, '[removed]'),
-          el('span', {}, timeAgo(p.createdTs) + ' ago'),
-          el('span', {}, plural(p.commentCount, 'comment')),
-          t.perms.canReport ? linkAction('report', () => doReport('post', p.id, p.feedId)) : null,
-          saveInline('post', p.id, p.saved),
-          ...(t.perms.canModerate ? modInline('post', p) : [])))));
+        el('div', { class: 'foot' },
+          vote('post', p.id, p, t.perms.canVote), // Phase 6c: the head's pill, the row's control
+          el('div', { class: 'postmeta' },
+            p.author ? el('a', { href: `/u/${p.author}` }, p.author) : el('span', { class: 'muted' }, '[removed]'),
+            el('span', {}, timeAgo(p.createdTs) + ' ago'),
+            el('span', {}, plural(p.commentCount, 'comment')),
+            t.perms.canReport ? linkAction('report', () => doReport('post', p.id, p.feedId)) : null,
+            saveInline('post', p.id, p.saved),
+            ...(t.perms.canModerate ? modInline('post', p) : []))))));
   main.append(head);
 
   if (t.locked) main.append(el('div', { class: 'notice lock' }, '🔒 This thread is locked. New comments are disabled.'));
@@ -598,6 +600,20 @@ export function settingsView() {
   // — and the two namespaces overlap on bbs/usenet/phpbb, so nothing may read
   // this value as a skin id.
   const curFamily = skins.SKINS[skins.activeSkin()]?.family ?? null;
+  // Decision 6 (plan 2026-08-29 post-and-thread): the haptics switch. Device-
+  // local like the skin; default on. Where the device cannot buzz the switch
+  // still renders — it is honest about a preference, not about hardware.
+  // A button[role=switch], not a 13px checkbox: the tap floor (mobile-fit)
+  // measures the control itself, and a switch is what the plan calls it.
+  const hapticsBox = el('button', { type: 'button', class: 'switch', id: 'pref-haptics', role: 'switch',
+    'aria-checked': String(haptics.enabled()) }, el('span', { class: 'switch-state' }, haptics.enabled() ? 'On' : 'Off'));
+  hapticsBox.addEventListener('click', () => {
+    const on = hapticsBox.getAttribute('aria-checked') !== 'true';
+    haptics.set(on);
+    hapticsBox.setAttribute('aria-checked', String(on));
+    hapticsBox.querySelector('.switch-state').textContent = on ? 'On' : 'Off';
+    if (on) haptics.buzz();
+  });
   const skinSel = el('select', { class: 'form', id: 'pref-skin' },
     ...skins.families().map((f) => el('option',
       { value: f.id, 'data-family': f.id, selected: f.id === curFamily || false },
@@ -614,6 +630,8 @@ export function settingsView() {
     // silently lost four rows and nothing tells you the toggle gained them.
     el('div', { class: 'xs muted', style: 'margin:-4px 0 8px' },
       'Light or dark is the ☾ toggle in the top bar. A style that ships one palette says so.'),
+    el('div', { class: 'field-row' }, el('label', { for: 'pref-haptics' }, 'Buzz on like'),
+      el('span', {}, hapticsBox, el('span', { class: 'xs muted', style: 'margin-left:8px' }, 'a short vibration when you like or promote something, on phones that can'))),
     el('div', { class: 'field-row' }, el('label', {}, 'Mode'),
       el('a', { href: '/mode' }, 'Bluesky view ↔ Memory sandbox — choose at /mode')),
     el('div', { class: 'field-row' }, el('label', {}, 'Accounts'),
