@@ -9,6 +9,7 @@ import { devBar } from './devbar.js';
 import * as skins from './skins.js';
 import * as density from './board-density.js';
 import * as cardSize from './card-size.js';
+import * as rail from './rail.js';
 import { toast } from './ui/components.js';
 import { setToaster } from './actions.js';
 import * as views from './ui/views.js';
@@ -36,6 +37,7 @@ const navHost = el('div', { id: 'navhost' });
 const navScrim = el('button', { class: 'navscrim', 'aria-label': 'Close navigation', hidden: true });
 const shell = el('div', { class: 'shell' }, navHost, mainEl, sideEl);
 app.append(devHost, mastHost, shell, navScrim);
+rail.apply(); // board-cards decision 6: the rail's on/off lands on the shell before first paint
 if (!document.getElementById('toasts')) document.body.append(el('div', { id: 'toasts' }));
 
 // The upper-right control moves between a skin and its PAIRED OPPOSITE. Skins
