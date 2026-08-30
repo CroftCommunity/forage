@@ -82,6 +82,9 @@ export async function run() {
     // remove that"): the divergence-ledger chips (DL-010, DL-011) are not on a
     // reader's board — the ledger and /frontiers keep them
     assert.equal(await page.locator('#main .frontier-chip').count(), 0, 'no frontier chips over a reader’s board');
+    // feed-row v5 claim 17 (owner: 'change "Feed order" to "Default"'): the sort's
+    // first choice — the order the feed's own generator hands us — is called Default
+    assert.equal(await page.locator('#main .sortbar select').first().locator('option').first().innerText(), 'Default', 'the sort’s first choice is "Default"');
     assert.equal(new Set(list.map((r) => r.likeLeft)).size, 1,
       `the like does not line up down the board: lefts ${list.map((r) => r.likeLeft).join(', ')}`);
     // board-cards decision D: a picture post stands on a stage, sized from its

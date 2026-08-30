@@ -529,7 +529,7 @@ function boardToolbar(onChange) {
   // decision 3). Redrawn with the bar — it is cheap and reads its own state.
   const barHost = el('div', { style: 'display:contents' });
   const drawBar = () => barHost.replaceChildren(sortBar({
-    sorts: [['feed', 'Feed order'], ['hot', 'Hot'], ['new', 'New'], ['top', 'Top']],
+    sorts: [['feed', 'Default'], ['hot', 'Hot'], ['new', 'New'], ['top', 'Top']],
     sort: boardSort, from: boardTimeframe,
     onChange: ({ sort, from }) => { boardSort = sort; boardTimeframe = from; drawBar(); onChange(); },
     // decision 7: the card size dial (1–4) stands where the 3t slider stood —
