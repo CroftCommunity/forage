@@ -1,4 +1,22 @@
-/* Surf (night swell) — DRAFT */
+/* Surf (night swell) — sibling of `surf`. Hand-authored (ADR-003): a deep-ocean
+   ground with a twilight gradient at the top, a dusk-to-ember band with the same
+   foam line, sunset-orange links. Cards stay opaque.
+
+   CONTRAST (measured by test/skins.test.js; band stops graded separately):
+     text        #EAF3F7  on bg          #0E2233   14.41:1
+     text        #EAF3F7  on card        #163445   11.58:1
+     text        #EAF3F7  on row-even    #1A3B4E   10.49:1
+     text        #EAF3F7  on row-head    #21475C    8.80:1
+     muted       #A9BFCB  on bg          #0E2233    8.49:1
+     link        #F4B77A  on card        #163445    7.39:1
+     link        #F4B77A  on nav-fill    #12293C    8.45:1
+     link-hover  #FFD4A3  on card        #163445    9.43:1
+     band-ink    #FFF3E6  on band-fill   #3B2A55   11.66:1
+     band-link   #FFE1C2  on band-fill   #3B2A55   10.19:1
+     on-brand    #FFFFFF  on brand-fill  #C24E3A    4.72:1
+     danger-ink  #F0938A  on danger-tint #45262A    5.91:1
+     tag chip: --gold-strong on mix(gold 18%, card)=#384947  5.25
+*/
 :root {
   --bg:          #0E2233;
   --page-art:    linear-gradient(180deg, #1A3247 0, #0E2233 320px);
@@ -16,7 +34,7 @@
   --on-brand:    #FFFFFF;
 
   --band-fill:   #3B2A55;
-  --band-art:    url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 120 10%27 preserveAspectRatio=%27none%27%3E%3Cpath d=%27M0 7 Q15 1 30 7 T60 7 T90 7 T120 7 V10 H0Z%27 fill=%27%23ffffff%27 fill-opacity=%27.85%27/%3E%3C/svg%3E") left bottom / 120px 8px repeat-x, linear-gradient(90deg, #2A2148 0%, #5A2E58 40%, #A2405C 75%, #C24E3A 100%);
+  --band-art:    url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 120 10%27 preserveAspectRatio=%27none%27%3E%3Cpath d=%27M0 7 Q15 1 30 7 T60 7 T90 7 T120 7 V10 H0Z%27 fill=%27%23ffffff%27 fill-opacity=%27.85%27/%3E%3C/svg%3E") left bottom / 120px 8px repeat-x, linear-gradient(90deg, #2A2148 0%, #5A2E58 40%, #A2405C 75%, #B0432F 100%);
   --band-ink:    #FFF3E6;
   --band-link:   #FFE1C2;
   --band-brand:  #FFF3E6;

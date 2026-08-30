@@ -782,7 +782,7 @@ test('every skin holds AA on every pair its chrome paints, at the threshold the 
 
 const ART_SLOTS = [
   // slot            the ink that sits on it   floor
-  ['--band-art',     '--band-ink',             3.0],
+  ['--band-art',     '--band-ink',             4.5],   // 14px nav links sit on it (decision 7)
   ['--page-art',     '--text',                 4.5],
   ['--card-art',     '--text',                 4.5],
 ];

@@ -1,4 +1,33 @@
-/* Surf (beach day) — DRAFT header; the measured table follows */
+/* Surf (beach day) — the first GRAPHICAL skin (owner, 2026-08-30: "not-just-color
+   themes … surfing, ocean and beach vibes, thinking sunset and beach colors with
+   some ocean"). Light half of `surf`; skins/surf-dark.css is the sibling.
+
+   What is graphical here rides the ART SLOTS (css/tokens.css): --page-art is a
+   sky-to-sand gradient behind the cards; --band-art is a sunset gradient with
+   an inline-SVG foam line along the band's bottom edge. Both are gradients so
+   every colour stop is GRADED against the ink on it (test/skins.test.js), and
+   text never sits on a picture: cards stay opaque white. The owner's photos and
+   badges drop into /skins/art/surf/ in the same slots later — a veiled banner
+   on the band, a low-contrast grain on the page — per docs/SKINS.md § Art.
+
+   Palette: sand ground, ocean-teal links, coral hover, sunset band. Rounded
+   (12px) and ui-rounded where the platform has it.
+
+   CONTRAST (measured by test/skins.test.js; band stops graded separately):
+     text        #23343F  on bg          #F7ECDA   10.99:1
+     text        #23343F  on card        #FFFFFF   12.85:1
+     text        #23343F  on row-even    #F7ECDA   10.99:1
+     text        #23343F  on row-head    #F0E6D4   10.39:1
+     muted       #5C6B75  on bg          #F7ECDA    4.71:1
+     link        #0F6E8C  on card        #FFFFFF    5.79:1
+     link        #0F6E8C  on nav-fill    #DDEEF1    4.84:1
+     link-hover  #B9452F  on card        #FFFFFF    5.31:1
+     band-ink    #FFFFFF  on band-fill   #C24E3A    4.72:1
+     band-link   #FFFFFF  on band-fill   #C24E3A    4.72:1
+     on-brand    #FFFFFF  on brand-fill  #0F6E8C    5.79:1
+     danger-ink  #8F2A22  on danger-tint #F8ECEA    7.21:1
+     tag chip: --gold-strong on mix(gold 18%, card)=#f8efdd  5.58
+*/
 :root {
   --bg:          #F7ECDA;
   --page-art:    linear-gradient(180deg, #E3F0F3 0, #F7ECDA 280px);
@@ -16,7 +45,7 @@
   --on-brand:    #FFFFFF;
 
   --band-fill:   #C24E3A;
-  --band-art:    url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 120 10%27 preserveAspectRatio=%27none%27%3E%3Cpath d=%27M0 7 Q15 1 30 7 T60 7 T90 7 T120 7 V10 H0Z%27 fill=%27%23ffffff%27 fill-opacity=%27.85%27/%3E%3C/svg%3E") left bottom / 120px 8px repeat-x, linear-gradient(90deg, #A2405C 0%, #C24E3A 45%, #D9723F 100%);
+  --band-art:    url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 120 10%27 preserveAspectRatio=%27none%27%3E%3Cpath d=%27M0 7 Q15 1 30 7 T60 7 T90 7 T120 7 V10 H0Z%27 fill=%27%23ffffff%27 fill-opacity=%27.85%27/%3E%3C/svg%3E") left bottom / 120px 8px repeat-x, linear-gradient(90deg, #A2405C 0%, #C24E3A 55%, #B8532F 100%);
   --band-ink:    #FFFFFF;
   --band-link:   #FFFFFF;
   --band-brand:  #FFFFFF;
@@ -24,7 +53,7 @@
   --panel:       #FFFFFF;
   --row-odd:     #FFFFFF;
   --row-even:    #F7ECDA;
-  --row-head:    #EADFC8;
+  --row-head:    #F0E6D4;
 
   --boost:       #0F6E8C;
   --bury:        #B9452F;

@@ -1,4 +1,33 @@
-/* Nebula (deep field) — DRAFT */
+/* Nebula (deep field) — the space skin (owner, 2026-08-30: "another that is
+   like a space theme … themeing along graphical lines along with color"). Dark
+   half of `nebula`; skins/nebula.css is the sibling, and this is the side the
+   family is designed from.
+
+   Graphical, on the art slots: --page-art tiles an inline-SVG starfield over
+   two nebula veils (radial gradients, violet upper-left and teal upper-right,
+   the palette of the reference images); --band-art is an indigo-to-teal
+   gradient; --accent-glow puts the neon on the wordmark and the active nav
+   item; --card-shadow gives cards a faint cyan rim over a deep drop. Cards are
+   OPAQUE — the glass-panel look of the reference is the one thing deliberately
+   not done, because text on a translucent panel over a nebula cannot be graded.
+   The owner's nebula/planet images drop into /skins/art/nebula/ as a veiled
+   band or a dim page texture, same slots.
+
+   CONTRAST (measured by test/skins.test.js; band stops graded separately):
+     text        #E9E8F5  on bg          #0B0D1A   15.94:1
+     text        #E9E8F5  on card        #151833   14.31:1
+     text        #E9E8F5  on row-even    #191C3B   13.64:1
+     text        #E9E8F5  on row-head    #22264A   12.00:1
+     muted       #A7A9C8  on bg          #0B0D1A    8.42:1
+     link        #7FE3F0  on card        #151833   11.69:1
+     link        #7FE3F0  on nav-fill    #10132A   12.32:1
+     link-hover  #B9F2FA  on card        #151833   14.16:1
+     band-ink    #E9E6FF  on band-fill   #1B1540   14.03:1
+     band-link   #A9C9FF  on band-fill   #1B1540   10.17:1
+     on-brand    #FFFFFF  on brand-fill  #4B4AA8    7.38:1
+     danger-ink  #F0938A  on danger-tint #3A2438    6.21:1
+     tag chip: --gold-strong on mix(gold 18%, card)=#373238  6.93
+*/
 :root {
   --bg:          #0B0D1A;
   --page-art:    url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27180%27 height=%27180%27%3E%3Cg fill=%27%23ffffff%27%3E%3Ccircle cx=%2712%27 cy=%2720%27 r=%271%27 fill-opacity=%27.8%27/%3E%3Ccircle cx=%2760%27 cy=%278%27 r=%27.7%27 fill-opacity=%27.6%27/%3E%3Ccircle cx=%27110%27 cy=%2734%27 r=%271.2%27 fill-opacity=%27.9%27/%3E%3Ccircle cx=%27150%27 cy=%2714%27 r=%27.6%27 fill-opacity=%27.5%27/%3E%3Ccircle cx=%2730%27 cy=%2770%27 r=%27.8%27 fill-opacity=%27.6%27/%3E%3Ccircle cx=%2790%27 cy=%2762%27 r=%27.6%27 fill-opacity=%27.5%27/%3E%3Ccircle cx=%27170%27 cy=%2780%27 r=%271%27 fill-opacity=%27.7%27/%3E%3Ccircle cx=%2750%27 cy=%27110%27 r=%271.1%27 fill-opacity=%27.85%27/%3E%3Ccircle cx=%27130%27 cy=%27104%27 r=%27.7%27 fill-opacity=%27.55%27/%3E%3Ccircle cx=%2710%27 cy=%27150%27 r=%27.6%27 fill-opacity=%27.5%27/%3E%3Ccircle cx=%2775%27 cy=%27160%27 r=%271%27 fill-opacity=%27.75%27/%3E%3Ccircle cx=%27160%27 cy=%27140%27 r=%27.8%27 fill-opacity=%27.6%27/%3E%3Ccircle cx=%27100%27 cy=%27135%27 r=%27.5%27 fill-opacity=%27.5%27/%3E%3Ccircle cx=%2740%27 cy=%2740%27 r=%27.5%27 fill-opacity=%27.45%27/%3E%3C/g%3E%3C/svg%3E") 0 0 / 180px 180px repeat, radial-gradient(ellipse at 20% 0%, #2A1B4A 0, transparent 45%), radial-gradient(ellipse at 85% 10%, #11303A 0, transparent 40%);
