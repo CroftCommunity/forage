@@ -10,6 +10,7 @@
 // never dead buttons — the UI renders these as deferred, invariant 7).
 import { buildPost, withTag, IMAGE_LIMITS } from '../compose.js';
 import { RUNG_IDS, membersFor, labelFor } from '../rings.js';
+import { sortItems } from '../engines/rank.js';
 
 export const LENS_PERMS = Object.freeze({
   viewerId: null, loggedIn: false, admin: false, probation: false,
@@ -457,16 +458,23 @@ export function slugifyFeedName(name) {
 const TIMEFRAME_MS = { day: 86400_000, week: 7 * 86400_000, month: 30 * 86400_000, year: 365 * 86400_000 };
 
 export function sortWindow(posts, sort, timeframe, nowMs) {
-  if (!['feed', 'new', 'top'].includes(sort)) {
-    throw new Error(`unknown window sort: ${sort} (known: feed, new, top)`);
+  if (!['feed', 'new', 'top', 'hot'].includes(sort)) {
+    throw new Error(`unknown window sort: ${sort} (known: feed, new, top, hot)`);
   }
   if (sort === 'feed') return posts;
   let window = posts;
-  if (sort === 'top' && timeframe !== 'all') {
+  // the window applies to the score-ranked sorts — top, and hot (plan
+  // 2026-08-29 post-and-thread, decision 9: engagement over the loaded window)
+  if ((sort === 'top' || sort === 'hot') && timeframe !== 'all') {
     const span = TIMEFRAME_MS[timeframe];
     if (!span) throw new Error(`unknown timeframe: ${timeframe} (known: day, week, month, year, all)`);
     const cutoff = nowMs - span;
     window = posts.filter((p) => p.createdTs >= cutoff);
+  }
+  if (sort === 'hot') {
+    // shaped posts carry createdSec; a caller that only has createdTs gets it derived
+    const items = window.map((p) => (p.createdSec != null ? p : { ...p, createdSec: Math.floor(p.createdTs / 1000) }));
+    return sortItems(items, 'hot', Math.floor(nowMs / 1000));
   }
   return [...window].sort((a, b) => (sort === 'new' ? b.createdTs - a.createdTs : b.likes - a.likes));
 }

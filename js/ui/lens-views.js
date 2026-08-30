@@ -20,6 +20,8 @@ import { heroDismissed, dismissHero, EMBLEM } from '../hero.js';
 import * as mediaScale from '../media-scale.js';
 import * as lang from '../lang.js';
 import { density, setDensity, DENSITIES } from '../board-density.js';
+import { sortBar } from './sortbar.js';
+import { sortItems } from '../engines/rank.js';
 import { POST_LIMITS, IMAGE_LIMITS, graphemes, withTag } from '../compose.js';
 import { MEDIA_SCALE } from '../media-scale.js';
 import { settingsView } from './views.js';
@@ -496,21 +498,27 @@ const boardView = density;
 // Per-page-load sort state (a view concern, like the ring).
 let boardSort = 'feed';
 let boardTimeframe = 'day';
+// the thread's own sort, session-local like the board's (Phase 11c)
+let threadSort = 'hot';
+let threadFrom = 'all';
+const THREAD_WINDOW_MS = { day: 86400e3, week: 6048e5, month: 2592e6, year: 31536e6 };
 
 // The reddit-style toolbar: sort · timeframe (under Top) · view. Sorting is
 // HONEST about scope — it re-orders the loaded window only (the generator
 // owns the true ranking, DL-010; whole-feed live sorts are the Jetstream v2
 // frontier, E139).
 function boardToolbar(onChange) {
-  const sortSel = el('select', { title: 'Sorts the LOADED posts — the feed itself is ranked by its generator (DL-010)' },
-    ...[['feed', 'Feed order'], ['new', 'New'], ['top', 'Top']].map(([v, l]) =>
-      el('option', { value: v, selected: boardSort === v || false }, l)));
-  const tfSel = el('select', { title: 'Timeframe for Top' },
-    ...[['day', 'Today'], ['week', 'This week'], ['month', 'This month'], ['year', 'This year'], ['all', 'All time']].map(([v, l]) =>
-      el('option', { value: v, selected: boardTimeframe === v || false }, l)));
-  if (boardSort !== 'top') tfSel.style.display = 'none';
-  sortSel.addEventListener('change', () => { boardSort = sortSel.value; tfSel.style.display = boardSort === 'top' ? '' : 'none'; onChange(); });
-  tfSel.addEventListener('change', () => { boardTimeframe = tfSel.value; onChange(); });
+  // Phase 11c: the same bar the memory board has. Sorts the LOADED posts —
+  // the feed itself is ranked by its generator (DL-010); Hot is engagement
+  // over that window (decision 9), From applies to Hot and Top.
+  // rebuilt on every change so From appears the moment a windowed sort is chosen
+  const barHost = el('div', { style: 'display:contents' });
+  const drawBar = () => barHost.replaceChildren(sortBar({
+    sorts: [['feed', 'Feed order'], ['hot', 'Hot'], ['new', 'New'], ['top', 'Top']],
+    sort: boardSort, from: boardTimeframe,
+    onChange: ({ sort, from }) => { boardSort = sort; boardTimeframe = from; drawBar(); onChange(); },
+  }));
+  drawBar();
   const viewSel = el('select', { 'data-density': '1', 'aria-label': 'Board density',
     title: 'Card shows previews and media; Compact is dense rows' },
     ...DENSITIES.map(([v, l]) =>
@@ -533,7 +541,7 @@ function boardToolbar(onChange) {
     onChange();
   });
   return el('div', { class: 'row wrap', style: 'gap:6px;margin:6px 0;align-items:center', 'data-board-toolbar': '1' },
-    sortSel, tfSel, viewSel,
+    barHost, viewSel,
     el('div', { class: 'row', style: 'gap:6px;align-items:center;margin-left:auto' }, slider));
 }
 
@@ -2350,8 +2358,23 @@ export function lensThreadView(params, query) {
         else rerender();
       }) };
     const commentsCard = el('div', { class: 'card' });
+    // Phase 11c: the thread's sort bar — the top-level replies re-sorted
+    // CLIENT-SIDE (the thread is already loaded whole; nothing to re-query),
+    // Hot on engagement (likes + replies + reposts, the node's own children
+    // standing in for a reply count), From windowing the top level only.
+    const orderComments = (comments) => {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const windowed = threadSort !== 'new' && threadFrom !== 'all'
+        ? comments.filter((n) => n.createdTs >= Date.now() - THREAD_WINDOW_MS[threadFrom]) : comments;
+      return sortItems(windowed, threadSort, nowSec);
+    };
+    let latest = t.comments;
     const paintComments = (comments) => {
-      commentsCard.replaceChildren(...comments.map((n) => lensNode(n, ctx)));
+      latest = comments;
+      commentsCard.replaceChildren(
+        sortBar({ sorts: [['hot', 'Hot'], ['top', 'Top'], ['new', 'New']], sort: threadSort, from: threadFrom,
+          onChange: ({ sort, from }) => { threadSort = sort; threadFrom = from; paintComments(latest); } }),
+        ...orderComments(comments).map((n) => lensNode(n, ctx)));
     };
     paintComments(t.comments);
     onCascade = (next) => paintComments(next.comments); // the cascade landed — redraw the list in place

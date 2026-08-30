@@ -267,3 +267,21 @@ test('3g: tagStream collects tagged posts ACROSS feeds, newest first, case-insen
   assert.equal(r.tag, 'gardening');
   assert.deepEqual(tagStream(s, null, 'nosuch', 10).posts, []);
 });
+
+// ---- plan 2026-08-29 post-and-thread, Phase 11: From applies to Hot ----
+test('11b: the board timeframe window applies to hot as it does to top; new ignores it', () => {
+  const now = 1_800_000_000;
+  const DAY = 86400;
+  const log = [
+    { id: 'e1', type: 'account.registered', actor: 'u_a', ts: (now - 40 * DAY) * 1000, payload: { handle: 'a' } },
+    { id: 'e2', type: 'feed.created', actor: 'u_a', ts: (now - 40 * DAY) * 1000, payload: { id: 'f1', slug: 'g', title: 'G' } },
+    { id: 'e3', type: 'post.created', actor: 'u_a', ts: (now - 3 * DAY) * 1000, payload: { id: 'old', feedId: 'f1', format: 'text', title: 'old', bodyMd: '' } },
+    { id: 'e4', type: 'post.created', actor: 'u_a', ts: (now - 3600) * 1000, payload: { id: 'fresh', feedId: 'f1', format: 'text', title: 'fresh', bodyMd: '' } },
+  ];
+  const s = log.reduce((st, e) => reduce(st, e), emptyState());
+  const ids = (sort, tf) => board(s, null, 'feed:g', sort, tf, now).posts.map((p) => p.id);
+  assert.deepEqual(ids('hot', 'day'), ['fresh'], 'From: Today on Hot drops the 3-day-old post');
+  assert.deepEqual(ids('hot', 'all').sort(), ['fresh', 'old']);
+  assert.deepEqual(ids('top', 'day'), ['fresh']);
+  assert.deepEqual(ids('new', 'day').sort(), ['fresh', 'old'], 'New has no window');
+});

@@ -118,10 +118,14 @@ export async function run() {
     // when the node has one, initials when it does not.
     await s.page.goto(`${s.origin}/p?uri=${encodeURIComponent('at://did:plc:aa/app.bsky.feed.post/a')}`);
     await s.page.waitForSelector('.comment');
-    const avs = await s.page.$$eval('.comment > .avcol > .av', (els) => els.map((e) => ({
-      img: !!e.querySelector('img'), text: e.textContent.trim() })));
-    assert.deepEqual(avs.map((a) => a.img), [true, false], `a picture where the node has one, initials where not: ${JSON.stringify(avs)}`);
-    assert.equal(avs[1].text, 'cc', 'the initials come from the handle');
+    // keyed by node, not by position — the thread's sort decides the order
+    const avs = await s.page.$$eval('.comment', (els) => Object.fromEntries(els.map((c) => {
+      const av = c.querySelector(':scope > .avcol > .av');
+      return [c.getAttribute('data-node-id').split('/').pop(), { img: !!av.querySelector('img'), text: av.textContent.trim() }];
+    })));
+    assert.equal(avs.b.img, true, `bb has a picture: ${JSON.stringify(avs)}`);
+    assert.equal(avs.c.img, false, 'cc has none — initials');
+    assert.equal(avs.c.text, 'cc', 'the initials come from the handle');
     assert.deepEqual(await s.shimMisses(), [], 'no request left the shim — pictures are data: URLs here');
 
     // And it opens the merged page.

@@ -3,7 +3,7 @@
 // (window edges, factor thresholds, gates) so single-line mutations die.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { hot, confidence, rising, sortItems } from '../js/engines/rank.js';
+import { hot, engagement, rising, sortItems } from '../js/engines/rank.js';
 import { limits, humanWait, REP_FAST_THRESHOLD } from '../js/engines/limits.js';
 
 const EPOCH = 1134028003; // reddit epoch, rank.js
@@ -31,25 +31,51 @@ test('hot: age moves rank even when the score is identical', () => {
   assert.ok(hot(4, EPOCH + 90000) > hot(4, EPOCH));
 });
 
-// ---- confidence (Wilson lower bound, z = 1.281551565545) ----
+// ---- engagement: Hot's signal (plan 2026-08-29 post-and-thread, decision 9) ----
+// Best is RETIRED. With downvotes gone, `confidence(n)` — Wilson on
+// likes/(likes+downs) — reduced to 1/(1+z²/n): strictly increasing in likes,
+// so Best ordered a thread exactly as Top did and the tab promised something
+// the number no longer delivered. Hot's order term is now ENGAGEMENT: likes +
+// replies + reposts (owner, 2026-08-29: "Hot is fine and likes+replies … and
+// across reposts too"), the same on a board and in a thread.
 
-test('confidence: measured pins', () => {
-  assert.equal(confidence(0, 0), 0); // no votes -> 0, not NaN
-  // Downvotes are gone (plan 2026-08-27-1), so n === ups and p === 1 always.
-  // These are the SAME numbers the two-argument version produced with downs=0 —
-  // deliberately unchanged, because a formula simplification that moves its own
-  // outputs is a behaviour change wearing a refactor's clothes.
-  assert.ok(Math.abs(confidence(1) - 0.37844750322520615) < 1e-12);
-  assert.ok(Math.abs(confidence(100) - 0.9838416366736703) < 1e-12);
-  assert.equal(confidence(0), 0, 'no votes is no confidence, not a division by zero');
+test('engagement: likes + replies + reposts; the shaped count wins over a children array; absent fields are 0, never NaN', () => {
+  assert.equal(engagement({ likes: 3, commentCount: 4, repostCount: 0 }), 7);
+  assert.equal(engagement({ likes: 5 }), 5, 'no replies, no reposts: just likes — and not NaN');
+  assert.equal(engagement({ likes: 0 }), 0);
+  assert.equal(engagement({ likes: 1, children: [{}, {}, {}] }), 4, 'a thread node counts its direct children');
+  assert.equal(engagement({ likes: 1, commentCount: 2, children: [{}, {}, {}] }), 3, 'a shaped commentCount wins over the array');
+  assert.equal(engagement({ likes: 1, repostCount: 6 }), 7);
 });
 
-test('confidence: more evidence raises the lower bound', () => {
-  // Was "more evidence AT THE SAME RATIO". There is only one ratio now, which
-  // is why the old second assertion (confidence(30,10) > confidence(3,1)) is
-  // not ported: its subject — two different ratios — no longer exists.
-  assert.ok(confidence(100) > confidence(1));
-  assert.ok(confidence(2) > confidence(1));
+test('hot on engagement: at equal age a replied-to item outranks a merely liked one; equal engagement → newer first; a repost breaks a tie', () => {
+  const now = EPOCH + 200000;
+  const ids = (items, sort) => sortItems(items, sort, now).map((i) => i.id);
+  assert.deepStrictEqual(ids([
+    { id: 'liked', likes: 5, commentCount: 0, repostCount: 0, createdSec: EPOCH },
+    { id: 'talked', likes: 3, commentCount: 4, repostCount: 0, createdSec: EPOCH },
+  ], 'hot'), ['talked', 'liked'], '7 > 5 at equal age');
+  assert.deepStrictEqual(ids([
+    { id: 'older', likes: 4, commentCount: 3, createdSec: EPOCH },
+    { id: 'newer', likes: 4, commentCount: 3, createdSec: EPOCH + 90000 },
+  ], 'hot'), ['newer', 'older'], 'equal engagement: the decay still bites');
+  assert.deepStrictEqual(ids([
+    { id: 'plain', likes: 5, commentCount: 0, repostCount: 0, createdSec: EPOCH },
+    { id: 'shared', likes: 5, commentCount: 0, repostCount: 1, createdSec: EPOCH },
+  ], 'hot'), ['shared', 'plain'], 'the repost decides');
+});
+
+test('best is retired: sortItems(…, "best") is the IDENTICAL order to hot, and top still puts 5 likes above 3+4', () => {
+  const now = EPOCH + 200000;
+  const items = [
+    { id: 'liked', likes: 5, commentCount: 0, createdSec: EPOCH },
+    { id: 'talked', likes: 3, commentCount: 4, createdSec: EPOCH },
+    { id: 'fresh', likes: 1, commentCount: 0, createdSec: EPOCH + 90000 },
+  ];
+  const ids = (sort) => sortItems(items, sort, now).map((i) => i.id);
+  assert.deepStrictEqual(ids('best'), ids('hot'), 'an old ?sort=best link lands on Hot (O7)');
+  assert.deepStrictEqual(ids('top'), ['liked', 'talked', 'fresh'], 'Top stays likes-only — the visible difference Best could never show');
+  assert.notDeepStrictEqual(ids('top'), ids('hot'));
 });
 
 // The `controversy` tests are DELETED, not ported, and the distinction matters:
@@ -206,13 +232,7 @@ test('sortItems: each sort key dispatches to ITS ranking (orders differ from hot
   // two items and two sorts that disagree, one output must equal input order —
   // so that guard now comes from the OTHER sort in each pair below, and each
   // pair is ordered so at least one of them reverses it.
-  // best vs top: Wilson favors volume over a single vote
-  const b = [
-    { id: 'one', likes: 1, createdSec: EPOCH },     // confidence .378
-    { id: 'many', likes: 50, createdSec: EPOCH },   // confidence ~.96
-  ];
-  assert.deepStrictEqual(sortItems(b, 'best', now).map((i) => i.id), ['many', 'one']);
-  assert.deepStrictEqual(sortItems(b, 'top', now).map((i) => i.id), ['many', 'one']);
+  // (the best-vs-top pair is gone with Best — see the engagement tests above)
   // rising vs hot: the old high-scorer is age-gated out of rising
   const r = [
     { id: 'slowNew', likes: 2, createdSec: now - 3600 },
