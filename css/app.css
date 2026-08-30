@@ -287,6 +287,16 @@ button.avvote[aria-pressed="true"] { color: var(--boost); border-color: var(--bo
 /* the byline — avatar slot · who · bare time · ⋯ (plan 2026-08-29 post-and-thread) */
 .byline { display: flex; align-items: center; gap: 8px; font-size: var(--t-xs); color: var(--muted); min-width: 0; flex-wrap: wrap; }
 .byline .who { color: var(--text); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* A comment's byline is ONE line (post-and-thread decision 7, mock v18 claim A): a real
+   handle is up to 30 characters, and at 390px it wrapped the time, "⟳ quoted this" and
+   the ⋯ onto second and third lines (forage.fyi, owner screenshots 2026-08-30). The name
+   is the only part that yields — it ellipsizes; everything after it keeps its width. */
+.comment > .comment-body > .byline { flex-wrap: nowrap; }
+.comment > .comment-body > .byline > .who { flex: 0 1 auto; min-width: 0; }
+.comment > .comment-body > .byline > :not(.who) { flex: none; white-space: nowrap; }
+/* the kind label ("⟳ quoted this") yields after the name does — at 320px nine deep there
+   is no room for both (e2e/mobile-fit's deep thread), and the time and ⋯ never yield */
+.comment > .comment-body > .byline > .kind { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .byline .who.muted { color: var(--muted); }
 .byline .dot::before { content: "\b7"; }
 .av { width: 28px; height: 28px; border-radius: var(--radius-round); flex: none; display: grid; place-items: center; overflow: hidden;
@@ -362,7 +372,7 @@ dialog.menu::backdrop { background: transparent; }
 .tab.active { color: var(--brand); border-bottom-color: var(--brand); font-weight: 600; }
 
 /* ---- Comments: the rail and the fold (plan 2026-08-29 post-and-thread, decision 2) ---- */
-.comment { position: relative; display: grid; grid-template-columns: 32px 1fr; column-gap: 10px; padding: 8px 0 2px; }
+.comment { position: relative; display: grid; grid-template-columns: 32px minmax(0, 1fr); column-gap: 10px; padding: 8px 0 2px; }
 .comment-body { display: contents; }
 .comment > .avcol { grid-column: 1; grid-row: 1 / span 3; display: flex; flex-direction: column; align-items: center; }
 .comment > .avcol .line { flex: 1; width: 2px; margin-top: 4px; background: var(--border); pointer-events: none; }
@@ -390,6 +400,11 @@ dialog.menu::backdrop { background: transparent; }
 .comment-actions { display: flex; gap: var(--s3); align-items: center; min-height: 36px; font-size: var(--t-xs); color: var(--muted); }
 .comment-actions button { background: none; border: none; color: var(--muted); cursor: pointer; padding: 0; font-size: var(--t-xs); }
 .comment-actions button:hover { color: var(--brand); }
+.comment-actions .reply { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 0 8px; border-radius: var(--radius-chip); font-weight: 600; white-space: nowrap; }
+.comment-actions .reply:hover, .comment-actions .reply:focus-visible { background: var(--card-2); }
+@media (max-width: 480px) { .comment-actions .reply { min-height: 44px; } } /* the tap floor; after the base rule, or the base rule wins */
+.comment > .comment-body > .reply-host { grid-column: 2; grid-row: 4; }
+.comment > .comment-body > .reply-host:empty { display: none; }
 /* Phase 2: an armed delete. The colour change IS the second thought — the
    button you are about to press is visibly not the one you pressed. */
 .btn.danger { color: var(--danger, #b4432b); border-color: var(--danger, #b4432b); font-weight: 600; }

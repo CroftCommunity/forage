@@ -2352,7 +2352,15 @@ export function lensThreadView(params, query) {
             el('a', { class: 'btn', href: `/f/${src.feedSlug}` }, 'Back to the board')));
         })),
       replyHost));
-    const ctx = { ...LENS_PERMS, locked: true, // save/mod still gate; replying does not
+    const ctx = { ...LENS_PERMS, // save/mod still gate; replying does not —
+      // Reply sits on every node (mock v18 claim C; on forage.fyi 2026-08-30 only
+      // the head offered it), the composer mounting under the node you answered
+      onReply: (n, host) => {
+        const gate = sessionGate('reply');
+        if (gate) return toast(gate, 'err');
+        if (host.querySelector('[data-composer]')) { host.replaceChildren(); return; } // a second press folds it
+        host.replaceChildren(composerCard({ replyTo: { root: rootRef, parent: { uri: n.id, cid: n.cid } }, onDone: () => rerender() }));
+      },
       // A reply's stack is the same like the head's pill is (owner, 2026-08-29:
       // signed in, the comment arrow did nothing — it was the guest span).
       canVote: !!session, onVote: (n) => lensVote(n),
