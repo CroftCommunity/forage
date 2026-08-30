@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forage Warm Skins v1</title>
+<meta name="mock-version" content="1">
+<meta name="mock-baseline" content="forage@fe2b77b">
+<meta name="mock-proposal" content="forage@35b64db">
+<style>
+:root{--page-bg:#F6F4F0;--page-card:#fff;--page-ink:#26231F;--page-muted:#6B665E;--page-line:#E2DDD4}
+body{margin:0;background:var(--page-bg);color:var(--page-ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1480px;margin:0 auto;padding:24px 20px 60px}
+h1{font-size:26px;margin:0 0 4px} h2{font-size:19px;margin:36px 0 10px} h3{font-size:18px;margin:0 0 12px} h3 small{font-weight:400;color:var(--page-muted);font-size:14px}
+h4{margin:0 0 8px;font-size:15px} h4 code{font-weight:400;color:var(--page-muted)}
+p{max-width:78ch} .meta{color:var(--page-muted);font-size:13px;margin-bottom:18px}
+code{font-family:ui-monospace,Menlo,monospace;font-size:.92em}
+table{border-collapse:collapse;font-size:14px;width:100%} th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--page-line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page-muted)}
+.tablewrap{overflow-x:auto;background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:6px 8px}
+.family{background:var(--page-card);border:1px solid var(--page-line);border-radius:10px;padding:18px;margin:18px 0}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:18px} @media (max-width:1000px){.pair{grid-template-columns:1fr}}
+.side{min-width:0}
+.frames{display:grid;grid-template-columns:130px 1fr 130px;gap:10px;align-items:start}
+@media (max-width:700px){.frames{grid-template-columns:1fr 1fr}}
+figure{margin:0;min-width:0} figure img{width:100%;height:auto;display:block;border:1px solid var(--page-line);border-radius:6px}
+figcaption{font-size:11px;color:var(--page-muted);margin-top:4px}
+.sw{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px} .sw span{display:flex;flex-direction:column;align-items:center;font-size:10px;color:var(--page-muted)}
+.sw i{display:block;width:34px;height:22px;border-radius:4px;border:1px solid rgba(0,0,0,.15)} .sw small{font-family:ui-monospace,Menlo,monospace;font-size:9px}
+.current .pair{opacity:.92}
+</style>
+</head>
+<body>
+<main>
+<h1>Forage — the warm set: four skin families, each with a lighter and a darker side</h1>
+<p class="meta">Mock v1 · Current frames <code>forage@fe2b77b</code> (main, the tree the owner runs) · Proposed frames <code>forage@35b64db</code> (branch <code>claude/warm-skins</code>) · every frame is a capture of the engine by <code>scripts/mock-snaps.mjs</code> over the hermetic <code>lens:mock-board</code> / <code>lens:mock-thread</code> populations, signed out, at 390×844 and 1280×900 · manifest: <code>snaps/warm-skins/manifest.json</code></p>
+
+<p><b>What this shows.</b> Eight new skins in four families — Rosewater, Lavender, Apricot, Seaglass — proposed for Settings → Skin, beside the four families forage ships today (Forage, Classic BBS, Usenet gray, phpBB), all of which are cool or neutral. The ask (owner, 2026-08-30): <i>"more warm or feminine energy … look at some old popular phpbb skins with some diversity to reimplement an inspired version from, each should have a lighter and a darker mode."</i> Each family is inspired by a colour variant the classic phpBB era actually ran, keeps prosilver’s grammar (filled band, pale tab strip, white cards on a tinted ground, striped rows, rounded corners) and none of its hexes — every value is ours, and every text pair clears AA (<code>test/skins.test.js</code> recomputes 24 role pairs per skin).</p>
+
+<p><b>Read this before comparing.</b> MOCKS.md says compare in ONE skin, because the skin is usually noise. Here the skin <em>is</em> the subject, so every Proposed frame is deliberately in a different skin, and each frame’s caption and the manifest say which. Nothing structural differs between any two frames — a skin restyles and restructures nothing — so any layout difference you think you see is the same tree in different clothes. The pictures in the board fixture point at a test CDN and never load; the empty stages are the fixture, not the skin.</p>
+
+<h2>Open decisions</h2>
+<div class="tablewrap"><table>
+<tr><th>#</th><th>Decision</th><th>Proposed</th><th>Alternatives</th></tr>
+<tr><td>1</td><td>The names</td><td>Rosewater · Lavender · Apricot · Seaglass (family labels, no palette words); skin labels carry the flavour — (blush)/(plum), (lilac)/(twilight), (cream)/(espresso), (foam)/(deep water)</td><td>Any rename is a one-line registry edit; <code>validateFamilies</code> refuses a palette word or a parenthetical in a family label</td></tr>
+<tr><td>2</td><td>Seaglass is cool</td><td>Keep — the ask said diversity, and three warm + one mint reads as a set</td><td>Drop it for a fourth warm (a coral or a honey); or keep four and add a fifth</td></tr>
+<tr><td>3</td><td>Serif display on Rosewater and Apricot</td><td>Georgia for the wordmark and headings; Trebuchet elsewhere</td><td>Trebuchet throughout (Lavender and Seaglass already are) — a flatter, more prosilver look</td></tr>
+<tr><td>4</td><td>Corner radius</td><td>7px on three families (prosilver’s), 10px on Seaglass (the Air/Aero line was rounder)</td><td>One radius for all four</td></tr>
+<tr><td>5</td><td>Apricot’s band</td><td>#C2551F — white on it is 4.55:1, the tightest pair in the set; a warmer terracotta fails the button fill that shares the value</td><td>Split band and button into two values so the band can run warmer at the 3.0 floor a band earns</td></tr>
+</table></div>
+
+<h2>Current — the two Forage skins main ships today <small>(<code>forage@fe2b77b</code>)</small></h2>
+<section class="family current">
+  <div class="pair">
+    <div class="side">
+  <h4>Forage (light) <code>default</code></h4>
+  <div class="sw"><span title="--bg: #F8F4EC"><i style="background:#F8F4EC"></i><code>bg</code><small>#F8F4EC</small></span><span title="--card: #FFFFFF"><i style="background:#FFFFFF"></i><code>card</code><small>#FFFFFF</small></span><span title="--link: #38683F"><i style="background:#38683F"></i><code>link</code><small>#38683F</small></span><span title="--text: #2B251C"><i style="background:#2B251C"></i><code>text</code><small>#2B251C</small></span><span title="--muted: #68604F"><i style="background:#68604F"></i><code>muted</code><small>#68604F</small></span></div>
+  <div class="frames">
+    <figure><img src="snaps/warm-skins/board-lens.phone.current.png" alt="board · 390×844" loading="lazy"><figcaption>board · 390×844</figcaption></figure>
+    <figure><img src="snaps/warm-skins/board-lens.desktop.current.png" alt="board · 1280×900" loading="lazy"><figcaption>board · 1280×900</figcaption></figure>
+    <figure><img src="snaps/warm-skins/thread-lens.phone.current.png" alt="thread · 390×844" loading="lazy"><figcaption>thread · 390×844</figcaption></figure>
+  </div>
+</div>
+    <div class="side">
+  <h4>Forage (dark) <code>forage-dark</code></h4>
+  <div class="sw"><span title="--bg: #262019"><i style="background:#262019"></i><code>bg</code><small>#262019</small></span><span title="--card: #31291F"><i style="background:#31291F"></i><code>card</code><small>#31291F</small></span><span title="--link: #A5CD98"><i style="background:#A5CD98"></i><code>link</code><small>#A5CD98</small></span><span title="--text: #EFE7D9"><i style="background:#EFE7D9"></i><code>text</code><small>#EFE7D9</small></span><span title="--muted: #B5A88F"><i style="background:#B5A88F"></i><code>muted</code><small>#B5A88F</small></span></div>
+  <div class="frames">
+    <figure><img src="snaps/warm-skins/board-lens.phone.forage-dark.current.png" alt="board · 390×844" loading="lazy"><figcaption>board · 390×844</figcaption></figure>
+    <figure><img src="snaps/warm-skins/board-lens.desktop.forage-dark.current.png" alt="board · 1280×900" loading="lazy"><figcaption>board · 1280×900</figcaption></figure>
+    <figure><img src="snaps/warm-skins/thread-lens.phone.forage-dark.current.png" alt="thread · 390×844" loading="lazy"><figcaption>thread · 390×844</figcaption></figure>
+  </div>
+</div>
+  </div>
+</section>
+
+<h2>Proposed — the warm set <small>(<code>forage@35b64db</code>)</small></h2>
+
+<section class="family" id="rosewater">
+  <h3>Rosewater <small>— the pink prosilver recolours (ColorizeIt and its long tail); Georgia display</small></h3>
+  <div class="pair">
+    <div class="side">
+  <h4>Rosewater (blush) <code>rosewater</code></h4>
+  <div class="sw"><span title="--bg: #FBF1F3"><i style="background:#FBF1F3"></i><code>bg</code><small>#FBF1F3</small></span><span title="--card: #FFFFFF"><i style="background:#FFFFFF"></i><code>card</code><small>#FFFFFF</small></span><span title="--band-fill: #B83A65"><i style="background:#B83A65"></i><code>band-fill</code><small>#B83A65</small></span><span title="--nav-fill: #F3D9E0"><i style="background:#F3D9E0"></i><code>nav-fill</code><small>#F3D9E0</small></span><span title="--link: #A8244F"><i style="background:#A8244F"></i><code>link</code><small>#A8244F</small></span><span title="--link-hover: #7E1A3B"><i style="background:#7E1A3B"></i><code>link-hover</code><small>#7E1A3B</small></span><span title="--text: #3D262E"><i style="background:#3D262E"></i><code>text</code><small>#3D262E</small></span><span title="--muted: #75565F"><i style="background:#75565F"></i><code>muted</code><small>#75565F</small></span></div>
+  <div class="frames">
+    <figure><img src="snaps/warm-skins/board-lens.phone.rosewater.png" alt="board · 390×844" loading="lazy"><figcaption>board · 390×844</figcaption></figure>
+    <figure><img src="snaps/warm-skins/board-lens.desktop.rosewater.png" alt="board · 1280×900" loading="lazy"><figcaption>board · 1280×900</figcaption></figure>
+    <figure><img src="snaps/warm-skins/thread-lens.phone.rosewater.png" alt="thread · 390×844" loading="lazy"><figcaption>thread · 390×844</figcaption></figure>
+  </div>
+</div>
+    <div class="side">
+  <h4>Rosewater (plum) <code>rosewater-dark</code></h4>
+  <div class="sw"><span title="--bg: #2A1B22"><i style="background:#2A1B22"></i><code>bg</code><small>#2A1B22</small></span><span title="--card: #35232C"><i style="background:#35232C"></i><code>card</code><small>#35232C</small></span><span title="--band-fill: #7E2A4C"><i style="background:#7E2A4C"></i><code>band-fill</code><small>#7E2A4C</small></span><span title="--nav-fill: #331F29"><i style="background:#331F29"></i><code>nav-fill</code><small>#331F29</small></span><span title="--link: #F2A2BC"><i style="background:#F2A2BC"></i><code>link</code><small>#F2A2BC</small></span><span title="--link-hover: #FFC2D4"><i style="background:#FFC2D4"></i><code>link-hover</code><small>#FFC2D4</small></span><span title="--text: #F3E4E9"><i style="background:#F3E4E9"></i><code>text</code><small>#F3E4E9</small></span><span title="--muted: #C2A3AE"><i style="background:#C2A3AE"></i><code>muted</code><small>#C2A3AE</small></span></div>
+  <div class="frames">
+    <figure><img src="snaps/warm-skins/board-lens.phone.rosewater-dark.png" alt="board · 390×844" loading="lazy"><figcaption>board · 390×844</figcaption></figure>
+    <figure><img src="snaps/warm-skins/board-lens.desktop.rosewater-dark.png" alt="board · 1280×900" loading="lazy"><figcaption>board · 1280×900</figcaption></figure>
+    <figure><img src="snaps/warm-skins/thread-lens.phone.rosewater-dark.png" alt="thread · 390×844" loading="lazy"><figcaption>thread · 390×844</figcaption></figure>
+  </div>
+</div>
+  </div>
+</section>
+<section class="family" id="lavender">
+  <h3>Lavender <small>— the purple recolours and the night-sky subsilver2 styles (Milky Way); Trebuchet</small></h3>
+  <div class="pair">
+    <div class="side">
+  <h4>Lavender (lilac) <code>lavender</code></h4>
+  <div class="sw"><span title="--bg: #F4F0FA"><i style="background:#F4F0FA"></i><code>bg</code><small>#F4F0FA</small></span><span title="--card: #FFFFFF"><i style="background:#FFFFFF"></i><code>card</code><small>#FFFFFF</small></span><span title="--band-fill: #6F49B8"><i style="background:#6F49B8"></i><code>band-fill</code><small>#6F49B8</small></span><span title="--nav-fill: #E4DBF2"><i style="background:#E4DBF2"></i><code>nav-fill</code><small>#E4DBF2</small></span><span title="--link: #6A3FB5"><i style="background:#6A3FB5"></i><code>link</code><small>#6A3FB5</small></span><span title="--link-hover: #4E2A8E"><i style="background:#4E2A8E"></i><code>link-hover</code><small>#4E2A8E</small></span><span title="--text: #2E2540"><i style="background:#2E2540"></i><code>text</code><small>#2E2540</small></span><span title="--muted: #665A7C"><i style="background:#665A7C"></i><code>muted</code><small>#665A7C</small></span></div>
+  <div class="frames">
+    <figure><img src="snaps/warm-skins/board-lens.phone.lavender.png" alt="board · 390×844" loading="lazy"><figcaption>board · 390×844</figcaption></figure>
+    <figure><img src="snaps/warm-skins/board-lens.desktop.lavender.png" alt="board · 1280×900" loading="lazy"><figcaption>board · 1280×900</figcaption></figure>
+    <figure><img src="snaps/warm-skins/thread-lens.phone.lavender.png" alt="thread · 390×844" loading="lazy"><figcaption>thread · 390×844</figcaption></figure>
+  </div>
+</div>
+    <div class="side">
+  <h4>Lavender (twilight) <code>lavender-dark</code></h4>
+  <div class="sw"><span title="--bg: #1E1A2B"><i style="background:#1E1A2B"></i><code>bg</code><small>#1E1A2B</small></span><span title="--card: #282236"><i style="background:#282236"></i><code>card</code><small>#282236</small></span><span title="--band-fill: #3F2E6E"><i style="background:#3F2E6E"></i><code>band-fill</code><small>#3F2E6E</small></span><span title="--nav-fill: #241F33"><i style="background:#241F33"></i><code>nav-fill</code><small>#241F33</small></span><span title="--link: #C3AEF0"><i style="background:#C3AEF0"></i><code>link</code><small>#C3AEF0</small></span><span title="--link-hover: #DACDF8"><i style="background:#DACDF8"></i><code>link-hover</code><small>#DACDF8</small></span><span title="--text: #E9E3F4"><i style="background:#E9E3F4"></i><code>text</code><small>#E9E3F4</small></span><span title="--muted: #B2A8C8"><i style="background:#B2A8C8"></i><code>muted</code><small>#B2A8C8</small></span></div>
+  <div class="frames">
+    <figure><img src="snaps/warm-skins/board-lens.phone.lavender-dark.png" alt="board · 390×844" loading="lazy"><figcaption>board · 390×844</figcaption></figure>
+    <figure><img src="snaps/warm-skins/board-lens.desktop.lavender-dark.png" alt="board · 1280×900" loading="lazy"><figcaption>board · 1280×900</figcaption></figure>
+    <figure><img src="snaps/warm-skins/thread-lens.phone.lavender-dark.png" alt="thread · 390×844" loading="lazy"><figcaption>thread · 390×844</figcaption></figure>
+  </div>
+</div>
+  </div>
+</section>
+<section class="family" id="apricot">
+  <h3>Apricot <small>— the coffee styles (Latte) and subsilver2’s orange hover made the primary hue; Georgia display</small></h3>
+  <div class="pair">
+    <div class="side">
+  <h4>Apricot (cream) <code>apricot</code></h4>
+  <div class="sw"><span title="--bg: #FFF6EC"><i style="background:#FFF6EC"></i><code>bg</code><small>#FFF6EC</small></span><span title="--card: #FFFFFF"><i style="background:#FFFFFF"></i><code>card</code><small>#FFFFFF</small></span><span title="--band-fill: #C2551F"><i style="background:#C2551F"></i><code>band-fill</code><small>#C2551F</small></span><span title="--nav-fill: #FAE3CC"><i style="background:#FAE3CC"></i><code>nav-fill</code><small>#FAE3CC</small></span><span title="--link: #A54118"><i style="background:#A54118"></i><code>link</code><small>#A54118</small></span><span title="--link-hover: #8C3611"><i style="background:#8C3611"></i><code>link-hover</code><small>#8C3611</small></span><span title="--text: #3E2A1C"><i style="background:#3E2A1C"></i><code>text</code><small>#3E2A1C</small></span><span title="--muted: #7A5E49"><i style="background:#7A5E49"></i><code>muted</code><small>#7A5E49</small></span></div>
+  <div class="frames">
+    <figure><img src="snaps/warm-skins/board-lens.phone.apricot.png" alt="board · 390×844" loading="lazy"><figcaption>board · 390×844</figcaption></figure>
+    <figure><img src="snaps/warm-skins/board-lens.desktop.apricot.png" alt="board · 1280×900" loading="lazy"><figcaption>board · 1280×900</figcaption></figure>
+    <figure><img src="snaps/warm-skins/thread-lens.phone.apricot.png" alt="thread · 390×844" loading="lazy"><figcaption>thread · 390×844</figcaption></figure>
+  </div>
+</div>
+    <div class="side">
+  <h4>Apricot (espresso) <code>apricot-dark</code></h4>
+  <div class="sw"><span title="--bg: #26190F"><i style="background:#26190F"></i><code>bg</code><small>#26190F</small></span><span title="--card: #322216"><i style="background:#322216"></i><code>card</code><small>#322216</small></span><span title="--band-fill: #7A3413"><i style="background:#7A3413"></i><code>band-fill</code><small>#7A3413</small></span><span title="--nav-fill: #2E1F14"><i style="background:#2E1F14"></i><code>nav-fill</code><small>#2E1F14</small></span><span title="--link: #F4B07A"><i style="background:#F4B07A"></i><code>link</code><small>#F4B07A</small></span><span title="--link-hover: #FFC99A"><i style="background:#FFC99A"></i><code>link-hover</code><small>#FFC99A</small></span><span title="--text: #F5E7D8"><i style="background:#F5E7D8"></i><code>text</code><small>#F5E7D8</small></span><span title="--muted: #C4A88E"><i style="background:#C4A88E"></i><code>muted</code><small>#C4A88E</small></span></div>
+  <div class="frames">
+    <figure><img src="snaps/warm-skins/board-lens.phone.apricot-dark.png" alt="board · 390×844" loading="lazy"><figcaption>board · 390×844</figcaption></figure>
+    <figure><img src="snaps/warm-skins/board-lens.desktop.apricot-dark.png" alt="board · 1280×900" loading="lazy"><figcaption>board · 1280×900</figcaption></figure>
+    <figure><img src="snaps/warm-skins/thread-lens.phone.apricot-dark.png" alt="thread · 390×844" loading="lazy"><figcaption>thread · 390×844</figcaption></figure>
+  </div>
+</div>
+  </div>
+</section>
+<section class="family" id="seaglass">
+  <h3>Seaglass <small>— the white-and-mint prosilver descendants (Artodia Air, Aero) with their coral hover — the cool one, for range</small></h3>
+  <div class="pair">
+    <div class="side">
+  <h4>Seaglass (foam) <code>seaglass</code></h4>
+  <div class="sw"><span title="--bg: #EEF7F4"><i style="background:#EEF7F4"></i><code>bg</code><small>#EEF7F4</small></span><span title="--card: #FFFFFF"><i style="background:#FFFFFF"></i><code>card</code><small>#FFFFFF</small></span><span title="--band-fill: #117A6D"><i style="background:#117A6D"></i><code>band-fill</code><small>#117A6D</small></span><span title="--nav-fill: #D8ECE5"><i style="background:#D8ECE5"></i><code>nav-fill</code><small>#D8ECE5</small></span><span title="--link: #0B6B5C"><i style="background:#0B6B5C"></i><code>link</code><small>#0B6B5C</small></span><span title="--link-hover: #B93E28"><i style="background:#B93E28"></i><code>link-hover</code><small>#B93E28</small></span><span title="--text: #1F3A36"><i style="background:#1F3A36"></i><code>text</code><small>#1F3A36</small></span><span title="--muted: #4F6E68"><i style="background:#4F6E68"></i><code>muted</code><small>#4F6E68</small></span></div>
+  <div class="frames">
+    <figure><img src="snaps/warm-skins/board-lens.phone.seaglass.png" alt="board · 390×844" loading="lazy"><figcaption>board · 390×844</figcaption></figure>
+    <figure><img src="snaps/warm-skins/board-lens.desktop.seaglass.png" alt="board · 1280×900" loading="lazy"><figcaption>board · 1280×900</figcaption></figure>
+    <figure><img src="snaps/warm-skins/thread-lens.phone.seaglass.png" alt="thread · 390×844" loading="lazy"><figcaption>thread · 390×844</figcaption></figure>
+  </div>
+</div>
+    <div class="side">
+  <h4>Seaglass (deep water) <code>seaglass-dark</code></h4>
+  <div class="sw"><span title="--bg: #142320"><i style="background:#142320"></i><code>bg</code><small>#142320</small></span><span title="--card: #1C2E2A"><i style="background:#1C2E2A"></i><code>card</code><small>#1C2E2A</small></span><span title="--band-fill: #0F5A50"><i style="background:#0F5A50"></i><code>band-fill</code><small>#0F5A50</small></span><span title="--nav-fill: #182A26"><i style="background:#182A26"></i><code>nav-fill</code><small>#182A26</small></span><span title="--link: #7FD6C2"><i style="background:#7FD6C2"></i><code>link</code><small>#7FD6C2</small></span><span title="--link-hover: #FFA48E"><i style="background:#FFA48E"></i><code>link-hover</code><small>#FFA48E</small></span><span title="--text: #E3F0EC"><i style="background:#E3F0EC"></i><code>text</code><small>#E3F0EC</small></span><span title="--muted: #A5C0B9"><i style="background:#A5C0B9"></i><code>muted</code><small>#A5C0B9</small></span></div>
+  <div class="frames">
+    <figure><img src="snaps/warm-skins/board-lens.phone.seaglass-dark.png" alt="board · 390×844" loading="lazy"><figcaption>board · 390×844</figcaption></figure>
+    <figure><img src="snaps/warm-skins/board-lens.desktop.seaglass-dark.png" alt="board · 1280×900" loading="lazy"><figcaption>board · 1280×900</figcaption></figure>
+    <figure><img src="snaps/warm-skins/thread-lens.phone.seaglass-dark.png" alt="thread · 390×844" loading="lazy"><figcaption>thread · 390×844</figcaption></figure>
+  </div>
+</div>
+  </div>
+</section>
+
+<h2>Revisions</h2>
+<div class="tablewrap"><table>
+<tr><th>v</th><th>Date</th><th>What changed</th></tr>
+<tr><td>1</td><td>2026-08-30</td><td>First capture: eight skins × board (phone, desktop) + thread (phone), beside Forage light/dark from main. Plan: <code>plans/2026-08-30-plan-warm-skins.md</code>.</td></tr>
+</table></div>
+</main>
+</body>
+</html>
