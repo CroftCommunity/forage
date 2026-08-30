@@ -38,7 +38,8 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
   await shoot('board');
   // the thread with the most comments — the one whose shape a mock cares about
   const href = await s.page.evaluate(() => [...document.querySelectorAll('.postrow')]
-    .map((r) => ({ n: parseInt(r.querySelector('.postmeta a[href*="/p/"]')?.textContent || '0', 10), href: r.querySelector('.posttitle a')?.getAttribute('href') }))
+    // the replies pill on the action row (board-cards Phase 4) says "12 comments"
+    .map((r) => ({ n: parseInt((r.querySelector('.actions a.replies')?.textContent || '').match(/\d+/)?.[0] || '0', 10), href: r.querySelector('.posttitle a')?.getAttribute('href') }))
     .sort((a, b) => b.n - a.n)[0]?.href);
   await s.page.goto(`${s.origin}/#${href}`); await s.page.reload();
   await s.page.waitForSelector('.comment', { timeout: 15000 });
