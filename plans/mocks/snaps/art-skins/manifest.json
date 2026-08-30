@@ -1,0 +1,201 @@
+{
+  "capturedAt": "2026-08-30",
+  "files": [
+    {
+      "file": "thread-lens.phone.surf.png",
+      "route": "thread-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@3bf6bff",
+      "population": "lens:mock-thread",
+      "skin": "surf"
+    },
+    {
+      "file": "board-lens.phone.surf.png",
+      "route": "board-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@3bf6bff",
+      "population": "lens:mock-board",
+      "skin": "surf"
+    },
+    {
+      "file": "thread-lens.desktop.surf.png",
+      "route": "thread-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@3bf6bff",
+      "population": "lens:mock-thread",
+      "skin": "surf"
+    },
+    {
+      "file": "board-lens.desktop.surf.png",
+      "route": "board-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@3bf6bff",
+      "population": "lens:mock-board",
+      "skin": "surf"
+    },
+    {
+      "file": "thread-lens.phone.surf-dark.png",
+      "route": "thread-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@3bf6bff",
+      "population": "lens:mock-thread",
+      "skin": "surf-dark"
+    },
+    {
+      "file": "board-lens.phone.surf-dark.png",
+      "route": "board-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@3bf6bff",
+      "population": "lens:mock-board",
+      "skin": "surf-dark"
+    },
+    {
+      "file": "thread-lens.desktop.surf-dark.png",
+      "route": "thread-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@3bf6bff",
+      "population": "lens:mock-thread",
+      "skin": "surf-dark"
+    },
+    {
+      "file": "board-lens.desktop.surf-dark.png",
+      "route": "board-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@3bf6bff",
+      "population": "lens:mock-board",
+      "skin": "surf-dark"
+    },
+    {
+      "file": "thread-lens.phone.nebula.png",
+      "route": "thread-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@3bf6bff",
+      "population": "lens:mock-thread",
+      "skin": "nebula"
+    },
+    {
+      "file": "board-lens.phone.nebula.png",
+      "route": "board-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@3bf6bff",
+      "population": "lens:mock-board",
+      "skin": "nebula"
+    },
+    {
+      "file": "thread-lens.desktop.nebula.png",
+      "route": "thread-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@3bf6bff",
+      "population": "lens:mock-thread",
+      "skin": "nebula"
+    },
+    {
+      "file": "board-lens.desktop.nebula.png",
+      "route": "board-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@3bf6bff",
+      "population": "lens:mock-board",
+      "skin": "nebula"
+    },
+    {
+      "file": "thread-lens.phone.nebula-dark.png",
+      "route": "thread-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@3bf6bff",
+      "population": "lens:mock-thread",
+      "skin": "nebula-dark"
+    },
+    {
+      "file": "board-lens.phone.nebula-dark.png",
+      "route": "board-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@3bf6bff",
+      "population": "lens:mock-board",
+      "skin": "nebula-dark"
+    },
+    {
+      "file": "thread-lens.desktop.nebula-dark.png",
+      "route": "thread-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@3bf6bff",
+      "population": "lens:mock-thread",
+      "skin": "nebula-dark"
+    },
+    {
+      "file": "board-lens.desktop.nebula-dark.png",
+      "route": "board-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@3bf6bff",
+      "population": "lens:mock-board",
+      "skin": "nebula-dark"
+    },
+    {
+      "file": "thread-lens.phone.current.png",
+      "route": "thread-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@7a701c3",
+      "population": "lens:mock-thread"
+    },
+    {
+      "file": "board-lens.phone.current.png",
+      "route": "board-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@7a701c3",
+      "population": "lens:mock-board"
+    },
+    {
+      "file": "thread-lens.desktop.current.png",
+      "route": "thread-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@7a701c3",
+      "population": "lens:mock-thread"
+    },
+    {
+      "file": "board-lens.desktop.current.png",
+      "route": "board-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@7a701c3",
+      "population": "lens:mock-board"
+    }
+  ]
+}
