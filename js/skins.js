@@ -74,6 +74,14 @@ export const FAMILIES = Object.freeze({
   // family above stays exactly as it is — this is prosilver's blues on the
   // warm set's grammar, not a replacement for the classic board.
   cornflower: { label: 'Cornflower' },
+  // The GRAPHICAL pair (owner, 2026-08-30: "not-just-color themes … surfing,
+  // ocean and beach vibes … another that is like a space theme … themeing
+  // along graphical lines along with color"). These are the first skins to
+  // fill the art slots (--page-art, --band-art, --card-art, --accent-glow);
+  // today from gradients and inline SVG, with /skins/art/ as the slot the
+  // owner's images drop into.
+  surf: { label: 'Surf' },
+  nebula: { label: 'Nebula' },
 });
 
 export const SKINS = Object.freeze({
@@ -100,6 +108,10 @@ export const SKINS = Object.freeze({
   'seaglass-dark': { label: 'Seaglass (deep water)', file: 'skins/seaglass-dark.css', palette: 'dark', family: 'seaglass' },
   cornflower: { label: 'Cornflower (sky)', file: 'skins/cornflower.css', palette: 'light', family: 'cornflower' },
   'cornflower-dark': { label: 'Cornflower (midnight)', file: 'skins/cornflower-dark.css', palette: 'dark', family: 'cornflower' },
+  surf: { label: 'Surf (beach day)', file: 'skins/surf.css', palette: 'light', family: 'surf' },
+  'surf-dark': { label: 'Surf (night swell)', file: 'skins/surf-dark.css', palette: 'dark', family: 'surf' },
+  nebula: { label: 'Nebula (observatory)', file: 'skins/nebula.css', palette: 'light', family: 'nebula' },
+  'nebula-dark': { label: 'Nebula (deep field)', file: 'skins/nebula-dark.css', palette: 'dark', family: 'nebula' },
 });
 
 // ---- families -------------------------------------------------------------

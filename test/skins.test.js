@@ -574,6 +574,14 @@ const CHROME_TOKENS = {
   '--radius-sm':    '4px',
   '--radius-media': '8px',
   '--radius-round': '50%',
+  // The ART slots (plan 2026-08-30-plan-warm-skins § Graphical skins). A skin
+  // could move colours, fonts and radii and nothing else; a picture had no
+  // token to ride on. Each is a <bg-image> layer list painted OVER the solid
+  // token it belongs to, so `none` is byte-identical to today.
+  '--page-art':     'none',             // body:      var(--page-art), var(--bg)
+  '--band-art':     'none',             // .masthead: var(--band-art), var(--band-fill)
+  '--card-art':     'none',             // .card:     var(--card-art), var(--card)
+  '--accent-glow':  'none',             // text-shadow on the wordmark and the active nav
 };
 
 test('2: every forum-chrome token is declared in tokens.css', () => {
@@ -693,9 +701,9 @@ test('the tag chip clears AA in every skin — the floor applies to the ROLE, no
 // blues on the same grammar, beside the untouched phpBB family, not instead of it.
 // ---------------------------------------------------------------------------
 
-const NEW_SET = ['rosewater', 'lavender', 'apricot', 'seaglass', 'cornflower'];
+const NEW_SET = ['rosewater', 'lavender', 'apricot', 'seaglass', 'cornflower', 'surf', 'nebula'];
 
-test('the new set: rosewater, lavender, apricot, seaglass and cornflower each ship a light AND a dark skin', () => {
+test('the new set: rosewater, lavender, apricot, seaglass, cornflower, surf and nebula each ship a light AND a dark skin', () => {
   const rows = families();
   for (const fam of NEW_SET) {
     assert.ok(FAMILIES[fam], `family ${fam} is registered`);
@@ -760,4 +768,72 @@ test('every skin holds AA on every pair its chrome paints, at the threshold the 
     }
   }
   assert.deepEqual(failures, [], `AA fails on ${failures.length} pair(s):\n  ${failures.join('\n  ')}`);
+});
+
+
+// ---------------------------------------------------------------------------
+// Graphical skins. Text never sits on a picture: the art slots paint UNDER the
+// solid token they belong to, and a gradient's every colour stop is graded
+// against the ink that sits on it — so gradient art is measured, not hoped.
+// A url() image cannot be graded here; it is allowed only from this repo (a
+// skin that fetched from a third party would be a tracker wearing a palette)
+// or inline as a data: URI, and docs/SKINS.md carries the texture rule.
+// ---------------------------------------------------------------------------
+
+const ART_SLOTS = [
+  // slot            the ink that sits on it   floor
+  ['--band-art',     '--band-ink',             4.5],   // 14px nav links sit on it (decision 7)
+  ['--page-art',     '--text',                 4.5],
+  ['--card-art',     '--text',                 4.5],
+];
+
+const hexStops = (value) => [...String(value).matchAll(/#[0-9a-f]{6}\b|#[0-9a-f]{3}\b/gi)].map((m) => m[0]);
+
+test('graphical: surf and nebula actually USE the art slots, so the slots are exercised by a shipping skin', () => {
+  for (const id of ['surf', 'surf-dark', 'nebula', 'nebula-dark']) {
+    const css = readFileSync(join(root, SKINS[id].file), 'utf8');
+    assert.notEqual(tokenValue(css, '--band-art'), null, `${id} paints the band`);
+    assert.notEqual(tokenValue(css, '--page-art'), null, `${id} paints the page ground`);
+  }
+});
+
+test('graphical: every colour stop in an art gradient clears the floor against the ink on it', () => {
+  const base = readFileSync(join(root, 'css/tokens.css'), 'utf8');
+  const failures = [];
+  for (const [id, s] of Object.entries(SKINS)) {
+    if (!s.file) continue;
+    const css = base + '\n' + readFileSync(join(root, s.file), 'utf8');
+    for (const [slot, inkName, floor] of ART_SLOTS) {
+      const art = tokenValue(css, slot);
+      if (!art || art === 'none') continue;
+      const ink = tokenValue(css, inkName);
+      for (const stop of hexStops(art)) {
+        const ratio = contrastOf(ink, stop);
+        if (ratio < floor) failures.push(`${id}: ${inkName} ${ink} on ${slot} stop ${stop} = ${ratio.toFixed(2)} (floor ${floor})`);
+      }
+    }
+  }
+  assert.deepEqual(failures, [], `art stops under the floor:\n  ${failures.join('\n  ')}`);
+});
+
+test('graphical: a url() in a skin is same-repo (skins/art/…) or inline — never a third party', () => {
+  for (const [id, s] of Object.entries(SKINS)) {
+    if (!s.file) continue;
+    const css = readFileSync(join(root, s.file), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    for (const m of css.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/g)) {
+      const ref = m[1];
+      if (ref.startsWith('data:')) continue;
+      assert.match(ref, /^\/skins\/art\//, `${id} references ${ref} — art lives under /skins/art/ or inline`);
+      readFileSync(join(root, ref.slice(1))); // throws if the file is missing
+    }
+  }
+});
+
+test('graphical: an art skin keeps its cards OPAQUE hex — the one surface text is promised', () => {
+  for (const [id, s] of Object.entries(SKINS)) {
+    if (!s.file) continue;
+    const css = readFileSync(join(root, s.file), 'utf8');
+    if ((tokenValue(css, '--page-art') ?? 'none') === 'none') continue;
+    assert.match(tokenValue(css, '--card') ?? '', /^#[0-9a-f]{6}$/i, `${id} paints the page but its --card is not opaque hex`);
+  }
 });

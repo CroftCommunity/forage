@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forage Art Skins v2</title>
+<meta name="mock-version" content="2">
+<meta name="mock-baseline" content="forage@7a701c3">
+<meta name="mock-proposal" content="forage@3bf6bff">
+<style>
+:root{--page-bg:#F6F4F0;--page-card:#fff;--page-ink:#26231F;--page-muted:#6B665E;--page-line:#E2DDD4}
+body{margin:0;background:var(--page-bg);color:var(--page-ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1480px;margin:0 auto;padding:24px 20px 60px}
+h1{font-size:26px;margin:0 0 4px} h2{font-size:19px;margin:36px 0 10px} h3{font-size:18px;margin:0 0 12px} h3 small{font-weight:400;color:var(--page-muted);font-size:14px}
+h4{margin:0 0 8px;font-size:15px} h4 code{font-weight:400;color:var(--page-muted)}
+p{max-width:78ch} .meta{color:var(--page-muted);font-size:13px;margin-bottom:18px} .art{font-size:12px;color:var(--page-muted);margin:-6px 0 10px;max-width:none}
+code{font-family:ui-monospace,Menlo,monospace;font-size:.92em}
+table{border-collapse:collapse;font-size:14px;width:100%} th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--page-line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page-muted)}
+.tablewrap{overflow-x:auto;background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:6px 8px}
+.family{background:var(--page-card);border:1px solid var(--page-line);border-radius:10px;padding:18px;margin:18px 0}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:18px} @media (max-width:1000px){.pair{grid-template-columns:1fr}}
+.side{min-width:0}
+.frames{display:grid;grid-template-columns:130px 1fr 130px;gap:10px;align-items:start}
+@media (max-width:700px){.frames{grid-template-columns:1fr 1fr}}
+figure{margin:0;min-width:0} figure img{width:100%;height:auto;display:block;border:1px solid var(--page-line);border-radius:6px}
+figcaption{font-size:11px;color:var(--page-muted);margin-top:4px}
+.sw{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px} .sw span{display:flex;flex-direction:column;align-items:center;font-size:10px;color:var(--page-muted)}
+.sw i{display:block;width:34px;height:22px;border-radius:4px;border:1px solid rgba(0,0,0,.15)} .sw small{font-family:ui-monospace,Menlo,monospace;font-size:9px}
+.current .pair{opacity:.92}
+</style>
+</head>
+<body>
+<main>
+<h1>Forage — graphical skins: Surf and Nebula, each with a lighter and a darker side</h1>
+<p class="meta">Mock v2 · EXPERIMENTAL (branch <code>claude/art-skins</code>, stacked on the landed warm set) · Current frame <code>forage@7a701c3</code> (main) · Proposed frames <code>forage@3bf6bff</code> · every frame is a capture of the engine by <code>scripts/mock-snaps.mjs --skin</code> over the hermetic lens fixtures, signed out, 390×844 and 1280×900 · manifest: <code>snaps/art-skins/manifest.json</code></p>
+
+<p><b>What this shows.</b> The ask (owner, 2026-08-30): <i>"a couple not-just-color themes for like say surfing, ocean and beach vibes, thinking sunset and beach colors with some ocean … another that is like a space theme … themeing along graphical lines along with color."</i> Until now a skin could move colours, fonts and radii and nothing else — no token carried a picture. This branch adds four <b>art slots</b> to the token sheet (<code>--page-art</code>, <code>--band-art</code>, <code>--card-art</code>, <code>--accent-glow</code>), each painted <em>over</em> its solid token by <code>app.css</code>, and two families that use them. Everything you see is gradients and inline SVG — no image files yet — so it works today and is fully measured; your photos and badges drop into <code>/skins/art/&lt;family&gt;/</code> in the same slots.</p>
+
+<p><b>Read this before comparing.</b> The skin is the subject, so each frame is deliberately in a different skin. Text never sits on a picture: cards are opaque, every colour stop in a band or page gradient is graded against the ink on it (band at 4.5 — decision 7 from the warm set), and a translucent "glass" card like the space reference is the one thing deliberately <em>not</em> done, because text on glass over a nebula cannot be graded. The board fixture's pictures point at a test CDN and never load; the empty stages are the fixture.</p>
+
+<h2>Decisions <small>— 1–6 locked on review, 2026-08-30: "yep I like all of it, let's pr and merge"</small></h2>
+<div class="tablewrap"><table>
+<tr><th>#</th><th>Decision</th><th>Proposed</th><th>Alternatives / what your assets would change</th></tr>
+<tr><td>1</td><td>The art slots as the mechanism</td><td>Four tokens, painted as background layers over the solid; <code>none</code> is byte-identical to today; gradients graded, <code>url()</code> same-repo or inline only</td><td>A per-skin component stylesheet (rejected: a skin that ships component CSS can hide a moderation notice — docs/SKINS.md)</td></tr>
+<tr><td>2</td><td>Where the picture goes</td><td>The masthead band is the banner slot (your surf panorama, a nebula strip); the page ground takes only a low-contrast texture (sand grain, starfield); cards take at most a faint grain</td><td>A full-bleed photo behind the whole page (rejected: headings like "Discover" sit on the page ground, not on a card)</td></tr>
+<tr><td>3</td><td>Surf’s palette</td><td>Sand ground with a sky gradient at the top, sunset band (plum → coral → ember) with a foam line, ocean-teal links, coral hover; night swell = deep ocean, dusk band, sunset links</td><td>More ocean (teal ground) and less sand; the surfer/wave badges as a wordmark glyph next to “Forage”</td></tr>
+<tr><td>4</td><td>Nebula’s palette</td><td>Deep field = near-black with a starfield and violet/teal veils, indigo→teal band, neon-cyan links with glow, cyan-rimmed cards; observatory = moon-dust gray keeping the dark band</td><td>Planet-scape band from your fourth reference; a warmer nebula (magenta) instead of teal</td></tr>
+<tr><td>5</td><td>The glow</td><td>Wordmark and active nav only</td><td>Also on links (louder; risks legibility on the 14px nav)</td></tr>
+<tr><td>6</td><td>Assets you supply</td><td>Band: 1600×120 and 800×120 WebP, subject weighted right, ≤150 KB, veiled by the skin to ≥4.5 under the wordmark. Page texture: 512×512 seamless tile within the ground’s luminance band. Only assets you own or GPL-compatible ship in the repo</td><td>—</td></tr>
+</table></div>
+
+<h2>Current — Forage (light), main <small>(<code>forage@7a701c3</code>)</small></h2>
+<section class="family current"><div class="pair"><div class="side">
+  <h4>Forage (light) <code>default</code></h4>
+  <div class="sw"><span title="--bg: #F8F4EC"><i style="background:#F8F4EC"></i><code>bg</code><small>#F8F4EC</small></span><span title="--card: #FFFFFF"><i style="background:#FFFFFF"></i><code>card</code><small>#FFFFFF</small></span><span title="--link: #38683F"><i style="background:#38683F"></i><code>link</code><small>#38683F</small></span><span title="--text: #2B251C"><i style="background:#2B251C"></i><code>text</code><small>#2B251C</small></span><span title="--muted: #68604F"><i style="background:#68604F"></i><code>muted</code><small>#68604F</small></span></div>
+  <div class="frames">
+    <figure><img src="snaps/art-skins/board-lens.phone.current.png" alt="board · 390×844" loading="lazy"><figcaption>board · 390×844</figcaption></figure>
+    <figure><img src="snaps/art-skins/board-lens.desktop.current.png" alt="board · 1280×900" loading="lazy"><figcaption>board · 1280×900</figcaption></figure>
+    <figure><img src="snaps/art-skins/thread-lens.phone.current.png" alt="thread · 390×844" loading="lazy"><figcaption>thread · 390×844</figcaption></figure>
+  </div>
+</div></div></section>
+
+<h2>Proposed <small>(<code>forage@3bf6bff</code>)</small></h2>
+<section class="family" id="surf">
+  <h3>Surf <small>— sand, sunset band with a foam line, ocean links</small></h3>
+  <div class="pair"><div class="side">
+  <h4>Surf (beach day) <code>surf</code></h4>
+  <div class="sw"><span title="--bg: #F7ECDA"><i style="background:#F7ECDA"></i><code>bg</code><small>#F7ECDA</small></span><span title="--card: #FFFFFF"><i style="background:#FFFFFF"></i><code>card</code><small>#FFFFFF</small></span><span title="--band-fill: #C24E3A"><i style="background:#C24E3A"></i><code>band-fill</code><small>#C24E3A</small></span><span title="--nav-fill: #DDEEF1"><i style="background:#DDEEF1"></i><code>nav-fill</code><small>#DDEEF1</small></span><span title="--link: #0F6E8C"><i style="background:#0F6E8C"></i><code>link</code><small>#0F6E8C</small></span><span title="--link-hover: #B9452F"><i style="background:#B9452F"></i><code>link-hover</code><small>#B9452F</small></span><span title="--text: #23343F"><i style="background:#23343F"></i><code>text</code><small>#23343F</small></span><span title="--muted: #5C6B75"><i style="background:#5C6B75"></i><code>muted</code><small>#5C6B75</small></span></div><p class="art"><b>art slots:</b> page-art <code>gradient</code> · band-art <code>gradient + inline SVG</code> · card-art <code>none</code> · accent-glow <code>none</code></p>
+  <div class="frames">
+    <figure><img src="snaps/art-skins/board-lens.phone.surf.png" alt="board · 390×844" loading="lazy"><figcaption>board · 390×844</figcaption></figure>
+    <figure><img src="snaps/art-skins/board-lens.desktop.surf.png" alt="board · 1280×900" loading="lazy"><figcaption>board · 1280×900</figcaption></figure>
+    <figure><img src="snaps/art-skins/thread-lens.phone.surf.png" alt="thread · 390×844" loading="lazy"><figcaption>thread · 390×844</figcaption></figure>
+  </div>
+</div><div class="side">
+  <h4>Surf (night swell) <code>surf-dark</code></h4>
+  <div class="sw"><span title="--bg: #0E2233"><i style="background:#0E2233"></i><code>bg</code><small>#0E2233</small></span><span title="--card: #163445"><i style="background:#163445"></i><code>card</code><small>#163445</small></span><span title="--band-fill: #3B2A55"><i style="background:#3B2A55"></i><code>band-fill</code><small>#3B2A55</small></span><span title="--nav-fill: #12293C"><i style="background:#12293C"></i><code>nav-fill</code><small>#12293C</small></span><span title="--link: #F4B77A"><i style="background:#F4B77A"></i><code>link</code><small>#F4B77A</small></span><span title="--link-hover: #FFD4A3"><i style="background:#FFD4A3"></i><code>link-hover</code><small>#FFD4A3</small></span><span title="--text: #EAF3F7"><i style="background:#EAF3F7"></i><code>text</code><small>#EAF3F7</small></span><span title="--muted: #A9BFCB"><i style="background:#A9BFCB"></i><code>muted</code><small>#A9BFCB</small></span></div><p class="art"><b>art slots:</b> page-art <code>gradient</code> · band-art <code>gradient + inline SVG</code> · card-art <code>none</code> · accent-glow <code>none</code></p>
+  <div class="frames">
+    <figure><img src="snaps/art-skins/board-lens.phone.surf-dark.png" alt="board · 390×844" loading="lazy"><figcaption>board · 390×844</figcaption></figure>
+    <figure><img src="snaps/art-skins/board-lens.desktop.surf-dark.png" alt="board · 1280×900" loading="lazy"><figcaption>board · 1280×900</figcaption></figure>
+    <figure><img src="snaps/art-skins/thread-lens.phone.surf-dark.png" alt="thread · 390×844" loading="lazy"><figcaption>thread · 390×844</figcaption></figure>
+  </div>
+</div></div>
+</section>
+<section class="family" id="nebula">
+  <h3>Nebula <small>— starfield and nebula veils, indigo→teal band, neon glow</small></h3>
+  <div class="pair"><div class="side">
+  <h4>Nebula (deep field) <code>nebula-dark</code></h4>
+  <div class="sw"><span title="--bg: #0B0D1A"><i style="background:#0B0D1A"></i><code>bg</code><small>#0B0D1A</small></span><span title="--card: #151833"><i style="background:#151833"></i><code>card</code><small>#151833</small></span><span title="--band-fill: #1B1540"><i style="background:#1B1540"></i><code>band-fill</code><small>#1B1540</small></span><span title="--nav-fill: #10132A"><i style="background:#10132A"></i><code>nav-fill</code><small>#10132A</small></span><span title="--link: #7FE3F0"><i style="background:#7FE3F0"></i><code>link</code><small>#7FE3F0</small></span><span title="--link-hover: #B9F2FA"><i style="background:#B9F2FA"></i><code>link-hover</code><small>#B9F2FA</small></span><span title="--text: #E9E8F5"><i style="background:#E9E8F5"></i><code>text</code><small>#E9E8F5</small></span><span title="--muted: #A7A9C8"><i style="background:#A7A9C8"></i><code>muted</code><small>#A7A9C8</small></span></div><p class="art"><b>art slots:</b> page-art <code>gradient + inline SVG</code> · band-art <code>gradient</code> · card-art <code>none</code> · accent-glow <code>0 0 8px rgba(127, 227, 240, .55)</code></p>
+  <div class="frames">
+    <figure><img src="snaps/art-skins/board-lens.phone.nebula-dark.png" alt="board · 390×844" loading="lazy"><figcaption>board · 390×844</figcaption></figure>
+    <figure><img src="snaps/art-skins/board-lens.desktop.nebula-dark.png" alt="board · 1280×900" loading="lazy"><figcaption>board · 1280×900</figcaption></figure>
+    <figure><img src="snaps/art-skins/thread-lens.phone.nebula-dark.png" alt="thread · 390×844" loading="lazy"><figcaption>thread · 390×844</figcaption></figure>
+  </div>
+</div><div class="side">
+  <h4>Nebula (observatory) <code>nebula</code></h4>
+  <div class="sw"><span title="--bg: #EEF0F7"><i style="background:#EEF0F7"></i><code>bg</code><small>#EEF0F7</small></span><span title="--card: #FFFFFF"><i style="background:#FFFFFF"></i><code>card</code><small>#FFFFFF</small></span><span title="--band-fill: #1B1540"><i style="background:#1B1540"></i><code>band-fill</code><small>#1B1540</small></span><span title="--nav-fill: #E2E4F0"><i style="background:#E2E4F0"></i><code>nav-fill</code><small>#E2E4F0</small></span><span title="--link: #4B4AA8"><i style="background:#4B4AA8"></i><code>link</code><small>#4B4AA8</small></span><span title="--link-hover: #2F2E7A"><i style="background:#2F2E7A"></i><code>link-hover</code><small>#2F2E7A</small></span><span title="--text: #1F2140"><i style="background:#1F2140"></i><code>text</code><small>#1F2140</small></span><span title="--muted: #5C5F80"><i style="background:#5C5F80"></i><code>muted</code><small>#5C5F80</small></span></div><p class="art"><b>art slots:</b> page-art <code>gradient + inline SVG</code> · band-art <code>gradient</code> · card-art <code>none</code> · accent-glow <code>0 0 6px rgba(120, 140, 220, .35)</code></p>
+  <div class="frames">
+    <figure><img src="snaps/art-skins/board-lens.phone.nebula.png" alt="board · 390×844" loading="lazy"><figcaption>board · 390×844</figcaption></figure>
+    <figure><img src="snaps/art-skins/board-lens.desktop.nebula.png" alt="board · 1280×900" loading="lazy"><figcaption>board · 1280×900</figcaption></figure>
+    <figure><img src="snaps/art-skins/thread-lens.phone.nebula.png" alt="thread · 390×844" loading="lazy"><figcaption>thread · 390×844</figcaption></figure>
+  </div>
+</div></div>
+</section>
+
+<h2>Revisions</h2>
+<div class="tablewrap"><table>
+<tr><th>v</th><th>Date</th><th>What changed</th></tr>
+<tr><td>2</td><td>2026-08-30</td><td>Owner review: decisions 1–6 locked as proposed. No code change; frames stand at <code>forage@3bf6bff</code>.</td></tr>
+<tr><td>1</td><td>2026-08-30</td><td>First capture: Surf and Nebula, both sides, board (phone, desktop) + thread (phone), beside Forage light from main. Gradients and inline SVG only; asset slots defined (decision 6).</td></tr>
+</table></div>
+</main>
+</body>
+</html>

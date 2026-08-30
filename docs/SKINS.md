@@ -85,6 +85,40 @@ Plus chrome that is not a role: `--card-shadow` (bevels — a value token, becau
 Every default is a **passthrough** to whatever the rule used before, so the
 default skin renders exactly as it did and only a skin changes anything.
 
+## Art slots
+
+A skin could move colours, fonts and radii and nothing else; a picture had no
+token to ride on. Four slots (2026-08-30, plan `2026-08-30-plan-warm-skins`
+§ Graphical skins), each a `<bg-image>` **layer list** that `css/app.css`
+paints OVER the solid token it belongs to, so `none` renders byte-identically:
+
+| Slot | Painted on | As | For |
+|---|---|---|---|
+| `--page-art` | `body` | `background: var(--page-art), var(--bg)` | a texture or gradient behind the cards |
+| `--band-art` | `.masthead` | `background: var(--band-art), var(--band-fill)` | the banner — where a picture goes |
+| `--card-art` | `.card` | `background: var(--card-art), var(--card)` | a faint grain at most |
+| `--accent-glow` | wordmark, active nav | `text-shadow` | the neon a space skin is made of |
+
+**Text never sits on a picture.** That is the rule, and `test/skins.test.js`
+holds four pieces of it: a skin that paints the page keeps `--card` opaque hex;
+every colour stop in an art gradient is graded against the ink on it (band at
+4.5 — the masthead's nav links are 14px normal weight; page and card at 4.5);
+a `url()` is same-repo (`/skins/art/<family>/…`) or an inline `data:` URI,
+never a third party (a skin that fetched off-site would be a tracker wearing
+a palette); and Surf and Nebula actually fill the slots, so the slots are
+exercised by a shipping skin.
+
+A `url()` image cannot be graded by the test. Two shapes are allowed, by
+convention: a **veiled banner** on the band — the skin composes a gradient
+from `--band-fill` over the image so the region under the wordmark and nav
+stays at ≥ 4.5 — and a **low-contrast texture** on the page or card, within
+the ground's luminance band (a sand grain, a starfield). The per-skin axe
+workflow (`e2e/a11y-skins.workflow.mjs`) is the backstop. Asset spec: band
+1600×120 and 800×120 WebP, subject weighted right, ≤ 150 KB; page texture a
+512×512 seamless tile. Art files are NOT in the service-worker shell — they
+are picked up by the same-origin stale-while-revalidate path — so a large
+banner cannot fail the install. Only assets we own or GPL-compatible ship.
+
 ## The importer
 
 ```
