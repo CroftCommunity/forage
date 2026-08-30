@@ -8,6 +8,11 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-08
 
+- 2026-08-30 **A link to a reply lands on it, and a board row's name holds its line.** Opening
+  a link to a specific reply in a thread now scrolls to that reply and keeps it marked, even
+  when the thread also has quotes (before, the page said "Viewing one comment" and sat at the
+  top). On the board, a long Bluesky handle no longer wraps a post's byline onto two lines.
+  (plan 2026-08-29-plan-post-and-thread / board-cards, mock v20 / v9 — the captures pass)
 - 2026-08-30 **A reply's name holds its line, and every reply offers Reply.** In a thread, a
   long Bluesky handle no longer wraps the byline onto two or three lines and pushes the ⋯
   down with it: the name shortens with an ellipsis and the time and ⋯ stay where they are.

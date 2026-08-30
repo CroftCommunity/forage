@@ -3,9 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forage Board Cards Proposals v8</title>
-<meta name="mock-version" content="8">
-<meta name="mock-baseline" content="forage@0e20a32">
+<title>Forage Board Cards Proposals v9</title>
+<meta name="mock-version" content="9">
+<meta name="mock-baseline" content="forage@c85eebe">
+<meta name="mock-proposal" content="forage@6208fb6">
 <style>
 :root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
   --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
@@ -205,6 +206,17 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
   <section>
     <div class="eyebrow">Proposal A + B</div>
     <h2>A. The like a guest cannot press &nbsp;·&nbsp; B. Share on every post</h2>
+    <div class="callout"><h3>v9 — captured (the frames the sketches below were built to)</h3>
+      <p>Real pixels of the lens board against <code>e2e/harness/mock-board.mjs</code>. <b>A, B shipped as decided:</b> signed out, the like is a dashed pill with a person glyph (a door — <code>e2e/mock-board.workflow.mjs</code> presses it); every row ends its action row with ↗ share; signed in, the pill has its arrow.
+        <b>Found:</b> on the phone a row's byline wrapped under a 30-character handle and the ⋯ dropped a line (Current); fixed on the branch (Proposed). <b>Not drawn, by design:</b> the dashed DL-010 / DL-011 chips above the feed card are the divergence ledger's, not this mock's.</p></div>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · board-lens · CURRENT (forage@c85eebe)</div>
+        <img class="shot" src="snaps/board-lens.phone.current.png" alt="Lens board signed out on a phone today: the guest pill, share on every row, and a wrapped byline under the long handle" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · board-lens · PROPOSED (forage@6208fb6)</div>
+        <img class="shot" src="snaps/board-lens.phone.proposed.png" alt="Lens board signed out on a phone on the branch: the byline holds one line" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · board-lens-in · CURRENT (forage@c85eebe)</div>
+        <img class="shot" src="snaps/board-lens-in.phone.current.png" alt="Lens board signed in on a phone: the like pill with its arrow, Join and star on the feed card" width="390"></div>
+    </div>
     <p class="sub">Today the guest's count is a read-only span dressed exactly like the live pill, so it reads as a button and ignores the touch. Proposed: the pill is honest about being a door.</p>
     <div class="stage">
       <div class="device phone"><div class="device-label">Phone · signed out · today (f374bc7 rules)</div>
@@ -267,6 +279,12 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
   <section>
     <div class="eyebrow">Proposal C</div>
     <h2>C. One toolbar, one dressing</h2>
+    <div class="callout"><h3>v9 — captured</h3>
+      <p>Shipped as decided: one row of select pills — Feed order · Card · Size · 4 — in the action-row dressing, on both frames; the media slider is gone. On a lens feed the first pill reads Feed order (DL-010), which is what “Sort” means there.</p></div>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Desktop · board-lens · CURRENT (forage@c85eebe)</div>
+        <img class="shot" src="snaps/board-lens.desktop.current.png" alt="Lens board on desktop: the toolbar reads Feed order, Card, Size 4"></div>
+    </div>
     <div class="stage">
       <div class="device phone"><div class="device-label">Today · lens board toolbar (f374bc7)</div>
         <div class="screen app" data-skin="dark" style="padding:12px"><div style="font-family:ui-serif,Georgia,serif;font-size:26px;font-weight:600;margin:6px 0 10px">Bluesky</div>
@@ -286,6 +304,14 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
   <section>
     <div class="eyebrow">Proposal D</div>
     <h2>D. The media stage, and more than one picture</h2>
+    <div class="callout"><h3>v9 — captured: a portrait picture on the stage</h3>
+      <p>Shipped as decided: a card-wide frame, the picture centred and contain-fit, a blurred copy of itself filling the sides. The fixture's pictures are SVG data URIs at the declared aspect ratio — the first capture fenced them and showed a black frame with alt text, which can prove a frame's size and nothing about its look. Identical on main and the branch.</p></div>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · board-lens-media · CURRENT (forage@c85eebe)</div>
+        <img class="shot" src="snaps/board-lens-media.phone.current.png" alt="A portrait picture on the stage on a phone: contain-fit, blurred sides" width="390"></div>
+      <div class="device desk"><div class="device-label">Desktop · board-lens-media · CURRENT (forage@c85eebe)</div>
+        <img class="shot" src="snaps/board-lens-media.desktop.current.png" alt="A portrait picture on the stage on desktop"></div>
+    </div>
     <p class="sub">One rule for every shape: a card-wide frame, height capped, the picture centred and contain-fit, a blurred copy of itself behind. Portrait, landscape, widescreen and a screenshot all fill the same rectangle. Use the <b>Pictures shown at once</b> control above to see the setting.</p>
     <div class="stage">
       <div class="device desk"><div class="device-label">Today · desktop card (220px image cap, f374bc7)</div>
@@ -364,6 +390,12 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
   <section>
     <div class="eyebrow">Proposal E + F</div>
     <h2>E. One centred column &nbsp;·&nbsp; F. The masthead stays put</h2>
+    <div class="callout"><h3>v9 — captured</h3>
+      <p>Shipped as decided: 200 / 680 / 300 — the slim nav, the content column, the quieter rail with the sign-in card for a guest, feeds, trending. Whether the masthead stays put cannot show in a still; the capture is the top of the page. Identical on main and the branch.</p></div>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Desktop · board-lens · CURRENT (forage@c85eebe)</div>
+        <img class="shot" src="snaps/board-lens.desktop.current.png" alt="Lens board on desktop: nav, content column, and the rail with the sign-in card"></div>
+    </div>
     <div class="stage">
       <div class="device desk full"><div class="device-label">Today · 1100px shell, three columns (see snaps/board.desktop.png)</div>
         <div class="screen app" data-skin="dark"><div class="masthead"><span class="wordmark"><span class="glyph">🌿</span>Forage</span><span class="acct">cp</span></div>
@@ -404,7 +436,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
 
   <section>
     <div class="eyebrow">Revisions</div>
-    <ul class="small" style="margin:0;padding-left:18px"><li><b>v8</b> — branch C landed; baseline <code>ea7ed09</code>, re-captured at <code>0e20a32</code> (<code>1fb14a6</code>, <code>f3f7897</code>). The title said v5 until the mock-alignment pass (2026-08-30) — see MOCKS.md rule 1.</li><li><b>v7</b> — branch B landed; baseline <code>674b4f3</code> (<code>2c16b47</code>)</li><li><b>v6</b> — branch A landed; the landed column; baseline <code>b54cb3e</code> (<code>6c4b508</code>)</li><li><b>v5</b> — decisions locked; the plan written. No frames changed.</li><li><b>v4</b> — the rail is optional, on by default, quieter (decision 6); the E frames take the full row so the 680px column reads at true width; a Rail control at the top. Owner review 2026-08-29.</li><li><b>v3</b> — E redrawn at 200 / 680 / 300 with a content rail (sign-in card, feeds, tags) — Reddit's ratio is advertising's, not ours; decision 8: Sign in in the guest's ⋯ menu, drawn in A. Owner review 2026-08-29.</li><li><b>v2</b> — card size 1–4 (decision 7) replaces the slider everywhere; the skin control flips the page too; the multi-picture sample has four pictures and a grids-by-count strip. Owner review 2026-08-29.</li><li><b>v1</b> — first draft from the owner's 2026-08-29 review and Reddit front-page references; baseline forage@411c40f.</li></ul>
+    <ul class="small" style="margin:0;padding-left:18px"><li><b>v9</b> — the captures pass (owner-approved, 2026-08-30): every proposal gets real frames of the lens board beside its sketch, Current from main (<code>forage@c85eebe</code>), Proposed from the branch (<code>forage@6208fb6</code>) where it differs; one thing found and fixed (a row's byline wrapped under a real handle); the sketches stay, labelled as sketches (CroftC MOCKS.md).</li><li><b>v8</b> — branch C landed; baseline <code>ea7ed09</code>, re-captured at <code>0e20a32</code> (<code>1fb14a6</code>, <code>f3f7897</code>). The title said v5 until the mock-alignment pass (2026-08-30) — see MOCKS.md rule 1.</li><li><b>v7</b> — branch B landed; baseline <code>674b4f3</code> (<code>2c16b47</code>)</li><li><b>v6</b> — branch A landed; the landed column; baseline <code>b54cb3e</code> (<code>6c4b508</code>)</li><li><b>v5</b> — decisions locked; the plan written. No frames changed.</li><li><b>v4</b> — the rail is optional, on by default, quieter (decision 6); the E frames take the full row so the 680px column reads at true width; a Rail control at the top. Owner review 2026-08-29.</li><li><b>v3</b> — E redrawn at 200 / 680 / 300 with a content rail (sign-in card, feeds, tags) — Reddit's ratio is advertising's, not ours; decision 8: Sign in in the guest's ⋯ menu, drawn in A. Owner review 2026-08-29.</li><li><b>v2</b> — card size 1–4 (decision 7) replaces the slider everywhere; the skin control flips the page too; the multi-picture sample has four pictures and a grids-by-count strip. Owner review 2026-08-29.</li><li><b>v1</b> — first draft from the owner's 2026-08-29 review and Reddit front-page references; baseline forage@411c40f.</li></ul>
   </section>
 </div>
 
