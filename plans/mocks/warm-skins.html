@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forage Warm Skins v2</title>
-<meta name="mock-version" content="2">
+<title>Forage Warm Skins v3</title>
+<meta name="mock-version" content="3">
 <meta name="mock-baseline" content="forage@fe2b77b">
-<meta name="mock-proposal" content="forage@582057d">
+<meta name="mock-proposal" content="forage@0341203">
 <style>
 :root{--page-bg:#F6F4F0;--page-card:#fff;--page-ink:#26231F;--page-muted:#6B665E;--page-line:#E2DDD4}
 body{margin:0;background:var(--page-bg);color:var(--page-ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
@@ -33,13 +33,13 @@ figcaption{font-size:11px;color:var(--page-muted);margin-top:4px}
 <body>
 <main>
 <h1>Forage — the warm set: five skin families, each with a lighter and a darker side</h1>
-<p class="meta">Mock v2 · Current frames <code>forage@fe2b77b</code> (main, the tree the owner runs) · Proposed frames <code>forage@582057d</code> (branch <code>claude/warm-skins</code>) · every frame is a capture of the engine by <code>scripts/mock-snaps.mjs</code> over the hermetic <code>lens:mock-board</code> / <code>lens:mock-thread</code> populations, signed out, at 390×844 and 1280×900 · manifest: <code>snaps/warm-skins/manifest.json</code></p>
+<p class="meta">Mock v3 · Current frames <code>forage@fe2b77b</code> (main, the tree the owner runs) · Proposed frames <code>forage@0341203</code> (branch <code>claude/warm-skins</code>) · every frame is a capture of the engine by <code>scripts/mock-snaps.mjs</code> over the hermetic <code>lens:mock-board</code> / <code>lens:mock-thread</code> populations, signed out, at 390×844 and 1280×900 · manifest: <code>snaps/warm-skins/manifest.json</code></p>
 
 <p><b>What this shows.</b> Ten new skins in five families — Rosewater, Lavender, Apricot, Seaglass, and (v2) Cornflower, the phpBB blue on the same grammar — proposed for Settings → Skin, beside the four families forage ships today (Forage, Classic BBS, Usenet gray, phpBB), all of which are cool or neutral. The ask (owner, 2026-08-30): <i>"more warm or feminine energy … look at some old popular phpbb skins with some diversity to reimplement an inspired version from, each should have a lighter and a darker mode."</i> Each family is inspired by a colour variant the classic phpBB era actually ran, keeps prosilver’s grammar (filled band, pale tab strip, white cards on a tinted ground, striped rows, rounded corners) and none of its hexes — every value is ours, and every text pair clears AA (<code>test/skins.test.js</code> recomputes 24 role pairs per skin).</p>
 
 <p><b>Read this before comparing.</b> MOCKS.md says compare in ONE skin, because the skin is usually noise. Here the skin <em>is</em> the subject, so every Proposed frame is deliberately in a different skin, and each frame’s caption and the manifest say which. Nothing structural differs between any two frames — a skin restyles and restructures nothing — so any layout difference you think you see is the same tree in different clothes. The pictures in the board fixture point at a test CDN and never load; the empty stages are the fixture, not the skin.</p>
 
-<h2>Decisions <small>— 1–6 locked on review, 2026-08-30</small></h2>
+<h2>Decisions <small>— 1–6 locked on review, 7 recorded from CI, 2026-08-30</small></h2>
 <div class="tablewrap"><table>
 <tr><th>#</th><th>Decision</th><th>Proposed</th><th>Alternatives</th><th>Status</th></tr>
 <tr><td>1</td><td>The names</td><td>Rosewater · Lavender · Apricot · Seaglass (family labels, no palette words); skin labels carry the flavour — (blush)/(plum), (lilac)/(twilight), (cream)/(espresso), (foam)/(deep water)</td><td>Any rename is a one-line registry edit; <code>validateFamilies</code> refuses a palette word or a parenthetical in a family label</td><td><b>Locked</b> v2 — owner: "I do like them all"</td></tr>
@@ -47,7 +47,8 @@ figcaption{font-size:11px;color:var(--page-muted);margin-top:4px}
 <tr><td>3</td><td>Serif display on Rosewater and Apricot</td><td>Georgia for the wordmark and headings; Trebuchet elsewhere</td><td>Trebuchet throughout (Lavender and Seaglass already are) — a flatter, more prosilver look</td><td><b>Locked</b> v2 — owner: "I do like them all"</td></tr>
 <tr><td>4</td><td>Corner radius</td><td>7px on three families (prosilver’s), 10px on Seaglass (the Air/Aero line was rounder)</td><td>One radius for all four</td><td><b>Locked</b> v2 — owner: "I do like them all"</td></tr>
 <tr><td>5</td><td>Apricot’s band</td><td>#C2551F — white on it is 4.55:1, the tightest pair in the set; a warmer terracotta fails the button fill that shares the value</td><td>Split band and button into two values so the band can run warmer at the 3.0 floor a band earns</td><td><b>Locked</b> v2 — owner: "I do like them all"</td></tr>
-<tr><td>6</td><td>The blue</td><td>Keep the phpBB pair exactly as it is (subSilver gray, squares, bevel, compact rows) AND add <b>Cornflower</b>: prosilver’s measured band <code>#4688CE</code> and navbar <code>#C9DEE8</code> on white cards over sky-tinted paper, 7px corners, Trebuchet headings — the phpBB blue on the warm set’s grammar</td><td>Rewrite the phpBB pair in this style (loses a recorded owner choice and the compact-board look)</td><td><b>Locked</b> v2 — owner: "want to keep my phpbb forum ones as well and refine along these lines … the blue one I mean"; "if you want to keep it as a blue family and just have the blue family showcase the phpbb blue that's great"</td></tr>
+<tr><td>6</td><td>The blue</td><td>Keep the phpBB pair exactly as it is (subSilver gray, squares, bevel, compact rows) AND add <b>Cornflower</b>: the phpBB skin’s band blue <code>#3A78BC</code> and prosilver’s measured navbar <code>#C9DEE8</code> on white cards over sky-tinted paper, 7px corners, Trebuchet headings — the phpBB blue on the warm set’s grammar</td><td>Rewrite the phpBB pair in this style (loses a recorded owner choice and the compact-board look)</td><td><b>Locked</b> v2 — owner: "want to keep my phpbb forum ones as well and refine along these lines … the blue one I mean"; "if you want to keep it as a blue family and just have the blue family showcase the phpbb blue that's great"</td></tr>
+<tr><td>7</td><td>The band floor</td><td>Every band pair graded at <b>4.5</b>, not 3.0: the masthead paints its nav links at 14px normal weight — body text to WCAG and axe. Apricot’s band link is white (4.55); Cornflower’s band is <code>#3A78BC</code>, not prosilver’s literal <code>#4688CE</code> (white on it is 3.70) — the same swap <code>phpbb.css</code> recorded</td><td>Paint band links bold so 3.0 applies (a structural change no skin can make); keep the literal and accept the axe failure (no)</td><td><b>Recorded</b> v3 — CI’s per-skin axe pass refused v2 with 18 violations, all masthead links on Apricot and Cornflower; the unit test now names the same four pairs</td></tr>
 </table></div>
 
 <h2>Current — the two Forage skins main ships today <small>(<code>forage@fe2b77b</code>)</small></h2>
@@ -74,7 +75,7 @@ figcaption{font-size:11px;color:var(--page-muted);margin-top:4px}
   </div>
 </section>
 
-<h2>Proposed — the warm set <small>(<code>forage@582057d</code>)</small></h2>
+<h2>Proposed — the warm set <small>(<code>forage@0341203</code>)</small></h2>
 
 <section class="family" id="rosewater">
   <h3>Rosewater <small>— the pink prosilver recolours (ColorizeIt and its long tail); Georgia display</small></h3>
@@ -173,7 +174,7 @@ figcaption{font-size:11px;color:var(--page-muted);margin-top:4px}
   <div class="pair">
     <div class="side">
   <h4>Cornflower (sky) <code>cornflower</code></h4>
-  <div class="sw"><span title="--bg: #EEF3F9"><i style="background:#EEF3F9"></i><code>bg</code><small>#EEF3F9</small></span><span title="--card: #FFFFFF"><i style="background:#FFFFFF"></i><code>card</code><small>#FFFFFF</small></span><span title="--band-fill: #4688CE"><i style="background:#4688CE"></i><code>band-fill</code><small>#4688CE</small></span><span title="--nav-fill: #C9DEE8"><i style="background:#C9DEE8"></i><code>nav-fill</code><small>#C9DEE8</small></span><span title="--link: #1B5C9E"><i style="background:#1B5C9E"></i><code>link</code><small>#1B5C9E</small></span><span title="--link-hover: #0F3F73"><i style="background:#0F3F73"></i><code>link-hover</code><small>#0F3F73</small></span><span title="--text: #1F2C3D"><i style="background:#1F2C3D"></i><code>text</code><small>#1F2C3D</small></span><span title="--muted: #56677B"><i style="background:#56677B"></i><code>muted</code><small>#56677B</small></span></div>
+  <div class="sw"><span title="--bg: #EEF3F9"><i style="background:#EEF3F9"></i><code>bg</code><small>#EEF3F9</small></span><span title="--card: #FFFFFF"><i style="background:#FFFFFF"></i><code>card</code><small>#FFFFFF</small></span><span title="--band-fill: #3A78BC"><i style="background:#3A78BC"></i><code>band-fill</code><small>#3A78BC</small></span><span title="--nav-fill: #C9DEE8"><i style="background:#C9DEE8"></i><code>nav-fill</code><small>#C9DEE8</small></span><span title="--link: #1B5C9E"><i style="background:#1B5C9E"></i><code>link</code><small>#1B5C9E</small></span><span title="--link-hover: #0F3F73"><i style="background:#0F3F73"></i><code>link-hover</code><small>#0F3F73</small></span><span title="--text: #1F2C3D"><i style="background:#1F2C3D"></i><code>text</code><small>#1F2C3D</small></span><span title="--muted: #56677B"><i style="background:#56677B"></i><code>muted</code><small>#56677B</small></span></div>
   <div class="frames">
     <figure><img src="snaps/warm-skins/board-lens.phone.cornflower.png" alt="board · 390×844" loading="lazy"><figcaption>board · 390×844</figcaption></figure>
     <figure><img src="snaps/warm-skins/board-lens.desktop.cornflower.png" alt="board · 1280×900" loading="lazy"><figcaption>board · 1280×900</figcaption></figure>
@@ -216,7 +217,8 @@ figcaption{font-size:11px;color:var(--page-muted);margin-top:4px}
 <h2>Revisions</h2>
 <div class="tablewrap"><table>
 <tr><th>v</th><th>Date</th><th>What changed</th></tr>
-<tr><td>2</td><td>2026-08-30</td><td>Owner review: decisions 1–5 locked as proposed; decision 6 added and locked — the phpBB pair stays, and Cornflower joins as the blue family. All Proposed frames re-captured at <code>forage@582057d</code>; the phpBB pair captured from main beside Cornflower.</td></tr>
+<tr><td>3</td><td>2026-08-30</td><td>Decision 7 recorded: the band floor is 4.5. Apricot’s band link → white; Cornflower’s band → <code>#3A78BC</code>. All Proposed frames re-captured at <code>forage@0341203</code>.</td></tr>
+<tr><td>2</td><td>2026-08-30</td><td>Owner review: decisions 1–5 locked as proposed; decision 6 added and locked — the phpBB pair stays, and Cornflower joins as the blue family. All Proposed frames re-captured at <code>forage@0341203</code>; the phpBB pair captured from main beside Cornflower.</td></tr>
 <tr><td>1</td><td>2026-08-30</td><td>First capture: eight skins × board (phone, desktop) + thread (phone), beside Forage light/dark from main. Plan: <code>plans/2026-08-30-plan-warm-skins.md</code>.</td></tr>
 </table></div>
 </main>
