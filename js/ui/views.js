@@ -10,7 +10,7 @@ import * as version from '../version.js';
 import { go } from '../router.js';
 import { frontiers } from '../../ledger/divergence.js';
 import { humanWait } from '../engines/limits.js';
-import { postRow, commentNode, voteBox, emptyState, gate, errorState, toast } from './components.js';
+import { postRow, commentNode,  vote, emptyState, gate, errorState, toast } from './components.js';
 import { densityDial, isCompact } from '../board-density.js';
 
 // A board scope for one feed. Derived, not spelled: the old literal was the
@@ -144,7 +144,6 @@ export function threadView(params, query) {
   // post card
   const head = el('div', { class: 'card' },
     el('div', { class: 'row', style: 'gap:12px;align-items:flex-start' },
-      voteBox('post', p.id, p, t.perms.canVote),
       el('div', { class: 'grow' },
         el('div', { class: 'row wrap', style: 'gap:6px' },
           el('a', { href: `/f/${p.feedSlug}`, class: 'xs' }, `f/${p.feedSlug}`),
@@ -156,13 +155,15 @@ export function threadView(params, query) {
         el('h1', {}, p.maskedRemoved ? '[removed by stewards]' : p.title),
         p.format === 'link' && p.url ? el('div', {}, el('a', { href: p.url, target: '_blank', rel: 'noopener noreferrer', class: 'domain' }, `${p.url} (${domainOf(p.url)})`)) : null,
         p.body && !p.maskedRemoved ? el('div', { class: 'small', html: mdLite(p.body) }) : null,
-        el('div', { class: 'postmeta' },
-          p.author ? el('a', { href: `/u/${p.author}` }, p.author) : el('span', { class: 'muted' }, '[removed]'),
-          el('span', {}, timeAgo(p.createdTs) + ' ago'),
-          el('span', {}, plural(p.commentCount, 'comment')),
-          t.perms.canReport ? linkAction('report', () => doReport('post', p.id, p.feedId)) : null,
-          saveInline('post', p.id, p.saved),
-          ...(t.perms.canModerate ? modInline('post', p) : [])))));
+        el('div', { class: 'foot' },
+          vote('post', p.id, p, t.perms.canVote), // Phase 6c: the head's pill, the row's control
+          el('div', { class: 'postmeta' },
+            p.author ? el('a', { href: `/u/${p.author}` }, p.author) : el('span', { class: 'muted' }, '[removed]'),
+            el('span', {}, timeAgo(p.createdTs) + ' ago'),
+            el('span', {}, plural(p.commentCount, 'comment')),
+            t.perms.canReport ? linkAction('report', () => doReport('post', p.id, p.feedId)) : null,
+            saveInline('post', p.id, p.saved),
+            ...(t.perms.canModerate ? modInline('post', p) : []))))));
   main.append(head);
 
   if (t.locked) main.append(el('div', { class: 'notice lock' }, '🔒 This thread is locked. New comments are disabled.'));

@@ -185,8 +185,8 @@ kbd { background: var(--green-100); border: 1px solid var(--border); border-radi
   .masthead nav a, .masthead .who a { min-width: 44px; justify-content: center; }
   /* Icon-only, and the smallest things on the page — padding, not a bigger
      glyph, so the arrows look the same and the thumb has somewhere to land. */
-  .vote, .cvote { min-width: 44px; min-height: 44px; }
-  .votebox { gap: 0; }
+  button.vote { min-width: 44px; min-height: 44px; }
+  button.avvote { min-height: 44px; justify-content: flex-end; }
 }
 
 /* ---- Buttons ---- */
@@ -219,19 +219,27 @@ kbd { background: var(--green-100); border: 1px solid var(--border); border-radi
 .badge-locked { color: var(--muted); }
 
 /* ---- Feed / post rows ---- */
-.postrow { display: grid; grid-template-columns: 40px 1fr; gap: var(--s3); padding: var(--s3) 0;
+.postrow { display: block; padding: var(--s3) var(--s2);
   border-bottom: 1px solid var(--border); }
 .postrow:nth-child(odd) { background: var(--row-odd); }
 .postrow:nth-child(even) { background: var(--row-even); }
 .postrow:last-child { border-bottom: 0; }
-.votebox { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.vote {
-  border: none; background: none; cursor: pointer; color: var(--ink-soft);
-  font-size: 18px; line-height: 1; padding: 2px 4px; border-radius: var(--radius-sm);
-}
-.vote:hover { background: var(--green-100); }
-.vote.boost.on { color: var(--boost); }
-.score { font-size: var(--t-sm); font-weight: 600; }
+/* the vote — one control, two layouts (plan 2026-08-29 post-and-thread, decision 1) */
+.foot { display: flex; flex-wrap: wrap; gap: var(--s3); align-items: center; margin-top: 4px; }
+.n { font-variant-numeric: tabular-nums; }
+.vote { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--border); border-radius: var(--radius-chip);
+  background: var(--card); color: var(--muted); padding: 3px 10px; font: inherit; font-size: var(--t-xs); font-weight: 600;
+  line-height: 1.2; cursor: default; }
+button.vote { cursor: pointer; }
+button.vote:hover { color: var(--text); border-color: var(--muted); }
+button.vote[aria-pressed="true"] { color: var(--boost); border-color: var(--boost); }
+.avvote { display: inline-flex; flex-direction: column; align-items: center; gap: 1px; width: 26px; padding: 3px 0 2px;
+  border: 1px solid var(--border); border-radius: var(--radius-chip); background: var(--card); color: var(--muted);
+  font: inherit; font-size: 12px; font-weight: 600; line-height: 1; cursor: default; }
+.avvote .arrow { font-size: 14px; }
+button.avvote { cursor: pointer; }
+button.avvote:hover { color: var(--text); border-color: var(--muted); }
+button.avvote[aria-pressed="true"] { color: var(--boost); border-color: var(--boost); }
 .posttitle { font-size: var(--t-md); font-weight: 600; }
 .posttitle a { color: var(--text); }
 .postmeta { color: var(--muted); font-size: var(--t-xs); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 2px; }
@@ -347,8 +355,6 @@ dialog.menu::backdrop { background: transparent; }
 .loadmore { font-size: var(--t-xs); margin-left: var(--gutter-hit); padding: 4px 0; }
 
 /* ---- Vote control on comments ---- */
-.cvote { border: none; background: none; cursor: pointer; color: var(--ink-soft); font-size: 13px; padding: 0 2px; }
-.cvote.boost.on { color: var(--boost); }
 
 /* ---- Notices ---- */
 .notice { border: 1px solid var(--border); border-radius: var(--radius-card); padding: var(--s3); margin-bottom: var(--s3); font-size: var(--t-sm); }
@@ -432,9 +438,7 @@ hr.rule { border: none; border-top: 1px solid var(--border); margin: var(--s4) 0
    elements ignore however tight the row gets. Shrinking the text alone left
    "compact" only ~17% denser than card, which is not a second density so much
    as a slightly smaller one. */
-.postrow.compact .votebox { gap: 0; }
-.postrow.compact .vote { font-size: 12px; padding: 0 2px; }
-.postrow.compact .score { font-size: var(--t-xs); line-height: 1.1; }
+.postrow.compact .vote { padding: 1px 8px; }
 .media-strip { display: flex; gap: 6px; margin: 6px 0; flex-wrap: wrap; }
 /* 3t: --media-max is the slider's one output; 220px is what shipped, so an
    untouched board looks exactly as it did. */

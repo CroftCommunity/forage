@@ -7,7 +7,7 @@
 // sign-in survives reloads. The lens consumes { did, handle, fetchHandler }.
 
 import { el, timeAgo, fmtScore, domainOf, plural } from '../util.js';
-import { postRow, commentNode, voteBox, skeleton, emptyState, toast, reportSheet } from './components.js';
+import { postRow, commentNode, vote, skeleton, emptyState, toast, reportSheet } from './components.js';
 import { navTree } from './nav.js';
 import { LADDER, RUNG_IDS, labelFor } from '../rings.js';
 import { lastBoard, setLastBoard, landingBoard, DIRECTORY } from '../last-board.js';
@@ -2273,7 +2273,6 @@ export function lensThreadView(params, query) {
       }));
     };
     const head = el('div', { class: 'card', style: 'display:flex;gap:10px' },
-      voteBox('post', p.id, p, !!session, 'col', lensVote(p)),
       el('div', {},
       el('div', { class: 'row wrap', style: 'gap:6px' },
         el('a', { href: `/f/${src.feedSlug}`, class: 'xs' }, `f/${src.feedSlug}`),
@@ -2282,9 +2281,11 @@ export function lensThreadView(params, query) {
       // renders below — the picture is the thing the heading stood in for.
       // A real title (text or alt-derived) keeps its heading above the media.
       p.placeholderTitle && p.media ? null : el('h1', {}, p.title.slice(0, 300)),
-      el('div', { class: 'postmeta' },
-        p.author ? el('a', { href: `/u/${encodeURIComponent(p.author)}` }, p.author) : '[muted]',
-        ` · ${plural(p.likes, 'like')} · ${timeAgo(p.createdTs)} ago · ${plural(p.commentCount, 'reply', 'replies')}`),
+      el('div', { class: 'foot' },
+        vote('post', p.id, p, !!session, { onVote: lensVote(p) }), // Phase 6c: the head's pill
+        el('div', { class: 'postmeta' },
+          p.author ? el('a', { href: `/u/${encodeURIComponent(p.author)}` }, p.author) : '[muted]',
+          ` · ${timeAgo(p.createdTs)} ago · ${plural(p.commentCount, 'reply', 'replies')}`)),
       // The post's own media, at full board size — until 2026-08-28 an image
       // post's thread page rendered no image at all.
       p.media && !p.maskedRemoved ? mediaNode(p) : null,

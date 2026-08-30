@@ -38,66 +38,46 @@ export function gate(msg) {
 // ---------- vote control (optimistic) ----------
 // onVote (optional) replaces the memory-tier write path — the lens injects
 // its like/unlike here so policy stays out of this component (invariant 2).
-export function voteBox(subjectType, id, data, canVote, orientation = 'col', onVote = null) {
-  const countEl = el('div', { class: 'score' }, fmtScore(data.likes));
-  // Owner, 2026-08-27: a reader who cannot vote is not shown vote controls —
-  // absent, not disabled, and never a control that summons a login. But the
-  // SCORE stays: the arrow is an action you cannot take, the number is a fact,
-  // and it is how you tell a busy thread from a quiet one. Read literally,
-  // "hide the vote control" would take the score with it and make every post
-  // look identical. One rule, both populations — `canVote` is already what each
-  // of them computes.
+// ---------- the vote (plan 2026-08-29 post-and-thread, decision 1) ----------
+// ONE control, two layouts: the pill `▲ 35` on a post's action row, the
+// count-over-arrow stack in a comment's avatar column. Both are a
+// button[data-vote] with a real aria-pressed; a reader who cannot vote gets
+// the same element as a read-only span carrying the count — the arrow is an
+// action you cannot take, the number is a fact (owner, 2026-08-27). The glyph
+// is an ARROW and never a heart: a like here is a promotion, not an affection.
+//
+// This folds `voteBox` and `miniVote` — two implementations of one idea, and
+// the named risk of every earlier vote change — into one. e2e/no-downvote
+// visits a row AND a comment for exactly that reason.
+export function vote(subjectType, id, data, canVote, { layout = 'pill', onVote = null } = {}) {
+  const n = el('span', { class: 'n' }, fmtScore(data.likes));
+  const arrow = el('span', { class: 'arrow', 'aria-hidden': 'true' }, '\u25B2');
+  const cls = layout === 'stack' ? 'avvote' : 'vote';
+  const parts = layout === 'stack' ? [n, arrow] : [arrow, n];
   if (!canVote) {
-    // The number needs its own name now. Signed in it is legible because the
-    // Boost button sits against it; strip that away and a screen reader
-    // announces a bare "12" with nothing saying what twelve of. role="img" +
-    // aria-label is the supported way to give a glyph-or-number its meaning
-    // without adding visible chrome a reader did not ask for.
-    countEl.setAttribute('role', 'img');
-    countEl.setAttribute('aria-label', plural(data.likes, 'like'));
-    return el('div', { class: 'votebox', 'data-readonly': '1' }, countEl);
+    // role="img" + aria-label: a bare "12" says nothing about twelve of what
+    return el('span', { class: cls, 'data-vote': subjectType, 'data-readonly': '1', role: 'img',
+      'aria-label': plural(data.likes, 'like') }, ...parts);
   }
-  // Owner, 2026-08-27: there is no downvote. It could never work on the lens
-  // (Bluesky has likes and no dislikes — DL-011) and the owner judged it not
-  // worth its surface area in the sandbox. Removing it makes the two
-  // populations AGREE, which is what lets DL-011 retire instead of being
-  // carried forever.
-  //
-  // `apply` still takes a target and still computes `next` by toggling, rather
-  // than being collapsed to a boolean. That is deliberate: the score
-  // arithmetic (`prevScore - prevVote + next`) is what makes un-boosting
-  // correct, and rewriting it around a single value is a change to working
-  // code that this removal does not need.
-  // The glyph is an ARROW and never a heart (owner, 2026-08-27): a like here is
-  // a PROMOTION — it pushes the thing up a ranking — not an affection. The word
-  // and the shape have to agree about that, and a heart says the other thing.
-  // The `.vote.boost` class stays: it is internal, six skins style it, and
-  // renaming it would churn them for no reader's benefit.
-  const boost = el('button', { class: 'vote boost' + (data.myVote === 1 ? ' on' : ''), title: 'Like', 'aria-label': 'Like' }, '▲');
+  const btn = el('button', { type: 'button', class: cls, 'data-vote': subjectType,
+    'aria-pressed': String(data.myVote === 1), 'aria-label': 'Like', title: 'Like' }, ...parts);
   let myVote = data.myVote, score = data.likes;
-
-  const apply = async (target) => {
-    if (!canVote) { toast('Log in to vote.', 'err'); return; }
+  const paint = () => { btn.setAttribute('aria-pressed', String(myVote === 1)); n.textContent = fmtScore(score); };
+  btn.addEventListener('click', async () => {
     const prevVote = myVote, prevScore = score;
-    const next = myVote === target ? 0 : target;
-    // optimistic paint
-    myVote = next; score = prevScore - prevVote + next;
-    boost.classList.toggle('on', next === 1);
-    countEl.textContent = fmtScore(score);
+    const next = myVote === 1 ? 0 : 1;
+    // optimistic paint; the arithmetic is what makes un-liking correct
+    myVote = next; score = prevScore - prevVote + next; paint();
     try {
       if (onVote) await onVote(next, prevVote);
       else await actions.setVote(subjectType, id, next);
       // store notify triggers a full re-render with the truth
     } catch (e) {
-      // revert (the "fills green then reverts" path with Fail Next armed)
-      myVote = prevVote; score = prevScore;
-      boost.classList.toggle('on', prevVote === 1);
-      countEl.textContent = fmtScore(prevScore);
+      myVote = prevVote; score = prevScore; paint(); // revert to the ORIGINAL, not one off
       if (e.message !== 'gated' && e.message !== 'banned') toast('Vote failed — reverted.', 'err');
     }
-  };
-  boost.addEventListener('click', () => apply(1));
-  return el('div', { class: 'votebox' }, boost, countEl);
+  });
+  return btn;
 }
 
 // ---------- badges ----------
@@ -277,11 +257,13 @@ export function postRow(p, viewerCanVote, opts = {}) {
     }),
     el('div', { class: 'row wrap', style: 'gap:6px;align-items:center' }, ...postBadges(p)),
     title,
-    body, meta,
+    body,
   );
-  const row = el('div', { class: 'postrow' + (p.pinned ? ' pinned-row' : '') + (opts.compact ? ' compact' : '') },
-    voteBox('post', p.id, p, viewerCanVote, 'col', opts.onVote), right);
-  return row;
+  // Decision 1: the vote is a pill on the action row; the left column is gone
+  // (the byline carries the avatar). `.foot` is NOT `.postmeta`, on purpose —
+  // mobile-fit exempts .postmeta as prose, and a tap target must be measured.
+  right.append(el('div', { class: 'foot' }, vote('post', p.id, p, viewerCanVote, { onVote: opts.onVote }), meta));
+  return el('div', { class: 'postrow' + (p.pinned ? ' pinned-row' : '') + (opts.compact ? ' compact' : '') }, right);
 }
 
 // ---------- comment tree with the signature collapse gutter (§3.3) ----------
@@ -323,8 +305,7 @@ export function commentNode(node, ctx) {
 
   const actionsRow = el('div', { class: 'comment-actions' });
   if (!node.maskedRemoved && !node.deleted) {
-    const vb = miniVote('comment', node.id, node, ctx.canVote);
-    actionsRow.append(vb.up, vb.score);
+    actionsRow.append(vote('comment', node.id, node, ctx.canVote, { layout: 'stack' }));
     if (ctx.canComment && !ctx.locked) actionsRow.append(replyButton(node, ctx));
     // Save, Report and the steward actions live in the ⋯ menu now (Phase 3).
     // Phase 2: the lens hangs its own controls here (delete-your-own-reply).
@@ -378,25 +359,6 @@ function countDesc(node) {
   return n + (node.deferred || 0);
 }
 
-function miniVote(type, id, data, canVote) {
-  // The SECOND vote control (voteBox is the first). Two implementations of one
-  // idea is why the plan named "fix one and ship" as the likely mistake here,
-  // and why e2e/no-downvote.workflow.mjs visits a comment as well as a row.
-  const score = el('span', {}, `${fmtScore(data.likes)}`);
-  let my = data.myVote, sc = data.likes;
-  const up = el('button', { class: 'cvote boost' + (my === 1 ? ' on' : ''), title: 'Like', 'aria-label': 'Like' }, '▲');
-  const apply = async (t) => {
-    if (!canVote) { toast('Log in to vote.', 'err'); return; }
-    const pv = my, ps = sc, next = my === t ? 0 : t;
-    my = next; sc = ps - pv + next;
-    up.classList.toggle('on', next === 1); score.textContent = fmtScore(sc);
-    try { await actions.setVote(type, id, next); }
-    catch (e) { my = pv; sc = ps; up.classList.toggle('on', pv === 1); score.textContent = fmtScore(ps);
-      if (e.message !== 'gated' && e.message !== 'banned') toast('Vote failed — reverted.', 'err'); }
-  };
-  up.addEventListener('click', () => apply(1));
-  return { up, score };
-}
 
 function replyButton(node, ctx) {
   const btn = el('button', {}, 'reply');

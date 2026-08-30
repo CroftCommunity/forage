@@ -4,7 +4,7 @@
 applied the same day** — see Review Log. **Pass 3 (quality gates) applied the same day** — see
 Review Log. **Not started: Phase 0 first.** Open-question severities (O2–O8) **confirmed as recommended by the owner
 2026-08-29** ("accept all as recommended"): O5/O6/O8 PHASE-GATED, O2/O3/O4/O7 ADVISORY.
-**Progress tracker:** this Status line. last green: Phase 4b (branch B) — At every phase end append `last green: <phase> @ <sha>`;
+**Progress tracker:** this Status line. last green: Phase 6 (branch C) — At every phase end append `last green: <phase> @ <sha>`;
 at every landing the CHANGELOG entry and the mock's `mock-baseline` sha are the markers.
 **Origin:** owner session 2026-08-29 — Reddit (web + Android) and Bluesky screenshots
 studied against Forage as it renders, worked through twelve revisions of a mock, and
@@ -605,7 +605,16 @@ no string containing "muted" reaches a shaped board.
 
 ### Landing branch C — threading, the vote, haptics, the quote
 
-#### Phase 6: one vote component (pill on posts, count-over-arrow on comments)
+#### Phase 6: one vote component (pill on posts, count-over-arrow on comments) — ✅ SHIPPED (branch C)
+**Delivered:** 6a as its own RED commit; 6b and 6c in ONE commit (a red CI between them
+served nobody). `vote(subject, id, data, canVote, { layout, onVote })` — `button[data-vote]`
+with a real `aria-pressed`, or a read-only `span[role=img]` for a reader who cannot vote.
+The post row lost its 40px left column: the pill sits in a new `.foot` row beside
+`.postmeta` (NOT inside it — mobile-fit exempts `.postmeta` as prose, and a tap target must
+be measured). The comment stack sits at the head of the action row until 8b moves it into
+the avatar column. The "refused vote reverts to the original count" edge is driven by the
+dev bar's Fail Next, not a banned persona — the banned persona could vote on the chosen
+thread. `lens-views` still comments on `voteBox` at `:395`; prose only.
 **Goal:** `voteBox` and `miniVote` fold into one `vote(subject, data, { layout })`; the
 post layout is the pill `▲ 35`, the comment layout the outlined count-over-arrow in the
 avatar column; the pressed state fills the arrow in `--boost`.

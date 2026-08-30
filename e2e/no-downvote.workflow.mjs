@@ -198,30 +198,27 @@ export async function run() {
     await assertNone(page, 'sandbox thread, logged in', { expectBoosts: true });
     // the comment's stack is the SAME control: count over arrow, one button,
     // toggling the same way (Phase 6 edges)
-    const stack = page.locator('.comment button[data-vote]').first();
-    const stackN = () => stack.locator('.n').innerText();
+    // queried by selector every time: the store's notify re-renders the thread,
+    // so a handle taken before the click is detached after it
+    const SEL = '.comment button[data-vote]';
+    const stackN = () => page.evaluate((s) => document.querySelector(s)?.querySelector('.n').textContent.trim(), SEL);
     const n0 = Number(await stackN());
-    await stack.click();
-    await page.waitForFunction((el, n) => el.querySelector('.n').textContent.trim() !== String(n), await stack.elementHandle(), n0);
+    await page.locator(SEL).first().click();
+    await page.waitForFunction(([s, n]) => document.querySelector(s)?.querySelector('.n').textContent.trim() !== String(n), [SEL, n0]);
     assert.equal(Number(await stackN()), n0 + 1, 'a comment like counts up by one');
-    assert.equal(await stack.getAttribute('aria-pressed'), 'true');
-    await stack.click();
-    await page.waitForFunction((el, n) => el.querySelector('.n').textContent.trim() === String(n), await stack.elementHandle(), n0);
-    assert.equal(await stack.getAttribute('aria-pressed'), 'false', 'and back');
-    // a persona who cannot vote here: the flip reverts to the ORIGINAL count
-    await page.locator('.devbar select[title="Active persona"]').selectOption('u_thorn');
-    await page.waitForSelector('.comment');
-    const gatedCount = await page.locator('button[data-vote]').count();
-    if (gatedCount > 0) {
-      const g = page.locator('button[data-vote]').first();
-      const before = await g.locator('.n').innerText();
-      await g.click();
-      await page.waitForTimeout(300);
-      assert.equal(await g.locator('.n').innerText(), before, 'a refused vote reverts to the original count, not one off');
-      assert.equal(await g.getAttribute('aria-pressed'), 'false');
-    }
-    await page.locator('.devbar select[title="Active persona"]').selectOption('u_fern');
-    await page.waitForSelector('.comment');
+    assert.equal(await page.locator(SEL).first().getAttribute('aria-pressed'), 'true');
+    await page.locator(SEL).first().click();
+    await page.waitForFunction(([s, n]) => document.querySelector(s)?.querySelector('.n').textContent.trim() === String(n), [SEL, n0]);
+    assert.equal(await page.locator(SEL).first().getAttribute('aria-pressed'), 'false', 'and back');
+    // a REFUSED write: the dev bar's Fail Next arms one simulated failure in
+    // the write path, and the flip must revert to the ORIGINAL count — not
+    // stay one off, not show a stale pressed state
+    await page.locator('.devbar button', { hasText: /^Fail Next/ }).click();
+    const untouched = await stackN();
+    await page.locator(SEL).first().click();
+    await page.waitForSelector('text=Vote failed');
+    assert.equal(await stackN(), untouched, 'a refused vote reverts to the original count, not one off');
+    assert.equal(await page.locator(SEL).first().getAttribute('aria-pressed'), 'false');
 
     // ---- Phase 2: Controversial is gone from BOTH sort lists ----------
     // Two of them exist: the board's and the one for comments inside a thread.
