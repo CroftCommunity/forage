@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forage Feed Row Proposals v2</title>
-<meta name="mock-version" content="2">
+<title>Forage Feed Row Proposals v3</title>
+<meta name="mock-version" content="3">
 <meta name="mock-baseline" content="forage@fe2b77b">
-<meta name="mock-proposal" content="forage@c1f780e">
+<meta name="mock-proposal" content="forage@97b4d00">
 <style>
 :root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
   --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
@@ -43,13 +43,13 @@ code{font-size:.92em}
 <body>
 <div class="wrap">
   <header>
-    <div class="eyebrow">Forage · mock · feed-row <b>v2</b> · Current forage@fe2b77b · Proposed forage@c1f780e · 2026-08-30</div>
+    <div class="eyebrow">Forage · mock · feed-row <b>v3</b> · Current forage@fe2b77b · Proposed forage@97b4d00 · 2026-08-30</div>
     <h1>The feed row, made to agree with the phone</h1>
-    <p class="sub"><b>One proposal in seven decisions, for one purpose:</b> the lens feed row on forage.fyi should look the way the owner's phone expected it to, with Bluesky's own row as the reference — and this time the thing being agreed on is the app, not a drawing.
+    <p class="sub"><b>One proposal in eight decisions, for one purpose:</b> the lens feed row on forage.fyi should look the way the owner's phone expected it to, with Bluesky's own row as the reference — and this time the thing being agreed on is the app, not a drawing.
       Origin: six phone screenshots of forage.fyi and bsky.app taken 2026-08-30 16:17–16:28 (phpBB skin, <code>f/whats-hot</code> and two threads), plus a desktop pair (<code>/u/pds.ls</code> → <code>f/pds.ls</code> → "Unknown feed").
       They showed: the picture the thread page renders missing from the feed; a post's text set as a bold heading; and an action row whose share arrow wrapped under "7315 · 270 comments · 1225", with the dashed like box two lines tall beside it.
       <b>None of it was visible in board-cards v9's captures</b> — default skin, card density, "1284 · 40 comments · 12".</p>
-    <p class="sub"><b>Every frame on this page is a capture of the engine</b> (MOCKS.md P1): Current is <code>main</code> at <code>fe2b77b</code>, Proposed is <code>claude/feed-card</code> at <code>c1f780e</code>, both by <code>scripts/mock-snaps.mjs</code> against <code>e2e/harness/mock-board.mjs</code> / <code>mock-thread.mjs</code>, in the default skin (rule 4 — the phone's phpBB skin restyles and restructures nothing, so it is not on this page), at 390 × 844 and 1280 × 900.
+    <p class="sub"><b>Every frame on this page is a capture of the engine</b> (MOCKS.md P1): Current is <code>main</code> at <code>fe2b77b</code>, Proposed is <code>claude/feed-card</code> at <code>97b4d00</code>, both by <code>scripts/mock-snaps.mjs</code> against <code>e2e/harness/mock-board.mjs</code> / <code>mock-thread.mjs</code>, in the default skin (rule 4 — the phone's phpBB skin restyles and restructures nothing, so it is not on this page), at 390 × 844 and 1280 × 900.
       The population now carries the phone's load (P2): a row with 7315 likes, 270 replies and 1225 reposts, a four-line text-plus-picture post, and (v2) the names people choose at the widths the network allows — a 64-grapheme name, an emoji name, no name, and one that impersonates. Nothing here is drawn; there is no sketch to fall short of.</p>
   </header>
 
@@ -66,6 +66,7 @@ code{font-size:.92em}
         <tr><td>4</td><td><b>The replies cell is a number</b> (A)</td><td>💬 270. The words — "270 comments — open the thread" — are the control's accessible name and its tooltip, so a screen reader and a hover keep them.</td><td>Keep "270 comments" in words and let the cell be wider than the others</td><td>board-cards Phase 4's "12 comments in words"; the four workflows that read the words now read the name</td></tr>
         <tr><td>6</td><td><b>The byline shows the name a person chose</b> (v2, owner 2026-08-30)</td><td>The row, the thread head and every comment show <code>displayName</code>; the handle is the name's tooltip (<code>@quietcartographer.bsky.social</code>) and part of its accessible name. No chosen name → the handle shows. A 64-grapheme name ellipsises on its one line.</td><td><b>Name, then the handle muted after it</b> (bsky.app's row — the handle visible, not one hover away). Recorded because a display name is not unique: the second row on the phone frame reads <b>"Bluesky 🦋"</b> and is <code>averyveryverylonghandle.bsky.social</code>. The tooltip is the only tell on this branch.</td><td>every byline since post-and-thread's header line</td></tr>
         <tr><td>7</td><td><b>A provider mark beside the name, switchable</b> (v2)</td><td>A text-sized muted glyph right after the name: the butterfly for a <code>*.bsky.social</code> handle, an atmosphere ring for anyone else, the provider in its tooltip ("atmo provider: bsky.social"). Settings → <b>Provider mark</b> switches it off (device-local, on by default).</td><td>Resolve the author's real atmo provider from the DID document (plc.directory, one fetch per author, cached) — the honest mark for custom-domain handles, which today get the ring and a tooltip saying the handle does not show the provider. Recorded as the follow-on, not built.</td><td>DESIGN.md's noun is kept: <i>atmo provider</i>, never <i>server</i>/<i>PDS</i>; the butterfly is a mark for one provider, not Bluesky-as-category</td></tr>
+        <tr><td>8</td><td><b>The share glyph</b> (v3, owner 2026-08-30: "I really don't like that bottom right share icon")</td><td>The tray-with-arrow-up line icon board-cards v5 drew (<code>#i-share</code>; the shape bsky.app and iOS use), at 1.15em and 70% at rest, on rows and comments alike — one weight with the other three. The ↗ text glyph is gone.</td><td>A chain link — the button does copy a link; or the arrow-out-of-box at full opacity</td><td>post-and-thread decision 10 kept its placement (last on the row) and its accessible name; only the glyph and the rest opacity (55 → 70%) moved</td></tr>
         <tr><td>5</td><td><b>An author board's row points home</b> (desktop pair)</td><td>On <code>/u/&lt;handle&gt;</code> a row's breadcrumb reads <code>@handle</code> and opens <code>/u/&lt;handle&gt;</code>. Before: <code>f/pds.ls</code> → <code>/f/pds.ls</code> → "Unknown feed — this link is missing the feed's creator".</td><td>Resolve <code>/f/&lt;handle&gt;</code> as an author board when the slug looks like a handle (also fixes old links; not done here)</td><td>nothing decided before — a gap</td></tr>
       </tbody>
     </table></div>
@@ -193,6 +194,7 @@ code{font-size:.92em}
   <section>
     <div class="eyebrow">Revisions</div>
     <ul class="small" style="margin:0;padding-left:18px">
+      <li><b>v3</b> — 2026-08-30, evening (owner: the ↗ share icon): decision 8 — the tray-and-arrow line icon at text size, on rows and comments; Proposed re-captured at <code>forage@97b4d00</code>, Current unchanged (same population). O1's "line icons for the four" is now one glyph closer; three remain.</li>
       <li><b>v2</b> — 2026-08-30, later the same day (owner: "replace the foo.bsky.social on posts with the display name users choose and a small icon for each provider that can be toggled off"): decisions 6–7 built and captured; both columns re-captured under the named population (Proposed <code>forage@c1f780e</code>; Current still <code>forage@fe2b77b</code>). O0 records the impersonation risk and the muted-handle alternative.</li>
       <li><b>v1</b> — 2026-08-30, first version: five decisions built on <code>claude/feed-card</code> and captured (Current <code>forage@fe2b77b</code>, Proposed <code>forage@8f25520</code>) from the owner's phone screenshots. Nothing drawn. Awaiting the owner on the frames.</li>
     </ul>
