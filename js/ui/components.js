@@ -112,6 +112,29 @@ function postBadges(p) {
   return b;
 }
 
+// ---------- byline (plan 2026-08-29 post-and-thread, decisions 7 + 8) ----------
+// Every post row and comment opens the same way: avatar slot · who · bare time
+// · ⋯ top-right. The avatar slot draws initials until Phase 2 hands it a
+// picture; the kebab has no handler until Phase 3 hands it the menu — both are
+// SLOTS pinned by e2e/thread-byline.workflow.mjs so the header cannot drift
+// between the tiers while the rest lands.
+function initials(name) {
+  const n = String(name || '').replace(/^@/, '').split('.')[0];
+  return n ? n.slice(0, 2).toLowerCase() : '··';
+}
+
+export function byline({ name, whoNode, ts, avatar = null, after = [] }) {
+  const av = el('span', { class: 'av', 'aria-hidden': 'true' }, initials(name));
+  if (avatar) av.append(el('img', { src: avatar, alt: '', loading: 'lazy' }));
+  return el('div', { class: 'byline' },
+    av,
+    whoNode,
+    el('span', { class: 'dot' }),
+    el('span', { 'data-time': '1', title: new Date(ts).toLocaleString() }, timeAgo(ts)),
+    ...after.filter(Boolean),
+    el('button', { class: 'kebab', type: 'button', 'aria-label': `More, by ${name || '[removed]'}`, 'aria-expanded': 'false' }, '⋯'));
+}
+
 // ---------- post row (feed) ----------
 export function postRow(p, viewerCanVote, opts = {}) {
   const link = `/f/${p.feedSlug}/p/${p.id}`;
@@ -123,8 +146,6 @@ export function postRow(p, viewerCanVote, opts = {}) {
     // copied breadcrumb resolves for a stranger. Memory Feeds are local and
     // need no creator, so the plain slug stays the default.
     el('a', { href: opts.feedHref || `/f/${p.feedSlug}` }, `f/${p.feedSlug}`),
-    p.author ? el('span', {}, `by ${p.author}`, opts.authorBadge || '') : el('span', { class: 'muted' }, 'by [removed]'),
-    el('span', {}, timeAgo(p.createdTs) + ' ago'),
     p.format === 'link' && p.url ? el('span', { class: 'domain' }, domainOf(p.url)) : null,
     el('a', { href: link }, plural(p.commentCount, 'comment')),
     p.edited ? el('span', { class: 'muted' }, 'edited') : null,
@@ -150,6 +171,12 @@ export function postRow(p, viewerCanVote, opts = {}) {
     // parent link / a repost's byline here. An explicit node like bodyNode —
     // the memory tier passes nothing and its rows are untouched.
     opts.aboveNode || null,
+    byline({
+      name: p.author, ts: p.createdTs, avatar: p.avatar || null,
+      whoNode: p.author
+        ? el('span', { class: 'who' }, p.author, opts.authorBadge || '')
+        : el('span', { class: 'who muted' }, '[removed]'),
+    }),
     el('div', { class: 'row wrap', style: 'gap:6px;align-items:center' }, ...postBadges(p)),
     title,
     body, meta,
@@ -177,18 +204,18 @@ export function commentNode(node, ctx) {
 
   const author = node.author
     ? (ctx.authorHref
-      ? el('a', { href: ctx.authorHref(node), target: '_blank', rel: 'noopener noreferrer', title: 'Profiles live on bsky.app — Forage is a lens' }, node.author)
-      : el('a', { href: `/u/${node.author}` }, node.author))
-    : el('span', { class: 'removed-stub' }, node.deleted ? '[deleted]' : '[removed]');
+      ? el('a', { class: 'who', href: ctx.authorHref(node), target: '_blank', rel: 'noopener noreferrer', title: 'Profiles live on bsky.app — Forage is a lens' }, node.author)
+      : el('a', { class: 'who', href: `/u/${node.author}` }, node.author))
+    : el('span', { class: 'who removed-stub' }, node.deleted ? '[deleted]' : '[removed]');
   const note = el('span', { class: 'collapse-note' });
-  const meta = el('div', { class: 'comment-meta' },
-    author,
-    el('span', {}, plural(node.likes, 'like')),
-    el('span', {}, timeAgo(node.createdTs) + ' ago'),
-    node.edited ? el('span', { class: 'muted' }, 'edited') : null,
-    node.removed && ctx.canModerate ? el('span', { class: 'chip badge-nsfw' }, 'removed') : null,
-    note,
-  );
+  const meta = byline({
+    name: node.author, whoNode: author, ts: node.createdTs, avatar: node.avatar || null,
+    after: [
+      node.edited ? el('span', { class: 'muted' }, 'edited') : null,
+      node.removed && ctx.canModerate ? el('span', { class: 'chip badge-nsfw' }, 'removed') : null,
+      note,
+    ],
+  });
 
   const text = el('div', { class: 'comment-text', html: node.maskedRemoved || node.deleted ? esc(node.body) : mdLite(node.body) });
 

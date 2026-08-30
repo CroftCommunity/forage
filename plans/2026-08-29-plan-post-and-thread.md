@@ -4,7 +4,7 @@
 applied the same day** — see Review Log. **Pass 3 (quality gates) applied the same day** — see
 Review Log. **Not started: Phase 0 first.** Open-question severities (O2–O8) **confirmed as recommended by the owner
 2026-08-29** ("accept all as recommended"): O5/O6/O8 PHASE-GATED, O2/O3/O4/O7 ADVISORY.
-**Progress tracker:** this Status line. At every phase end append `last green: <phase> @ <sha>`;
+**Progress tracker:** this Status line. last green: Phase 2 (branch A) — At every phase end append `last green: <phase> @ <sha>`;
 at every landing the CHANGELOG entry and the mock's `mock-baseline` sha are the markers.
 **Origin:** owner session 2026-08-29 — Reddit (web + Android) and Bluesky screenshots
 studied against Forage as it renders, worked through twelve revisions of a mock, and
@@ -188,6 +188,22 @@ either a Phase 0 task or an Open Question.
 - *(Pass 2)* `renderChildren` appends the `continue-stub` and the "load more" button
   **inside** the children container (`components.js:236-246`), so they inherit the
   collapse — Phase 8b's risk is void.
+- *(Phase 0, D1 — live, 2026-08-29, `scripts/probe-graph.mjs`, fixture
+  `test/fixtures/atproto/bookmarks.json`)* `app.bsky.bookmark.createBookmark` `{uri,cid}`
+  → 200 with an **empty body**; `getBookmarks` → `{bookmarks:[{createdAt, subject:{uri,cid},
+  item:<postView with viewer.bookmarked:true and bookmarkCount>}]}`; `deleteBookmark`
+  `{uri}` → 200 empty; the list is then `[]`. No record, no repo commit — a procedure.
+- *(Phase 0, D2 — live, same run, fixture `test/fixtures/atproto/graph-writes.json`)*
+  `app.bsky.graph.muteActor` / `unmuteActor` `{actor}` → 200 empty, read back via
+  `getMutes` (`viewer.muted:true`); `muteThread` / `unmuteThread` `{root}` → 200 empty,
+  read back on `getPostThread` as `post.viewer.threadMuted:true`; **block is a record**:
+  `createRecord` `app.bsky.graph.block {subject, createdAt}` → `validationStatus: valid`,
+  `getBlocks` shows `viewer.blocking:<uri>`, `deleteRecord` by rkey clears it. Every write
+  undone in-run; the account's two pre-existing mutes were untouched and are stripped from
+  the fixture. Neither test account holds a post, so the subject is a public post.
+- *(Phase 0)* `e2e/tagsub-pds-live.workflow.mjs:36` resolves `.env` as `root/../.env`,
+  which is wrong from a worktree (two levels deeper); the probe walks up. 4a-iv inherits
+  the walk.
 - *(Pass 2, resolves D3 without a probe)* `test/fixtures/atproto/wide-authed-thread-liked.json`
   carries both `"avatar"` and `"repostCount"`; `wide-getPostThread.json` carries
   `repostCount` but its three authors have no `avatar`. Phase 2a and 10b drive their
@@ -298,12 +314,12 @@ end, so a missing fixture for a new procedure reads as a fixture bug, not as a f
 carries an **Edges** field naming the cases a single-point assertion would miss; the
 Mental Mutation Pass at execution time starts from that list.
 
-### Phase 0: Discovery — landing branch A (with phases 1–2)
+### Phase 0: Discovery — landing branch A (with phases 1–2) — ✅ SHIPPED (branch A)
 
 **Goal:** turn the four unverified externals into evidence before any phase depends on
 them. Cheap; each is a probe script or a fixture read.
 
-- [ ] **D1: Do `app.bsky.bookmark.createBookmark` / `getBookmarks` / `deleteBookmark`
+- [x] **D1: Do `app.bsky.bookmark.createBookmark` / `getBookmarks` / `deleteBookmark`
   exist on the test account's PDS/AppView, and what do they return?**
   - **Probe:** a script under `scripts/probe-bookmarks.mjs` (throwaway) that signs in as
     the test account (credentials at the location TESTBED.md names, never in the repo),
@@ -320,7 +336,7 @@ them. Cheap; each is a probe script or a fixture read.
     **Phase 4a-iv**, where it is rewritten to drive the production writes instead of
     raw XRPC. Not resolvable during planning: the repo has no `@atproto/api` and the
     question is what the *server* accepts, not what the lexicon says.
-- [ ] **D2: Which mute/block procedures does the test account's server accept, and
+- [x] **D2: Which mute/block procedures does the test account's server accept, and
   are they records or procedures?**
   - **Probe:** same script style: `app.bsky.graph.muteActor` / `unmuteActor`
     (procedures), `app.bsky.graph.muteThread` / `unmuteThread`, and
@@ -334,13 +350,19 @@ them. Cheap; each is a probe script or a fixture read.
   **Resolved in Pass 2 by reading the fixtures:** `wide-authed-thread-liked.json` has
   both. No probe needed; the remaining D3 act is one line in Phase 2a's test naming
   that fixture.
-- [ ] **D4: Does `navigator.vibrate(12)` fire inside a click handler on the Samsung
+- [ ] **D4 (NOT RUN — no device this session): Does `navigator.vibrate(12)` fire inside a click handler on the Samsung
   test device's Chrome, and is it silent in the iOS simulator?**
   - **Probe:** a one-page `scripts/probe-haptics.html` opened over the LAN; tap a
     button; report `typeof navigator.vibrate` and the return value in the page.
   - **Success criteria:** Android: `true` and a felt buzz; iOS: `undefined`, no error,
     nothing else happens.
   - **Disposition:** `throwaway`.
+  - **Execution 2026-08-29:** no `adb` and no phone on this machine; the owner said
+    execute to the end, so D4 is deferred to Phase 7's device validation rather than
+    blocking the plan. Nothing structural depends on its answer: the call is
+    `navigator.vibrate?.(12)` either way, and the Android/iOS behaviour is the
+    platform's documented contract (Chrome fires inside a user gesture; WebKit has no
+    `vibrate`). Phase 7's "on the Samsung a like buzzes" stays owed until a device run.
 
 **Observability:** the probe prints every raw response in full (never through `head`) and
 the undo's read-back last, so a failed cleanup is the final line on screen.
@@ -352,7 +374,13 @@ restructure later phases; log any change in the Review Log).
 
 ### Landing branch A — the header line
 
-#### Phase 1: the byline on rows and comments (memory tier)
+#### Phase 1: the byline on rows and comments (memory tier) — ✅ SHIPPED (branch A)
+**Delivered:** as specified, plus two suites the Documentation Impact grep missed:
+`e2e/ring-tabs.workflow.mjs:108` pinned the literal copy `by aa.test` (now reads
+`.byline .who`), and `e2e/density.workflow.mjs:59` holds compact rows >25% shorter than
+card — the byline added equal height to both, so compact draws it tighter
+(`.postrow.compact .byline/.av/.kebab`). `test/util.test.js` added (timeAgo boundaries).
+The like count left the comment header (the vote carries it; Phase 6).
 **Goal:** every post row and comment opens the same way: avatar slot · name · `1d` ·
 ⋯ slot, top-right.
 **Changes:**
@@ -387,7 +415,12 @@ phone rule makes it 44 on `[data-phone]`; `mobile-fit` measures at 320/360/390 s
 kebab must be 44 there. Carry the mock's `.app[data-phone]` rule as a `@media
 (max-width: 480px)` rule).
 
-#### Phase 2: real avatars on posts, comments, and the masthead (lens)
+#### Phase 2: real avatars on posts, comments, and the masthead (lens) — ✅ SHIPPED (branch A)
+**Delivered:** 2a as specified. 2b touched `js/ui/lens-views.js` as well (the session's
+picture is fetched in `adoptSession` via `lens.profile(did)` and exposed as
+`sessionAvatar()`; `main.js` only draws it) — three files, still under the rule. The
+new sign-in read needed a fixture in `bluesky-view` (it holds every read to one) and the
+posture reads needed four in `avatar-nav` (which now asserts no shim misses).
 **Goal:** the avatar slot shows the account's picture wherever the lens has one; initials
 are the loading state.
 **Changes:**

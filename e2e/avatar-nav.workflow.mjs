@@ -33,10 +33,31 @@ const FAKE_SIGNED_IN = `(() => {
   };
 })();`;
 
+const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
 const RESPONSES = {
   describeRepo: { handle: 'cpettet.bsky.social' },
   getPreferences: { preferences: [] },
-  getProfile: { did: 'did:plc:me', handle: 'cpettet.bsky.social', displayName: 'Chase' },
+  // A 1x1 data: URL — the shim fences the CDN, and a masthead picture must
+  // never cost the network in a hermetic suite.
+  getProfile: { did: 'did:plc:me', handle: 'cpettet.bsky.social', displayName: 'Chase', avatar: PIXEL },
+  getPostThread: { thread: {
+    post: { uri: 'at://did:plc:aa/app.bsky.feed.post/a', cid: 'ca',
+      author: { did: 'did:plc:aa', handle: 'aa.test', avatar: PIXEL },
+      record: { text: 'head', createdAt: '2026-08-26T10:00:00Z' }, indexedAt: '2026-08-26T10:00:00Z',
+      replyCount: 2, likeCount: 1 },
+    replies: [
+      { post: { uri: 'at://did:plc:bb/app.bsky.feed.post/b', cid: 'cb',
+        author: { did: 'did:plc:bb', handle: 'bb.test', avatar: PIXEL },
+        record: { text: 'with a picture', createdAt: '2026-08-26T11:00:00Z' }, indexedAt: '2026-08-26T11:00:00Z' }, replies: [] },
+      { post: { uri: 'at://did:plc:cc/app.bsky.feed.post/c', cid: 'cc',
+        author: { did: 'did:plc:cc', handle: 'cc.test' },
+        record: { text: 'without one', createdAt: '2026-08-26T12:00:00Z' }, indexedAt: '2026-08-26T12:00:00Z' }, replies: [] },
+    ] } },
+  getQuotes: { posts: [] },
+  // the posture reads a sign-in fires (3f) — fixtured so the shim-miss
+  // assertion below is about the pictures, not about these
+  getMutes: { mutes: [] }, getBlocks: { blocks: [] }, getListMutes: { lists: [] }, getListBlocks: { lists: [] },
   getFollows: { follows: [] },
   getFollowers: { followers: [] },
   getAuthorFeed: { feed: [] },
@@ -79,7 +100,33 @@ export async function run() {
     });
     assert.ok(rows.h <= 72, `the masthead stays one row at 320px: ${rows.h}px`);
 
+    // Decision 8 (plan 2026-08-29 post-and-thread): the avatar is the account's
+    // PICTURE; initials are only the not-yet-loaded state. The img must be
+    // decorative (alt="") because the link already carries the name.
+    await s.page.waitForSelector('[data-account="1"] img', { timeout: 10000 });
+    const pic = await s.page.evaluate(() => {
+      const a = document.querySelector('[data-account="1"]');
+      const img = a.querySelector('img');
+      const r = a.getBoundingClientRect();
+      return { alt: img.getAttribute('alt'), src: img.getAttribute('src'), w: Math.round(r.width), h: Math.round(r.height) };
+    });
+    assert.equal(pic.alt, '', 'the picture is decorative; the link names the account');
+    assert.ok(pic.src.startsWith('data:'), 'the shim served the picture — no CDN request');
+    assert.ok(pic.w >= 44 && pic.h >= 44, `the control keeps its 44px hit area with a picture in it: ${pic.w}x${pic.h}`);
+
+    // …and on a thread, every comment's byline shows its author's picture
+    // when the node has one, initials when it does not.
+    await s.page.goto(`${s.origin}/p?uri=${encodeURIComponent('at://did:plc:aa/app.bsky.feed.post/a')}`);
+    await s.page.waitForSelector('.comment');
+    const avs = await s.page.$$eval('.comment .byline .av', (els) => els.map((e) => ({
+      img: !!e.querySelector('img'), text: e.textContent.trim() })));
+    assert.deepEqual(avs.map((a) => a.img), [true, false], `a picture where the node has one, initials where not: ${JSON.stringify(avs)}`);
+    assert.equal(avs[1].text, 'cc', 'the initials come from the handle');
+    assert.deepEqual(await s.shimMisses(), [], 'no request left the shim — pictures are data: URLs here');
+
     // And it opens the merged page.
+    await s.page.goto(`${s.origin}/trending`);
+    await s.page.waitForSelector('[data-account="1"]');
     await s.page.click('[data-account="1"]');
     await s.page.waitForSelector('h1');
     assert.ok(s.page.url().endsWith('/me'), 'the avatar opens your account page');

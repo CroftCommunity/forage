@@ -183,6 +183,10 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
       : post.author?.verification?.trustedVerifierStatus === 'valid' ? 'trusted' : null,
     saved: false, // bookmarks are not public API surface yet — frontier
     commentCount: post.replyCount ?? 0,
+    // Decision 8 (plan 2026-08-29 post-and-thread): the byline draws the
+    // author's PICTURE; null (never undefined) when the account has none, so
+    // the component falls back to initials on one check.
+    avatar: post.author?.avatar || null,
   };
   // 3f: the posture applies here — policy in the shape layer, never components.
   const disp = labelDisposition(post, posture);
@@ -292,7 +296,7 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
     createdTs: p.createdTs, createdSec: p.createdSec, edited: false,
     removed: false, deleted: false,
     likes: p.likes, myVote: p.myVote, saved: false,
-    body: p.body, author: p.author, authorId: p.authorId,
+    body: p.body, author: p.author, authorId: p.authorId, avatar: p.avatar,
     ...(p.maskedRemoved ? { maskedRemoved: true, title: p.title } : { removedReason: '' }),
     depth,
     children: [], deferred: 0,
