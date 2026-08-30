@@ -81,6 +81,22 @@ test('rows carry the kind of source they came from', async () => {
   assert.ok(feed.posts.every((p) => p.feedKind === 'feed'));
 });
 
+// feed-row v2: the name a person chose rides on every row and comment, null
+// when they chose none (an empty or blank displayName is "none", so the view
+// falls back to the handle rather than printing nothing).
+test('rows carry the author\'s display name, null when they set none', async () => {
+  const lens = createLens({ transport: makeTransport([]) });
+  const feed = await lens.feed({ kind: 'feed', uri: WHATS_HOT });
+  const byUri = new Map(fixture('wide-getFeed').feed.map((i) => [i.post.uri, i.post.author]));
+  assert.ok(feed.posts.length > 0);
+  for (const p of feed.posts) {
+    const a = byUri.get(p.id);
+    const want = a?.displayName?.trim() ? a.displayName.trim() : null;
+    assert.equal(p.authorName, want, `${p.author}: authorName`);
+  }
+  assert.ok(feed.posts.some((p) => p.authorName), 'the fixture has at least one chosen name, or this test proves nothing');
+});
+
 test('a session routes through the DPoP fetchHandler with a relative /xrpc path — no header building', async () => {
   const log = [];
   const lens = createLens({ session: oauthSession(log), transport: makeTransport([]) });

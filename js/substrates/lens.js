@@ -270,6 +270,9 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
     ...base,
     title: displayTitle, body: text, url: external?.uri || '',
     author: post.author?.handle || '[unknown]', authorId: post.author?.did || null,
+    // feed-row v2: the name they chose; null when blank, so a view falls back
+    // to the handle instead of printing nothing
+    authorName: post.author?.displayName?.trim() || null,
     removedReason: '',
     // 3i: rows never duplicate the title as a preview — bluesky text posts ARE
     // their title (300/300). Thread/comment rendering keeps using body.
@@ -321,7 +324,7 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
     likes: p.likes, myVote: p.myVote, saved: p.saved, cid: p.cid,
     likeUri: p.likeUri, // the unlike input, as on the head post — dropped here until 2026-08-29
     repostCount: p.repostCount, repostUri: p.repostUri,
-    body: p.body, author: p.author, authorId: p.authorId, avatar: p.avatar,
+    body: p.body, author: p.author, authorId: p.authorId, authorName: p.authorName ?? null, avatar: p.avatar,
     ...(p.maskedRemoved ? { maskedRemoved: true, title: p.title } : { removedReason: '' }),
     depth,
     children: [], deferred: 0,

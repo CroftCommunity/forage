@@ -305,6 +305,10 @@ h1.posttext { font-family: var(--font-body); font-size: var(--t-lg); font-weight
 /* the byline — avatar slot · who · bare time · ⋯ (plan 2026-08-29 post-and-thread) */
 .byline { display: flex; align-items: center; gap: 8px; font-size: var(--t-xs); color: var(--muted); min-width: 0; flex-wrap: wrap; }
 .byline .who { color: var(--text); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* feed-row v2: the provider mark — text-sized, muted, right after the name; the byline's
+   own flex rules keep it on the line (`.byline > :not(.who)` is flex: none) */
+.provider-mark { display: inline-flex; width: 1em; height: 1em; color: var(--muted); opacity: .8; vertical-align: -0.1em; }
+.provider-mark svg { width: 100%; height: 100%; display: block; }
 /* A comment's byline is ONE line (post-and-thread decision 7, mock v18 claim A): a real
    handle is up to 30 characters, and at 390px it wrapped the time, "⟳ quoted this" and
    the ⋯ onto second and third lines (forage.fyi, owner screenshots 2026-08-30). The name

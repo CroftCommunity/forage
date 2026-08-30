@@ -7,7 +7,8 @@
 // sign-in survives reloads. The lens consumes { did, handle, fetchHandler }.
 
 import { el, timeAgo, fmtScore, domainOf, plural } from '../util.js';
-import { postRow, commentNode, vote, focusComment, skeleton, emptyState, toast, reportSheet } from './components.js';
+import { postRow, commentNode, vote, focusComment, skeleton, emptyState, toast, reportSheet, whoNode } from './components.js';
+import * as providerMark from '../provider-mark.js';
 import { navTree } from './nav.js';
 import { LADDER, RUNG_IDS, labelFor } from '../rings.js';
 import { lastBoard, setLastBoard, landingBoard, DIRECTORY } from '../last-board.js';
@@ -638,6 +639,8 @@ const lensRow = (p, view = 'card') => {
     // a Bluesky post's text is body text; a link post's title is the card's headline
     textPost: p.format !== 'link',
     authorBadge: verifiedBadge(p),
+    // feed-row v2: the provider mark, unless the reader switched it off
+    ...(providerMark.enabled() ? { provider: providerMark.providerOf(p.author), providerLabel: providerMark.markLabel(providerMark.providerOf(p.author), p.author) } : {}),
     metaExtra: langChip(p),
     // an author board's row points back at the author board, and says so —
     // `f/pds.ls` linked a feed path nothing resolved ("Unknown feed", the
@@ -2323,7 +2326,8 @@ export function lensThreadView(params, query) {
       el('div', { class: 'actions' },
         vote('post', p.id, p, !!session, { onVote: lensVote(p), onGuest: session ? null : openAuthSheet }), // Phase 6c: the head's pill
         el('div', { class: 'postmeta' },
-          p.author ? el('a', { href: `/u/${encodeURIComponent(p.author)}` }, p.author) : '[muted]',
+          // feed-row v2: the chosen name, the handle in the tooltip
+          p.author ? el('a', { href: `/u/${encodeURIComponent(p.author)}` }, whoNode(p.author, p.authorName)) : '[muted]',
           ` · ${timeAgo(p.createdTs)} ago · ${plural(p.commentCount, 'reply', 'replies')}`)),
       // The post's own media, at full board size — until 2026-08-28 an image
       // post's thread page rendered no image at all.
@@ -2369,6 +2373,9 @@ export function lensThreadView(params, query) {
       menuGroups: (n) => lensMenuGroups(n, { kind: 'comment' }), // 4b: the ⋯ on every reply
       permalink: (n) => `${location.origin}/p?uri=${encodeURIComponent(p.id)}&focus=${encodeURIComponent(n.id)}`, // decision 10
       authorHref: (n) => `/u/${encodeURIComponent(n.author)}`, // 3k: authors reach OUR profile page (which links out)
+      // feed-row v2: the provider mark on comments too, unless switched off
+      providerOf: providerMark.enabled() ? providerMark.providerOf : null,
+      providerLabel: (h) => providerMark.markLabel(providerMark.providerOf(h), h),
       nodeRenderer: (n, c) => lensNode(n, c), // 3r: a quote nested under a reply is still a quote
       // phase 2: a reply you regret is the commoner case than a post you
       // regret, so your own replies carry the same control. Same guard, same

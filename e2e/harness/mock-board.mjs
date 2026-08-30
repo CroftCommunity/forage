@@ -19,9 +19,21 @@ const AV = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAA
 const WH = 'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot';
 const T = (h) => `2026-08-30T${String(h).padStart(2, '0')}:00:00Z`;
 
+// feed-row v2: the names people CHOOSE, at the widths the network allows — a
+// 64-grapheme name (Bluesky's cap), an emoji name, no name at all (the handle
+// stands in), and a name that impersonates ("Bluesky" on a random handle): a
+// display name is not unique, and the frame must show what that looks like
+const NAMES = {
+  'quietcartographer.bsky.social': 'The Quiet Cartographer of the Northern Fenlands & Bog Society',
+  'averyveryverylonghandle.bsky.social': 'Bluesky',
+  'briarpatchradio.bsky.social': null,
+  'erislovesgardens.bsky.social': 'Eris 🌿🐸',
+  'misterhooperspecial.bsky.social': 'mister hooper',
+  'thefrostwarning.bsky.social': 'Frost Warning',
+};
 const post = (rkey, did, handle, ts, text, { likes = 0, replies = 0, reposts = 0, embed = null, reply = null } = {}) => ({
   uri: `at://${did}/app.bsky.feed.post/${rkey}`, cid: `cid-${rkey}`,
-  author: { did, handle, avatar: AV },
+  author: { did, handle, avatar: AV, ...(NAMES[handle] ? { displayName: NAMES[handle] } : {}) },
   record: { text, createdAt: ts, ...(reply ? { reply } : {}) }, indexedAt: ts,
   // the hydrated embed (#view) sits on the POST, beside the record — the raw
   // record's embed is the blob ref, which the lens never reads (a fixture that

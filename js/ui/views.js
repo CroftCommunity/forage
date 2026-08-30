@@ -16,6 +16,7 @@ import { densityDial, isCompact } from '../board-density.js';
 import * as cardSize from '../card-size.js';
 import * as pictures from '../pictures.js';
 import * as rail from '../rail.js';
+import * as providerMark from '../provider-mark.js';
 import { sortBar } from './sortbar.js';
 
 // A board scope for one feed. Derived, not spelled: the old literal was the
@@ -682,12 +683,23 @@ export function settingsView() {
     railBox.setAttribute('aria-checked', String(on));
     railBox.querySelector('.switch-state').textContent = on ? 'On' : 'Off';
   });
+  // feed-row v2: the provider mark beside a name is the reader's to switch off
+  const markBox = el('button', { type: 'button', class: 'switch', id: 'pref-providermark', role: 'switch',
+    'aria-checked': String(providerMark.enabled()) }, el('span', { class: 'switch-state' }, providerMark.enabled() ? 'On' : 'Off'));
+  markBox.addEventListener('click', () => {
+    const on = markBox.getAttribute('aria-checked') !== 'true';
+    providerMark.set(on);
+    markBox.setAttribute('aria-checked', String(on));
+    markBox.querySelector('.switch-state').textContent = on ? 'On' : 'Off';
+  });
   const themeCard = el('div', { class: 'card' },
     fieldRow('Skin', skinSel),
     notchRow('pref-cardsize', 'Card size', sizeNotches, 'how much room a post takes — 1 is small, 4 is the full picture'),
     notchRow('pref-pictures', 'Pictures shown at once', picNotches, 'up to this many side by side; more become a carousel'),
     el('div', { class: 'field-row' }, el('label', { for: 'pref-rail' }, 'Side panel'),
       el('span', {}, railBox, el('span', { class: 'xs muted', style: 'margin-left:8px' }, 'the right-hand column — suggestions, and sign-in when you are signed out; off, the posts take the middle'))),
+    el('div', { class: 'field-row' }, el('label', { for: 'pref-providermark' }, 'Provider mark'),
+      el('span', {}, markBox, el('span', { class: 'xs muted', style: 'margin-left:8px' }, 'a small mark beside each name saying which atmo provider they post from; the handle is always in the name’s tooltip'))),
     // Say where the other half of the choice lives. Without this the picker
     // silently lost four rows and nothing tells you the toggle gained them.
     el('div', { class: 'xs muted', style: 'margin:-4px 0 8px' },

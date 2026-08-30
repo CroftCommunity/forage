@@ -24,7 +24,10 @@ const rows = (page) => page.evaluate(() => [...document.querySelectorAll('.postr
   const time = b.querySelector('[data-time]').getBoundingClientRect();
   const mid = (x) => Math.round(x.top + x.height / 2);
   return {
-    who: b.querySelector('.who').textContent,
+    who: b.querySelector('.who').dataset.handle, // feed-row v2: the text is the chosen name; the handle is data
+    shown: b.querySelector('.who').textContent.trim(),
+    whoTitle: b.querySelector('.who').getAttribute('title') || '',
+    mark: b.querySelector('.provider-mark')?.getAttribute('title') ?? null,
     sameLine: [kebab, time].every((x) => Math.abs(mid(x) - mid(who)) <= 2),
     whoFits: who.right <= time.left,
     guestDoor: !!r.querySelector('.actions button[data-vote][data-guest]'),
@@ -66,6 +69,15 @@ export async function run() {
       // feed-row v1 claim 4: a post's text is text, not a heading
       assert.equal(r.titleWeight, '400', `${r.who}: the post text is set bold (${r.titleWeight}) — it is body text, not a title`);
     }
+    // feed-row v2 claims 9–10: the chosen name shows, the handle stays one hover
+    // away, and the mark names the provider — on every row, one line still
+    const NAMES = Object.fromEntries(FEED.feed.map((i) => [i.post.author.handle, i.post.author.displayName ?? null]));
+    for (const r of list) {
+      const want = NAMES[r.who] ?? r.who;
+      assert.ok(r.shown.startsWith(want), `${r.who}: the byline shows "${r.shown}", not the chosen name "${want}"`);
+      if (NAMES[r.who]) assert.ok(r.whoTitle.includes(`@${r.who}`), `${r.who}: the handle is not in the name's tooltip ("${r.whoTitle}")`);
+      assert.match(r.mark ?? '', /bsky\.social/, `${r.who}: no provider mark naming bsky.social (${r.mark})`);
+    }
     assert.equal(new Set(list.map((r) => r.likeLeft)).size, 1,
       `the like does not line up down the board: lefts ${list.map((r) => r.likeLeft).join(', ')}`);
     // board-cards decision D: a picture post stands on a stage, sized from its
@@ -101,4 +113,19 @@ export async function run() {
     assert.deepEqual(await c.shimMisses(), []);
     assert.deepEqual(c.errors(), []);
   } finally { await c.close(); }
+
+  // feed-row v2 claim 11: the mark is the reader's to switch off (Settings →
+  // Provider mark); off, no row carries one and the byline is otherwise the same
+  const m = await scenario('first-visit', { mode: 'bluesky', responses: RESPONSES,
+    initScripts: ["try { localStorage.setItem('forage.providermark', 'off'); } catch {}"] });
+  try {
+    const { page } = m;
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`${m.origin}${BOARD_PATH}`);
+    await page.waitForSelector('.postrow');
+    const list = await rows(page);
+    assert.ok(list.every((r) => r.mark === null), 'with the setting off, no row shows a provider mark');
+    assert.ok(list.every((r) => r.sameLine), 'and the byline still holds one line');
+    assert.deepEqual(m.errors(), []);
+  } finally { await m.close(); }
 }

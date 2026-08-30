@@ -107,7 +107,7 @@ export async function run() {
     assert.match(rtext, /reposted by @me\.test/, `the repost names its reposter: ${JSON.stringify(rtext)}`);
     // The header is the byline now (plan 2026-08-29 post-and-thread, Phase 1):
     // avatar · who · time, no "by" — so the author is read from .who, not prose.
-    assert.equal((await rrow.locator('.byline .who').innerText()).trim(), 'aa.test', 'the byline stays the original author');
+    assert.equal(await rrow.locator('.byline .who').getAttribute('data-handle'), 'aa.test', 'the byline stays the original author'); // feed-row v2: the text is the chosen name
     assert.equal(await page.locator('.postrow:has-text("a plain post")').count(), 0);
 
     // And back: the tabs are a filter, not a one-way door.

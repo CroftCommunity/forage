@@ -140,10 +140,11 @@ export function avatarSlot(name, avatar = null) {
 
 // `avatar: false` draws no slot — a comment's avatar lives in its own column
 // (decision 1 + 2, Phase 8b), a row's opens the byline.
-export function byline({ name, whoNode, ts, avatar = null, after = [], menu = null }) {
+export function byline({ name, whoNode, ts, avatar = null, after = [], menu = null, mark = null }) {
   return el('div', { class: 'byline' },
     avatar === false ? null : avatarSlot(name, avatar),
     whoNode,
+    mark, // feed-row v2: the provider mark, or null
     el('span', { class: 'dot' }),
     el('span', { 'data-time': '1', title: new Date(ts).toLocaleString() }, timeAgo(ts)),
     ...after.filter(Boolean),
@@ -245,6 +246,28 @@ function stewardItems(type, subject) {
   return out;
 }
 
+// feed-row v2 (owner, 2026-08-30): the byline shows the name a person CHOSE;
+// the handle — the one thing on a row nobody else can type — stays one hover
+// away as the name's tooltip, and in the accessible name. A row with no chosen
+// name shows the handle. `data-handle` is the stable hook for tests and
+// tooling, since the text is no longer the handle.
+export function whoNode(author, authorName, badge = '') {
+  const name = authorName || author;
+  return el('span', { class: 'who', 'data-handle': author,
+    ...(authorName ? { title: `@${author}`, 'aria-label': `${authorName} (@${author})` } : {}) }, name, badge || '');
+}
+
+// The provider mark (js/provider-mark.js): a glyph the size of the text,
+// muted, with the provider in its tooltip. `provider` is null when the caller
+// has none to show (the memory sandbox, a removed author, the setting off).
+const BUTTERFLY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 10.8c-1.087-2.114-4.046-6.053-6.798-7.995C2.566.944 1.561 1.266.902 1.565.139 1.908 0 3.08 0 3.768c0 .69.378 5.65.624 6.479.815 2.736 3.713 3.66 6.383 3.364.136-.02.275-.039.415-.056-.138.022-.276.04-.415.056-3.912.58-7.387 2.005-2.83 7.078 5.013 5.19 6.87-1.113 7.823-4.308.953 3.195 2.05 9.271 7.733 4.308 4.267-4.308 1.172-6.498-2.74-7.078a8.741 8.741 0 0 1-.415-.056c.14.017.279.036.415.056 2.67.297 5.568-.628 6.383-3.364.246-.828.624-5.79.624-6.478 0-.69-.139-1.861-.902-2.206-.659-.298-1.664-.62-4.3 1.24C16.046 4.748 13.087 8.687 12 10.8Z"/></svg>';
+const RING = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="currentColor"/><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="6 3"/></svg>';
+export function providerMark(provider, label) {
+  if (!provider) return null;
+  return el('span', { class: 'provider-mark', 'data-provider': provider.id, role: 'img', title: label, 'aria-label': label,
+    html: provider.id === 'bsky' ? BUTTERFLY : RING });
+}
+
 // ---------- post row (feed) ----------
 export function postRow(p, viewerCanVote, opts = {}) {
   const link = `/f/${p.feedSlug}/p/${p.id}`;
@@ -286,8 +309,9 @@ export function postRow(p, viewerCanVote, opts = {}) {
     byline({
       name: p.author, ts: p.createdTs, avatar: p.avatar || null,
       whoNode: p.author
-        ? el('span', { class: 'who' }, p.author, opts.authorBadge || '')
+        ? whoNode(p.author, p.authorName, opts.authorBadge)
         : el('span', { class: 'who muted' }, '[removed]'),
+      mark: p.author && opts.provider ? providerMark(opts.provider, opts.providerLabel) : null,
       // `opts.menuGroups(p)` (the lens, Phase 4b) or `opts.perms(p)` (memory:
       // the feed-scoped permissions for this row's feed) — a row with neither
       // gets a guest's menu, which is the safe default.
@@ -414,13 +438,19 @@ export function commentNode(node, ctx) {
     });
   }
 
+  // feed-row v2: the chosen name, the handle in the tooltip (a comment's link
+  // already opened the profile — the lens's title said where; the handle now
+  // rides in front of that)
+  const shown = node.authorName || node.author;
+  const authorTitle = (node.authorName ? `@${node.author}` : '') + (ctx.authorHref ? `${node.authorName ? ' — ' : ''}Profiles live on bsky.app — Forage is a lens` : '');
   const author = node.author
-    ? (ctx.authorHref
-      ? el('a', { class: 'who', href: ctx.authorHref(node), target: '_blank', rel: 'noopener noreferrer', title: 'Profiles live on bsky.app — Forage is a lens' }, node.author)
-      : el('a', { class: 'who', href: `/u/${node.author}` }, node.author))
+    ? el('a', { class: 'who', 'data-handle': node.author, ...(authorTitle ? { title: authorTitle } : {}),
+      ...(node.authorName ? { 'aria-label': `${node.authorName} (@${node.author})` } : {}),
+      ...(ctx.authorHref ? { href: ctx.authorHref(node), target: '_blank', rel: 'noopener noreferrer' } : { href: `/u/${node.author}` }) }, shown)
     : el('span', { class: 'who removed-stub' }, node.deleted ? '[deleted]' : '[removed]');
   const meta = byline({
     name: node.author, whoNode: author, ts: node.createdTs, avatar: false,
+    mark: node.author && ctx.providerOf ? providerMark(ctx.providerOf(node.author), ctx.providerLabel(node.author)) : null,
     menu: node.maskedRemoved || node.deleted ? null
       : ctx.menuGroups ? () => ctx.menuGroups(node)
       : () => memoryMenuGroups({ type: 'comment', subject: node, text: node.body,
