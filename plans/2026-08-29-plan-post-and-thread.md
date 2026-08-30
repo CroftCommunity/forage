@@ -2,8 +2,8 @@
 
 **Status:** Pass 1 rewritten to the phase-plan template 2026-08-29; **Pass 2 (gap analysis)
 applied the same day** — see Review Log. **Pass 3 (quality gates) applied the same day** — see
-Review Log. **Not started: Phase 0 first.** Open-question severities (O2–O8) are the agent's
-recommendations and await the owner's confirmation before execution.
+Review Log. **Not started: Phase 0 first.** Open-question severities (O2–O8) **confirmed as recommended by the owner
+2026-08-29** ("accept all as recommended"): O5/O6/O8 PHASE-GATED, O2/O3/O4/O7 ADVISORY.
 **Progress tracker:** this Status line. At every phase end append `last green: <phase> @ <sha>`;
 at every landing the CHANGELOG entry and the mock's `mock-baseline` sha are the markers.
 **Origin:** owner session 2026-08-29 — Reddit (web + Android) and Bluesky screenshots
@@ -947,6 +947,6 @@ additive fixes, all recorded in place with a *(Pass 2)* marker:
 **Documentation impact:**
 - Two rows added (the `'best'` sites; the new-file grep record). Every listed file has
   a phase; no trailing docs phase.
-**Confirmed ready:** no — pending the owner's confirmation of O2–O8 severities (three
-PHASE-GATED, four ADVISORY). No BLOCKING items; Phase 0 can start once they are
-confirmed.
+**Confirmed ready:** yes — the owner confirmed every severity as recommended
+(2026-08-29) and said execute the full plan, PR and merge each landing. No BLOCKING
+items; 4b/9/3 are gated on O5/O6/O8, each with its recommended answer taken.
