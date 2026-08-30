@@ -133,9 +133,13 @@ export async function run() {
     });
     assert.ok(geo.rightGap <= 4, `Reply is not at the right end of its row (gap ${geo.rightGap}px)`);
     assert.ok(geo.sameLine, 'Reply shares the line with the like pill');
+    const pillH = await page.$eval('#main .head-actions [data-vote]', (b) => b.getBoundingClientRect().height);
+    assert.ok(pillH <= 44, `the like pill was squeezed onto two lines by the row (height ${Math.round(pillH)}px)`);
     await headReply.click();
     await page.waitForSelector('[data-reply-target]');
     assert.ok((await page.locator('[data-reply-target]').innerText()).includes('Pneumatic Pie Tube'), 'the post being answered is on the page, above the box');
+    const tb = await page.$eval('[data-reply-target] .byline', (b) => { const w = b.querySelector('.who').getBoundingClientRect(), k = b.querySelector('.kebab').getBoundingClientRect(); return Math.abs((w.top + w.height / 2) - (k.top + k.height / 2)); });
+    assert.ok(tb <= 4, `the answered post's ⋯ left its byline (${Math.round(tb)}px off the line)`);
     const pageBox = page.locator('[data-composer]:not([data-quick])');
     assert.equal(await pageBox.count(), 1, 'one box, the page’s');
     await pageBox.locator('textarea').fill('a draft, not yet sent');

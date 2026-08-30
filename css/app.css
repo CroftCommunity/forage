@@ -317,6 +317,11 @@ h1.posttext { font-family: var(--font-body); font-size: var(--t-lg); font-weight
 .actions.head-actions { flex-wrap: nowrap; }
 .head-actions .postmeta { flex: 1 1 auto; min-width: 0; }
 .head-actions .reply-right { flex: none; }
+.head-actions .vote { flex: none; white-space: nowrap; }
+/* the post being answered: its byline is one line like a row's (the ⋯ stays in the corner) */
+.reply-target .byline { flex-wrap: nowrap; }
+.reply-target .byline > .who { flex: 0 1 auto; min-width: 0; }
+.reply-target .byline > :not(.who) { flex: none; white-space: nowrap; }
 .reply-box textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: var(--t-md); padding: 8px; border: 1px solid var(--border);
   border-radius: var(--radius-sm); background: var(--card); color: var(--text); resize: vertical; }
 .reply-box.quick { margin-top: 8px; padding: 8px; }
