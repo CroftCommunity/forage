@@ -29,7 +29,7 @@
 // It refuses to run with uncommitted UI files in the served tree — the sha
 // would otherwise name a tree the pixels are not from.
 import { scenario } from '../e2e/harness/scenario.mjs';
-import { RESPONSES, FAKE_SIGNED_IN, THREAD_PATH, NODE_IDS } from '../e2e/harness/mock-thread.mjs';
+import { RESPONSES, FAKE_SIGNED_IN, THREAD_PATH, NODE_IDS, ROOT as THREAD_ROOT } from '../e2e/harness/mock-thread.mjs';
 import { RESPONSES as BOARD, BOARD_PATH } from '../e2e/harness/mock-board.mjs';
 import { mergeManifest } from './lib/snaps-manifest.mjs';
 import { SKINS } from '../js/skins.js';
@@ -48,6 +48,12 @@ if (AS && !['current', 'proposed'].includes(AS)) { console.error(`--as must be c
 const ONLY = opt('--only')?.split(',') ?? null;
 const wanted = (route) => !ONLY || ONLY.includes(route);
 const SERVE = resolve(opt('--serve') ?? ROOT);
+// --skin <id>: every frame in that skin (the owner asked to see the mocks in three,
+// 2026-08-30); files carry the skin in their name, the default skin carries none
+const SKIN = opt('--skin');
+const SKIN_INIT = SKIN ? [`try { localStorage.setItem('forage.skin', '${SKIN}'); } catch {}`] : [];
+const skinTag = SKIN ? `.${SKIN}` : '';
+const scenarioS = (state, opts = {}) => scenario(state, { ...opts, initScripts: [...SKIN_INIT, ...(opts.initScripts || [])] });
 const OUT = resolve(opt('--out') ?? join(ROOT, 'plans', 'mocks', 'snaps'));
 const SKIN = opt('--skin');
 if (SKIN && !SKINS[SKIN]) { console.error(`--skin must be a registered skin id, not ${SKIN} (known: ${Object.keys(SKINS).join(', ')})`); process.exit(2); }
@@ -69,7 +75,7 @@ mkdirSync(OUT, { recursive: true });
 const files = [];
 const shoot = async (page, route, population, name, vp) => {
   if (!wanted(route)) return;
-  const file = `${route}.${name}${suffix}.png`;
+  const file = `${route}.${name}${skinTag}${suffix}.png`;
   await page.screenshot({ path: join(OUT, file) });
   files.push({ file, route, viewport: name, ...vp, baseline, population, ...(SKIN ? { skin: SKIN } : {}) });
 };
@@ -77,7 +83,7 @@ const shoot = async (page, route, population, name, vp) => {
 for (const [name, vp] of Object.entries(VIEWPORTS)) {
   // ---- memory:seeded — the board and its deepest thread ----
   if (wanted('board') || wanted('thread')) {
-  const s = await scenario('seeded', { root: SERVE, initScripts: SKIN_INIT });
+  const s = await scenarioS('seeded', { root: SERVE, initScripts: SKIN_INIT });
   await s.page.setViewportSize({ width: vp.width, height: vp.height });
   await s.open('#/popular'); await s.waitForSeed();
   await s.page.reload(); await s.page.waitForSelector('.postrow', { timeout: 10000 });
@@ -95,7 +101,7 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
 
   // ---- lens:mock-thread — the Bluesky-view thread, signed in, under load ----
   if (wanted('thread-lens') || wanted('menu-lens') || wanted('focus-lens')) {
-  const l = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: RESPONSES });
+  const l = await scenarioS('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: RESPONSES });
   await l.page.setViewportSize({ width: vp.width, height: vp.height });
   await l.page.goto(`${l.origin}${THREAD_PATH}`);
   await l.page.waitForSelector('.comment[data-kind="quote"]', { timeout: 15000 }); // the quote cascade landed
@@ -121,9 +127,34 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
   await l.close();
   }
 
+  // feed-row v4: the /reply page (signed in, a draft already kept, so the frame shows
+  // the draft line) and the thread with the quick box open under a comment
+  if (wanted('reply-lens')) {
+    const seeded = `try { localStorage.setItem('forage.draft:${THREAD_ROOT}', JSON.stringify({ text: 'Might as well — a pie tube is a pie tube, and the quiche would travel better than the proposal did.', savedAt: '2026-08-30T20:15:00Z' })); } catch {}`;
+    const r = await scenarioS('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [FAKE_SIGNED_IN, seeded], responses: RESPONSES });
+    await r.page.setViewportSize({ width: vp.width, height: vp.height });
+    await r.page.goto(`${r.origin}/reply?uri=${encodeURIComponent(THREAD_ROOT)}&root=${encodeURIComponent(THREAD_ROOT)}`);
+    await r.page.waitForSelector('[data-reply-target]', { timeout: 15000 });
+    await r.page.evaluate(() => document.fonts?.ready);
+    await shoot(r.page, 'reply-lens', 'lens:mock-thread', name, vp);
+    await r.close();
+  }
+  if (wanted('thread-lens-reply')) {
+    const q = await scenarioS('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [FAKE_SIGNED_IN], responses: RESPONSES });
+    await q.page.setViewportSize({ width: vp.width, height: vp.height });
+    await q.page.goto(`${q.origin}${THREAD_PATH}`);
+    await q.page.waitForSelector('.comment[data-kind="quote"]', { timeout: 15000 });
+    await q.page.locator(`.comment[data-node-id="${NODE_IDS[2]}"] > .comment-body > .comment-actions button.reply`).click();
+    await q.page.waitForSelector(`.comment[data-node-id="${NODE_IDS[2]}"] [data-composer]`);
+    await q.page.evaluate((id) => document.querySelector(`.comment[data-node-id="${id}"]`)?.scrollIntoView({ block: 'start' }), NODE_IDS[2]);
+    await q.page.waitForTimeout(200);
+    await shoot(q.page, 'thread-lens-reply', 'lens:mock-thread', name, vp);
+    await q.close();
+  }
+
   // ---- lens:mock-board — the board, signed out (board-cards A–F, post-and-thread A/E) and signed in ----
   if (wanted('board-lens') || wanted('board-lens-media')) {
-    const out = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: SKIN_INIT, responses: BOARD });
+    const out = await scenarioS('first-visit', { root: SERVE, mode: 'bluesky', initScripts: SKIN_INIT, responses: BOARD });
     await out.page.setViewportSize({ width: vp.width, height: vp.height });
     await out.page.goto(`${out.origin}${BOARD_PATH}`);
     await out.page.waitForSelector('.postrow', { timeout: 15000 });
@@ -145,7 +176,7 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
   // the owner's phone (2026-08-30). Same skin as every other frame (MOCKS.md
   // rule 4: compare in one skin), so the density is the only axis that moves.
   if (wanted('board-lens-compact')) {
-    const cmp = await scenario('first-visit', { root: SERVE, mode: 'bluesky', responses: BOARD,
+    const cmp = await scenarioS('first-visit', { root: SERVE, mode: 'bluesky', responses: BOARD,
       initScripts: ["try { localStorage.setItem('forage.boardview', 'compact'); } catch {}"] });
     await cmp.page.setViewportSize({ width: vp.width, height: vp.height });
     await cmp.page.goto(`${cmp.origin}${BOARD_PATH}`);
@@ -161,7 +192,7 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
     await cmp.close();
   }
   if (wanted('board-lens-in')) {
-    const inn = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: BOARD });
+    const inn = await scenarioS('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: BOARD });
     await inn.page.setViewportSize({ width: vp.width, height: vp.height });
     await inn.page.goto(`${inn.origin}${BOARD_PATH}`);
     await inn.page.waitForSelector('.postrow', { timeout: 15000 });

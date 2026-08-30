@@ -309,6 +309,19 @@ h1.posttext { font-family: var(--font-body); font-size: var(--t-lg); font-weight
    own flex rules keep it on the line (`.byline > :not(.who)` is flex: none) */
 .provider-mark { display: inline-flex; width: 1em; height: 1em; color: var(--muted); opacity: .8; vertical-align: -0.1em; }
 .provider-mark svg { width: 100%; height: 100%; display: block; }
+/* feed-row v4: the head's Reply at the right end of the like's row; the reply box (the
+   /reply page's, and the quick one under a comment); the post being answered, walled
+   like a quote so it reads as context, not as the thing you are writing */
+.actions .reply-right { margin-left: auto; }
+/* the head's row keeps ONE line: the meta yields (wraps inside itself) before Reply drops */
+.actions.head-actions { flex-wrap: nowrap; }
+.head-actions .postmeta { flex: 1 1 auto; min-width: 0; }
+.head-actions .reply-right { flex: none; }
+.reply-box textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: var(--t-md); padding: 8px; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); background: var(--card); color: var(--text); resize: vertical; }
+.reply-box.quick { margin-top: 8px; padding: 8px; }
+.reply-target { border-left: 3px solid var(--brand-ink); margin-bottom: 8px; }
+.linkish { background: none; border: 0; padding: 0; color: var(--link); cursor: pointer; font: inherit; text-decoration: underline; }
 /* A comment's byline is ONE line (post-and-thread decision 7, mock v18 claim A): a real
    handle is up to 30 characters, and at 390px it wrapped the time, "⟳ quoted this" and
    the ⋯ onto second and third lines (forage.fyi, owner screenshots 2026-08-30). The name

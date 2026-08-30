@@ -359,10 +359,10 @@ export async function run() {
   // parent is what you clicked, root is the top of the thread — and both refs
   // carry a cid, which the lexicon requires and a broken ref would not.
   await page.waitForSelector('[data-reply-open]');
-  await page.locator('[data-reply-open]').first().click();
+  await page.locator('[data-reply-open]').first().click(); // feed-row v4: a link to the /reply page
   await page.waitForSelector('[data-composer]');
   await page.locator('[data-composer] textarea').fill('mine came up early too');
-  await page.locator('[data-composer] button:has-text("Reply")').click();
+  await page.locator('[data-composer] [data-send]').click();
   await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('createRecord')
     && JSON.parse(h.body).collection === 'app.bsky.feed.post'));
   const reply = await page.evaluate(() => JSON.parse(window.__shimHits

@@ -7,8 +7,10 @@
 // sign-in survives reloads. The lens consumes { did, handle, fetchHandler }.
 
 import { el, timeAgo, fmtScore, domainOf, plural } from '../util.js';
-import { postRow, commentNode, vote, focusComment, skeleton, emptyState, toast, reportSheet, whoNode } from './components.js';
+import { postRow, commentNode, vote, focusComment, skeleton, emptyState, toast, reportSheet, whoNode, byline, providerMark as providerMarkNode } from './components.js';
 import * as providerMark from '../provider-mark.js';
+import * as drafts from '../drafts.js';
+import { go } from '../router.js';
 import { navTree } from './nav.js';
 import { LADDER, RUNG_IDS, labelFor } from '../rings.js';
 import { lastBoard, setLastBoard, landingBoard, DIRECTORY } from '../last-board.js';
@@ -1303,6 +1305,95 @@ function deleteControl(post, onDone) {
 // the writer what the composer would say before they send it. The counter goes
 // NEGATIVE past the limit rather than clamping, because clamping hides that
 // their words are being cut.
+// feed-row v4 (owner, 2026-08-30): a reply is a PAGE (/reply — the post you
+// are answering above the box, so you can read it) or, under a comment, a
+// quick box — textarea, Send, Cancel, nothing else. Both keep what you typed
+// as a draft in this browser (js/drafts.js), keyed by the post answered: Cancel
+// keeps it, Send clears it, Discard throws it away. Text only in v4: the image
+// strip composerCard carries is not on a reply box (recorded on the mock, O7).
+const replyPath = (parentUri, rootUri, fromSlug) =>
+  `/reply?uri=${encodeURIComponent(parentUri)}&root=${encodeURIComponent(rootUri)}${fromSlug ? `&from=${encodeURIComponent(fromSlug)}` : ''}`;
+
+function replyBox({ parentUri, replyTo, onDone, onCancel, quick = false, autofocus = false }) {
+  const stored = drafts.load(parentUri);
+  const box = el('textarea', { rows: quick ? '3' : '6', 'data-composer-text': '1', placeholder: 'Write your reply…', 'aria-label': 'Your reply' });
+  if (stored) box.value = stored.text;
+  const remaining = el('span', { class: 'xs muted', 'data-remaining': '1' });
+  const status = el('span', { class: 'xs muted', 'data-draft-status': '1' });
+  const discard = el('button', { type: 'button', class: 'linkish xs', 'data-draft-discard': '1' }, 'Discard draft');
+  const send = el('button', { type: 'button', class: 'btn sm primary', 'data-send': '1' }, 'Send');
+  const cancel = el('button', { type: 'button', class: 'btn sm', 'data-cancel': '1' }, 'Cancel');
+  const paintDraft = (d) => {
+    status.textContent = d ? `Draft saved in this browser · ${new Date(d.savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '';
+    discard.hidden = !d;
+  };
+  paintDraft(stored);
+  let timer = null;
+  const sync = () => {
+    const left = POST_LIMITS.graphemes - graphemes(box.value.trim());
+    remaining.textContent = left >= 0 ? `${left} left` : `${-left} over`;
+    remaining.classList.toggle('over', left < 0);
+    send.disabled = left < 0 || !box.value.trim();
+  };
+  box.addEventListener('input', () => { sync(); clearTimeout(timer); timer = setTimeout(() => paintDraft(drafts.save(parentUri, box.value)), 400); });
+  sync();
+  discard.addEventListener('click', () => { clearTimeout(timer); drafts.clear(parentUri); box.value = ''; sync(); paintDraft(null); box.focus(); });
+  cancel.addEventListener('click', () => { clearTimeout(timer); if (box.value.trim()) drafts.save(parentUri, box.value); onCancel?.(); });
+  send.addEventListener('click', async () => {
+    send.disabled = true; clearTimeout(timer);
+    try {
+      await lens.publish({ text: box.value, replyTo, images: [], langs: lang.active().slice(0, 1),
+        navLang: typeof navigator !== 'undefined' ? navigator.language : null });
+      drafts.clear(parentUri);
+      toast('Reply sent — it is on your Bluesky account too.', 'ok');
+      onDone?.();
+    } catch (e) { toast('Reply failed: ' + e.message, 'err'); send.disabled = false; }
+  });
+  const card = el('div', { class: 'card reply-box' + (quick ? ' quick' : ''), 'data-composer': '1', ...(quick ? { 'data-quick': '1' } : {}) },
+    box,
+    el('div', { class: 'row spread wrap', style: 'gap:8px;align-items:center;margin-top:6px' },
+      el('div', { class: 'row wrap', style: 'gap:8px;align-items:center' }, remaining, status, discard),
+      el('div', { class: 'row', style: 'gap:6px' }, cancel, send)));
+  if (autofocus) queueMicrotask(() => box.focus());
+  return card;
+}
+
+// /reply?uri=<parent>&root=<root>[&from=<slug>] — the post (or comment) you
+// are answering, then the box. Sent or cancelled, you land back on the thread.
+export function lensReplyView(params, query) {
+  const parentUri = query.uri ? decodeURIComponent(query.uri) : null;
+  const rootUri = query.root ? decodeURIComponent(query.root) : parentUri;
+  if (!parentUri) return { main: emptyState('Nothing to reply to', 'Missing post uri.'), side: null };
+  const threadHref = `/p?uri=${encodeURIComponent(rootUri)}${parentUri !== rootUri ? `&focus=${encodeURIComponent(parentUri)}` : ''}`;
+  const gate = sessionGate('reply');
+  if (gate) return { main: emptyState('Sign in to reply', gate, el('a', { class: 'btn', href: threadHref }, 'Back to the thread')), side: null };
+  const from = sources.get(query.from);
+  const src = from ? { feedId: `lens:${from.slug}`, feedSlug: from.slug, feedTitle: from.title }
+                   : { feedId: 'lens:thread', feedSlug: 'thread', feedTitle: 'Thread' };
+  const main = el('div', {}, skeleton(4));
+  Promise.all([lens.thread(parentUri, src), parentUri === rootUri ? null : lens.thread(rootUri, src)])
+    .then(([t, rt]) => {
+      const p = t.post; const rootPost = rt ? rt.post : p;
+      const replyTo = { root: { uri: rootPost.id, cid: rootPost.cid }, parent: { uri: p.id, cid: p.cid } };
+      const pr = providerMark.enabled() ? providerMark.providerOf(p.author) : null;
+      const target = el('div', { class: 'card reply-target', 'data-reply-target': p.id },
+        el('div', { class: 'xs muted', style: 'margin-bottom:6px' }, p.id === rootUri ? 'Replying to the post' : 'Replying to this comment'),
+        byline({ name: p.author, ts: p.createdTs, avatar: p.avatar || null,
+          whoNode: p.author ? whoNode(p.author, p.authorName, verifiedBadge(p)) : el('span', { class: 'who muted' }, '[removed]'),
+          mark: pr ? providerMarkNode(pr, providerMark.markLabel(pr, p.author)) : null,
+          menu: () => lensMenuGroups(p, { kind: 'post' }) }),
+        facetedBody(p),
+        p.media && !p.maskedRemoved ? mediaNode(p) : null);
+      main.replaceChildren(
+        el('div', { class: 'row wrap', style: 'gap:6px;margin-bottom:8px' },
+          el('a', { href: threadHref, class: 'xs' }, `f/${src.feedSlug}`), el('span', { class: 'xs muted' }, '› Reply')),
+        target,
+        replyBox({ parentUri: p.id, replyTo, autofocus: true, onDone: () => go(threadHref), onCancel: () => go(threadHref) }));
+    })
+    .catch((e) => main.replaceChildren(emptyState('Could not load the post', e.message, el('a', { class: 'btn', href: threadHref }, 'Back to the thread'))));
+  return { main, side: el('div', { class: 'side' }, ...lensRail()) };
+}
+
 function composerCard({ tag, replyTo, onDone }) {
   const box = el('textarea', { rows: '3', 'data-composer-text': '1',
     placeholder: tag ? `Post to #${tag}…` : 'Write a reply…' });
@@ -2300,16 +2391,11 @@ export function lensThreadView(params, query) {
     // thread, which for a lens thread is always the post being read. Defined
     // before the head, which uses them.
     const rootRef = { uri: p.id, cid: p.cid };
-    const replyHost = el('div', {});
-    const openReply = (parentRef) => {
-      const gate = sessionGate('reply');
-      if (gate) return toast(gate, 'err');
-      if (replyHost.querySelector('[data-composer]')) return;
-      replyHost.replaceChildren(composerCard({
-        replyTo: { root: rootRef, parent: parentRef },
-        onDone: () => rerender(),
-      }));
-    };
+    // feed-row v4: Reply is a link to the /reply page, at the right end of the
+    // like's row (owner: "put reply on the right side"); the inline head
+    // composer is gone — the page shows the post above the box instead
+    const replyLink = el('a', { class: 'btn sm primary reply-right', 'data-reply-open': '1',
+      href: replyPath(p.id, p.id, src.feedSlug === 'thread' ? null : src.feedSlug) }, 'Reply');
     const head = el('div', { class: 'card', style: 'display:flex;gap:10px' },
       el('div', {},
       el('div', { class: 'row wrap', style: 'gap:6px' },
@@ -2323,12 +2409,13 @@ export function lensThreadView(params, query) {
       // phone, 2026-08-30: a four-line post filled the screen above its
       // picture). A link post's headline keeps the heading.
       p.placeholderTitle && p.media ? null : el('h1', p.format === 'link' ? {} : { class: 'posttext' }, p.title.slice(0, 300)),
-      el('div', { class: 'actions' },
+      el('div', { class: 'actions head-actions' },
         vote('post', p.id, p, !!session, { onVote: lensVote(p), onGuest: session ? null : openAuthSheet }), // Phase 6c: the head's pill
         el('div', { class: 'postmeta' },
           // feed-row v2: the chosen name, the handle in the tooltip
           p.author ? el('a', { href: `/u/${encodeURIComponent(p.author)}` }, whoNode(p.author, p.authorName)) : '[muted]',
-          ` · ${timeAgo(p.createdTs)} ago · ${plural(p.commentCount, 'reply', 'replies')}`)),
+          ` · ${timeAgo(p.createdTs)} ago · ${plural(p.commentCount, 'reply', 'replies')}`),
+        replyLink),
       // The post's own media, at full board size — until 2026-08-28 an image
       // post's thread page rendered no image at all.
       p.media && !p.maskedRemoved ? mediaNode(p) : null,
@@ -2344,19 +2431,12 @@ export function lensThreadView(params, query) {
       p.quoted ? quotedContext(p.quoted) : null,
       t.quotesFailed ? el('div', { class: 'row', style: 'gap:6px;margin-top:6px' },
         chip(`${t.quoteCount} quote${t.quoteCount === 1 ? '' : 's'} — couldn't fetch`, 'getQuotes failed; replies still render. Reload to retry.')) : null,
-      el('div', { class: 'row', style: 'gap:6px;margin-top:8px;align-items:center' },
-        (() => {
-          const b = el('button', { class: 'btn sm primary', 'data-reply-open': '1' }, 'Reply');
-          b.addEventListener('click', () => openReply(rootRef)); // replying to the post: parent IS root
-          return b;
-        })(),
-        // phase 2: only ever rendered for a post that is genuinely yours
-        deleteControl(p, () => {
-          main.replaceChildren(emptyState('This post was deleted',
-            'It is gone from your Bluesky account. Anyone who already saw it may still have a copy — deleting removes the record, it does not un-send it.',
-            el('a', { class: 'btn', href: `/f/${src.feedSlug}` }, 'Back to the board')));
-        })),
-      replyHost));
+      // phase 2: only ever rendered for a post that is genuinely yours
+      deleteControl(p, () => {
+        main.replaceChildren(emptyState('This post was deleted',
+          'It is gone from your Bluesky account. Anyone who already saw it may still have a copy — deleting removes the record, it does not un-send it.',
+          el('a', { class: 'btn', href: `/f/${src.feedSlug}` }, 'Back to the board')));
+      })));
     const ctx = { ...LENS_PERMS, // save/mod still gate; replying does not —
       // Reply sits on every node (mock v18 claim C; on forage.fyi 2026-08-30 only
       // the head offered it), the composer mounting under the node you answered
@@ -2364,7 +2444,9 @@ export function lensThreadView(params, query) {
         const gate = sessionGate('reply');
         if (gate) return toast(gate, 'err');
         if (host.querySelector('[data-composer]')) { host.replaceChildren(); return; } // a second press folds it
-        host.replaceChildren(composerCard({ replyTo: { root: rootRef, parent: { uri: n.id, cid: n.cid } }, onDone: () => rerender() }));
+        // feed-row v4: the quick box — textarea, Send, Cancel; the draft survives Cancel
+        host.replaceChildren(replyBox({ parentUri: n.id, replyTo: { root: rootRef, parent: { uri: n.id, cid: n.cid } },
+          quick: true, autofocus: true, onDone: () => rerender(), onCancel: () => host.replaceChildren() }));
       },
       // A reply's stack is the same like the head's pill is (owner, 2026-08-29:
       // signed in, the comment arrow did nothing — it was the guest span).

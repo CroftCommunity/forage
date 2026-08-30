@@ -67,6 +67,19 @@ export async function run() {
     await page.locator(`.comment[data-node-id="${target}"] > .comment-body > .comment-actions button.reply`).click();
     const composer = page.locator(`.comment[data-node-id="${target}"] [data-composer]`);
     assert.equal(await composer.count(), 1, 'the composer opens under the comment you answered');
+    // feed-row v4 claim 15 (owner: "a simple text box to drop down with a send or
+    // cancel"): under a comment the box is the QUICK one — textarea, Send,
+    // Cancel, nothing else; Cancel folds it and keeps what was typed as a draft
+    assert.equal(await composer.getAttribute('data-quick'), '1', 'the box under a comment is the quick box');
+    assert.equal(await composer.locator('[data-attach-image]').count(), 0, 'no image strip on the quick box');
+    assert.equal(await composer.locator('[data-send]').count(), 1, 'Send');
+    assert.equal(await composer.locator('[data-cancel]').count(), 1, 'Cancel');
+    await composer.locator('textarea').fill('half a thought');
+    await composer.locator('[data-cancel]').click();
+    assert.equal(await page.locator(`.comment[data-node-id="${target}"] [data-composer]`).count(), 0, 'Cancel folds the box');
+    assert.equal(await page.evaluate((k) => JSON.parse(localStorage.getItem(k) || 'null')?.text, `forage.draft:${target}`), 'half a thought', 'and keeps the words as a draft');
+    await page.locator(`.comment[data-node-id="${target}"] > .comment-body > .comment-actions button.reply`).click();
+    assert.equal(await composer.locator('textarea').inputValue(), 'half a thought', 'reopened, the draft is back');
     await composer.locator('textarea').fill('quiche it is');
     await composer.locator('button.primary').click();
     await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('createRecord') && (h.body || '').includes('app.bsky.feed.post')));
@@ -102,6 +115,44 @@ export async function run() {
     const focused = await page.$$eval('.comment.focused', (cs) => cs.map((c) => c.dataset.nodeId));
     assert.deepEqual(focused, [NODE_IDS[2]], 'after the cascade repaint, the deep-linked comment is still the focused one');
     assert.equal(await page.locator('.focus-bar').count(), 1, 'and the bar over it says so, once');
+
+    // feed-row v4 claims 12–14 (owner: "put reply on the right side, and when I
+    // hit reply I want to be on a new page with the text input box and the
+    // comment I am replying to above it"): the head's Reply is a LINK at the
+    // right end of the like's row; the page shows the post above the box; a
+    // draft is kept in this browser across a reload and cleared on send.
+    await page.goto(`${s.origin}${THREAD_PATH}`);
+    await page.waitForSelector('#main [data-reply-open]');
+    const headReply = page.locator('#main [data-reply-open]');
+    assert.equal(await headReply.evaluate((a) => a.tagName), 'A', 'the head’s Reply is a link to a page, not a button that unfolds');
+    assert.ok((await headReply.getAttribute('href')).startsWith('/reply?uri='), 'and it opens /reply');
+    const geo = await page.evaluate(() => {
+      const a = document.querySelector('#main [data-reply-open]'); const row = a.parentElement; const pill = row.querySelector('[data-vote]');
+      const ra = a.getBoundingClientRect(), rr = row.getBoundingClientRect(), rp = pill.getBoundingClientRect();
+      return { rightGap: Math.round(rr.right - ra.right), sameLine: Math.abs((ra.top + ra.height / 2) - (rp.top + rp.height / 2)) <= 4 };
+    });
+    assert.ok(geo.rightGap <= 4, `Reply is not at the right end of its row (gap ${geo.rightGap}px)`);
+    assert.ok(geo.sameLine, 'Reply shares the line with the like pill');
+    await headReply.click();
+    await page.waitForSelector('[data-reply-target]');
+    assert.ok((await page.locator('[data-reply-target]').innerText()).includes('Pneumatic Pie Tube'), 'the post being answered is on the page, above the box');
+    const pageBox = page.locator('[data-composer]:not([data-quick])');
+    assert.equal(await pageBox.count(), 1, 'one box, the page’s');
+    await pageBox.locator('textarea').fill('a draft, not yet sent');
+    await page.waitForFunction((k) => !!localStorage.getItem(k), `forage.draft:${ROOT}`);
+    await page.reload();
+    await page.waitForSelector('[data-composer] textarea');
+    assert.equal(await page.locator('[data-composer] textarea').inputValue(), 'a draft, not yet sent', 'the draft came back after a reload');
+    assert.match(await page.locator('[data-draft-status]').innerText(), /Draft saved in this browser/);
+    const before = await page.evaluate(() => window.__shimHits.filter((h) => h.url.includes('createRecord')).length);
+    await page.locator('[data-composer] [data-send]').click();
+    await page.waitForFunction((n) => window.__shimHits.filter((h) => h.url.includes('createRecord')).length > n, before);
+    const sent = await page.evaluate(() => JSON.parse(window.__shimHits.filter((h) => h.url.includes('createRecord')).at(-1).body));
+    assert.equal(sent.record.text, 'a draft, not yet sent');
+    assert.equal(sent.record.reply.parent.uri, ROOT, 'replying to the post: parent is the post');
+    assert.equal(sent.record.reply.root.uri, ROOT);
+    await page.waitForFunction((k) => !localStorage.getItem(k), `forage.draft:${ROOT}`);
+    await page.waitForSelector('.comment'); // sent, and back on the thread
     assert.deepEqual(await s.shimMisses(), []);
     assert.deepEqual(s.errors(), []);
   } finally { await s.close(); }
