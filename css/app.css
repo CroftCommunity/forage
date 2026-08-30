@@ -148,11 +148,12 @@ kbd { background: var(--green-100); border: 1px solid var(--border); border-radi
   /* the off state is restated here: its selector outranks this block's,
      and a two-track grid at 320 overflowed (mobile-fit caught it) */
   .shell, .shell[data-rail="off"] { grid-template-columns: 1fr; }
-  /* one column: the rail's cards become grid items — the sign-in card first,
-     the rest after the content */
+  /* one column: the rail's cards follow the content. The sign-in card does
+     NOT lead here — on the home page the hero is the door and owns the fold
+     (e2e/hero holds a 55% ceiling; a card above it reached 81%), and on a
+     board the like pill and the ⋯ are the doors (decisions 1, 8). */
   #side, .side { display: contents; }
   .side > .card { order: 2; }
-  .side > [data-signin-card] { order: -1; }
 }
 
 /* ---- Cards ---- */

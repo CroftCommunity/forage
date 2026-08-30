@@ -7,7 +7,7 @@ applied the same day** — every file:line below was read in the `board-cards` w
 **Progress tracker:** this Status line. At every phase end append `last green: <phase> @ <sha>`.
 last green: Phase 1 @ f71a04d · Phase 2 @ 16edc2b · Phase 3 @ 509a3b9 · Phase 4 @ 490bfc0 · **branch A gated** (npm test 623/0, workflows 25/0) @ 6c4b508.
 Phase 5a @ 7372582 · 5b+5c @ db0a990 · Phase 6 @ 674b4f3 · **branch B gated** (see the landing commit).
-Phase 7b @ 3ab6178 · 7c + branch C gated (see the landing commit).
+Phase 7b @ 3ab6178 · 7c @ ea7ed09 · branch C gated (npm test 637/0, workflows 27/0) at the fix commit after `hero` refused the first landing.
 **Origin:** the owner's review of forage.fyi after the post-and-thread landings (2026-08-29),
 with Reddit's front page as the reference; worked through four revisions of
 `plans/mocks/board-cards.html` and **eight decisions locked on v5**. The mock is the picture;
@@ -388,7 +388,10 @@ pure function with its own unit test, so the views cannot each re-derive it.
   — `lensSidebar` order: `sessionCard` (guest) · Feeds · `trendingRail`.
 **Edges:** rail off → the column is still 680 and centred (assert `.shell` grid has two
 tracks and the column's left offset equals the right margin); rail on under 860px → the
-sign-in card is the top notice, not a rail.
+rail's cards follow the content. *(Was "the sign-in card is the top notice" — executed that
+way first, and `hero` refused it: a card above the home hero pushed the front door to 81%
+of a 390 fold against a 55% ceiling. On a phone the doors are the hero and, on boards,
+decisions 1 and 8; the card follows.)*
 **Done when:** the live board reads as one content column with a quiet rail; all suites
 green.
 **Observability:** *(Pass 3)* none — layout; the suites and the look are the instrument.
