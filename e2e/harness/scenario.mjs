@@ -66,7 +66,7 @@ export async function diagnoseLive() {
   return out.join('\n');
 }
 
-export async function scenario(state, { initScripts = [], mode, ...shimOpts } = {}) {
+export async function scenario(state, { initScripts = [], mode, root, ...shimOpts } = {}) {
   if (!STATES.includes(state)) {
     throw new Error(`unknown scenario state: ${state} (known: ${STATES.join(', ')})`);
   }
@@ -75,7 +75,7 @@ export async function scenario(state, { initScripts = [], mode, ...shimOpts } = 
   // defaults to the domain default (bluesky) unless the workflow says.
   const presentation = mode ?? (state === 'seeded' ? 'memory' : null);
   if (presentation) initScripts = [`try { localStorage.setItem('forage.mode', '${presentation}'); } catch {}`, ...initScripts];
-  const server = await serve();
+  const server = await serve({ root }); // root: another checkout to serve (mock-snaps' CURRENT capture)
   const browser = await chromium.launch({ headless: !process.env.HEADED });
   const context = await browser.newContext();
   await context.addInitScript(fetchShim(shimOpts));

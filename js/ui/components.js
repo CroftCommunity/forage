@@ -427,6 +427,7 @@ export function commentNode(node, ctx) {
   const text = el('div', { class: 'comment-text', html: node.maskedRemoved || node.deleted ? esc(node.body) : mdLite(node.body) });
 
   const actionsRow = el('div', { class: 'comment-actions' });
+  const replyHost = el('div', { class: 'reply-host' }); // where a lens composer lands, under this node
   // the vote stack is a grid sibling in the avatar column, on the action row's
   // line, the rail passing behind it (decision 1)
   // ctx.onVote(node) hands the lens its like/unlike for THIS node, the same
@@ -435,7 +436,10 @@ export function commentNode(node, ctx) {
     : vote('comment', node.id, node, ctx.canVote, { layout: 'stack', onGuest: ctx.onGuest, onVote: ctx.onVote ? ctx.onVote(node) : null });
   if (fold) actionsRow.append(fold);
   if (!node.maskedRemoved && !node.deleted) {
-    if (ctx.canComment && !ctx.locked) actionsRow.append(replyButton(node, ctx));
+    // Reply on EVERY node (post-and-thread decision 2's row, mock v18 claim C):
+    // the lens hands its composer through ctx.onReply and mounts it in the
+    // comment's own reply host; the memory tier keeps its inline form.
+    if (ctx.onReply || (ctx.canComment && !ctx.locked)) actionsRow.append(replyButton(node, ctx, replyHost));
     // Save, Report and the steward actions live in the ⋯ menu now (Phase 3).
     // Phase 2: the lens hangs its own controls here (delete-your-own-reply).
     // Returns nodes or nothing; the memory tier passes no extraActions, so its
@@ -450,7 +454,7 @@ export function commentNode(node, ctx) {
 
   // .comment-body is display:contents — its children sit in the comment's
   // grid, and every suite's `> .comment-body > .byline` keeps working
-  const bodyWrap = el('div', { class: 'comment-body' }, meta, text, voteEl, actionsRow);
+  const bodyWrap = el('div', { class: 'comment-body' }, meta, text, voteEl, actionsRow, replyHost);
   const childrenWrap = el('div', { class: 'kids' });
 
   wrap.append(avcol, bodyWrap, childrenWrap);
@@ -497,9 +501,12 @@ function countDesc(node) {
 }
 
 
-function replyButton(node, ctx) {
-  const btn = el('button', {}, 'reply');
+function replyButton(node, ctx, replyHost) {
+  // the return arrow IS the verb (mock v17 § C: "Two icons, two verbs" — the
+  // bubble counts, the arrow answers)
+  const btn = el('button', { class: 'reply', type: 'button' }, el('span', { 'aria-hidden': 'true' }, '\u21A9 '), 'Reply');
   btn.addEventListener('click', () => {
+    if (ctx.onReply) { ctx.onReply(node, replyHost); return; }
     if (btn.nextSibling && btn.nextSibling.classList?.contains('reply-form')) { btn.nextSibling.remove(); return; }
     const ta = el('textarea', { placeholder: 'Add a reply…' });
     const send = el('button', { class: 'btn sm primary' }, 'Reply');

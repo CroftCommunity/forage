@@ -3,9 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forage Post &amp; Thread Proposals v12</title>
-<meta name="mock-version" content="17">
-<meta name="mock-baseline" content="forage@f374bc7">
+<title>Forage Post &amp; Thread Proposals v19</title>
+<meta name="mock-version" content="19">
+<meta name="mock-baseline" content="forage@bc4ca96">
+<meta name="mock-proposal" content="forage@7259905">
 <style>
 :root{
   --page-bg:#EFE9DE; --page-card:#F8F4EC; --page-ink:#2B251C; --page-muted:#6B6252;
@@ -274,7 +275,11 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
   <header>
     <div class="eyebrow">Forage · mock · post-and-thread <b>v12</b> · baseline forage@9eb0074 · 2026-08-29</div>
     <h1>Posts, threads, and the ⋯ menu</h1>
-    <p class="sub"><b>Six proposals (A–F) and ten decisions — all ten LOCKED by the owner on 2026-08-29, as drawn in v11.</b> Talked through; still not code. The purpose:
+    <p class="sub"><b>Six proposals (A–F) and ten decisions — all ten LOCKED by the owner on 2026-08-29, as drawn in v11; built through v17; v18 is the alignment pass.</b>
+      On 2026-08-30 the owner's phone showed a thread that was “close but not right”: a real handle wrapped the byline to three lines, no reply offered Reply,
+      and the vote stack sat somewhere the drawing did not put it. v18 replaces C's drawn frames with <b>captures of the engine</b> — Current from
+      <code>forage@bc4ca96</code> (main), Proposed from <code>forage@7259905</code> (the branch) — against a thread built to carry the load the drawing never did
+      (<code>e2e/harness/mock-thread.mjs</code>), and records decision 1 as the owner amended it in code. The purpose, unchanged:
       make a Forage thread read the way the Reddit and Bluesky screenshots in <code>~/Downloads/new/Photos-1-001</code> read —
       who said what, what answers what, what is a repost — with fewer things to tap by accident on a phone. A is the header
       line, B the ⋯ menu, C the threading, D the like control, E the sort control, F deep links to comments. Every proposal shows Forage today beside
@@ -287,7 +292,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
     <h2>Decisions — locked 2026-08-29, as drawn</h2>
     <div class="tablewrap"><table>
       <tr><th style="width:36px">#</th><th>Decision</th><th>Decided (the proposal, as drawn)</th><th>Not taken</th></tr>
-      <tr><td>1</td><td>Where the vote lives</td><td>On a post: a pill in the action row, the left column becomes the avatar. On a comment: count-over-arrow in one outlined pill under the avatar, the arrow on the action row’s line, the rail passing behind (v8–v11)</td><td>Keep the rail; put the avatar in the byline only (no left column at all)</td></tr>
+      <tr><td>1</td><td>Where the vote lives</td><td>On a post: a pill in the action row, the left column becomes the avatar. On a comment: count-over-arrow in one outlined pill under the avatar, the rail passing behind (v8–v11). <b>Amended in code, owner 2026-08-29 (<code>c8af809</code>):</b> the stack sits at the <b>vertical middle</b> of the comment's body, not on the action row's line — recorded here in v18; the drawing had said the line for a day after the decision changed</td><td>Keep the rail; put the avatar in the byline only (no left column at all)</td></tr>
       <tr><td>2</td><td>Collapse control</td><td>⊖/⊕ on the actions row, children only</td><td>Keep the gutter but draw it only from depth 1, and shrink the hit area</td></tr>
       <tr><td>3</td><td>Menu contents</td><td>Post · thread · account as in B, separators only; steward group conditional; Delete replaces Report on your own post; Save via Bluesky bookmarks</td><td>Fewer: Copy link · Save · Hide · Report</td></tr>
       <tr><td>4</td><td>Menu on phone</td><td>Bottom sheet (Reddit); popover on desktop (Bluesky)</td><td>Popover everywhere</td></tr>
@@ -304,7 +309,13 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
     <div class="eyebrow">Revisions</div>
     <div class="tablewrap"><table>
       <tr><th style="width:36px">v</th><th>What changed</th><th>Commit</th></tr>
-      <tr><td>12</td><td><b>All ten decisions locked</b> (owner, 2026-08-29) — the mock as drawn in v11 is the decision; nothing else changed</td><td><i>this</i></td></tr>
+      <tr><td>19</td><td><b>Approved by the owner, 2026-08-30</b> — the captured Proposed frames in C (forage@7259905) are the decision; nothing else changed</td><td><i>this</i></td></tr>
+      <tr><td>18</td><td><b>Alignment.</b> C's frames are captures of the engine, Current beside Proposed, from the mock-thread fixture; decision 1 amended to the owner's in-code change; the title, version, baselines and this table agree again (v17 said v12 in its title, and named three baselines — <code>f374bc7</code>, <code>9eb0074</code>, <code>0e20a32</code> — for one set of pixels)</td><td><code>e1d7f3c</code></td></tr>
+      <tr><td>17</td><td>Baseline <code>f374bc7</code> after branch E (deep links)</td><td><code>9c086ee</code></td></tr>
+      <tr><td>16</td><td>Baseline <code>f364cb2</code> after branch D (Hot, the sort bar)</td><td><code>f6b84c7</code></td></tr>
+      <tr><td>15</td><td>Baseline <code>7f4a4da</code> after branch C (threading, vote, haptics, quote)</td><td><code>83dbd6f</code></td></tr>
+      <tr><td>13–14</td><td>Baselines after branches A–B (the byline; the menu)</td><td><i>git log — the Revisions table was not kept for these</i></td></tr>
+      <tr><td>12</td><td><b>All ten decisions locked</b> (owner, 2026-08-29) — the mock as drawn in v11 is the decision; nothing else changed</td><td><code>96b35e7</code></td></tr>
       <tr><td>11</td><td>A subtle pill outline around count + arrow: one unit, one touch target</td><td><code>9269812</code></td></tr>
       <tr><td>10</td><td>Count tucked closer to the arrow; the two are one unit — the rail enters above the count and leaves below the arrow</td><td><code>74a6464</code></td></tr>
       <tr><td>9</td><td>The rail runs behind the count and the arrow and out the other side — one continuous line from avatar to children</td><td><code>8288fe5</code></td></tr>
@@ -478,6 +489,31 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
   <section id="c">
     <div class="eyebrow">Proposal C</div>
     <h2>Threading: a rail only where there is a branch</h2>
+    <div class="callout"><h3>v18 — as built, captured: Current beside Proposed</h3>
+      <p>Real pixels, both columns, from <code>scripts/mock-snaps.mjs</code> against <code>e2e/harness/mock-thread.mjs</code> — the Bluesky-view thread,
+        signed in, with handles at the lengths Bluesky hands us, a quote with a reply under it, a chain four deep and a zero-like leaf.
+        <b>Current</b> is main at <code>forage@bc4ca96</code>: the byline wraps and drops the ⋯; no reply offers Reply. <b>Proposed</b> is the branch at
+        <code>forage@7259905</code>: the name yields, the line holds, ↩ Reply on every node; the stack in the middle per decision 1 as amended.
+        Every claim the Proposed frame makes is held by <code>e2e/mock-thread.workflow.mjs</code> (claims A byline · B stack · C Reply), so approving
+        this frame approves what the gate runs. The drawn frames further down are the v11 sketch the decisions were made on — kept for the record, not for approval.</p></div>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · lens thread · CURRENT (forage@bc4ca96)</div>
+        <img class="shot" src="snaps/thread-lens.phone.current.png" alt="Forage lens thread today on a 390px phone: the long handle wraps the byline, the ⋯ drops to a second line, and the action row has no Reply" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · lens thread · PROPOSED (forage@7259905)</div>
+        <img class="shot" src="snaps/thread-lens.phone.proposed.png" alt="Forage lens thread on the branch on a 390px phone: the handle ellipsizes on one line with the ⋯ in the corner, and ↩ Reply sits on every action row" width="390"></div>
+    </div>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Desktop · lens thread · CURRENT (forage@bc4ca96)</div>
+        <img class="shot" src="snaps/thread-lens.desktop.current.png" alt="Forage lens thread today on desktop"></div>
+      <div class="device desk"><div class="device-label">Desktop · lens thread · PROPOSED (forage@7259905)</div>
+        <img class="shot" src="snaps/thread-lens.desktop.proposed.png" alt="Forage lens thread on the branch on desktop: ↩ Reply on every node"></div>
+    </div>
+    <div class="callout"><h3>What the captures found that the drawing could not</h3>
+      <ul><li><b>The load was invented.</b> v11 drew “briar” and “sage”; a Bluesky handle is up to 30 characters. Under a real one the byline wrapped at 390px and the ⋯ went with it. The fix is one rule (the name yields; nothing else does), and the mobile-fit gate then found the same rule overflowing at 320px nine deep — a second thing no drawing would have shown.</li>
+          <li><b>A drawn control is not a built one.</b> Reply was drawn on every node in v3 and never wired in the lens: the thread's context set <code>locked: true</code>, which the component read as “no reply”. The head had Reply; the comments did not.</li>
+          <li><b>A decision moved in code and not here.</b> The stack's position was changed by the owner on 2026-08-29 (<code>c8af809</code>), a day after decision 1 was locked, and the mock kept saying the old thing through five more revisions. The rule from this: a decision changed at build time is recorded in the mock in the same landing, or the mock stops being the record.</li>
+          <li><b>Compare in the same skin.</b> The owner's screenshots were in a non-default skin (square corners, a blue masthead); the drawing is in the default. Two of the “differences” were the skin, not the build. Captures are taken in the default skin; a skin difference is not a drift.</li>
+          <li><b>Still open, and now filed in <code>TODO.md</code>:</b> the byline's word order is <i>name · time · ⟳ quoted this</i> while the drawing has <i>name · ⟳ quoted this · time</i>; the lens head sets the post's whole text as an <code>h1</code> (a Bluesky post has no title), which at 390px is eight lines of display type before the first reply.</li></ul></div>
     <p class="sub">Today every comment carries the collapse gutter — a direct reply to the post looks “nested” under nothing, and
       on a phone the whole left edge is a hit target (the second row below is today, drawn with the same content). Reddit's model reads correctly:
       a top-level comment sits flush; a connector is drawn only from a comment to <b>its own</b> replies, elbowing into each
@@ -485,8 +521,8 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
       replies lives on the ⊕ that replaces it. A repost-with-content (quote) keeps its wall — it is a different thing — but it
       gets the same avatar header as everything else, loses its tint on the phone, and only the explicit “open its thread ↳”
       is a link.</p>
-    <div class="stage">
-      <div class="device phone"><div class="device-label">Phone · thread page · PROPOSED</div>
+    <div class="stage" id="c-sketch">
+      <div class="device phone"><div class="device-label">Phone · thread page · SKETCH (v11, drawn — see the captures above)</div>
         <div class="screen app" data-phone data-skin="light" data-variant="proposed" data-thread>
           <div class="masthead"><span class="wordmark"><span class="glyph">🐦‍⬛</span>Forage</span><span class="back">‹ f/gardening</span></div>
           <div class="sheetwrap">
@@ -582,7 +618,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
           <div class="toast" data-toast></div>
         </div>
       </div>
-      <div class="device desk"><div class="device-label">Desktop · thread page · PROPOSED</div>
+      <div class="device desk"><div class="device-label">Desktop · thread page · SKETCH (v11, drawn — see the captures above)</div>
         <div class="screen app" data-skin="light" data-variant="proposed" data-thread>
           <div class="card threadhead">
             <div class="byline"><span class="av c2">f</span><span class="who">fern</span><span class="dot"></span><span>1d</span><span class="dot"></span><a class="board" href="#">f/gardening</a>
@@ -707,16 +743,20 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
             <li>Reddit fades the connector after the last child; here the last elbow is masked with the card colour, which breaks on a striped row background (<code>--row-odd/even</code>). The thread card is unstriped today, so this holds — worth a test.</li>
             <li>Should a plain reply carry Repost too? On Bluesky a reply is a post and can be reposted; the row here shows it only on quotes, per the ask. Cheap to add, busier row.</li>
             <li>Deep threads: the connector nests 22px per level (16px on phone). Past depth 5 or so it wants the existing “continue this thread” stub sooner than 10.</li></ul></div>
-      <div class="callout"><h3>Today, captured</h3>
-        <p>Below: real pixels of the memory-mode demo thread at <b>forage@9eb0074</b>, taken by <code>scripts/mock-snaps.mjs</code>
-        at the standard frames (390×844, 1280×900; <code>snaps/manifest.json</code>). The drawn “Current (today)” row above uses this
-        mock's own content for a like-for-like read; these are the evidence it is a faithful drawing of.</p></div>
+      <div class="callout"><h3>The memory sandbox, captured</h3>
+        <p>Below: the memory-mode demo thread, Current (<b>forage@bc4ca96</b>) beside Proposed (<b>forage@7259905</b>), from the same script at the
+        standard frames (<code>snaps/manifest.json</code> names the baseline of every file). The memory population is signed out and carries no quote,
+        so it shows less than the lens frames above — it is here because the memory tier renders the same component and must not regress.</p></div>
     </div>
     <div class="stage">
-      <div class="device phone"><div class="device-label">Phone · thread · captured</div>
-        <img class="shot" src="snaps/thread.phone.png" alt="Forage thread today on a 390px phone: each top-level comment has a vertical line on its left" width="390"></div>
-      <div class="device desk"><div class="device-label">Desktop · thread · captured</div>
-        <img class="shot" src="snaps/thread.desktop.png" alt="Forage thread today on desktop: forty flat comments, each with a left rail"></div>
+      <div class="device phone"><div class="device-label">Phone · memory thread · CURRENT</div>
+        <img class="shot" src="snaps/thread.phone.current.png" alt="Forage memory-mode thread today on a 390px phone" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · memory thread · PROPOSED</div>
+        <img class="shot" src="snaps/thread.phone.proposed.png" alt="Forage memory-mode thread on the branch on a 390px phone" width="390"></div>
+      <div class="device desk"><div class="device-label">Desktop · memory thread · CURRENT</div>
+        <img class="shot" src="snaps/thread.desktop.current.png" alt="Forage memory-mode thread today on desktop"></div>
+      <div class="device desk"><div class="device-label">Desktop · memory thread · PROPOSED</div>
+        <img class="shot" src="snaps/thread.desktop.proposed.png" alt="Forage memory-mode thread on the branch on desktop"></div>
     </div>
   </section>
 
@@ -836,8 +876,8 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
 
 <script>
 // C: render Current beside Proposed — a clone of each thread frame, switched to today's grammar.
-(()=>{const stage=document.querySelector('#c .stage'); const row=stage.cloneNode(true);
-  row.querySelectorAll('.device-label').forEach(l=>l.textContent=l.textContent.replace('PROPOSED','CURRENT (today)'));
+(()=>{const stage=document.querySelector('#c-sketch'); const row=stage.cloneNode(true); row.removeAttribute('id');
+  row.querySelectorAll('.device-label').forEach(l=>l.textContent=l.textContent.replace(/SKETCH \(v11.*$/,'SKETCH OF TODAY (v11, drawn)'));
   row.querySelectorAll('[data-thread]').forEach(a=>a.dataset.variant='current');
   row.querySelectorAll('[data-menu],[id]').forEach(n=>{n.removeAttribute('data-menu');n.removeAttribute('id');});
   stage.after(row);})();
