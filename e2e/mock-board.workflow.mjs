@@ -78,6 +78,10 @@ export async function run() {
       if (NAMES[r.who]) assert.ok(r.whoTitle.includes(`@${r.who}`), `${r.who}: the handle is not in the name's tooltip ("${r.whoTitle}")`);
       assert.match(r.mark ?? '', /bsky\.social/, `${r.who}: no provider mark naming bsky.social (${r.mark})`);
     }
+    // feed-row v4 claim 16 (owner: "what's this content about? … we can just
+    // remove that"): the divergence-ledger chips (DL-010, DL-011) are not on a
+    // reader's board — the ledger and /frontiers keep them
+    assert.equal(await page.locator('#main .frontier-chip').count(), 0, 'no frontier chips over a reader’s board');
     assert.equal(new Set(list.map((r) => r.likeLeft)).size, 1,
       `the like does not line up down the board: lefts ${list.map((r) => r.likeLeft).join(', ')}`);
     // board-cards decision D: a picture post stands on a stage, sized from its

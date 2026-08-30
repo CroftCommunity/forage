@@ -976,9 +976,10 @@ export function lensFeedView(params) {
 
 function feedBoardView(entry, preInfo) {
   const main = el('div', {},
-    el('div', { class: 'row spread wrap' },
-      el('h1', {}, entry.title),
-      chip('ranking: the feed’s own order (DL-010)', 'The generator ranks; our hot/top do not apply here')),
+    // feed-row v4 (owner, 2026-08-30): the DL-010/DL-011 frontier chips are off
+    // a reader's board — they told a tier-comparison story nobody browsing
+    // needs; the ledger and /frontiers keep them
+    el('div', { class: 'row spread wrap' }, el('h1', {}, entry.title)),
     skeleton(6));
   const allPosts = [];
   let nextCursor = null;
@@ -1049,10 +1050,7 @@ function feedBoardView(entry, preInfo) {
       el('div', { class: 'row spread wrap' },
         // 4h: `info` is the network's answer and is already resolved here —
         // reaching past it for the registry string is how a retired name shipped.
-        el('h1', {}, info?.title || entry.title),
-        el('div', { class: 'row', style: 'gap:6px' },
-          chip('likes-only scores (DL-011)'),
-          chip('ranking: feed order (DL-010)'))),
+        el('h1', {}, info?.title || entry.title)), // the DL chips are gone (feed-row v4)
       headerHost,
       boardToolbar(() => { repaint(); deepen(); }),
       f.posts.length ? card : emptyState('Nothing here', 'This source returned no posts.'),
