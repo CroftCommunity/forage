@@ -1053,3 +1053,13 @@ additive fixes, all recorded in place with a *(Pass 2)* marker:
 **Confirmed ready:** yes — the owner confirmed every severity as recommended
 (2026-08-29) and said execute the full plan, PR and merge each landing. No BLOCKING
 items; 4b/9/3 are gated on O5/O6/O8, each with its recommended answer taken.
+
+### Execution note — 2026-08-29, branch D landed on a red gate
+
+`npm run workflows` before D's landing reported `bluesky-view` FAILED (24 found, 1 failed).
+The landing was scripted as one chain gated on a `grep -q "0 failed"` of that output, and
+the chain did not stop — the gate was READ and not HONOURED. Cause of the red: two
+`select.nth(2)` density selectors in `bluesky-view` (`:655`, `:666`); the fix replaced the
+first only. Branch E's first commit fixes the second (`select[data-density]`), verified
+twice on `main`'s tree. Lesson for VERIFICATION.md's list: a landing chain must gate on the
+runner's **exit code**, never on a grep of its prose.

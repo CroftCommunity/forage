@@ -663,7 +663,7 @@ export async function run() {
     'the no-alt image post shows a small thumbnail as its compact handle');
   assert.ok(await page.locator('.posttitle a:has(img.title-thumb)').first()
     .getAttribute('aria-label'), 'the thumb link carries an accessible name');
-  await page.locator('[data-board-toolbar] select').nth(2).selectOption('card');
+  await page.locator('[data-board-toolbar] select[data-density]').selectOption('card');
   await page.waitForSelector('.media-strip img');
   assert.equal(await page.locator('img.title-thumb').count(), 0,
     'card rows render the real media, never the compact thumb');
