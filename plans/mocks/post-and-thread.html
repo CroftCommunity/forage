@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forage Post &amp; Thread Proposals v5</title>
-<meta name="mock-version" content="5">
+<title>Forage Post &amp; Thread Proposals v6</title>
+<meta name="mock-version" content="6">
 <meta name="mock-baseline" content="forage@9eb0074">
 <style>
 :root{
@@ -195,6 +195,10 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
 .cbtn .icon{width:1.35em;height:1.35em}
 .cbtn:hover{background:var(--card-2);color:var(--text)}
 .cbtn.like[aria-pressed="true"]{color:var(--boost)}
+/* share: present on every comment, quiet — small glyph, full hit area, reveals on hover/focus */
+.cbtn.share{margin-left:auto;padding:0 8px;opacity:.55}
+.cbtn.share .icon{width:1.1em;height:1.1em}
+.cbtn.share:hover,.cbtn.share:focus-visible{opacity:1}
 .cbtn.like[aria-pressed="true"] .icon{fill:currentColor}
 .cbtn.more{margin-left:auto;padding:0 10px;font-size:16px;letter-spacing:1px}
 .app[data-phone] .cbtn{min-height:44px}
@@ -258,12 +262,12 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
 
 <div class="wrap">
   <header>
-    <div class="eyebrow">Forage · mock · post-and-thread <b>v5</b> · baseline forage@9eb0074 · 2026-08-29</div>
+    <div class="eyebrow">Forage · mock · post-and-thread <b>v6</b> · baseline forage@9eb0074 · 2026-08-29</div>
     <h1>Posts, threads, and the ⋯ menu</h1>
-    <p class="sub"><b>Five proposals (A–E) and nine open decisions</b>, made to be talked through — not code. The purpose:
+    <p class="sub"><b>Six proposals (A–F) and ten open decisions</b>, made to be talked through — not code. The purpose:
       make a Forage thread read the way the Reddit and Bluesky screenshots in <code>~/Downloads/new/Photos-1-001</code> read —
       who said what, what answers what, what is a repost — with fewer things to tap by accident on a phone. A is the header
-      line, B the ⋯ menu, C the threading, D the like control, E the sort control. Every proposal shows Forage today beside
+      line, B the ⋯ menu, C the threading, D the like control, E the sort control, F deep links to comments. Every proposal shows Forage today beside
       the proposal; the “today” frames in C are also captured pixels, not drawings (see <code>snaps/</code>).</p>
   </header>
 
@@ -281,6 +285,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
       <tr><td>6</td><td>Haptics</td><td>On by default, one settings switch, like + promote only</td><td>Off by default</td></tr>
       <tr><td>7</td><td>Time format</td><td>Bare “1d” / “5h” next to the name (Reddit/Bluesky)</td><td>Keep “1d ago”</td></tr>
       <tr><td>8</td><td>Avatars are real (owner, 2026-08-29)</td><td>Every avatar in A and C is the account's actual picture; the masthead's initials stand-in (deliberate, <code>js/main.js</code> E144: “their little avatar or like a stand-in”) is retired for the fetched one, with the initials only as the not-yet-loaded state</td><td>Keep the stand-in in the masthead; real avatars only on posts and comments</td></tr>
+      <tr><td>10</td><td>Deep links to comments (F)</td><td>Every comment has a permalink; Share copies it; opening one lands on the thread with that comment highlighted and its parents above it (Reddit's shape); a reply's own <code>at://</code> uri resolves too</td><td>Open the reply as the root of its own page with the parent shown above (bsky.app's shape)</td></tr>
       <tr><td>9</td><td>Sort: one control bar, not tabs — and what Best means (E)</td><td>Adapt the lens board toolbar (selects) into one bar used on boards AND threads; every sort on every board, timeframe on Top; Best redefined, since without downvotes it orders exactly as Top today</td><td>Keep Best/Top/New tabs on threads; sort bar on boards only</td></tr>
     </table></div>
   </section>
@@ -289,7 +294,8 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
     <div class="eyebrow">Revisions</div>
     <div class="tablewrap"><table>
       <tr><th style="width:36px">v</th><th>What changed</th><th>Commit</th></tr>
-      <tr><td>5</td><td>Versioned (MOCKS.md); blurb + decisions on top; captured phone/desktop snaps of today; real avatars (8) and the sort bar (E, 9) added</td><td><i>this</i></td></tr>
+      <tr><td>6</td><td>Repost on quotes is icon-only; a small share at the bottom-right of every comment; F — deep links to comments (decision 10)</td><td><i>this</i></td></tr>
+      <tr><td>5</td><td>Versioned (MOCKS.md); blurb + decisions on top; captured phone/desktop snaps of today; real avatars (8) and the sort bar (E, 9) added</td><td><code>df40aeb</code></td></tr>
       <tr><td>4</td><td>⋯ top-right on every comment and quote, with its menu; quotes get like · Reply · Repost</td><td><code>9eb0074</code></td></tr>
       <tr><td>3</td><td>Connector anchored to avatars; quote wall outside the avatar; Reply gets a return arrow</td><td><code>a2ca71f</code></td></tr>
       <tr><td>2</td><td>Current beside Proposed (toggle dropped); share pill right-aligned; Save rides Bluesky bookmarks</td><td><code>0339b28</code></td></tr>
@@ -511,7 +517,8 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
                 <div class="cact">
                   <button class="fold" data-fold aria-label="Collapse"><svg class="icon"><use href="#i-minus"/></svg></button>
                   <button class="cbtn like" aria-pressed="true" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">21</span></button>
-                  <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button></div>
+                  <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button>
+                  <button class="cbtn share" aria-label="Share" title="Share"><svg class="icon"><use href="#i-share"/></svg></button></div>
                 <div class="kids">
                   <div class="c leaf">
                     <div class="avcol"><span class="av c5">s</span><span class="line"></span></div>
@@ -519,7 +526,8 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
                     <div class="ctext">Fleece over the beans and they will be fine.</div>
                     <div class="cact">
                       <button class="cbtn like" aria-pressed="false" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">4</span></button>
-                      <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button></div>
+                      <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button>
+                  <button class="cbtn share" aria-label="Share" title="Share"><svg class="icon"><use href="#i-share"/></svg></button></div>
                     <div class="kids"></div>
                   </div>
                   <button class="more-replies"><svg class="icon"><use href="#i-plus"/></svg>2 more replies</button>
@@ -533,7 +541,8 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
                 <div class="cact">
                   <button class="cbtn like" aria-pressed="false" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">9</span></button>
                   <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button>
-                  <button class="cbtn"><svg class="icon"><use href="#i-repost"/></svg>Repost</button></div>
+                  <button class="cbtn" aria-label="Repost" title="Repost"><svg class="icon"><use href="#i-repost"/></svg></button>
+                  <button class="cbtn share" aria-label="Share" title="Share"><svg class="icon"><use href="#i-share"/></svg></button></div>
                 <div class="kids"></div>
               </div>
               <div class="c leaf">
@@ -542,7 +551,8 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
                 <div class="ctext">Nothing. It is a bog out there.</div>
                 <div class="cact">
                   <button class="cbtn like" aria-pressed="false" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">0</span></button>
-                  <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button></div>
+                  <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button>
+                  <button class="cbtn share" aria-label="Share" title="Share"><svg class="icon"><use href="#i-share"/></svg></button></div>
                 <div class="kids"></div>
               </div>
             </div>
@@ -621,7 +631,8 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
                 <div class="cact">
                   <button class="fold" data-fold aria-label="Collapse"><svg class="icon"><use href="#i-minus"/></svg></button>
                   <button class="cbtn like" aria-pressed="true" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">21</span></button>
-                  <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button></div>
+                  <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button>
+                  <button class="cbtn share" aria-label="Share" title="Share"><svg class="icon"><use href="#i-share"/></svg></button></div>
                 <div class="kids">
                   <div class="c">
                     <div class="avcol"><span class="av c5">s</span><span class="line"></span></div>
@@ -630,7 +641,8 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
                     <div class="cact">
                       <button class="fold" data-fold aria-label="Collapse"><svg class="icon"><use href="#i-minus"/></svg></button>
                       <button class="cbtn like" aria-pressed="false" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">4</span></button>
-                      <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button></div>
+                      <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button>
+                  <button class="cbtn share" aria-label="Share" title="Share"><svg class="icon"><use href="#i-share"/></svg></button></div>
                     <div class="kids">
                       <div class="c leaf">
                         <div class="avcol"><span class="av c1">b</span><span class="line"></span></div>
@@ -638,7 +650,8 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
                         <div class="ctext">Fleece it is. Thank you.</div>
                         <div class="cact">
                           <button class="cbtn like" aria-pressed="false" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">2</span></button>
-                          <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button></div>
+                          <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button>
+                  <button class="cbtn share" aria-label="Share" title="Share"><svg class="icon"><use href="#i-share"/></svg></button></div>
                         <div class="kids"></div>
                       </div>
                     </div>
@@ -654,7 +667,8 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
                 <div class="cact">
                   <button class="cbtn like" aria-pressed="false" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">9</span></button>
                   <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button>
-                  <button class="cbtn"><svg class="icon"><use href="#i-repost"/></svg>Repost</button></div>
+                  <button class="cbtn" aria-label="Repost" title="Repost"><svg class="icon"><use href="#i-repost"/></svg></button>
+                  <button class="cbtn share" aria-label="Share" title="Share"><svg class="icon"><use href="#i-share"/></svg></button></div>
                 <div class="kids"></div>
               </div>
               <div class="c leaf">
@@ -663,7 +677,8 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
                 <div class="ctext">Nothing. It is a bog out there.</div>
                 <div class="cact">
                   <button class="cbtn like" aria-pressed="false" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">0</span></button>
-                  <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button></div>
+                  <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button>
+                  <button class="cbtn share" aria-label="Share" title="Share"><svg class="icon"><use href="#i-share"/></svg></button></div>
                 <div class="kids"></div>
               </div>
             </div>
@@ -750,7 +765,8 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
               <div class="byline"><span class="who">briar</span><span class="dot"></span><span>1d</span><button class="kebab sm" aria-label="Options">⋯</button></div>
               <div class="ctext">Broad beans and a late row of spinach.</div>
               <div class="cact"><button class="cbtn like" aria-pressed="false" data-like><svg class="icon"><use href="#i-up"/></svg><span class="n">21</span></button>
-                <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button></div>
+                <button class="cbtn"><svg class="icon"><use href="#i-replyarrow"/></svg>Reply</button>
+                  <button class="cbtn share" aria-label="Share" title="Share"><svg class="icon"><use href="#i-share"/></svg></button></div>
               <div class="kids"></div>
             </div>
           </div>
@@ -786,6 +802,30 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page
         <ul><li>Every sort available on every board and thread, whatever its age — no “this post is too new to sort”.</li>
             <li>Default <b>From</b>: Today on a board, All time on a thread (a thread's window is the thread).</li>
             <li>Hour is in the memory tier and not the lens; either add it to the lens or drop it — one list.</li></ul></div>
+    </div>
+  </section>
+
+  <!-- ================================================================ -->
+  <section id="f">
+    <div class="eyebrow">Proposal F</div>
+    <h2>Deep links: every comment has an address</h2>
+    <p class="sub">The share glyph on a comment (D, bottom-right, quiet) is only worth having if what it copies lands somewhere. Today
+      it would not: the memory tier's continue-stub writes <code>?focus=&lt;id&gt;</code> but <code>threadView</code> never reads it,
+      and on the lens <code>/p?uri=</code> is built for a post — a board row's “replying to” link opens the <b>parent</b>, and the
+      substrate fetches <code>getPostThread(uri, depth 10)</code> with nothing rendered above the head, so a reply's own uri would
+      open it as an orphan root.</p>
+    <div class="cols">
+      <div class="callout"><h3>The address</h3>
+        <ul><li>Memory: <code>/f/&lt;slug&gt;/p/&lt;post&gt;?focus=&lt;comment&gt;</code> — the shape already in the stub; make the view honour it.</li>
+            <li>Lens: <code>/p?uri=&lt;post at://&gt;&amp;focus=&lt;reply at://&gt;</code>; and a bare <code>/p?uri=&lt;reply at://&gt;</code> resolves to the same page by walking <code>reply.root</code> from the record.</li>
+            <li>Share copies this; the ⋯ menu's “Copy link” is the same link, and “Open on bsky.app” opens the reply there.</li></ul></div>
+      <div class="callout"><h3>Landing (proposal: Reddit's shape)</h3>
+        <ul><li>The whole thread renders; the page scrolls to the focused comment and tints it briefly (the <code>--tint</code> token, fading over ~2s).</li>
+            <li>Its ancestor chain is expanded whatever the collapse state; siblings collapse to the ⊕ “n more” form so the focused branch is what you see first.</li>
+            <li>A one-line bar above it: “Viewing one comment — <a>see the whole thread</a>”, as Reddit does, so nobody thinks the thread is three replies long.</li></ul></div>
+      <div class="callout"><h3>Alternative: bsky.app's shape</h3>
+        <ul><li>The reply becomes the head of its own page, with its parent (and grandparent) drawn above it, greyed, connected by the same rail.</li>
+            <li>Cheaper on the lens — one <code>getPostThread</code> with <code>parentHeight</code> — but it makes “the thread” mean two different pages, and the forum framing prefers one.</li></ul></div>
     </div>
   </section>
 </div>
