@@ -1,5 +1,5 @@
 {
-  "baseline": "forage@9eb0074",
+  "baseline": "forage@de7a867",
   "capturedAt": "2026-08-29",
   "population": "memory:seeded",
   "files": [
@@ -8,32 +8,28 @@
       "route": "board",
       "viewport": "phone",
       "width": 390,
-      "height": 844,
-      "scale": 2
+      "height": 844
     },
     {
       "file": "thread.phone.png",
       "route": "thread",
       "viewport": "phone",
       "width": 390,
-      "height": 844,
-      "scale": 2
+      "height": 844
     },
     {
       "file": "board.desktop.png",
       "route": "board",
       "viewport": "desktop",
       "width": 1280,
-      "height": 900,
-      "scale": 1
+      "height": 900
     },
     {
       "file": "thread.desktop.png",
       "route": "thread",
       "viewport": "desktop",
       "width": 1280,
-      "height": 900,
-      "scale": 1
+      "height": 900
     }
   ]
 }
