@@ -222,7 +222,7 @@ function heroCard() {
     el('div', { class: 'hero-copy' },
       el('strong', { class: 'hero-head' }, 'Forage the open web.'),
       el('p', { class: 'small' },
-        'Your Bluesky as a forum — feeds are boards, threads are threads. Forage has no accounts of its own: you bring one from Bluesky or any other atproto server.'),
+        'Your Bluesky as a forum — feeds are boards, threads are threads. Forage has no accounts of its own: you bring one from Bluesky or any other atmo provider.'),
       cta));
   return card;
 }
@@ -721,7 +721,7 @@ function sessionCard() {
   const btn = el('button', { class: 'btn primary sm' }, 'Sign in with Bluesky');
   const go = async () => {
     const handle = id.value.trim().replace(/^@+/, '');
-    if (!handle) return toast('Enter your Bluesky handle.', 'err');
+    if (!handle) return toast('Enter your handle — for example you.bsky.social.', 'err');
     try { await manager.signIn(handle); } catch (e) { toast('Sign-in failed: ' + e.message, 'err'); }
   };
   btn.addEventListener('click', go);
@@ -912,7 +912,7 @@ export function lensHomeView() {
       // where the answer to "what would an account get me" actually lives —
       // once, in prose, instead of six muted nags across every surface.
       ...(session ? [] : [el('p', { class: 'small', 'data-account-adds': '1' },
-        'With an account you get your own ring — following, mutuals, and one step past them — plus joining and favouriting feeds, liking posts, and posting and replying. Forage has no accounts of its own; you bring one from Bluesky or any other atproto server.')]),
+        'With an account you get your own ring — following, mutuals, and one step past them — plus joining and favouriting feeds, liking posts, and posting and replying. Forage has no accounts of its own; you bring one from Bluesky or any other atmo provider.')]),
       el('div', { class: 'row wrap', style: 'gap:6px' },
         ...(session ? [] : [chip('guest search: needs sign-in (DL-014)', 'searchPosts is 403 unauthenticated — probe-verified')]),
         chip('saves: deferred (DL-015)', 'Bookmarks are not public API surface yet'))),
