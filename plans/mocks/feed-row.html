@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forage Feed Row Proposals v1</title>
-<meta name="mock-version" content="1">
+<title>Forage Feed Row Proposals v2</title>
+<meta name="mock-version" content="2">
 <meta name="mock-baseline" content="forage@fe2b77b">
-<meta name="mock-proposal" content="forage@8f25520">
+<meta name="mock-proposal" content="forage@c1f780e">
 <style>
 :root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
   --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
@@ -43,14 +43,14 @@ code{font-size:.92em}
 <body>
 <div class="wrap">
   <header>
-    <div class="eyebrow">Forage · mock · feed-row <b>v1</b> · Current forage@fe2b77b · Proposed forage@8f25520 · 2026-08-30</div>
+    <div class="eyebrow">Forage · mock · feed-row <b>v2</b> · Current forage@fe2b77b · Proposed forage@c1f780e · 2026-08-30</div>
     <h1>The feed row, made to agree with the phone</h1>
-    <p class="sub"><b>One proposal in five decisions, for one purpose:</b> the lens feed row on forage.fyi should look the way the owner's phone expected it to, with Bluesky's own row as the reference — and this time the thing being agreed on is the app, not a drawing.
+    <p class="sub"><b>One proposal in seven decisions, for one purpose:</b> the lens feed row on forage.fyi should look the way the owner's phone expected it to, with Bluesky's own row as the reference — and this time the thing being agreed on is the app, not a drawing.
       Origin: six phone screenshots of forage.fyi and bsky.app taken 2026-08-30 16:17–16:28 (phpBB skin, <code>f/whats-hot</code> and two threads), plus a desktop pair (<code>/u/pds.ls</code> → <code>f/pds.ls</code> → "Unknown feed").
       They showed: the picture the thread page renders missing from the feed; a post's text set as a bold heading; and an action row whose share arrow wrapped under "7315 · 270 comments · 1225", with the dashed like box two lines tall beside it.
       <b>None of it was visible in board-cards v9's captures</b> — default skin, card density, "1284 · 40 comments · 12".</p>
-    <p class="sub"><b>Every frame on this page is a capture of the engine</b> (MOCKS.md P1): Current is <code>main</code> at <code>fe2b77b</code>, Proposed is <code>claude/feed-card</code> at <code>8f25520</code>, both by <code>scripts/mock-snaps.mjs</code> against <code>e2e/harness/mock-board.mjs</code> / <code>mock-thread.mjs</code>, in the default skin (rule 4 — the phone's phpBB skin restyles and restructures nothing, so it is not on this page), at 390 × 844 and 1280 × 900.
-      The population now carries the phone's load (P2): a row with 7315 likes, 270 replies and 1225 reposts, and a four-line text-plus-picture post. Nothing here is drawn; there is no sketch to fall short of.</p>
+    <p class="sub"><b>Every frame on this page is a capture of the engine</b> (MOCKS.md P1): Current is <code>main</code> at <code>fe2b77b</code>, Proposed is <code>claude/feed-card</code> at <code>c1f780e</code>, both by <code>scripts/mock-snaps.mjs</code> against <code>e2e/harness/mock-board.mjs</code> / <code>mock-thread.mjs</code>, in the default skin (rule 4 — the phone's phpBB skin restyles and restructures nothing, so it is not on this page), at 390 × 844 and 1280 × 900.
+      The population now carries the phone's load (P2): a row with 7315 likes, 270 replies and 1225 reposts, a four-line text-plus-picture post, and (v2) the names people choose at the widths the network allows — a 64-grapheme name, an emoji name, no name, and one that impersonates. Nothing here is drawn; there is no sketch to fall short of.</p>
   </header>
 
   <section>
@@ -64,10 +64,13 @@ code{font-size:.92em}
         <tr><td>2</td><td><b>A post's text is text</b> (A, E)</td><td>On the row: the title's size, body weight (<code>.posttext</code>, 400). At the thread head: 20px, body face and weight — one step up from the body, not a 26px serif heading. A link post's headline keeps the heading weight in both places.</td><td>Lower the size and keep the weight; or leave the row and change only the thread head</td><td>post-and-thread's head, board-cards' row</td></tr>
         <tr><td>3</td><td><b>Bluesky's action row</b> (A)</td><td><b>replies · reposts · like · share</b> in four EQUAL cells (a grid, not a flex gap), so the row is one line under any count and every row's controls line up down the board. The like sits third — where Bluesky's heart is — and <b>loses its pill border</b>: one weight for the four; the guest's person glyph is still the tell, the tap still opens sign-in.</td><td>Keep the order and only fix the wrap (a <code>nowrap</code> row with smaller gaps); or the like first as drawn in board-cards v5</td><td>board-cards decisions 1 and 2 (noted there, v10); post-and-thread decision 1 (the pill on the row — still a pill, now unboxed)</td></tr>
         <tr><td>4</td><td><b>The replies cell is a number</b> (A)</td><td>💬 270. The words — "270 comments — open the thread" — are the control's accessible name and its tooltip, so a screen reader and a hover keep them.</td><td>Keep "270 comments" in words and let the cell be wider than the others</td><td>board-cards Phase 4's "12 comments in words"; the four workflows that read the words now read the name</td></tr>
+        <tr><td>6</td><td><b>The byline shows the name a person chose</b> (v2, owner 2026-08-30)</td><td>The row, the thread head and every comment show <code>displayName</code>; the handle is the name's tooltip (<code>@quietcartographer.bsky.social</code>) and part of its accessible name. No chosen name → the handle shows. A 64-grapheme name ellipsises on its one line.</td><td><b>Name, then the handle muted after it</b> (bsky.app's row — the handle visible, not one hover away). Recorded because a display name is not unique: the second row on the phone frame reads <b>"Bluesky 🦋"</b> and is <code>averyveryverylonghandle.bsky.social</code>. The tooltip is the only tell on this branch.</td><td>every byline since post-and-thread's header line</td></tr>
+        <tr><td>7</td><td><b>A provider mark beside the name, switchable</b> (v2)</td><td>A text-sized muted glyph right after the name: the butterfly for a <code>*.bsky.social</code> handle, an atmosphere ring for anyone else, the provider in its tooltip ("atmo provider: bsky.social"). Settings → <b>Provider mark</b> switches it off (device-local, on by default).</td><td>Resolve the author's real atmo provider from the DID document (plc.directory, one fetch per author, cached) — the honest mark for custom-domain handles, which today get the ring and a tooltip saying the handle does not show the provider. Recorded as the follow-on, not built.</td><td>DESIGN.md's noun is kept: <i>atmo provider</i>, never <i>server</i>/<i>PDS</i>; the butterfly is a mark for one provider, not Bluesky-as-category</td></tr>
         <tr><td>5</td><td><b>An author board's row points home</b> (desktop pair)</td><td>On <code>/u/&lt;handle&gt;</code> a row's breadcrumb reads <code>@handle</code> and opens <code>/u/&lt;handle&gt;</code>. Before: <code>f/pds.ls</code> → <code>/f/pds.ls</code> → "Unknown feed — this link is missing the feed's creator".</td><td>Resolve <code>/f/&lt;handle&gt;</code> as an author board when the slug looks like a handle (also fixes old links; not done here)</td><td>nothing decided before — a gap</td></tr>
       </tbody>
     </table></div>
     <div class="callout"><h3>Open — not built, the owner's call</h3><ul>
+      <li><b>O0 — the handle's visibility (decision 6's alternative).</b> As built, an impersonating name is caught only by hovering. <i>Recommend: the muted handle after the name, at least on the row — it costs one line nothing on desktop and ellipsises on a phone; say the word and v3 captures it.</i></li>
       <li><b>O1 — line icons for the four.</b> Today 💬 is a coloured emoji, ⟳ a thin text glyph, and the person an SVG: three weights in one row. Bluesky's are four line icons of one weight. <i>Recommend: yes, next revision — it is a glyph swap, no layout change.</i></li>
       <li><b>O2 — the thread head's like is still boxed</b> (▲ 11 in a pill) while the row's is not. <i>Recommend: the head follows the row.</i></li>
       <li><b>O3 — should the phpBB family still prefer compact</b> now that compact keeps the picture? <i>Recommend: yes — it is only density now, which is what a skin was allowed to suggest.</i></li>
@@ -78,8 +81,8 @@ code{font-size:.92em}
 
   <section>
     <div class="eyebrow">Proposal A</div>
-    <h2>A. The row — one line, aligned, text as text</h2>
-    <p class="sub">The phone's load on the first row: 7315 likes · 270 replies · 1225 reposts, signed out. <b>Current:</b> the share arrow wraps under the row and the dashed like box stands two lines tall beside "270 comments"; the text is a bold heading. <b>Proposed:</b> 💬 270 · ⟳ 1225 · 👤 7315 · ↗ in four cells, the same x on every row; the text at body weight.</p>
+    <h2>A. The row — one line, aligned, text as text; the chosen name and its mark (v2)</h2>
+    <p class="sub">The phone's load on the first row: 7315 likes · 270 replies · 1225 reposts, signed out; from v2 the bylines carry chosen names — a 64-grapheme one on the first row, the impersonating "Bluesky" on the second, none on the third — each with its provider mark. <b>Current:</b> the share arrow wraps under the row and the dashed like box stands two lines tall beside "270 comments"; the text is a bold heading. <b>Proposed:</b> 💬 270 · ⟳ 1225 · 👤 7315 · ↗ in four cells, the same x on every row; the text at body weight.</p>
     <div class="stage">
       <div class="device phone"><div class="device-label">Phone · board-lens · CURRENT (forage@fe2b77b)</div>
         <img class="shot" src="snaps/feed-row/board-lens.phone.current.png" alt="Lens board on a phone today: bold post text, a dashed like box, 270 comments in words, and the share arrow wrapped onto its own line" width="390"></div>
@@ -161,6 +164,9 @@ code{font-size:.92em}
         <tr><td>5</td><td>Compact keeps the stage and shows no thumbnail</td><td>structure</td><td>mock-board — "compact: the portrait post still stands on its stage"; <code>bluesky-view</code> — "compact rows still render the image posts on their stage"</td></tr>
         <tr><td>6</td><td>The thread head's text is weight 400 and ≤ 20px</td><td>look</td><td><code>e2e/mock-thread.workflow.mjs</code> — "the head's text is set bold" / "20px is the step up"; measured RED on main (600 / 26px), GREEN on the branch</td></tr>
         <tr><td>7</td><td>The replies control's accessible name counts in words; its cell shows the number</td><td>structure</td><td><code>deep-link</code> — "the cell shows the number" / "its name counts in words"; <code>bluesky-view</code> — "one reply is 1 comment"</td></tr>
+        <tr><td>9</td><td>The byline shows the chosen name, or the handle when none; the handle is in the name's tooltip</td><td>structure</td><td>mock-board — "the byline shows … not the chosen name" / "the handle is not in the name's tooltip"; <code>test/lens-intake.test.js</code> — "rows carry the author's display name, null when they set none"</td></tr>
+        <tr><td>10</td><td>Every row's byline carries a provider mark naming bsky.social, and still holds one line under a 64-grapheme name</td><td>structure · measure</td><td>mock-board — "no provider mark naming bsky.social" + the existing one-line claim; <code>test/provider-mark.test.js</code> — the handle→provider rule</td></tr>
+        <tr><td>11</td><td>With Settings → Provider mark off, no row carries a mark</td><td>behaviour</td><td>mock-board — "with the setting off, no row shows a provider mark"</td></tr>
         <tr><td>8</td><td>An author board's breadcrumb is <code>@handle</code> → <code>/u/handle</code></td><td>structure</td><td><code>test/lens-intake.test.js</code> — "rows carry the kind of source they came from"; <code>bluesky-view</code> — "an author board's breadcrumb opens the author board"</td></tr>
       </tbody>
     </table></div>
@@ -177,6 +183,8 @@ code{font-size:.92em}
         <tr><td>3 the row</td><td><code>components.js</code> <code>postRow</code> (order); <code>css/app.css</code> <code>.postrow .actions</code> grid, <code>.postrow .actions .vote</code> unboxed</td></tr>
         <tr><td>4 the number</td><td><code>components.js</code> <code>postRow</code> — <code>repliesWords</code> as <code>aria-label</code> + <code>title</code></td></tr>
         <tr><td>5 author board</td><td><code>js/substrates/lens.js</code> <code>srcCtx</code> / <code>shapeLensPost</code> (<code>feedKind</code>); <code>lens-views.js</code> <code>lensRow</code> (<code>feedHref</code>, <code>feedLabel</code>); <code>components.js</code> <code>postRow</code> (<code>opts.feedLabel</code>)</td></tr>
+        <tr><td>6 the chosen name</td><td><code>js/substrates/lens.js</code> (<code>authorName</code> on rows and comments); <code>js/ui/components.js</code> <code>whoNode</code> (row + thread head), the comment byline; <code>data-handle</code> on <code>.who</code></td></tr>
+        <tr><td>7 the mark</td><td><code>js/provider-mark.js</code> (setting + <code>providerOf</code> + <code>markLabel</code>); <code>components.js</code> <code>providerMark</code>, <code>byline({ mark })</code>; <code>lens-views.js</code> passes it on rows and thread ctx; <code>js/ui/views.js</code> Settings switch; <code>css/app.css</code> <code>.provider-mark</code>; <code>sw.js</code> precaches the module (v63)</td></tr>
         <tr><td>the captures</td><td><code>scripts/mock-snaps.mjs</code> — a <code>board-lens-compact</code> route; <code>--out plans/mocks/snaps/feed-row</code> so this mock's files never overwrite another mock's (the first run of this session did exactly that — see MOCKS.md rule 3)</td></tr>
       </tbody>
     </table></div>
@@ -185,6 +193,7 @@ code{font-size:.92em}
   <section>
     <div class="eyebrow">Revisions</div>
     <ul class="small" style="margin:0;padding-left:18px">
+      <li><b>v2</b> — 2026-08-30, later the same day (owner: "replace the foo.bsky.social on posts with the display name users choose and a small icon for each provider that can be toggled off"): decisions 6–7 built and captured; both columns re-captured under the named population (Proposed <code>forage@c1f780e</code>; Current still <code>forage@fe2b77b</code>). O0 records the impersonation risk and the muted-handle alternative.</li>
       <li><b>v1</b> — 2026-08-30, first version: five decisions built on <code>claude/feed-card</code> and captured (Current <code>forage@fe2b77b</code>, Proposed <code>forage@8f25520</code>) from the owner's phone screenshots. Nothing drawn. Awaiting the owner on the frames.</li>
     </ul>
   </section>

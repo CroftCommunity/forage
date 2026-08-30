@@ -34,8 +34,11 @@ below are the landings of that month, and everything earlier is in `git log`.
   four-digit counts and lines up row to row; the like sits where the heart does and loses its
   box; the replies cell shows the number, with "270 comments" as its name for a screen reader
   and a hover. On an author board a row's breadcrumb reads `@handle` and opens that board
-  (`f/pds.ls` opened "Unknown feed"). (mock feed-row v1, from the owner's 2026-08-30 phone
-  screenshots; plan pending on the captures)
+  (`f/pds.ls` opened "Unknown feed"). Bylines show the **name a person chose** — the handle
+  is the name's tooltip, and shows when no name was chosen — with a small **provider mark**
+  beside it (the butterfly for a bsky.social account, an atmosphere ring otherwise);
+  Settings → *Provider mark* switches the mark off. (mock feed-row v2, from the owner's
+  2026-08-30 phone screenshots; plan pending on the captures)
 - 2026-08-30 **A link to a reply lands on it, and a board row's name holds its line.** Opening
   a link to a specific reply in a thread now scrolls to that reply and keeps it marked, even
   when the thread also has quotes (before, the page said "Viewing one comment" and sat at the
