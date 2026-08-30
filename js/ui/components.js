@@ -131,10 +131,11 @@ function initials(name) {
   return n ? n.slice(0, 2).toLowerCase() : '··';
 }
 
+// A picture REPLACES the initials — appended beside them, the two became two
+// rows of the slot's grid, picture under letters (owner, 2026-08-29).
 export function avatarSlot(name, avatar = null) {
-  const av = el('span', { class: 'av', 'aria-hidden': 'true' }, initials(name));
-  if (avatar) av.append(el('img', { src: avatar, alt: '', loading: 'lazy' }));
-  return av;
+  return el('span', { class: 'av', 'aria-hidden': 'true' },
+    avatar ? el('img', { src: avatar, alt: '', loading: 'lazy' }) : initials(name));
 }
 
 // `avatar: false` draws no slot — a comment's avatar lives in its own column
@@ -428,7 +429,10 @@ export function commentNode(node, ctx) {
   const actionsRow = el('div', { class: 'comment-actions' });
   // the vote stack is a grid sibling in the avatar column, on the action row's
   // line, the rail passing behind it (decision 1)
-  const voteEl = node.maskedRemoved || node.deleted ? null : vote('comment', node.id, node, ctx.canVote, { layout: 'stack', onGuest: ctx.onGuest });
+  // ctx.onVote(node) hands the lens its like/unlike for THIS node, the same
+  // seam postRow already had; the memory tier passes none and writes locally
+  const voteEl = node.maskedRemoved || node.deleted ? null
+    : vote('comment', node.id, node, ctx.canVote, { layout: 'stack', onGuest: ctx.onGuest, onVote: ctx.onVote ? ctx.onVote(node) : null });
   if (fold) actionsRow.append(fold);
   if (!node.maskedRemoved && !node.deleted) {
     if (ctx.canComment && !ctx.locked) actionsRow.append(replyButton(node, ctx));

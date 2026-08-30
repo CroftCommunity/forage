@@ -39,11 +39,14 @@ const RESPONSES = {
   'getFeed?': { feed: [post('a', 'did:plc:aa', '2026-08-26T10:00:00Z')] },
   'getPostThread': { thread: {
     post: post('a', 'did:plc:aa', '2026-08-26T10:00:00Z').post,
-    replies: [{ post: post('b', 'did:plc:bb', '2026-08-26T11:00:00Z').post, replies: [] }],
+    replies: [{ post: { ...post('b', 'did:plc:bb', '2026-08-26T11:00:00Z').post,
+      author: { did: 'did:plc:bb', handle: 'bb.test', avatar: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7' } }, replies: [] }],
   } },
   'getQuotes': { posts: [] },
   'describeRepo': { handle: 'me.test' },
   'getPreferences': { preferences: [] },
+  'com.atproto.repo.createRecord': { uri: 'at://did:plc:me/app.bsky.feed.like/3lk', cid: 'lc' },
+  'com.atproto.repo.deleteRecord': {},
 };
 
 const FAKE_SIGNED_IN = `(() => {
@@ -159,6 +162,44 @@ export async function run() {
     await inn.page.goto(`${inn.origin}/p?uri=${encodeURIComponent('at://did:plc:aa/app.bsky.feed.post/a')}`);
     await inn.page.waitForSelector('.comment');
     await assertNone(inn.page, 'lens thread, signed in', { expectBoosts: true });
+
+    // The comment's stack must be a BUTTON that writes a like, not the
+    // read-only span wearing the same clothes. Found by the owner, signed in
+    // on production (2026-08-29): the head's pill liked; the reply's stack did
+    // nothing, because the thread's comment context inherited the guest perms.
+    const reply = inn.page.locator('.comment[data-node-id="at://did:plc:bb/app.bsky.feed.post/b"]');
+    const stack = reply.locator('> .comment-body > button[data-vote="comment"]');
+    assert.equal(await stack.count(), 1, 'signed in, a reply\u2019s vote stack is a button');
+    await stack.click();
+    await inn.page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('createRecord')));
+    const like = JSON.parse(await inn.page.evaluate(() =>
+      window.__shimHits.filter((h) => h.url.includes('createRecord')).at(-1).body));
+    assert.equal(like.collection, 'app.bsky.feed.like', 'the arrow on a reply is a real like');
+    assert.equal(like.record.subject.uri, 'at://did:plc:bb/app.bsky.feed.post/b', 'of THAT reply, not the head');
+    await inn.page.waitForSelector('.comment[data-node-id="at://did:plc:bb/app.bsky.feed.post/b"] button[data-vote][aria-pressed="true"]');
+    await stack.click();
+    await inn.page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('deleteRecord')));
+    const unlike = JSON.parse(await inn.page.evaluate(() =>
+      window.__shimHits.filter((h) => h.url.includes('deleteRecord')).at(-1).body));
+    assert.equal(unlike.rkey, '3lk', 'a second press removes the like it just made, by its own rkey');
+
+    // The avatar is THEIR picture when they have one — not their picture under
+    // two letters (owner, 2026-08-29: the initials and the image were rendering
+    // as two rows of one grid, half and half).
+    const av = await reply.locator('> .avcol > .av').evaluate((a) => ({ img: !!a.querySelector('img'), text: a.textContent.trim() }));
+    assert.deepEqual(av, { img: true, text: '' }, 'a picture replaces the initials outright');
+
+    // Placement (owner, 2026-08-29): the stack sits at the vertical middle of
+    // the comment's own body — text through action row — not parked at the
+    // bottom of the avatar column.
+    const geo = await reply.evaluate((c) => {
+      const r = (sel) => c.querySelector(sel).getBoundingClientRect();
+      const text = r(':scope > .comment-body > .comment-text'), acts = r(':scope > .comment-body > .comment-actions');
+      const v = r(':scope > .comment-body > [data-vote]');
+      return { bodyMid: (text.top + acts.bottom) / 2, voteMid: (v.top + v.bottom) / 2 };
+    });
+    assert.ok(Math.abs(geo.bodyMid - geo.voteMid) <= 4,
+      `the vote stack is centred on the comment body: body mid ${geo.bodyMid}, vote mid ${geo.voteMid}`);
   } finally { await inn.close(); }
 
   // ---------- the sandbox, signed OUT and IN ----------

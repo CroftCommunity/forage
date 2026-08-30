@@ -241,10 +241,15 @@ function setDrawer(open) {
   if (btn) btn.setAttribute('aria-expanded', String(open));
 }
 navScrim.addEventListener('click', () => setDrawer(false));
+// Crossing the breakpoint re-applies the rule: a sidebar that was simply
+// visible at desktop width otherwise becomes the drawer, open, with no scrim
+// and a burger that says it is shut (owner, 2026-08-29, after resizing).
+window.matchMedia('(max-width: 800px)').addEventListener('change', () => setDrawer(false));
 window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && drawerOpen) setDrawer(false); });
 
 // ---------- render pipeline ----------
 let currentCleanup = null;
+let navigatedByLink = false;
 function render() {
   // dev bar (memory-only scaffolding, user 2026-08-26) + masthead always fresh
   devHost.replaceChildren(pmode.active() === 'memory' ? devBar() : '');
@@ -280,13 +285,19 @@ function render() {
   sideEl.hidden = lensMode && !out.side;
   // reflect frontier dev toggle
   document.body.classList.toggle('hide-frontiers', !store.getDev().frontiers);
-  window.scrollingReset && window.scrollTo(0, 0);
+  // A LINK navigation opens the new page at its top (owner, 2026-08-29: a
+  // thread opened wherever the board had been scrolled to — this line used to
+  // read `window.scrollingReset && …`, and nothing ever set that). A store
+  // re-render never moves the reader, and Back is left to the browser's own
+  // scroll restoration. A `?focus=` deep link still wins: focusComment scrolls
+  // in a later frame.
+  if (navigatedByLink) { navigatedByLink = false; window.scrollTo(0, 0); }
 }
 
 // re-render on any store change (persona switch, dispatch, dev flags)
 store.subscribe(render);
 window.addEventListener('popstate', render);
-router.interceptLinks(render); // real hrefs, no page loads
+router.interceptLinks(() => { navigatedByLink = true; render(); }); // real hrefs, no page loads
 // A legacy '#/...' link followed while the app is ALREADY open is a
 // same-document change — boot never re-runs, so bridge it here too.
 window.addEventListener('hashchange', () => {

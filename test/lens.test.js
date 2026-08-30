@@ -64,6 +64,30 @@ test('a lens thread mirrors the comment-node shape with depth/children/deferred'
   assert.equal(typeof t.total, 'number');
 });
 
+test('a thread reply carries likeUri, so un-liking a comment knows its rkey', () => {
+  // The head post carried viewer.like through shapeLensPost from the start;
+  // reply nodes were rebuilt by hand in shapeLensThread and dropped it, so the
+  // comment stack could like but never unlike (owner, 2026-08-29: "the button
+  // for me logged in doesn't work").
+  const mk = (rkey, did, like) => ({
+    uri: `at://${did}/app.bsky.feed.post/${rkey}`, cid: 'c' + rkey,
+    author: { did, handle: did.slice(8) + '.test' },
+    record: { text: rkey, createdAt: '2026-08-29T10:00:00Z' }, indexedAt: '2026-08-29T10:00:00Z',
+    replyCount: 0, repostCount: 0, likeCount: 1,
+    ...(like ? { viewer: { like } } : {}),
+  });
+  const t = shapeLensThread({ thread: {
+    post: mk('root', 'did:plc:op', null),
+    replies: [{ post: mk('b', 'did:plc:bb', 'at://did:plc:me/app.bsky.feed.like/3lk'), replies: [] },
+      { post: mk('c', 'did:plc:cc', null), replies: [] }],
+  } }, SRC);
+  const byRkey = Object.fromEntries(t.comments.map((n) => [n.id.split('/').pop(), n]));
+  assert.equal(byRkey.b.likeUri, 'at://did:plc:me/app.bsky.feed.like/3lk');
+  assert.equal(byRkey.b.myVote, 1);
+  assert.equal(byRkey.c.likeUri, null);
+  assert.equal(byRkey.c.myVote, 0);
+});
+
 test('a lens feed mirrors the feed result shape, guest perms locked down', () => {
   const f = shapeLensFeed(fixture('wide-getFeed'), SRC, { sort: 'lens' });
   assert.equal(f.posts.length, 3);
