@@ -32,12 +32,32 @@ const withStore = (fn) => {
   try { return fn(map); } finally { delete globalThis.localStorage; }
 };
 
-test('3u: no preference means no filter — every post shows, exactly as before', () => {
+test('never chosen, the filter follows the browser — only languages the panel can show', () => {
+  // Owner, 2026-08-30: "default to the browser language". The browser's list
+  // is ordered and regional; the seed is base tags, de-duped, and only ones
+  // Forage offers a checkbox for — a preference the panel cannot display is
+  // one the reader cannot see or undo.
   withStore(() => {
-    assert.deepEqual(active(), []);
-    assert.equal(stored(), null);
-    assert.equal(matches({ langs: ['ja'] }, []), true);
-    assert.equal(matches({ langs: [] }, []), true);
+    assert.equal(stored(), null, 'nothing chosen yet');
+    assert.deepEqual(active(['pt-BR', 'pt', 'en-US']), ['pt', 'en']);
+    assert.deepEqual(active(['nl', 'sv']), [], 'a browser in languages Forage cannot list filters nothing');
+    assert.deepEqual(active([]), []);
+    assert.equal(primary(['ja-JP']), 'ja', 'the browser seed also names the primary language');
+    assert.equal(matches({ langs: ['ja'] }, active(['en'])), false, 'so a Japanese post is hidden for an English browser');
+    assert.equal(matches({ langs: [] }, active(['en'])), true, 'and an undeclared one still never is');
+  });
+});
+
+test('"show every language" is a CHOICE that survives reload — it does not fall back to the browser', () => {
+  withStore((map) => {
+    clear();
+    assert.equal(map.get('forage.langs'), '', 'stored as an explicit empty choice, not removed');
+    assert.deepEqual(stored(), []);
+    assert.deepEqual(active(['en-US']), [], 'the browser is ignored once you have chosen');
+    assert.equal(primary(['en-US']), null);
+    set(['en']); set([]);
+    assert.equal(map.get('forage.langs'), '', 'unchecking the last box is the same choice');
+    assert.deepEqual(active(['en-US']), []);
   });
 });
 
@@ -60,8 +80,8 @@ test('3u: choosing languages persists; clearing returns to no filter', () => {
     assert.deepEqual(active(), ['en', 'ja']);
     assert.equal(primary(), 'en');
     clear();
-    assert.deepEqual(active(), []);
-    assert.equal(primary(), null, 'no preference means no primary — never a guessed one');
+    assert.deepEqual(active(['en']), []);
+    assert.equal(primary(['en']), null, 'every language means no primary');
   });
 });
 
@@ -69,7 +89,7 @@ test('3u: junk in storage reads as no preference, and set normalizes what it is 
   withStore((map) => {
     for (const junk of ['', ' , ,', ',,,']) {
       map.set('forage.langs', junk);
-      assert.deepEqual(active(), [], `${JSON.stringify(junk)} is not a language list`);
+      assert.deepEqual(active(['en']), [], `${JSON.stringify(junk)} is not a language list — it reads as every language`);
     }
     set([' EN ', 'ja', 'en', '']); // trimmed, lowercased, de-duped, blanks dropped
     assert.deepEqual(active(), ['en', 'ja']);
