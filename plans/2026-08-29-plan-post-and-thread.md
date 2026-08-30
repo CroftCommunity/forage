@@ -1,7 +1,11 @@
 # Plan: posts, threads, and the ⋯ menu
 
 **Status:** Pass 1 rewritten to the phase-plan template 2026-08-29; **Pass 2 (gap analysis)
-applied the same day** — see Review Log. **Pass 3 not yet run.** Not started: Phase 0 first.
+applied the same day** — see Review Log. **Pass 3 (quality gates) applied the same day** — see
+Review Log. **Not started: Phase 0 first.** Open-question severities (O2–O8) are the agent's
+recommendations and await the owner's confirmation before execution.
+**Progress tracker:** this Status line. At every phase end append `last green: <phase> @ <sha>`;
+at every landing the CHANGELOG entry and the mock's `mock-baseline` sha are the markers.
 **Origin:** owner session 2026-08-29 — Reddit (web + Android) and Bluesky screenshots
 studied against Forage as it renders, worked through twelve revisions of a mock, and
 **ten decisions locked on `plans/mocks/post-and-thread.html` v12** (landed `b091566`).
@@ -216,6 +220,13 @@ Scheduled in the phase that makes the reference stale; the branch letter is the 
 - `plans/2026-08-28-1-plan-ring-board-kind-tabs.md` — unchanged; its
   `kindContext` reply/repost line is kept by Phase 1 (grepped `reply-context`,
   `repost-context`: only `lens-views.js:577-585` and `app.css:246-247`).
+- *(Pass 3)* `js/ui/views.js:136` and `:624` — two more `'best'` sites (the thread
+  selector call and the prefs `defaultSort` option list); Phase 10b.
+- *(Pass 3)* New modules `js/haptics.js`, `js/ui/menu.js`, `js/ui/sortbar.js` and the
+  new suites: `AGENTS.md` keeps no module map (grep for `js/skins.js`, `js/util.js`,
+  `js/ui/`: only `js/mode.js` at `:129`) and `README.md` names suites only by example
+  (`:440`), so no doc row is owed for a new file; `test/css-classes.test.js` and
+  `e2e/run.mjs` discover them.
 - Grepped for other references to `.gutter`, `miniVote`, `voteBox`, `cvote`, `votebox`:
   `e2e/no-downvote.workflow.mjs`, `e2e/bluesky-view.workflow.mjs`,
   `e2e/mobile-fit.workflow.mjs`, `scenarios/comment-tree-collapse.js`,
@@ -243,6 +254,19 @@ three suites) and 10a ↔ 11a (rank + its test vs one suite) — each saves minu
 sits inside a branch whose next phase needs both; **stays sequential**, not worth a
 worktree.
 
+*(Pass 3.)* Map re-checked after the Pass 3 additions: 4a-iv and 13b add one file each
+(`e2e/lens-writes-live.workflow.mjs`, shared by both — a second reason branch E follows
+B); no phase moved between branches; the plan stays sequential. Shared-state contract
+for the test account, as invariants: (1) `testbed--forage-test-account` claim file
+exists before the run and is struck after; (2) the live suite refuses any DID but
+`TEST_DID` before its first request; (3) every write's undo is the same run's last
+assertion, so `getBookmarks`/`getMutes`/`getBlocks` read back empty of the run's
+subjects; (4) no credential reaches stdout, a fixture, or a commit. Re-entry
+verification, one per invariant: `ls .coordination/claims/` shows no live
+`testbed--forage-test-account`; the suite's `TEST_DID` guard is asserted by a unit test
+that calls it with another DID; the run's last `ok` line is the read-back; `gitleaks`
+(SUPPLY-CHAIN.md) over the branch before it lands.
+
 ## Phases
 
 Fourteen phases, five landing branches. Every phase: RED-first (a failing wiring test
@@ -250,6 +274,29 @@ before production code), `npm test` green at its end, and the named workflow gre
 its end **unless the phase is a suite rewrite** (8a, 11a), which ends RED by design.
 Field shape per phase-plan; "Shared-state contract" is "none beyond the write-set" unless
 it says otherwise.
+
+*(Pass 3 — how the commands below actually run.)* `node e2e/run.mjs <name>` in the
+Done-when lines is **shorthand**: the runner takes no argument (`e2e/run.mjs:21` globs
+every `*.workflow.mjs`). One suite runs as
+`node --input-type=module -e "await (await import('./e2e/<name>.workflow.mjs')).run()"`;
+the declared gates at a **landing** are `npm test` and `npm run workflows`, both in full.
+Because the runner globs, a RED suite (3a, 6a, 8a, 11a) makes the whole browser gate red
+until its GREEN phase lands — so a RED phase and its GREEN phase are committed back to
+back on the same branch, never left across sessions (`run.mjs:1-10` records the flake
+hunt that rule comes from).
+
+*(Pass 3 — observability convention.)* The app has no logger: the convention is
+`console.info/warn/error` prefixed `forage:` (`js/store.js:119`, `js/storage.js:17-33`)
+for the operator and `toast()` (`components.js:7`) for the reader; the e2e shim records
+every fenced request in `window.__shimHits` and every unfixtured one in
+`window.__shimMisses` (599, `e2e/harness/shim.mjs:15-49`). Each phase below that adds a
+runtime path names its line in an **Observability** field; a failure a reader can hit
+is never a silent no-op. Every new suite asserts `window.__shimMisses` is empty at its
+end, so a missing fixture for a new procedure reads as a fixture bug, not as a flake.
+
+*(Pass 3 — edges.)* Each phase whose tests assert branching or boundary behaviour
+carries an **Edges** field naming the cases a single-point assertion would miss; the
+Mental Mutation Pass at execution time starts from that list.
 
 ### Phase 0: Discovery — landing branch A (with phases 1–2)
 
@@ -266,8 +313,13 @@ them. Cheap; each is a probe script or a fixture read.
     write); `getBookmarks` lists the subject with a `createdAt`; after delete the list
     no longer holds it. Record the exact response shapes.
   - **Disposition:** `keep-as-fixture` — the raw responses become
-    `test/fixtures/atproto/bookmarks.json` for Phase 4a's unit tests. The script is
-    deleted after (it holds a sign-in flow the substrate already owns).
+    `test/fixtures/atproto/bookmarks.json` for Phase 4a's unit tests. *(Pass 3)* The
+    script itself is **`promote`**: write it in the shape of
+    `e2e/tagsub-pds-live.workflow.mjs` (`live = true`, credentials from `CroftC/.env`,
+    refuses any DID but `TEST_DID`, undoes what it wrote) so its body becomes
+    **Phase 4a-iv**, where it is rewritten to drive the production writes instead of
+    raw XRPC. Not resolvable during planning: the repo has no `@atproto/api` and the
+    question is what the *server* accepts, not what the lexicon says.
 - [ ] **D2: Which mute/block procedures does the test account's server accept, and
   are they records or procedures?**
   - **Probe:** same script style: `app.bsky.graph.muteActor` / `unmuteActor`
@@ -277,7 +329,7 @@ them. Cheap; each is a probe script or a fixture read.
   - **Success criteria:** each call 200; the read-back shows the change; `buildPosture`
     applied to the read-back hides the muted account's post in the shape layer.
   - **Disposition:** `keep-as-fixture` — read-back shapes to
-    `test/fixtures/atproto/graph-writes.json`.
+    `test/fixtures/atproto/graph-writes.json`; the script `promote`s to 4a-iv with D1's.
 - [x] ~~**D3: Do the thread fixtures already carry `author.avatar` and `repostCount`?**~~
   **Resolved in Pass 2 by reading the fixtures:** `wide-authed-thread-liked.json` has
   both. No probe needed; the remaining D3 act is one line in Phase 2a's test naming
@@ -290,6 +342,8 @@ them. Cheap; each is a probe script or a fixture read.
     nothing else happens.
   - **Disposition:** `throwaway`.
 
+**Observability:** the probe prints every raw response in full (never through `head`) and
+the undo's read-back last, so a failed cleanup is the final line on screen.
 **Done when:** D1, D2 and D4 have evidence in Verified Assumptions, D1–D2 fixtures exist,
 and Phases 4a/4b/6 have been re-read against them (Phase 0 is the only phase allowed to
 restructure later phases; log any change in the Review Log).
@@ -311,10 +365,16 @@ restructure later phases; log any change in the Review Log).
   only); `test/css-classes.test.js` forces this in the same commit.
 - [ ] `e2e/thread-byline.workflow.mjs` (new) — seeded memory thread: every `.comment`
   has exactly one `.byline` whose first child is `.av` and last is `button.kebab`
-  with `aria-label`; time text matches `/^\d+[smhdw]$/`; the post row likewise.
+  with `aria-label`; time text matches `/^\d+(s|m|h|d|mo|y)$/` *(Pass 3: `timeAgo`'s
+  units are s/m/h/d/mo/y — `util.js:19-27` — there is no `w`)*; the post row likewise.
 **Call chain:** `#/f/:slug/p/:id` → `threadView` → `commentNode` → `.byline`;
 `#/popular` → `renderBoard` → `postRow` → `.byline`.
 **Wiring test:** `e2e/thread-byline.workflow.mjs` — RED before (no `.byline`).
+**Edges:** *(Pass 3)* exactly one `.byline` per comment (not ≥1 — a duplicate header is
+the likely regression); the kebab's accessible name includes the author (`More, by
+<name>`), so two kebabs never share a name; `timeAgo` is unit-pinned at its boundaries
+in a new `test/util.test.js` (59s/60s, 59m/60m, 23h/24h, 29d/30d, 11mo/12mo) — no test
+covers it today (grep: 0 hits in `test/`).
 **Depends on:** nothing. **Read-set:** `js/util.js`, `js/ui/views.js`.
 **Write-set:** `js/ui/components.js`, `css/app.css`, `e2e/thread-byline.workflow.mjs`.
 **Risks:** ~~`comment-meta` styled by a skin?~~ Pass 2: no skin references it. The
@@ -394,6 +454,14 @@ Also gates 3b: `e2e/guest-surface.workflow.mjs` (a guest's kebab shows Copy text
 Copy link only — never a Save it cannot perform).
 **Risks:** `guest-surface.workflow.mjs` asserts a signed-out reader sees no control they
 cannot use — the menu must render only usable items per persona, never disabled rows.
+**Edges:** *(Pass 3)* a guest's menu has **exactly two** items; the author sees Delete
+**and** no Report; a non-steward sees **no** fourth group (count the `.msep`s: 2, not
+≥2); the sheet/popover switch is asserted at 480 and 481 wide; Esc closes and focus is
+back on the kebab (`document.activeElement`); a second kebab click while open closes,
+never stacks (`[role=menu]` count 1, then 0).
+**Observability:** *(Pass 3)* a menu action that throws reaches `toast(msg, 'err')` and
+`console.warn('forage: menu action failed', e)` — the `storage.js:22` shape — never a
+closed menu and nothing else.
 **Done when:** (1) every memory post and comment has a working ⋯ with the decided
 groups; (2) `node e2e/run.mjs post-menu guest-surface` green.
 **Validation:** Moderate — plus keyboard: Tab to kebab, Enter, arrow keys, Esc.
@@ -428,11 +496,24 @@ a thread, block/unblock — each argued in `invariants.test.js` and listed in `A
   marker — a third phase 4a-iii, not a silent bump.
 - **4a-iii (O6, if taken): the repost write** — `app.bsky.feed.repost` record,
   `createRecord` 4→5, `deleteRecord` 4→5, `REPOST_COLLECTION`; same three files.
+- **4a-iv *(Pass 3)*: `e2e/lens-writes-live.workflow.mjs`** — the promoted D1/D2 probe,
+  rewritten to drive the production writes (`createLens(...).bookmark()` etc.) in the
+  `tagsub-pds-live` pattern: `live = true`, refuses any DID but `TEST_DID`, undoes every
+  write and asserts the read-back is clean. One file. This is the phase's Validation,
+  made repeatable instead of a hand pass.
+**Edges:** *(Pass 3)* every toggle is tested **both ways** through the shim (`on`
+sends create, `off` sends delete — `__shimHits` method + endpoint, not just "a call
+happened"); `block(did, on)` on `session.did` itself refuses before any request (the
+`deletePost` ownership-guard pattern, `invariants.test.js`); a 4xx from any procedure
+rejects — it does not resolve — so 4b's optimistic flip can revert.
+**Observability:** *(Pass 3)* a rejected write is `console.warn('forage: <write> refused',
+status, message)` in the substrate; the toast is 4b's job.
 **Risks:** `invariants.test.js` exists to make adding a write an argument — write the
 argument in the test's own voice, do not bump the number.
 **Done when:** `npm test` green with the new count and every new write exercised.
 **Validation:** Broad — each write run once against the test account (TESTBED claim),
-read back via `getBookmarks` / `getMutes` / `getBlocks`, then undone.
+read back via `getBookmarks` / `getMutes` / `getBlocks`, then undone — *(Pass 3)* as
+`LIVE=1` on 4a-iv, not by hand.
 
 #### Phase 4b: the lens menu
 **Goal:** the ⋯ on a lens post or comment carries the full decided list, each item live.
@@ -492,6 +573,11 @@ selectors; 6 files → three phases, RED → GREEN → GREEN):
   call `vote(…, { layout: 'pill' })`.
 **Risks:** ~~grep the callers~~ (done: four). The head's pill and the row's pill are
 the same layout — `density.workflow.mjs` must still see compact rows shrink the pill.
+**Edges:** *(Pass 3)* guest: `[data-vote] .n` present and **zero** `button[data-vote]`;
+signed in: `aria-pressed` toggles true→false→true and the count moves ±1 each way (not
+just "changed"); the gated persona's flip **reverts to the original count** (assert the
+number, not the class); both layouts assert the same four cases, since one
+implementation with two layouts is the point.
 **Done when:** (1) one `▲ n` control on posts, the stacked unit on comments, both
 toggling; a guest sees counts only; (2) `node e2e/run.mjs no-downvote guest-surface
 density` green, `npm test` green.
@@ -503,8 +589,10 @@ density` green, `npm test` green.
 - [ ] `js/haptics.js` (new) — `buzz()` reads `forage.haptics` (default `'on'`), calls
   `navigator.vibrate?.(12)` inside the user gesture; pure `enabled()`/`set()`.
 - [ ] `js/ui/components.js` — the vote component calls `haptics.buzz()` on the
-  optimistic flip **to on**, never on off. `js/ui/views.js` — the `/me` page gains the
-  switch beside skin/mode.
+  optimistic flip **to on**, never on off. `js/ui/views.js` — `settingsView`
+  (`views.js:561`) gains the switch beside skins *(Pass 3: not "the `/me` page" —
+  memory reaches it at `/settings`, and the lens `/me` embeds the same `settingsView()`,
+  `lens-views.js:2125`, so one switch serves both tiers)*.
 - [ ] `test/haptics.test.js` — default on; off suppresses; `vibrate` absent is a no-op
   with no throw.
 **Call chain:** vote click → `vote()` flip → `haptics.buzz()` → `navigator.vibrate`.
@@ -516,8 +604,17 @@ component's call — assert it via `no-downvote`'s existing click with a stubbed
 - **7a:** `js/haptics.js`, `test/haptics.test.js` — pure module; `navigator` absent in
   node is the first test (no throw).
 - **7b:** `js/ui/components.js` (the call inside the click handler), `js/ui/views.js`
-  (`/me` switch), `e2e/no-downvote.workflow.mjs` (stub `navigator.vibrate` via
-  `addInitScript`, count exactly one call per like-on, zero per like-off).
+  (the `settingsView` switch), `e2e/no-downvote.workflow.mjs` (stub `navigator.vibrate`
+  via `addInitScript`, count exactly one call per like-on, zero per like-off).
+**Edges:** *(Pass 3)* `enabled()`: key absent → true; `'off'` → false; any other value →
+true (only the literal off disables — a corrupted key must not silence a default-on
+feature); `buzz()` with off → `vibrate` called **zero** times (not ≤1); `vibrate`
+absent → returns false, no throw; called with `[12]`-shaped argument `12` exactly. If O3
+is taken: `matchMedia('(prefers-reduced-motion: reduce)')` true → zero calls even when
+enabled, and the suite stubs `matchMedia` both ways.
+**Observability:** *(Pass 3)* when `navigator.vibrate` is absent, one
+`console.debug('forage: haptics unavailable on this device')` per session, not per tap
+— iOS readers file "the switch does nothing" and this is the line that answers it.
 **Risks:** O3 (reduced-motion). Chrome ignores `vibrate` without user activation —
 the call must stay inside the click handler, not after the `await`.
 **Done when:** (1) on the Samsung a like buzzes and the switch stops it; (2)
@@ -564,6 +661,11 @@ selector timeout — a timeout is a wrong-selector bug in the test, not RED).
 are appended inside the children container (`components.js:236-246`); they do. Deep nesting at 390 wide: 22px per level; `mobile-fit`
 measures overflow by element geometry at 320/360/390 — a thread ten deep must not
 overflow (the continue-stub at depth 10 is the existing ceiling).
+**Edges:** *(Pass 3)* 0 children → no `.line`, no `[data-fold]`; 1 child → both; the
+⊕ label counts **all descendants** hidden, not direct children (a 1-child node whose
+child has 3 replies reads `4 hidden`) — pin it on the seeded thread's deepest branch;
+depth 0 has no elbow, depth 1 has one; fold state does not leak between two comments
+(fold A, assert B's `.kids` still visible).
 **Done when:** (1) a direct reply to the post has no rail; a comment's replies hang
 off its avatar; ⊖ folds them; (2) `node e2e/run.mjs bluesky-view mobile-fit` green,
 `npm test` green (css-classes: no orphan `.gutter` literal).
@@ -604,12 +706,24 @@ gets "landed <sha>".
   likes + 0; `sortItems(items,'best')` no longer exists (throws or falls to hot —
   decide: **falls to hot**, so an old `?sort=best` URL still renders; O7).
 - [ ] `js/substrates/lens.js` — `repostCount` shaped on posts and thread nodes (D3).
-  `js/selectors.js:171` thread default `'best'` → `'hot'`; `views.js:181` likewise.
+  `js/selectors.js:171` thread default `'best'` → `'hot'`; `views.js:181` likewise —
+  *(Pass 3)* **and `views.js:136`** (a second hard-coded `'best'` in `threadView`'s
+  `sel.thread(...)` call) **and `views.js:624`** (the prefs page's `defaultSort` select
+  lists `'best'`; a stored `prefs.defaultSort === 'best'` falls to hot by the O7 rule,
+  in `views.js:59`).
 **Write-set:** `js/engines/rank.js`, `test/engines.test.js`, `js/substrates/lens.js`,
 `js/selectors.js`, `js/ui/views.js` — **5 → split**: 10a rank + test (2); 10b shaping
 + defaults (3). `README.md:75,188` and the 2026-08-27-1 plan's Review Log line in 10b.
 **Wiring test:** `no-downvote`'s thread tab assertions (`:192-222`) already read the
 sort names on a thread — they pin `Best`; 10b changes them to `Hot` (RED first).
+**Edges:** *(Pass 3, `test/engines.test.js` — the file already pins boundary cases,
+`:1-3`)* at equal age: (3 likes, 4 replies, 0 reposts) = 7 above (5, 0, 0); equal
+engagement, different age → newer first (the decay still bites); (5, 0, 0) vs
+(5, 0, 1) → the repost decides; `replyCount` **and** `children` both present →
+`replyCount` wins (pin with `replyCount: 2, children: [a,b,c]`); none of the three
+present → engagement 0, never NaN; `sortItems(items, 'best')` returns the **identical
+order** to `'hot'`; and `'top'` on the 3+4 vs 5 case still puts 5 first — Top stays
+likes-only, which is the visible difference Best could never show.
 **Done when:** a thread sorted Hot puts a replied-to comment above a merely liked one;
 `npm test` green; `no-downvote` green.
 **Validation:** Narrow.
@@ -628,6 +742,11 @@ sort names on a thread — they pin `Best`; 10b changes them to `Hot` (RED first
 - **11b (GREEN):** `js/ui/sortbar.js`, `css/app.css`, `js/ui/views.js`.
 `e2e/mobile-fit.workflow.mjs:40` already lists `select` among tap targets, so the two
 selects are measured at 320/360/390 with no suite change.
+**Edges:** *(Pass 3)* `From` is rendered for `hot` and `top`, absent for `new`;
+choosing a sort rewrites `?sort=` and **keeps** `?from=`; `?from=` on `new` is ignored,
+not an error; the options list is asserted as an exact array, not "contains Hot".
+**Validation:** *(Pass 3)* 11a — read the RED output in full. 11b — Moderate: both
+selects clear 44px at 320/360/390 (`mobile-fit` measures `select` already).
 **Done when:** every memory board and thread has the bar; every sort available on every
 board; `no-downvote` green.
 
@@ -642,6 +761,9 @@ board; `no-downvote` green.
   shows the bar; re-sorting re-queries (4e) as today.
 **Depends on:** 11b. **Write-set:** `js/ui/lens-views.js`, `e2e/density.workflow.mjs`,
 `e2e/bluesky-view.workflow.mjs`.
+**Validation:** *(Pass 3)* Moderate — one lens thread re-sorted on the Samsung, and
+`__shimHits` shows a second `getPostThread` after a sort change (re-query, not
+re-order).
 **Done when:** the lens board and thread carry the same bar as memory; `density`,
 `bluesky-view` green.
 
@@ -671,6 +793,14 @@ clipboard case); **12b** focus landing — **Pass 2 decides the helper's home:**
 `focusComment(container, id, { bar })` lives in `js/ui/components.js` (both tiers import
 it; `views.js` and `lens-views.js` already import from there), so 12b's write-set is
 `components.js`, `views.js`, `deep-link` suite (GREEN)).
+**Edges:** *(Pass 3)* focus at depth 0 (nothing to expand, bar still shown); focus
+under a **collapsed** ancestor (ancestor expands); focus on the last sibling (earlier
+siblings fold to ⊕); `?focus=` naming an id **not in the thread** → no scroll, the bar
+reads "That comment isn't in this thread", the rest renders; the bar's link drops
+`focus` and **keeps** `sort`; the tint is skipped under `prefers-reduced-motion`
+(stub `matchMedia`); `focusComment` on an empty container returns without throwing.
+**Observability:** *(Pass 3)* the not-found case is `console.warn('forage: focus id not
+in thread', id)`; the found case logs nothing.
 **Done when:** a copied comment link opens on that comment, highlighted, in context;
 `deep-link` green.
 **Validation:** Moderate — phone: the focused node lands below the sticky masthead, not
@@ -686,8 +816,18 @@ under it.
   `/p?uri=<root>&focus=<reply>`.
 - [ ] `e2e/deep-link.workflow.mjs` — lens cases: `/p?uri=<reply uri>` lands on the root
   with the reply focused; `&focus=` likewise.
+**Edges:** *(Pass 3)* head is a root → **exactly one** `getPostThread` in
+`__shimHits`, no `focus`; head is a depth-1 reply (`root === parent`) → two calls, the
+second for `root.uri`, `focus` = the reply; depth-2 reply → the refetch targets
+**`root`**, not `parent`; `&focus=` given **and** the uri is a reply → the explicit
+`focus` wins; the root fetch failing → the error state names the root uri, never a
+blank page.
+**Observability:** *(Pass 3)* the refetch is
+`console.info('forage: /p opened on a reply — showing its thread from <root>')`, once.
 **Depends on:** 12b. **Write-set:** `js/substrates/lens.js`, `js/ui/lens-views.js`,
-`e2e/deep-link.workflow.mjs`.
+`e2e/deep-link.workflow.mjs`. *(Pass 3)* **13b:** one read-only case in
+`e2e/lens-writes-live.workflow.mjs` (4a-iv) — a real reply uri from the test account
+resolves to its root — 1 file; that is the "Broad" below, made repeatable.
 **Done when:** a bsky reply uri pasted into `/p?uri=` lands on its thread at that reply;
 `deep-link` green.
 **Validation:** Broad — one live reply uri from the test account.
@@ -764,3 +904,49 @@ additive fixes, all recorded in place with a *(Pass 2)* marker:
   tags" and Forage already has its own hashtag prefs (plan 2026-08-28-2) — O5 stays
   open and PHASE-GATED; the plan does not pick for the owner.
 - **Not changed:** phase order, decisions, the branch grouping.
+
+### Pass 3: Quality Gates — 2026-08-29
+
+**TDD ordering:**
+- Every phase already opened with its RED test (Pass 2's suite-first splits); Pass 3
+  added **Edges** to 1, 3, 4a, 6, 7, 8b, 10, 11, 12, 13 — boundary cases named so the
+  planned assertions are not single points (the Mental Mutation Pass starts from them).
+- Two wrong test specs fixed: Phase 1's time regex allowed `w` and missed `mo`/`y`
+  (`timeAgo`, `util.js:19-27`); Phase 7b put the switch on `/me`, which in memory mode
+  does not exist — it lives in `settingsView` (`views.js:561`), which the lens `/me`
+  embeds. `timeAgo` had no unit test at all; Phase 1 gains `test/util.test.js`.
+- Verification-command defect: `node e2e/run.mjs <name>` was cited fourteen times and
+  the runner takes no argument (`run.mjs:21`). Defined once in the Phases preamble as
+  shorthand, with the real single-suite invocation and the rule that a RED suite and
+  its GREEN phase land back to back (the runner globs).
+**Observability:**
+- Convention recorded (no logger; `forage:`-prefixed console lines + `toast()`;
+  `__shimHits`/`__shimMisses`). Lines added to Phase 0, 3, 4a, 7, 12, 13; every new
+  suite asserts `__shimMisses` empty.
+**Debugging readiness:**
+- The Status line is the progress tracker (`last green: <phase> @ <sha>`); landings are
+  marked by the CHANGELOG entry and the mock baseline sha. Phase-end checkpoint =
+  `npm test` + the one suite; landing checkpoint = both declared gates in full.
+**Validation calibration:**
+- 4a's "Broad — by hand" became **4a-iv**, a `live = true` workflow in the
+  `tagsub-pds-live` pattern (the repo's convention for anything that touches a real
+  PDS); 13's live check joins it as **13b**. 11a and 11c had no Validation line; added.
+**Concurrency honesty:**
+- Map confirmed; sequential plan. Test-account contract rewritten as four invariants
+  with one re-entry check each.
+**Discovery:**
+- D1/D2 probe scripts change disposition from throwaway to `promote` → 4a-iv (the
+  fixtures stay `keep-as-fixture`). Neither is resolvable during planning: no
+  `@atproto/api` in the tree, and the question is server acceptance. D4 stays
+  `throwaway` (a device answer). D3 stays resolved.
+**Coherence:**
+- Plan still answers the Problem Statement's seven measurements one-to-one; no scope
+  added beyond the live suite, which is convention. Two missed `'best'` sites found
+  (`views.js:136`, `:624`) and scheduled in 10b. All seven open questions carry a
+  recommended severity; **none has been confirmed by the owner** — flagged in Status.
+**Documentation impact:**
+- Two rows added (the `'best'` sites; the new-file grep record). Every listed file has
+  a phase; no trailing docs phase.
+**Confirmed ready:** no — pending the owner's confirmation of O2–O8 severities (three
+PHASE-GATED, four ADVISORY). No BLOCKING items; Phase 0 can start once they are
+confirmed.
