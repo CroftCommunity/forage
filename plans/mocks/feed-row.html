@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forage Feed Row Proposals v5</title>
+<meta name="mock-version" content="5">
+<meta name="mock-baseline" content="forage@7a701c3">
+<meta name="mock-proposal" content="forage@37007fd">
+<style>
+:root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
+  --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page-bg:#1C1813;--page-card:#262019;--page-ink:#EFE7D9;--page-muted:#B5A88F;--page-line:#3D3527;--page-accent:#A5CD98}}
+:root[data-theme="dark"]{--page-bg:#1C1813;--page-card:#262019;--page-ink:#EFE7D9;--page-muted:#B5A88F;--page-line:#3D3527;--page-accent:#A5CD98}
+*{box-sizing:border-box}
+body{background:var(--page-bg);color:var(--page-ink);font-family:var(--f-body);line-height:1.55;margin:0;padding:32px 20px 72px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:30px}
+h1{font-family:var(--f-display);font-size:30px;font-weight:600;margin:0;letter-spacing:-.01em}
+h2{font-family:var(--f-display);font-size:22px;font-weight:600;margin:0}
+h3{font-family:var(--f-display);font-size:17px;margin:0 0 7px;font-weight:600}
+.sub{color:var(--page-muted);font-size:15px;max-width:78ch;margin:0}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+section{display:flex;flex-direction:column;gap:14px}
+.stage{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap}
+.device{display:flex;flex-direction:column;gap:9px;min-width:0}
+.device-label{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+.phone{width:390px;max-width:100%}
+.desk{flex:1 1 460px;min-width:0}
+.shot{max-width:100%;display:block;border:1px solid var(--page-line);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.10),0 8px 24px rgba(0,0,0,.06)}
+.callout{background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:16px 18px}
+.callout p,.callout li{margin:0;font-size:14px;color:var(--page-muted)}
+.callout b,.callout code,td b{color:var(--page-ink);font-weight:600}
+.callout ul,.callout ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+table{border-collapse:collapse;font-size:14px;width:100%}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--page-line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page-muted)}
+.tablewrap{overflow-x:auto;background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:6px 8px}
+code{font-size:.92em}
+.small{font-size:13px;color:var(--page-muted)}
+.tag{display:inline-block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;padding:1px 8px;border-radius:999px;border:1px solid var(--page-line);color:var(--page-muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Forage · mock · feed-row <b>v5</b> · Current forage@7a701c3 · Proposed forage@37007fd · 2026-08-30</div>
+    <h1>The feed row, made to agree with the phone</h1>
+    <p class="sub"><b>One proposal in fourteen decisions, for one purpose:</b> the lens feed row on forage.fyi should look the way the owner's phone expected it to, with Bluesky's own row as the reference — and this time the thing being agreed on is the app, not a drawing.
+      Origin: six phone screenshots of forage.fyi and bsky.app taken 2026-08-30 16:17–16:28 (phpBB skin, <code>f/whats-hot</code> and two threads), plus a desktop pair (<code>/u/pds.ls</code> → <code>f/pds.ls</code> → "Unknown feed").
+      They showed: the picture the thread page renders missing from the feed; a post's text set as a bold heading; and an action row whose share arrow wrapped under "7315 · 270 comments · 1225", with the dashed like box two lines tall beside it.
+      <b>None of it was visible in board-cards v9's captures</b> — default skin, card density, "1284 · 40 comments · 12".</p>
+    <p class="sub"><b>Every frame on this page is a capture of the engine</b> (MOCKS.md P1): Current is <code>main</code> at <code>7a701c3</code> (v4 rebased onto the warm-skins landing; Current re-captured there), Proposed is <code>claude/feed-card</code> at <code>37007fd</code>, both by <code>scripts/mock-snaps.mjs</code> against <code>e2e/harness/mock-board.mjs</code> / <code>mock-thread.mjs</code>, in the default skin (rule 4) — and, from v4 at the owner's ask, § H shows the board, the thread and the reply page in three skins (Forage light, Forage dark, phpBB — the phone's), at 390 × 844 and 1280 × 900.
+      The population now carries the phone's load (P2): a row with 7315 likes, 270 replies and 1225 reposts, a four-line text-plus-picture post, and (v2) the names people choose at the widths the network allows — a 64-grapheme name, an emoji name, no name, and one that impersonates. Nothing here is drawn; there is no sketch to fall short of.</p>
+  </header>
+
+  <section>
+    <div class="eyebrow">Decisions</div>
+    <h2>Decisions — proposed 2026-08-30, on the branch, awaiting the owner</h2>
+    <p class="sub">Each is built and captured; "yes" on a row is "yes" to the frame below it. Where a row changes an earlier locked decision, the earlier mock now says so (board-cards v10, decisions 1 and 2 — MOCKS.md P3).</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>#</th><th>Decision</th><th>Proposed (as captured)</th><th>Alternative</th><th>Changes</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><b>The picture shows at both densities</b> (B)</td><td>Compact tightens the row — padding, byline, no body preview, no tag chips — and keeps the picture on its stage. The 40px <code>title-thumb</code> that stood in for a placeholder-titled compact row is gone.</td><td>Keep compact picture-free and stop the phpBB family preferring it; or keep both and accept that the owner's phone shows no pictures</td><td>the phone: it runs the phpBB skin, which prefers compact — which is why its feed had no pictures</td></tr>
+        <tr><td>2</td><td><b>A post's text is text</b> (A, E)</td><td>On the row: the title's size, body weight (<code>.posttext</code>, 400). At the thread head: 20px, body face and weight — one step up from the body, not a 26px serif heading. A link post's headline keeps the heading weight in both places.</td><td>Lower the size and keep the weight; or leave the row and change only the thread head</td><td>post-and-thread's head, board-cards' row</td></tr>
+        <tr><td>3</td><td><b>Bluesky's action row</b> (A)</td><td><b>replies · reposts · like · share</b> in four EQUAL cells (a grid, not a flex gap), so the row is one line under any count and every row's controls line up down the board. The like sits third — where Bluesky's heart is — and <b>loses its pill border</b>: one weight for the four; the guest's person glyph is still the tell, the tap still opens sign-in.</td><td>Keep the order and only fix the wrap (a <code>nowrap</code> row with smaller gaps); or the like first as drawn in board-cards v5</td><td>board-cards decisions 1 and 2 (noted there, v10); post-and-thread decision 1 (the pill on the row — still a pill, now unboxed)</td></tr>
+        <tr><td>4</td><td><b>The replies cell is a number</b> (A)</td><td>💬 270. The words — "270 comments — open the thread" — are the control's accessible name and its tooltip, so a screen reader and a hover keep them.</td><td>Keep "270 comments" in words and let the cell be wider than the others</td><td>board-cards Phase 4's "12 comments in words"; the four workflows that read the words now read the name</td></tr>
+        <tr><td>6</td><td><b>The byline shows the name a person chose</b> (v2, owner 2026-08-30)</td><td>The row, the thread head and every comment show <code>displayName</code>; the handle is the name's tooltip (<code>@quietcartographer.bsky.social</code>) and part of its accessible name. No chosen name → the handle shows. A 64-grapheme name ellipsises on its one line.</td><td><b>Name, then the handle muted after it</b> (bsky.app's row — the handle visible, not one hover away). Recorded because a display name is not unique: the second row on the phone frame reads <b>"Bluesky 🦋"</b> and is <code>averyveryverylonghandle.bsky.social</code>. The tooltip is the only tell on this branch.</td><td>every byline since post-and-thread's header line</td></tr>
+        <tr><td>7</td><td><b>A provider mark beside the name, switchable</b> (v2)</td><td>A text-sized muted glyph right after the name: the butterfly for a <code>*.bsky.social</code> handle, an atmosphere ring for anyone else, the provider in its tooltip ("atmo provider: bsky.social"). Settings → <b>Provider mark</b> switches it off (device-local, on by default).</td><td>Resolve the author's real atmo provider from the DID document (plc.directory, one fetch per author, cached) — the honest mark for custom-domain handles, which today get the ring and a tooltip saying the handle does not show the provider. Recorded as the follow-on, not built.</td><td>DESIGN.md's noun is kept: <i>atmo provider</i>, never <i>server</i>/<i>PDS</i>; the butterfly is a mark for one provider, not Bluesky-as-category</td></tr>
+        <tr><td>8</td><td><b>The share glyph</b> (v3, owner 2026-08-30: "I really don't like that bottom right share icon")</td><td>The tray-with-arrow-up line icon board-cards v5 drew (<code>#i-share</code>; the shape bsky.app and iOS use), at 1.15em and 70% at rest, on rows and comments alike — one weight with the other three. The ↗ text glyph is gone.</td><td>A chain link — the button does copy a link; or the arrow-out-of-box at full opacity</td><td>post-and-thread decision 10 kept its placement (last on the row) and its accessible name; only the glyph and the rest opacity (55 → 70%) moved</td></tr>
+        <tr><td>9</td><td><b>The head's Reply sits at the right</b> (v4, owner: "put reply on the right side")</td><td>At the right end of the like's row (<code>▲ 11 · name · 15h ago · 4 replies … Reply</code>); the row keeps one line — the meta yields before Reply drops, and the pill keeps its shape.</td><td>Reply under the post as before, right-aligned</td><td>post-and-thread's head layout</td></tr>
+        <tr><td>10</td><td><b>Replying to a post is a page</b> (v4)</td><td><code>/reply?uri=&root=[&from=]</code>: breadcrumb, the post you are answering (byline, text, picture) walled like a quote, then the box — Send · Cancel, a counter. Sent or cancelled, you land back on the thread. Text only in v4 (O7).</td><td>Keep the composer unfolding under the head</td><td>the head's inline composer is gone; the composer (with images) still serves new posts</td></tr>
+        <tr><td>11</td><td><b>A draft is kept in this browser</b> (v4, owner: "save drafts … local browser stash or the native bsky version")</td><td>Per post answered (<code>forage.draft:&lt;uri&gt;</code>): saved as you type, survives Cancel and a reload, cleared on Send, "Discard draft" throws it away; the box says "Draft saved in this browser · 20:15".</td><td><b>Bluesky's own drafts</b> (<code>app.bsky.draft.createDraft / updateDraft / getDrafts / deleteDraft</code>, private stash, needs a session). Read from the published lexicon 2026-08-30: <code>defs#draft</code> carries <code>deviceId, deviceName, posts, langs, postgateEmbeddingRules, threadgateAllow</code> — <b>no reply target</b>. A native draft would keep the words and forget which post they answer, so the parent must live locally regardless. Recorded as O8, not built.</td><td>nothing decided before</td></tr>
+        <tr><td>12</td><td><b>Under a comment, a quick box</b> (v4, owner: "a simple text box to drop down with a send or cancel")</td><td>Textarea · Send · Cancel and a counter, nothing else; Cancel folds it and keeps the words as the same kind of draft; reopened, they are back.</td><td>The full composer under the comment (today)</td><td>post-and-thread decision 2's row keeps ↩ Reply; what opens changed</td></tr>
+        <tr><td>13</td><td><b>The frontier chips are off the board</b> (v4, owner: "what's this content about? … we can just remove that")</td><td>The dashed <code>likes-only scores (DL-011)</code> and <code>ranking: feed order (DL-010)</code> chips over a board named entries of the divergence ledger (<code>ledger/divergence.js</code>) — "this surface knowingly differs from the memory-tier spec" — for whoever compares the two tiers. A reader gets nothing from them. Gone from every reader-facing board; the ledger and <code>/frontiers</code> keep them.</td><td>Keep them behind the dev bar's Frontiers toggle</td><td>the lens board header</td></tr>
+        <tr><td>14</td><td><b>The sort's first choice is "Default"</b> (v5, owner: 'change "Feed order" to "Default"')</td><td>The board's sort select reads Default · Hot · New · Top. "Default" is the order the feed's own generator hands us (DL-010's fact, without the ledger's vocabulary).</td><td>"Feed order" (today); "As curated"</td><td>the sort bar's wording (plan 2026-08-26 feed-discovery-sorts)</td></tr>
+        <tr><td>5</td><td><b>An author board's row points home</b> (desktop pair)</td><td>On <code>/u/&lt;handle&gt;</code> a row's breadcrumb reads <code>@handle</code> and opens <code>/u/&lt;handle&gt;</code>. Before: <code>f/pds.ls</code> → <code>/f/pds.ls</code> → "Unknown feed — this link is missing the feed's creator".</td><td>Resolve <code>/f/&lt;handle&gt;</code> as an author board when the slug looks like a handle (also fixes old links; not done here)</td><td>nothing decided before — a gap</td></tr>
+      </tbody>
+    </table></div>
+    <div class="callout"><h3>Open — not built, the owner's call</h3><ul>
+      <li><b>O0 — the handle's visibility (decision 6's alternative).</b> As built, an impersonating name is caught only by hovering. <i>Recommend: the muted handle after the name, at least on the row — it costs one line nothing on desktop and ellipsises on a phone; say the word and v3 captures it.</i></li>
+      <li><b>O7 — images on a reply.</b> The old composer under a comment could attach images; the v4 reply page and quick box are text only. <i>Recommend: the page gets "Add image" back in a later revision; the quick box stays text.</i></li>
+      <li><b>O8 — a native mirror of drafts.</b> Push the words to <code>app.bsky.draft.*</code> as well, keeping the parent locally (decision 11's finding). Wants a live probe with the standing test account before any code. <i>Recommend: after the local stash has been used for a week.</i></li>
+      <li><b>O1 — line icons for the four.</b> Today 💬 is a coloured emoji, ⟳ a thin text glyph, and the person an SVG: three weights in one row. Bluesky's are four line icons of one weight. <i>Recommend: yes, next revision — it is a glyph swap, no layout change.</i></li>
+      <li><b>O2 — the thread head's like is still boxed</b> (▲ 11 in a pill) while the row's is not. <i>Recommend: the head follows the row.</i></li>
+      <li><b>O3 — should the phpBB family still prefer compact</b> now that compact keeps the picture? <i>Recommend: yes — it is only density now, which is what a skin was allowed to suggest.</i></li>
+      <li><b>O4 — the <code>f/whats-hot</code> breadcrumb line</b> under every row. Bluesky has no such line. <i>Recommend: keep for now; a Forage board is a place and the line says which.</i></li>
+      <li><b>O5 — the desktop pair's OTHER finding:</b> that Brave tab showed the retired media slider and the pre-branch-A toolbar — a shell from before 2026-08-29. forage.fyi serves <code>forage-v62</code> (main). The service worker installs with <code>skipWaiting</code> + <code>clients.claim</code>, but a long-lived SPA tab only picks the new shell up on a reload. <i>Nothing to build; reload that tab. Whether the app should say "a newer Forage is ready — reload" is a separate question.</i></li>
+    </ul></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Proposal A</div>
+    <h2>A. The row — one line, aligned, text as text; the chosen name and its mark (v2)</h2>
+    <p class="sub">The phone's load on the first row: 7315 likes · 270 replies · 1225 reposts, signed out; from v2 the bylines carry chosen names — a 64-grapheme one on the first row, the impersonating "Bluesky" on the second, none on the third — each with its provider mark. <b>Current:</b> the share arrow wraps under the row and the dashed like box stands two lines tall beside "270 comments"; the text is a bold heading. <b>Proposed:</b> 💬 270 · ⟳ 1225 · 👤 7315 · ↗ in four cells, the same x on every row; the text at body weight.</p>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · board-lens · CURRENT (forage@fe2b77b)</div>
+        <img class="shot" src="snaps/feed-row/board-lens.phone.current.png" alt="Lens board on a phone today: bold post text, a dashed like box, 270 comments in words, and the share arrow wrapped onto its own line" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · board-lens · PROPOSED (forage@8f25520)</div>
+        <img class="shot" src="snaps/feed-row/board-lens.phone.proposed.png" alt="Lens board on a phone on the branch: post text at body weight; replies, reposts, like and share in four aligned cells on one line" width="390"></div>
+    </div>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Desktop · board-lens · CURRENT (forage@fe2b77b)</div>
+        <img class="shot" src="snaps/feed-row/board-lens.desktop.current.png" alt="Lens board at 1280 today"></div>
+      <div class="device desk"><div class="device-label">Desktop · board-lens · PROPOSED (forage@8f25520)</div>
+        <img class="shot" src="snaps/feed-row/board-lens.desktop.proposed.png" alt="Lens board at 1280 on the branch: the four cells span the column"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Proposal B</div>
+    <h2>B. Compact keeps the picture</h2>
+    <p class="sub">The board at Compact density — the phpBB skin's preference, and so the owner's phone — scrolled to the picture post. <b>Current:</b> the row is text and counts; the picture is gone (a placeholder-titled post would get a 40px thumbnail). <b>Proposed:</b> the stage is there; compact is only tighter.</p>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · board-lens-compact · CURRENT (forage@fe2b77b)</div>
+        <img class="shot" src="snaps/feed-row/board-lens-compact.phone.current.png" alt="Compact lens board on a phone today: the picture post is a line of text with no picture" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · board-lens-compact · PROPOSED (forage@8f25520)</div>
+        <img class="shot" src="snaps/feed-row/board-lens-compact.phone.proposed.png" alt="Compact lens board on a phone on the branch: the picture post stands on its stage" width="390"></div>
+    </div>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Desktop · board-lens-compact · CURRENT (forage@fe2b77b)</div>
+        <img class="shot" src="snaps/feed-row/board-lens-compact.desktop.current.png" alt="Compact lens board at 1280 today"></div>
+      <div class="device desk"><div class="device-label">Desktop · board-lens-compact · PROPOSED (forage@8f25520)</div>
+        <img class="shot" src="snaps/feed-row/board-lens-compact.desktop.proposed.png" alt="Compact lens board at 1280 on the branch, picture on its stage"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Proposal C</div>
+    <h2>C. A text-plus-picture post at Card density</h2>
+    <p class="sub">Bluesky's commonest shape — four lines of text with hashtags above a portrait picture — scrolled to the top of the frame. The stage is unchanged from board-cards decision 4; what changes is the text above it and the row below it.</p>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · board-lens-media · CURRENT (forage@fe2b77b)</div>
+        <img class="shot" src="snaps/feed-row/board-lens-media.phone.current.png" alt="A text-plus-picture post today: bold four-line text above the stage" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · board-lens-media · PROPOSED (forage@8f25520)</div>
+        <img class="shot" src="snaps/feed-row/board-lens-media.phone.proposed.png" alt="A text-plus-picture post on the branch: body-weight text above the stage" width="390"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Proposal D</div>
+    <h2>D. Signed in — the like has its arrow</h2>
+    <p class="sub">The same rows with a session: the like is ▲ and a live button, third in the row.</p>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · board-lens-in · CURRENT (forage@fe2b77b)</div>
+        <img class="shot" src="snaps/feed-row/board-lens-in.phone.current.png" alt="Signed-in lens board today" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · board-lens-in · PROPOSED (forage@8f25520)</div>
+        <img class="shot" src="snaps/feed-row/board-lens-in.phone.proposed.png" alt="Signed-in lens board on the branch: the arrow like sits third in the row" width="390"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Proposal E</div>
+    <h2>E. The thread head — the post's text, one step up from the body</h2>
+    <p class="sub"><b>Current:</b> a 26px serif heading at weight 600 — on the phone a four-line post filled the screen above its picture. <b>Proposed:</b> 20px, body face, weight 400. The head's own like pill is unchanged here (O2).</p>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · thread-lens · CURRENT (forage@fe2b77b)</div>
+        <img class="shot" src="snaps/feed-row/thread-lens.phone.current.png" alt="Thread head today: the post text as a large serif heading" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · thread-lens · PROPOSED (forage@8f25520)</div>
+        <img class="shot" src="snaps/feed-row/thread-lens.phone.proposed.png" alt="Thread head on the branch: the post text at 20px body weight" width="390"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Proposal F</div>
+    <h2>F. The thread head — Reply at the right; Reply is a page</h2>
+    <p class="sub">Signed in. <b>Current:</b> a full-width Reply button under the post, which unfolds a composer in place. <b>Proposed:</b> Reply at the right end of the like's row, and pressing it opens <code>/reply</code> — the post you are answering above the box, the draft line under it (this frame has a draft already kept, so the line shows).</p>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · thread-lens · CURRENT (forage@7a701c3)</div>
+        <img class="shot" src="snaps/feed-row/thread-lens.phone.current.png" alt="Thread head today: Reply as a button under the post, left-aligned" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · thread-lens · PROPOSED (forage@37007fd)</div>
+        <img class="shot" src="snaps/feed-row/thread-lens.phone.proposed.png" alt="Thread head on the branch: Reply at the right end of the like's row" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · reply-lens · PROPOSED (forage@37007fd) — no Current: the page did not exist</div>
+        <img class="shot" src="snaps/feed-row/reply-lens.phone.proposed.png" alt="The /reply page: the post being answered above a text box with a kept draft, Discard draft, Cancel and Send" width="390"></div>
+    </div>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Desktop · reply-lens · PROPOSED (forage@37007fd)</div>
+        <img class="shot" src="snaps/feed-row/reply-lens.desktop.proposed.png" alt="The /reply page at 1280"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Proposal G</div>
+    <h2>G. Under a comment — the quick box</h2>
+    <p class="sub">The third comment's ↩ Reply pressed. <b>Current:</b> the full composer (Add image, the tag note). <b>Proposed:</b> a textarea, the counter, Cancel · Send. Send is disabled until there are words.</p>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · thread-lens-reply · CURRENT (forage@7a701c3)</div>
+        <img class="shot" src="snaps/feed-row/thread-lens-reply.phone.current.png" alt="Today: the full composer opens under the comment" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · thread-lens-reply · PROPOSED (forage@37007fd)</div>
+        <img class="shot" src="snaps/feed-row/thread-lens-reply.phone.proposed.png" alt="On the branch: a quick box — textarea, counter, Cancel and Send — under the comment" width="390"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Proposal H</div>
+    <h2>H. Three skins — Forage light · Forage dark · phpBB</h2>
+    <p class="sub">The owner asked to see the mocks in three themes. Every frame is Proposed at <code>forage@37007fd</code>; only <code>forage.skin</code> differs (the phpBB frame is therefore at Compact density — that family prefers it — with its picture, decision 1). A skin restyles and restructures nothing (SKINS.md): any difference in <i>shape</i> between these columns would be a bug.</p>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · board-lens · Forage light (default)</div><img class="shot" src="snaps/feed-row/board-lens.phone.proposed.png" alt="Board, Forage light" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · board-lens · Forage dark</div><img class="shot" src="snaps/feed-row/board-lens.phone.forage-dark.proposed.png" alt="Board, Forage dark" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · board-lens · phpBB</div><img class="shot" src="snaps/feed-row/board-lens.phone.phpbb.proposed.png" alt="Board, phpBB skin, compact" width="390"></div>
+    </div>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · thread-lens · Forage light</div><img class="shot" src="snaps/feed-row/thread-lens.phone.proposed.png" alt="Thread, Forage light" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · thread-lens · Forage dark</div><img class="shot" src="snaps/feed-row/thread-lens.phone.forage-dark.proposed.png" alt="Thread, Forage dark" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · thread-lens · phpBB</div><img class="shot" src="snaps/feed-row/thread-lens.phone.phpbb.proposed.png" alt="Thread, phpBB skin" width="390"></div>
+    </div>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · reply-lens · Forage light</div><img class="shot" src="snaps/feed-row/reply-lens.phone.proposed.png" alt="Reply page, Forage light" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · reply-lens · Forage dark</div><img class="shot" src="snaps/feed-row/reply-lens.phone.forage-dark.proposed.png" alt="Reply page, Forage dark" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · reply-lens · phpBB</div><img class="shot" src="snaps/feed-row/reply-lens.phone.phpbb.proposed.png" alt="Reply page, phpBB skin" width="390"></div>
+    </div>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Desktop · board-lens · Forage dark</div><img class="shot" src="snaps/feed-row/board-lens.desktop.forage-dark.proposed.png" alt="Board at 1280, Forage dark"></div>
+      <div class="device desk"><div class="device-label">Desktop · board-lens · phpBB</div><img class="shot" src="snaps/feed-row/board-lens.desktop.phpbb.proposed.png" alt="Board at 1280, phpBB"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">What the frames claim, and what holds it</div>
+    <h2>Claims → checks (MOCKS.md P5)</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>#</th><th>Claim</th><th>Kind</th><th>Held by</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>The action row is replies · reposts · like · share on every row</td><td>structure</td><td><code>e2e/mock-board.workflow.mjs</code> — "the action row is replies · reposts · like · share"</td></tr>
+        <tr><td>2</td><td>The action row is one line at 390 under 7315 · 270 · 1225 (and under compact)</td><td>measure</td><td>mock-board — "the action row wrapped — its controls do not share one line"</td></tr>
+        <tr><td>3</td><td>Every row's like starts at the same x</td><td>measure</td><td>mock-board — "the like does not line up down the board"</td></tr>
+        <tr><td>4</td><td>A post's text on the row is weight 400</td><td>look</td><td>mock-board — "the post text is set bold"</td></tr>
+        <tr><td>5</td><td>Compact keeps the stage and shows no thumbnail</td><td>structure</td><td>mock-board — "compact: the portrait post still stands on its stage"; <code>bluesky-view</code> — "compact rows still render the image posts on their stage"</td></tr>
+        <tr><td>6</td><td>The thread head's text is weight 400 and ≤ 20px</td><td>look</td><td><code>e2e/mock-thread.workflow.mjs</code> — "the head's text is set bold" / "20px is the step up"; measured RED on main (600 / 26px), GREEN on the branch</td></tr>
+        <tr><td>7</td><td>The replies control's accessible name counts in words; its cell shows the number</td><td>structure</td><td><code>deep-link</code> — "the cell shows the number" / "its name counts in words"; <code>bluesky-view</code> — "one reply is 1 comment"</td></tr>
+        <tr><td>9</td><td>The byline shows the chosen name, or the handle when none; the handle is in the name's tooltip</td><td>structure</td><td>mock-board — "the byline shows … not the chosen name" / "the handle is not in the name's tooltip"; <code>test/lens-intake.test.js</code> — "rows carry the author's display name, null when they set none"</td></tr>
+        <tr><td>10</td><td>Every row's byline carries a provider mark naming bsky.social, and still holds one line under a 64-grapheme name</td><td>structure · measure</td><td>mock-board — "no provider mark naming bsky.social" + the existing one-line claim; <code>test/provider-mark.test.js</code> — the handle→provider rule</td></tr>
+        <tr><td>11</td><td>With Settings → Provider mark off, no row carries a mark</td><td>behaviour</td><td>mock-board — "with the setting off, no row shows a provider mark"</td></tr>
+        <tr><td>12</td><td>The head's Reply is a link to <code>/reply</code>, at the right end of the like's row, on its line; the pill keeps its shape</td><td>structure · measure</td><td><code>e2e/mock-thread.workflow.mjs</code> — "the head’s Reply is a link to a page" / "Reply is not at the right end of its row" / "Reply shares the line with the like pill" / "the like pill was squeezed"</td></tr>
+        <tr><td>13</td><td>The page shows the post being answered above the box, its ⋯ on the byline; Send posts with parent = root = the post and lands on the thread</td><td>structure · behaviour</td><td>mock-thread — "the post being answered is on the page" / "the answered post's ⋯ left its byline" / the createRecord body; <code>bluesky-view</code> — the head-reply flow through the page</td></tr>
+        <tr><td>14</td><td>A draft is saved as you type, comes back after a reload with its status line, and is cleared on Send</td><td>behaviour</td><td>mock-thread — "the draft came back after a reload" / draft-status / the cleared key; <code>test/drafts.test.js</code></td></tr>
+        <tr><td>15</td><td>Under a comment the box is the quick one — no image strip, Send, Cancel; Cancel folds it and keeps the words; reopened, they are back</td><td>structure · behaviour</td><td>mock-thread — "the box under a comment is the quick box" / "no image strip" / "Cancel folds the box" / "keeps the words as a draft" / "reopened, the draft is back"</td></tr>
+        <tr><td>17</td><td>The sort's first option reads "Default"</td><td>structure</td><td>mock-board — "the sort’s first choice is Default"</td></tr>
+        <tr><td>16</td><td>No frontier chips over a reader's board</td><td>structure</td><td>mock-board — "no frontier chips over a reader’s board"</td></tr>
+        <tr><td>8</td><td>An author board's breadcrumb is <code>@handle</code> → <code>/u/handle</code></td><td>structure</td><td><code>test/lens-intake.test.js</code> — "rows carry the kind of source they came from"; <code>bluesky-view</code> — "an author board's breadcrumb opens the author board"</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Where it lands in code</div>
+    <h2>Where each decision lands</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Decision</th><th>Files</th></tr></thead>
+      <tbody>
+        <tr><td>1 picture at both densities</td><td><code>js/ui/lens-views.js</code> <code>lensRow</code> (<code>showsMedia</code> no longer reads the view; the thumb path deleted); <code>css/app.css</code> (<code>.title-thumb</code> rule deleted)</td></tr>
+        <tr><td>2 text is text</td><td><code>js/ui/components.js</code> <code>postRow</code> (<code>opts.textPost</code> → <code>.posttext</code>); <code>lens-views.js</code> thread head (<code>h1.posttext</code>); <code>css/app.css</code> <code>.posttext</code>, <code>h1.posttext</code></td></tr>
+        <tr><td>3 the row</td><td><code>components.js</code> <code>postRow</code> (order); <code>css/app.css</code> <code>.postrow .actions</code> grid, <code>.postrow .actions .vote</code> unboxed</td></tr>
+        <tr><td>4 the number</td><td><code>components.js</code> <code>postRow</code> — <code>repliesWords</code> as <code>aria-label</code> + <code>title</code></td></tr>
+        <tr><td>5 author board</td><td><code>js/substrates/lens.js</code> <code>srcCtx</code> / <code>shapeLensPost</code> (<code>feedKind</code>); <code>lens-views.js</code> <code>lensRow</code> (<code>feedHref</code>, <code>feedLabel</code>); <code>components.js</code> <code>postRow</code> (<code>opts.feedLabel</code>)</td></tr>
+        <tr><td>6 the chosen name</td><td><code>js/substrates/lens.js</code> (<code>authorName</code> on rows and comments); <code>js/ui/components.js</code> <code>whoNode</code> (row + thread head), the comment byline; <code>data-handle</code> on <code>.who</code></td></tr>
+        <tr><td>7 the mark</td><td><code>js/provider-mark.js</code> (setting + <code>providerOf</code> + <code>markLabel</code>); <code>components.js</code> <code>providerMark</code>, <code>byline({ mark })</code>; <code>lens-views.js</code> passes it on rows and thread ctx; <code>js/ui/views.js</code> Settings switch; <code>css/app.css</code> <code>.provider-mark</code>; <code>sw.js</code> precaches the module (v63)</td></tr>
+        <tr><td>9–10 the head, the page</td><td><code>lens-views.js</code> <code>replyPath</code>, <code>lensReplyView</code>, the head's <code>replyLink</code> in <code>.head-actions</code>; <code>js/main.js</code> <code>/reply</code>; <code>css/app.css</code> <code>.head-actions</code>, <code>.reply-target</code></td></tr>
+        <tr><td>11 drafts</td><td><code>js/drafts.js</code> (<code>load / save / clear</code>, <code>forage.draft:</code>); <code>replyBox</code> saves on input (400ms), on Cancel, clears on Send; <code>sw.js</code> precaches it</td></tr>
+        <tr><td>12 the quick box</td><td><code>lens-views.js</code> <code>replyBox({ quick })</code> from the thread ctx's <code>onReply</code>; <code>css/app.css</code> <code>.reply-box</code></td></tr>
+        <tr><td>13 the chips</td><td><code>lens-views.js</code> <code>feedBoardView</code> and the generator board header — the two <code>chip(…)</code> calls removed; <code>ledger/divergence.js</code> and <code>/frontiers</code> untouched</td></tr>
+        <tr><td>the captures</td><td><code>scripts/mock-snaps.mjs</code> — a <code>board-lens-compact</code> route; <code>--out plans/mocks/snaps/feed-row</code> so this mock's files never overwrite another mock's (the first run of this session did exactly that — see MOCKS.md rule 3)</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Revisions</div>
+    <ul class="small" style="margin:0;padding-left:18px">
+      <li><b>v5</b> — 2026-08-30, night: decision 14 — the sort's first choice is "Default"; every Proposed frame re-captured at <code>forage@37007fd</code> (the toolbar is on every board frame).</li>
+      <li><b>v4</b> — 2026-08-30, night: rebased onto main's warm-skins landing (Current re-captured at <code>forage@7a701c3</code>); decisions 9–13 built and captured (Proposed <code>forage@dcca0e1</code>) — the head's Reply at the right, the <code>/reply</code> page, drafts in this browser (with the lexicon finding that a native draft has no reply target), the quick box under a comment, the frontier chips gone; § H shows three skins at the owner's ask. Two things the frames caught that the claims had not — the squeezed pill, the dropped ⋯ — became claims before the re-capture.</li>
+      <li><b>v3</b> — 2026-08-30, evening (owner: the ↗ share icon): decision 8 — the tray-and-arrow line icon at text size, on rows and comments; Proposed re-captured at <code>forage@97b4d00</code>, Current unchanged (same population). O1's "line icons for the four" is now one glyph closer; three remain.</li>
+      <li><b>v2</b> — 2026-08-30, later the same day (owner: "replace the foo.bsky.social on posts with the display name users choose and a small icon for each provider that can be toggled off"): decisions 6–7 built and captured; both columns re-captured under the named population (Proposed <code>forage@c1f780e</code>; Current still <code>forage@fe2b77b</code>). O0 records the impersonation risk and the muted-handle alternative.</li>
+      <li><b>v1</b> — 2026-08-30, first version: five decisions built on <code>claude/feed-card</code> and captured (Current <code>forage@fe2b77b</code>, Proposed <code>forage@8f25520</code>) from the owner's phone screenshots. Nothing drawn. Awaiting the owner on the frames.</li>
+    </ul>
+  </section>
+</div>
+</body>
+</html>

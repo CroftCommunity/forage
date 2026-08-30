@@ -140,10 +140,11 @@ export function avatarSlot(name, avatar = null) {
 
 // `avatar: false` draws no slot — a comment's avatar lives in its own column
 // (decision 1 + 2, Phase 8b), a row's opens the byline.
-export function byline({ name, whoNode, ts, avatar = null, after = [], menu = null }) {
+export function byline({ name, whoNode, ts, avatar = null, after = [], menu = null, mark = null }) {
   return el('div', { class: 'byline' },
     avatar === false ? null : avatarSlot(name, avatar),
     whoNode,
+    mark, // feed-row v2: the provider mark, or null
     el('span', { class: 'dot' }),
     el('span', { 'data-time': '1', title: new Date(ts).toLocaleString() }, timeAgo(ts)),
     ...after.filter(Boolean),
@@ -245,6 +246,28 @@ function stewardItems(type, subject) {
   return out;
 }
 
+// feed-row v2 (owner, 2026-08-30): the byline shows the name a person CHOSE;
+// the handle — the one thing on a row nobody else can type — stays one hover
+// away as the name's tooltip, and in the accessible name. A row with no chosen
+// name shows the handle. `data-handle` is the stable hook for tests and
+// tooling, since the text is no longer the handle.
+export function whoNode(author, authorName, badge = '') {
+  const name = authorName || author;
+  return el('span', { class: 'who', 'data-handle': author,
+    ...(authorName ? { title: `@${author}`, 'aria-label': `${authorName} (@${author})` } : {}) }, name, badge || '');
+}
+
+// The provider mark (js/provider-mark.js): a glyph the size of the text,
+// muted, with the provider in its tooltip. `provider` is null when the caller
+// has none to show (the memory sandbox, a removed author, the setting off).
+const BUTTERFLY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 10.8c-1.087-2.114-4.046-6.053-6.798-7.995C2.566.944 1.561 1.266.902 1.565.139 1.908 0 3.08 0 3.768c0 .69.378 5.65.624 6.479.815 2.736 3.713 3.66 6.383 3.364.136-.02.275-.039.415-.056-.138.022-.276.04-.415.056-3.912.58-7.387 2.005-2.83 7.078 5.013 5.19 6.87-1.113 7.823-4.308.953 3.195 2.05 9.271 7.733 4.308 4.267-4.308 1.172-6.498-2.74-7.078a8.741 8.741 0 0 1-.415-.056c.14.017.279.036.415.056 2.67.297 5.568-.628 6.383-3.364.246-.828.624-5.79.624-6.478 0-.69-.139-1.861-.902-2.206-.659-.298-1.664-.62-4.3 1.24C16.046 4.748 13.087 8.687 12 10.8Z"/></svg>';
+const RING = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="currentColor"/><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="6 3"/></svg>';
+export function providerMark(provider, label) {
+  if (!provider) return null;
+  return el('span', { class: 'provider-mark', 'data-provider': provider.id, role: 'img', title: label, 'aria-label': label,
+    html: provider.id === 'bsky' ? BUTTERFLY : RING });
+}
+
 // ---------- post row (feed) ----------
 export function postRow(p, viewerCanVote, opts = {}) {
   const link = `/f/${p.feedSlug}/p/${p.id}`;
@@ -255,7 +278,7 @@ export function postRow(p, viewerCanVote, opts = {}) {
     // 3v: the lens passes a creator-qualified href when it has one, so a
     // copied breadcrumb resolves for a stranger. Memory Feeds are local and
     // need no creator, so the plain slug stays the default.
-    el('a', { href: opts.feedHref || `/f/${p.feedSlug}` }, `f/${p.feedSlug}`),
+    el('a', { href: opts.feedHref || `/f/${p.feedSlug}` }, opts.feedLabel || `f/${p.feedSlug}`),
     p.format === 'link' && p.url ? el('span', { class: 'domain' }, domainOf(p.url)) : null,
     p.edited ? el('span', { class: 'muted' }, 'edited') : null,
     opts.metaExtra || null, // 3u: the lens hangs a language chip here
@@ -272,8 +295,11 @@ export function postRow(p, viewerCanVote, opts = {}) {
   // drop a PLACEHOLDER title from a row that renders the media itself —
   // "[image]" above the actual image names nothing the reader can't see —
   // or swap it for a tiny thumbnail on a compact row that renders none.
+  // feed-row v1 (2026-08-30): a Bluesky post's text is text, not a title —
+  // the lens passes `textPost` and the row sets it at body weight. A memory
+  // post has a real title and keeps the heading weight.
   const title = opts.titleNode !== undefined ? opts.titleNode
-    : el('div', { class: 'posttitle' }, titleLink);
+    : el('div', { class: 'posttitle' + (opts.textPost ? ' posttext' : '') }, titleLink);
 
   const right = el('div', {},
     // Context ABOVE the title (plan 2026-08-28-1): the lens hangs a reply's
@@ -283,8 +309,9 @@ export function postRow(p, viewerCanVote, opts = {}) {
     byline({
       name: p.author, ts: p.createdTs, avatar: p.avatar || null,
       whoNode: p.author
-        ? el('span', { class: 'who' }, p.author, opts.authorBadge || '')
+        ? whoNode(p.author, p.authorName, opts.authorBadge)
         : el('span', { class: 'who muted' }, '[removed]'),
+      mark: p.author && opts.provider ? providerMark(opts.provider, opts.providerLabel) : null,
       // `opts.menuGroups(p)` (the lens, Phase 4b) or `opts.perms(p)` (memory:
       // the feed-scoped permissions for this row's feed) — a row with neither
       // gets a guest's menu, which is the safe default.
@@ -299,24 +326,29 @@ export function postRow(p, viewerCanVote, opts = {}) {
   );
   // Decision 1 (post-and-thread): the vote is a pill on the action row; the
   // left column is gone (the byline carries the avatar). board-cards decision
-  // 2: the row's action row is like · replies · reposts · share, the comment
-  // row's shape — the share was only in the ⋯ and the owner could not find
-  // it. `.actions` is NOT `.postmeta`, on purpose — mobile-fit exempts
-  // .postmeta as prose, and a tap target must be measured. The replies pill
-  // says "12 comments" in words beside its glyph: the count is a fact and the
-  // words are what every thread picker (and a screen reader) reads.
-  const replies = el('a', { class: 'cbtn replies', href: link, title: 'Open the thread' },
-    el('span', { 'aria-hidden': 'true' }, '\u{1F4AC}'), plural(p.commentCount, 'comment'));
+  // 2 put share on every row — it was only in the ⋯ and the owner could not
+  // find it. feed-row v1 (2026-08-30) reshaped the row to Bluesky's: replies ·
+  // reposts · like · share, four equal cells (css .postrow .actions), the like
+  // where the heart is. The owner's phone measured the old row — "7315 ·
+  // 270 comments · 1225" wrapped the share arrow under it at 390px and left the
+  // boxed like two lines tall. The replies control shows the glyph and the
+  // number; "270 comments" stays its accessible name and its tooltip, so a
+  // screen reader and a hover still get the words. `.actions` is NOT
+  // `.postmeta`, on purpose — mobile-fit exempts .postmeta as prose, and a tap
+  // target must be measured.
+  const repliesWords = `${plural(p.commentCount, 'comment')} \u2014 open the thread`;
+  const replies = el('a', { class: 'cbtn replies', href: link, title: repliesWords, 'aria-label': repliesWords },
+    el('span', { 'aria-hidden': 'true' }, '\u{1F4AC}'), el('span', { class: 'n' }, fmtScore(p.commentCount)));
   // a repost COUNT, never a write on a row (post-and-thread O2); the sandbox
   // has no reposts and draws nothing
   const reposts = p.repostCount == null ? null
     : el('span', { class: 'cbtn', 'data-repost': '1', 'data-readonly': '1', role: 'img',
       'aria-label': plural(p.repostCount, 'repost') }, el('span', { 'aria-hidden': 'true' }, '\u27F3'), el('span', { class: 'n' }, fmtScore(p.repostCount)));
   right.append(el('div', { class: 'actions' },
+    replies, reposts,
     vote('post', p.id, p, viewerCanVote, { onVote: opts.onVote,
       // the lens passes its sheet; a sandbox row decides from its feed-scoped perms
       onGuest: opts.onGuest ?? (opts.perms?.(p)?.loggedIn ? null : guestGate) }),
-    replies, reposts,
     shareButton(opts.permalink ?? `${location.origin}${link}`, 'post')),
   meta);
   return el('div', { class: 'postrow' + (p.pinned ? ' pinned-row' : '') + (opts.compact ? ' compact' : '') }, right);
@@ -325,9 +357,15 @@ export function postRow(p, viewerCanVote, opts = {}) {
 // ---------- deep links (plan 2026-08-29 post-and-thread, decision 10) ----------
 // Every comment has an address; the share glyph copies it. Quiet at rest
 // (55%), full hit area, always the LAST thing on the action row.
+// feed-row v3 (owner, 2026-08-30: "I really don't like that bottom right share
+// icon"): the ↗ text glyph read as "external link" and sat tiny at 55%; the
+// glyph is now the share icon board-cards v5 drew — a tray with an arrow up out
+// of it, the shape bsky.app and iOS use — at text size, one weight with the
+// other three. Recorded alternative: a chain link (the button DOES copy a link).
+const SHARE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>';
 export function shareButton(url, what = 'comment') {
   const b = el('button', { type: 'button', class: 'cbtn share', 'aria-label': `Copy link to this ${what}`, title: 'Copy link' },
-    el('span', { 'aria-hidden': 'true' }, '\u2197'));
+    el('span', { class: 'glyph', 'aria-hidden': 'true', html: SHARE_ICON }));
   b.addEventListener('click', () => copy(url, 'Link'));
   return b;
 }
@@ -406,13 +444,19 @@ export function commentNode(node, ctx) {
     });
   }
 
+  // feed-row v2: the chosen name, the handle in the tooltip (a comment's link
+  // already opened the profile — the lens's title said where; the handle now
+  // rides in front of that)
+  const shown = node.authorName || node.author;
+  const authorTitle = (node.authorName ? `@${node.author}` : '') + (ctx.authorHref ? `${node.authorName ? ' — ' : ''}Profiles live on bsky.app — Forage is a lens` : '');
   const author = node.author
-    ? (ctx.authorHref
-      ? el('a', { class: 'who', href: ctx.authorHref(node), target: '_blank', rel: 'noopener noreferrer', title: 'Profiles live on bsky.app — Forage is a lens' }, node.author)
-      : el('a', { class: 'who', href: `/u/${node.author}` }, node.author))
+    ? el('a', { class: 'who', 'data-handle': node.author, ...(authorTitle ? { title: authorTitle } : {}),
+      ...(node.authorName ? { 'aria-label': `${node.authorName} (@${node.author})` } : {}),
+      ...(ctx.authorHref ? { href: ctx.authorHref(node), target: '_blank', rel: 'noopener noreferrer' } : { href: `/u/${node.author}` }) }, shown)
     : el('span', { class: 'who removed-stub' }, node.deleted ? '[deleted]' : '[removed]');
   const meta = byline({
     name: node.author, whoNode: author, ts: node.createdTs, avatar: false,
+    mark: node.author && ctx.providerOf ? providerMark(ctx.providerOf(node.author), ctx.providerLabel(node.author)) : null,
     menu: node.maskedRemoved || node.deleted ? null
       : ctx.menuGroups ? () => ctx.menuGroups(node)
       : () => memoryMenuGroups({ type: 'comment', subject: node, text: node.body,

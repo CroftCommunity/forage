@@ -7,6 +7,8 @@
 //   node scripts/mock-snaps.mjs                       # this checkout -> plans/mocks/snaps/
 //   node scripts/mock-snaps.mjs --as proposed         # files get a .proposed suffix
 //   node scripts/mock-snaps.mjs --only board-lens,menu-lens   # a subset of the routes below
+//       (routes: board thread board-lens board-lens-media board-lens-compact board-lens-in
+//        thread-lens menu-lens focus-lens)
 //   node scripts/mock-snaps.mjs --as current --serve ../../forage
 //       # the same script and fixtures, rendering ANOTHER checkout (main): the
 //       # Current frames come from the tree the owner is running, captured by
@@ -27,7 +29,7 @@
 // It refuses to run with uncommitted UI files in the served tree — the sha
 // would otherwise name a tree the pixels are not from.
 import { scenario } from '../e2e/harness/scenario.mjs';
-import { RESPONSES, FAKE_SIGNED_IN, THREAD_PATH, NODE_IDS } from '../e2e/harness/mock-thread.mjs';
+import { RESPONSES, FAKE_SIGNED_IN, THREAD_PATH, NODE_IDS, ROOT as THREAD_ROOT } from '../e2e/harness/mock-thread.mjs';
 import { RESPONSES as BOARD, BOARD_PATH } from '../e2e/harness/mock-board.mjs';
 import { mergeManifest } from './lib/snaps-manifest.mjs';
 import { SKINS } from '../js/skins.js';
@@ -119,6 +121,31 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
   await l.close();
   }
 
+  // feed-row v4: the /reply page (signed in, a draft already kept, so the frame shows
+  // the draft line) and the thread with the quick box open under a comment
+  if (wanted('reply-lens')) {
+    const seeded = `try { localStorage.setItem('forage.draft:${THREAD_ROOT}', JSON.stringify({ text: 'Might as well — a pie tube is a pie tube, and the quiche would travel better than the proposal did.', savedAt: '2026-08-30T20:15:00Z' })); } catch {}`;
+    const r = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN, seeded], responses: RESPONSES });
+    await r.page.setViewportSize({ width: vp.width, height: vp.height });
+    await r.page.goto(`${r.origin}/reply?uri=${encodeURIComponent(THREAD_ROOT)}&root=${encodeURIComponent(THREAD_ROOT)}`);
+    await r.page.waitForSelector('[data-reply-target]', { timeout: 15000 });
+    await r.page.evaluate(() => document.fonts?.ready);
+    await shoot(r.page, 'reply-lens', 'lens:mock-thread', name, vp);
+    await r.close();
+  }
+  if (wanted('thread-lens-reply')) {
+    const q = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: RESPONSES });
+    await q.page.setViewportSize({ width: vp.width, height: vp.height });
+    await q.page.goto(`${q.origin}${THREAD_PATH}`);
+    await q.page.waitForSelector('.comment[data-kind="quote"]', { timeout: 15000 });
+    await q.page.locator(`.comment[data-node-id="${NODE_IDS[2]}"] > .comment-body > .comment-actions button.reply`).click();
+    await q.page.waitForSelector(`.comment[data-node-id="${NODE_IDS[2]}"] [data-composer]`);
+    await q.page.evaluate((id) => document.querySelector(`.comment[data-node-id="${id}"]`)?.scrollIntoView({ block: 'start' }), NODE_IDS[2]);
+    await q.page.waitForTimeout(200);
+    await shoot(q.page, 'thread-lens-reply', 'lens:mock-thread', name, vp);
+    await q.close();
+  }
+
   // ---- lens:mock-board — the board, signed out (board-cards A–F, post-and-thread A/E) and signed in ----
   if (wanted('board-lens') || wanted('board-lens-media')) {
     const out = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: SKIN_INIT, responses: BOARD });
@@ -138,6 +165,25 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
     // errors the browser logs for them; this is a capture, not a gate
     out.consoleErrors(); out.errors();
     await out.close();
+  }
+  // feed-row v1: the board at COMPACT density — the phpBB skin's preference and
+  // the owner's phone (2026-08-30). Same skin as every other frame (MOCKS.md
+  // rule 4: compare in one skin), so the density is the only axis that moves.
+  if (wanted('board-lens-compact')) {
+    const cmp = await scenario('first-visit', { root: SERVE, mode: 'bluesky', responses: BOARD,
+      initScripts: ["try { localStorage.setItem('forage.boardview', 'compact'); } catch {}"] });
+    await cmp.page.setViewportSize({ width: vp.width, height: vp.height });
+    await cmp.page.goto(`${cmp.origin}${BOARD_PATH}`);
+    await cmp.page.waitForSelector('.postrow', { timeout: 15000 });
+    await cmp.page.evaluate(() => document.fonts?.ready);
+    // at the picture post, found by its handle (a tree that renders no stage in
+    // compact — main before feed-row — is exactly what the Current frame must show)
+    await cmp.page.evaluate(() => [...document.querySelectorAll('.postrow')]
+      .find((r) => r.querySelector('.who')?.textContent.includes('erislovesgardens'))?.scrollIntoView({ block: 'start' }));
+    await cmp.page.waitForTimeout(200);
+    await shoot(cmp.page, 'board-lens-compact', 'lens:mock-board', name, vp);
+    cmp.consoleErrors(); cmp.errors();
+    await cmp.close();
   }
   if (wanted('board-lens-in')) {
     const inn = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: BOARD });

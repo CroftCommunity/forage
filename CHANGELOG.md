@@ -26,6 +26,26 @@ below are the landings of that month, and everything earlier is in `git log`.
   copied from any of them, and every text pairing in every one clears AA. Also repaired:
   on Usenet gray after dark, a removal notice was painted in a red meant for a light page
   (1.93:1); it is now legible. (plan 2026-08-30-plan-warm-skins) [device: android]
+- 2026-08-30 **The feed row agrees with the phone.** A post's picture now shows in the feed at
+  both densities — Compact (the phpBB skin's preference) had dropped it and shown a 40px
+  thumbnail or nothing, while the thread page showed the picture. A Bluesky post's text is set
+  as text, not a bold heading, on the row and at the top of its thread. The action row is
+  Bluesky's: replies · reposts · like · share in four equal cells, so it stays one line under
+  four-digit counts and lines up row to row; the like sits where the heart does and loses its
+  box; the replies cell shows the number, with "270 comments" as its name for a screen reader
+  and a hover. On an author board a row's breadcrumb reads `@handle` and opens that board
+  (`f/pds.ls` opened "Unknown feed"). Bylines show the **name a person chose** — the handle
+  is the name's tooltip, and shows when no name was chosen — with a small **provider mark**
+  beside it (the butterfly for a bsky.social account, an atmosphere ring otherwise);
+  Settings → *Provider mark* switches the mark off. The share control's glyph is the
+  tray-and-arrow icon, not the small ↗. **Replying is a page:** the thread's Reply sits at the
+  right of the like's row and opens `/reply`, with the post you are answering above the box;
+  under a comment, Reply drops a simple box — Send or Cancel. **A reply you started is kept
+  in this browser** until you send or discard it (it survives Cancel and a reload). The dashed
+  `DL-010` / `DL-011` chips over a board are gone — they belonged to the divergence ledger,
+  not to readers. The board's sort now reads **Default** · Hot · New · Top ("Feed order" was
+  the ledger's word for it). (mock feed-row v5, from the owner's 2026-08-30 phone screenshots; plan
+  pending on the captures)
 - 2026-08-30 **A link to a reply lands on it, and a board row's name holds its line.** Opening
   a link to a specific reply in a thread now scrolls to that reply and keeps it marked, even
   when the thread also has quotes (before, the page said "Viewing one comment" and sat at the

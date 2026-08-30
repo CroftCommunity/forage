@@ -12,6 +12,19 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 
 ## Needs the owner
 
+- **Images on a reply (feed-row O7).** The `/reply` page and the quick box under a comment
+  are text-only since feed-row v4 (2026-08-30); the composer that used to unfold there
+  carried an image strip with required alt text. Bring "Add image" back on the page
+  (`replyBox` in `js/ui/lens-views.js`, the strip logic in `composerCard`); the quick box
+  stays text. Mock: `plans/mocks/feed-row.html` § F/G.
+
+- **A native mirror of drafts (feed-row O8).** Drafts live in this browser (`js/drafts.js`).
+  `app.bsky.draft.createDraft/updateDraft/getDrafts/deleteDraft` (private stash) could hold
+  the words too — but `defs#draft` has no reply target (lexicon read 2026-08-30), so the
+  parent stays local either way. Wants a live probe with the standing test account first
+  (CLAUDE.md § External APIs), then a Settings choice. [device: none]
+
+
 - ~~**`fyi.forage.tagsub` has never been written to a real PDS.**~~ — DONE
   2026-08-29. Probed against bsky.social with the standing test account and
   codified as `e2e/tagsub-pds-live.workflow.mjs` (W17, LIVE=1), which drives the

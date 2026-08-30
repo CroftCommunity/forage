@@ -175,8 +175,8 @@ export async function run() {
     // overflow risk we care about here)
     const threadLink = await m.page.evaluate(() => {
       for (const row of document.querySelectorAll('.postrow')) {
-        // the replies pill (board-cards Phase 4) — its words say how many
-        const link = [...row.querySelectorAll('a.replies')].find((a) => /\d+ comments/.test(a.textContent) && !/\b0 comments\b/.test(a.textContent));
+        // the replies control (board-cards Phase 4; feed-row v1) — its accessible name says how many
+        const link = [...row.querySelectorAll('a.replies')].find((a) => { const n = a.getAttribute('aria-label') || ''; return /\d+ comments/.test(n) && !/\b0 comments\b/.test(n); });
         if (link) return link.getAttribute('href');
       }
       return null;

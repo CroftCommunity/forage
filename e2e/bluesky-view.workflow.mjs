@@ -63,6 +63,9 @@ export async function run() {
       'getFollows?actor=did%3Aplc%3Ame': { follows: [{ did: 'did:plc:aa' }, { did: 'did:plc:bb' }] },
       'getFollowers': { followers: [{ did: 'did:plc:aa' }, { did: 'did:plc:bb' }] },
       'getAuthorFeed?actor=did%3Aplc%3Aaa': { feed: [post('a1', 'did:plc:aa', '2026-08-25T10:00:00Z')] },
+      // the /u/<handle> author board (feed-row v1): the profile and its feed by HANDLE
+      'getProfile?actor=aa.test': { did: 'did:plc:aa', handle: 'aa.test', displayName: 'aa', followersCount: 1, followsCount: 1, postsCount: 1 },
+      'getAuthorFeed?actor=aa.test': { feed: [post('a1', 'did:plc:aa', '2026-08-25T10:00:00Z')] },
       'getAuthorFeed?actor=did%3Aplc%3Abb': { feed: [
         // replyCount 1 against likeCount 2 is deliberate: it puts a SINGULAR and
         // a PLURAL count on the same row, which is what makes the assertion
@@ -199,14 +202,18 @@ export async function run() {
   // now; this is the check that it is actually REACHED, which a unit test on
   // the helper cannot tell you. Asserted before the boost, because boosting
   // moves the like count.
+  // feed-row v1: the words live in the replies control's accessible NAME (the
+  // visible cell is the glyph and the number), so that is where the plural is
+  // read — the row's visible text no longer carries it.
   const row = page.locator('.postrow', { hasText: 'post b1' });
   const rowText = (await row.innerText()).replace(/\s+/g, ' ');
-  assert.match(rowText, /\b1 comment\b(?!s)/, `one reply is "1 comment": ${rowText}`);
+  const repliesName = await row.locator('.actions a.replies').getAttribute('aria-label');
+  assert.match(repliesName, /\b1 comment\b(?!s)/, `one reply is "1 comment": ${repliesName}`);
   // ZERO is the other direction, and the one a naive `n > 1` check gets wrong.
   // (Likes are not asserted here: on a ROW the count is the votebox number, not
   // a worded string — the worded form lives on the lens meta lines.)
-  const zeroRow = (await page.locator('.postrow', { hasText: 'post a1' }).innerText()).replace(/\s+/g, ' ');
-  assert.match(zeroRow, /\b0 comments\b/, `no replies is "0 comments", never "0 comment": ${zeroRow}`);
+  const zeroName = await page.locator('.postrow', { hasText: 'post a1' }).locator('.actions a.replies').getAttribute('aria-label');
+  assert.match(zeroName, /\b0 comments\b/, `no replies is "0 comments", never "0 comment": ${zeroName}`);
 
   // 3c segment: boost the top post — a REAL like write, optimistically painted
   const scoreBefore = await row.locator('[data-vote] .n').innerText();
@@ -352,10 +359,10 @@ export async function run() {
   // parent is what you clicked, root is the top of the thread — and both refs
   // carry a cid, which the lexicon requires and a broken ref would not.
   await page.waitForSelector('[data-reply-open]');
-  await page.locator('[data-reply-open]').first().click();
+  await page.locator('[data-reply-open]').first().click(); // feed-row v4: a link to the /reply page
   await page.waitForSelector('[data-composer]');
   await page.locator('[data-composer] textarea').fill('mine came up early too');
-  await page.locator('[data-composer] button:has-text("Reply")').click();
+  await page.locator('[data-composer] [data-send]').click();
   await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('createRecord')
     && JSON.parse(h.body).collection === 'app.bsky.feed.post'));
   const reply = await page.evaluate(() => JSON.parse(window.__shimHits
@@ -674,20 +681,20 @@ export async function run() {
   assert.equal(await page.locator('.posttitle', { hasText: '[image]' }).count(), 0,
     'card mode never prints the literal [image] placeholder above a rendered image');
   await page.locator('[data-board-toolbar] select[data-density]').selectOption('compact');
-  await page.waitForFunction(() => !document.querySelector('.stage'));
-  assert.ok(await page.locator('.postrow.compact').count() > 0, 'compact rows are compact');
-  // Compact renders no media strip, but a placeholder-titled row still needs a
-  // handle — a tiny thumbnail linking to the thread, not the literal '[image]'.
+  await page.waitForSelector('.postrow.compact');
+  // feed-row v1 (2026-08-30): compact KEEPS the picture — density tightens the
+  // row, it does not take the content out of it (the owner's phone ran the
+  // phpBB skin, which prefers compact, and saw no pictures in the feed). The
+  // placeholder still never prints, and the 40px title-thumb is gone with the
+  // rule it served.
+  assert.ok(await page.locator('.postrow.compact .stage img.stage-fore').count() >= 2,
+    'compact rows still render the image posts on their stage');
   assert.equal(await page.locator('.posttitle', { hasText: '[image]' }).count(), 0,
-    'compact never prints the literal [image] either — the thumb is the handle');
-  assert.ok(await page.locator('.posttitle img.title-thumb').count() > 0,
-    'the no-alt image post shows a small thumbnail as its compact handle');
-  assert.ok(await page.locator('.posttitle a:has(img.title-thumb)').first()
-    .getAttribute('aria-label'), 'the thumb link carries an accessible name');
-  await page.locator('[data-board-toolbar] select[data-density]').selectOption('card');
-  await page.waitForSelector('.stage img.stage-fore');
+    'compact never prints the literal [image] either — the picture is there');
   assert.equal(await page.locator('img.title-thumb').count(), 0,
-    'card rows render the real media, never the compact thumb');
+    'no row swaps its picture for a thumbnail');
+  await page.locator('[data-board-toolbar] select[data-density]').selectOption('card');
+  await page.waitForSelector('.postrow:not(.compact) .stage img.stage-fore');
 
   // The same post opened as a THREAD: the head shows the image itself (until
   // now an image post's thread page rendered no image at all), and with the
@@ -707,6 +714,16 @@ export async function run() {
   assert.equal(await page.locator('text=Unknown lens Feed').count(), 0,
     'a pasted feed link resolves for someone who has never opened the app');
   assert.deepEqual(await s.shimMisses(), [], 'every network read had a fixture');
+
+  // feed-row v1: an author board's row links back to the author board, and
+  // says whose it is — `f/pds.ls` linked /f/pds.ls, which nothing resolves
+  // ("Unknown feed": the owner, forage.fyi, 2026-08-30).
+  await page.goto(`${s.origin}/u/aa.test`);
+  await page.waitForSelector('.postrow');
+  const crumb = page.locator('.postrow .postmeta a').first();
+  assert.equal(await crumb.getAttribute('href'), '/u/aa.test', 'an author board\'s breadcrumb opens the author board');
+  assert.equal(await crumb.innerText(), '@aa.test', 'and names the author, not a feed');
+
   await s.close();
 
   // 3d/3h segment: the front door, from a truly first visit — and the

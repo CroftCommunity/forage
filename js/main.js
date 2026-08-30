@@ -217,6 +217,7 @@ router.route('/settings', byMode(() => {
 router.route('/frontiers', views.frontiersView);
 router.route('/h/:tag', byMode(lensViews.lensHashtagView, views.tagStreamView));
 router.route('/p', blueskyOnly(lensViews.lensThreadView));
+router.route('/reply', blueskyOnly(lensViews.lensReplyView)); // feed-row v4: a reply is a page
 router.route('/me', blueskyOnly(lensViews.lensProfileView));
 router.route('/feeds', blueskyOnly(lensViews.lensFeedsView));
 router.route('/hashtags', blueskyOnly(lensViews.lensHashtagsView));

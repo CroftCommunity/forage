@@ -7,7 +7,10 @@
 // sign-in survives reloads. The lens consumes { did, handle, fetchHandler }.
 
 import { el, timeAgo, fmtScore, domainOf, plural } from '../util.js';
-import { postRow, commentNode, vote, focusComment, skeleton, emptyState, toast, reportSheet } from './components.js';
+import { postRow, commentNode, vote, focusComment, skeleton, emptyState, toast, reportSheet, whoNode, byline, providerMark as providerMarkNode } from './components.js';
+import * as providerMark from '../provider-mark.js';
+import * as drafts from '../drafts.js';
+import { go } from '../router.js';
 import { navTree } from './nav.js';
 import { LADDER, RUNG_IDS, labelFor } from '../rings.js';
 import { lastBoard, setLastBoard, landingBoard, DIRECTORY } from '../last-board.js';
@@ -526,7 +529,7 @@ function boardToolbar(onChange) {
   // decision 3). Redrawn with the bar — it is cheap and reads its own state.
   const barHost = el('div', { style: 'display:contents' });
   const drawBar = () => barHost.replaceChildren(sortBar({
-    sorts: [['feed', 'Feed order'], ['hot', 'Hot'], ['new', 'New'], ['top', 'Top']],
+    sorts: [['feed', 'Default'], ['hot', 'Hot'], ['new', 'New'], ['top', 'Top']],
     sort: boardSort, from: boardTimeframe,
     onChange: ({ sort, from }) => { boardSort = sort; boardTimeframe = from; drawBar(); onChange(); },
     // decision 7: the card size dial (1–4) stands where the 3t slider stood —
@@ -614,15 +617,13 @@ function kindContext(p) {
 }
 
 const lensRow = (p, view = 'card') => {
-  const showsMedia = view !== 'compact' && p.media && !p.maskedRemoved;
-  // Compact renders no media strip, so a placeholder-titled row takes a tiny
-  // thumbnail as its handle instead of the literal '[image]' — the same link
-  // to the same thread, showing a sliver of the thing rather than naming its
-  // absence. A video with no thumbnail keeps the text placeholder: the handle
-  // must render something.
-  const thumb = view === 'compact' && p.placeholderTitle && !p.maskedRemoved
-    ? (p.media?.kind === 'images' ? p.media.items?.[0]?.thumb : p.media?.thumb)
-    : null;
+  // feed-row v1 (2026-08-30): the picture shows in BOTH densities. Compact
+  // tightens the row — padding, byline, no body preview, no tag chips — but
+  // does not take the post's content out of it. The owner's phone runs the
+  // phpBB skin, which prefers compact, and showed a feed with no pictures
+  // beside a thread page with them; the 40px title-thumb that stood in for a
+  // placeholder-titled compact row went with the rule.
+  const showsMedia = !!p.media && !p.maskedRemoved;
   return postRow(p, !!session, {
     onVote: lensVote(p),
     onGuest: session ? null : openAuthSheet, // board-cards decision 1: the guest's pill is the door
@@ -631,23 +632,24 @@ const lensRow = (p, view = 'card') => {
     aboveNode: kindContext(p),
     // 3i: never duplicate the title — a preview renders only when it adds
     // content. Card mode carries media and tag doorways; compact is dense.
-    bodyNode: view === 'compact' ? null
-      : showsMedia ? el('div', {}, mediaNode(p), tagChips(p) || '')
+    bodyNode: showsMedia ? el('div', {}, mediaNode(p), view === 'compact' ? '' : tagChips(p) || '')
+      : view === 'compact' ? null
       : p.preview ? facetedBody({ ...p, body: p.preview }) : tagChips(p),
     // A placeholder title ('[image]', '[video]') exists so a row is never
-    // blank. A card row showing the media IS the content, so the placeholder
-    // drops there outright; a compact row swaps it for the thumb above.
+    // blank. A row showing the media IS the content, so the placeholder drops.
     ...(showsMedia && p.placeholderTitle ? { titleNode: null } : {}),
-    ...(thumb ? { titleNode: el('div', { class: 'posttitle' },
-      // Same href shape postRow builds — renderBoard rewrites it to /p?uri=.
-      // The img stays decorative inside a NAMED link: the label says what the
-      // link does, and invents no description of an undescribed picture.
-      el('a', { href: `/f/${p.feedSlug}/p/${p.id}`,
-        'aria-label': p.media.kind === 'video' ? 'Video post — open thread' : 'Image post — open thread' },
-        el('img', { class: 'title-thumb', src: thumb, alt: '', loading: 'lazy' }))) } : {}),
+    // a Bluesky post's text is body text; a link post's title is the card's headline
+    textPost: p.format !== 'link',
     authorBadge: verifiedBadge(p),
+    // feed-row v2: the provider mark, unless the reader switched it off
+    ...(providerMark.enabled() ? { provider: providerMark.providerOf(p.author), providerLabel: providerMark.markLabel(providerMark.providerOf(p.author), p.author) } : {}),
     metaExtra: langChip(p),
-    feedHref: feedHrefFor(p.feedSlug),
+    // an author board's row points back at the author board, and says so —
+    // `f/pds.ls` linked a feed path nothing resolved ("Unknown feed", the
+    // owner, 2026-08-30)
+    ...(p.feedKind === 'author'
+      ? { feedHref: `/u/${encodeURIComponent(p.feedSlug)}`, feedLabel: `@${p.feedSlug}` }
+      : { feedHref: feedHrefFor(p.feedSlug) }),
     compact: view === 'compact',
   });
 };
@@ -974,9 +976,10 @@ export function lensFeedView(params) {
 
 function feedBoardView(entry, preInfo) {
   const main = el('div', {},
-    el('div', { class: 'row spread wrap' },
-      el('h1', {}, entry.title),
-      chip('ranking: the feed’s own order (DL-010)', 'The generator ranks; our hot/top do not apply here')),
+    // feed-row v4 (owner, 2026-08-30): the DL-010/DL-011 frontier chips are off
+    // a reader's board — they told a tier-comparison story nobody browsing
+    // needs; the ledger and /frontiers keep them
+    el('div', { class: 'row spread wrap' }, el('h1', {}, entry.title)),
     skeleton(6));
   const allPosts = [];
   let nextCursor = null;
@@ -1047,10 +1050,7 @@ function feedBoardView(entry, preInfo) {
       el('div', { class: 'row spread wrap' },
         // 4h: `info` is the network's answer and is already resolved here —
         // reaching past it for the registry string is how a retired name shipped.
-        el('h1', {}, info?.title || entry.title),
-        el('div', { class: 'row', style: 'gap:6px' },
-          chip('likes-only scores (DL-011)'),
-          chip('ranking: feed order (DL-010)'))),
+        el('h1', {}, info?.title || entry.title)), // the DL chips are gone (feed-row v4)
       headerHost,
       boardToolbar(() => { repaint(); deepen(); }),
       f.posts.length ? card : emptyState('Nothing here', 'This source returned no posts.'),
@@ -1303,6 +1303,95 @@ function deleteControl(post, onDone) {
 // the writer what the composer would say before they send it. The counter goes
 // NEGATIVE past the limit rather than clamping, because clamping hides that
 // their words are being cut.
+// feed-row v4 (owner, 2026-08-30): a reply is a PAGE (/reply — the post you
+// are answering above the box, so you can read it) or, under a comment, a
+// quick box — textarea, Send, Cancel, nothing else. Both keep what you typed
+// as a draft in this browser (js/drafts.js), keyed by the post answered: Cancel
+// keeps it, Send clears it, Discard throws it away. Text only in v4: the image
+// strip composerCard carries is not on a reply box (recorded on the mock, O7).
+const replyPath = (parentUri, rootUri, fromSlug) =>
+  `/reply?uri=${encodeURIComponent(parentUri)}&root=${encodeURIComponent(rootUri)}${fromSlug ? `&from=${encodeURIComponent(fromSlug)}` : ''}`;
+
+function replyBox({ parentUri, replyTo, onDone, onCancel, quick = false, autofocus = false }) {
+  const stored = drafts.load(parentUri);
+  const box = el('textarea', { rows: quick ? '3' : '6', 'data-composer-text': '1', placeholder: 'Write your reply…', 'aria-label': 'Your reply' });
+  if (stored) box.value = stored.text;
+  const remaining = el('span', { class: 'xs muted', 'data-remaining': '1' });
+  const status = el('span', { class: 'xs muted', 'data-draft-status': '1' });
+  const discard = el('button', { type: 'button', class: 'linkish xs', 'data-draft-discard': '1' }, 'Discard draft');
+  const send = el('button', { type: 'button', class: 'btn sm primary', 'data-send': '1' }, 'Send');
+  const cancel = el('button', { type: 'button', class: 'btn sm', 'data-cancel': '1' }, 'Cancel');
+  const paintDraft = (d) => {
+    status.textContent = d ? `Draft saved in this browser · ${new Date(d.savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '';
+    discard.hidden = !d;
+  };
+  paintDraft(stored);
+  let timer = null;
+  const sync = () => {
+    const left = POST_LIMITS.graphemes - graphemes(box.value.trim());
+    remaining.textContent = left >= 0 ? `${left} left` : `${-left} over`;
+    remaining.classList.toggle('over', left < 0);
+    send.disabled = left < 0 || !box.value.trim();
+  };
+  box.addEventListener('input', () => { sync(); clearTimeout(timer); timer = setTimeout(() => paintDraft(drafts.save(parentUri, box.value)), 400); });
+  sync();
+  discard.addEventListener('click', () => { clearTimeout(timer); drafts.clear(parentUri); box.value = ''; sync(); paintDraft(null); box.focus(); });
+  cancel.addEventListener('click', () => { clearTimeout(timer); if (box.value.trim()) drafts.save(parentUri, box.value); onCancel?.(); });
+  send.addEventListener('click', async () => {
+    send.disabled = true; clearTimeout(timer);
+    try {
+      await lens.publish({ text: box.value, replyTo, images: [], langs: lang.active().slice(0, 1),
+        navLang: typeof navigator !== 'undefined' ? navigator.language : null });
+      drafts.clear(parentUri);
+      toast('Reply sent — it is on your Bluesky account too.', 'ok');
+      onDone?.();
+    } catch (e) { toast('Reply failed: ' + e.message, 'err'); send.disabled = false; }
+  });
+  const card = el('div', { class: 'card reply-box' + (quick ? ' quick' : ''), 'data-composer': '1', ...(quick ? { 'data-quick': '1' } : {}) },
+    box,
+    el('div', { class: 'row spread wrap', style: 'gap:8px;align-items:center;margin-top:6px' },
+      el('div', { class: 'row wrap', style: 'gap:8px;align-items:center' }, remaining, status, discard),
+      el('div', { class: 'row', style: 'gap:6px' }, cancel, send)));
+  if (autofocus) queueMicrotask(() => box.focus());
+  return card;
+}
+
+// /reply?uri=<parent>&root=<root>[&from=<slug>] — the post (or comment) you
+// are answering, then the box. Sent or cancelled, you land back on the thread.
+export function lensReplyView(params, query) {
+  const parentUri = query.uri ? decodeURIComponent(query.uri) : null;
+  const rootUri = query.root ? decodeURIComponent(query.root) : parentUri;
+  if (!parentUri) return { main: emptyState('Nothing to reply to', 'Missing post uri.'), side: null };
+  const threadHref = `/p?uri=${encodeURIComponent(rootUri)}${parentUri !== rootUri ? `&focus=${encodeURIComponent(parentUri)}` : ''}`;
+  const gate = sessionGate('reply');
+  if (gate) return { main: emptyState('Sign in to reply', gate, el('a', { class: 'btn', href: threadHref }, 'Back to the thread')), side: null };
+  const from = sources.get(query.from);
+  const src = from ? { feedId: `lens:${from.slug}`, feedSlug: from.slug, feedTitle: from.title }
+                   : { feedId: 'lens:thread', feedSlug: 'thread', feedTitle: 'Thread' };
+  const main = el('div', {}, skeleton(4));
+  Promise.all([lens.thread(parentUri, src), parentUri === rootUri ? null : lens.thread(rootUri, src)])
+    .then(([t, rt]) => {
+      const p = t.post; const rootPost = rt ? rt.post : p;
+      const replyTo = { root: { uri: rootPost.id, cid: rootPost.cid }, parent: { uri: p.id, cid: p.cid } };
+      const pr = providerMark.enabled() ? providerMark.providerOf(p.author) : null;
+      const target = el('div', { class: 'card reply-target', 'data-reply-target': p.id },
+        el('div', { class: 'xs muted', style: 'margin-bottom:6px' }, p.id === rootUri ? 'Replying to the post' : 'Replying to this comment'),
+        byline({ name: p.author, ts: p.createdTs, avatar: p.avatar || null,
+          whoNode: p.author ? whoNode(p.author, p.authorName, verifiedBadge(p)) : el('span', { class: 'who muted' }, '[removed]'),
+          mark: pr ? providerMarkNode(pr, providerMark.markLabel(pr, p.author)) : null,
+          menu: () => lensMenuGroups(p, { kind: 'post' }) }),
+        facetedBody(p),
+        p.media && !p.maskedRemoved ? mediaNode(p) : null);
+      main.replaceChildren(
+        el('div', { class: 'row wrap', style: 'gap:6px;margin-bottom:8px' },
+          el('a', { href: threadHref, class: 'xs' }, `f/${src.feedSlug}`), el('span', { class: 'xs muted' }, '› Reply')),
+        target,
+        replyBox({ parentUri: p.id, replyTo, autofocus: true, onDone: () => go(threadHref), onCancel: () => go(threadHref) }));
+    })
+    .catch((e) => main.replaceChildren(emptyState('Could not load the post', e.message, el('a', { class: 'btn', href: threadHref }, 'Back to the thread'))));
+  return { main, side: el('div', { class: 'side' }, ...lensRail()) };
+}
+
 function composerCard({ tag, replyTo, onDone }) {
   const box = el('textarea', { rows: '3', 'data-composer-text': '1',
     placeholder: tag ? `Post to #${tag}…` : 'Write a reply…' });
@@ -2300,16 +2389,11 @@ export function lensThreadView(params, query) {
     // thread, which for a lens thread is always the post being read. Defined
     // before the head, which uses them.
     const rootRef = { uri: p.id, cid: p.cid };
-    const replyHost = el('div', {});
-    const openReply = (parentRef) => {
-      const gate = sessionGate('reply');
-      if (gate) return toast(gate, 'err');
-      if (replyHost.querySelector('[data-composer]')) return;
-      replyHost.replaceChildren(composerCard({
-        replyTo: { root: rootRef, parent: parentRef },
-        onDone: () => rerender(),
-      }));
-    };
+    // feed-row v4: Reply is a link to the /reply page, at the right end of the
+    // like's row (owner: "put reply on the right side"); the inline head
+    // composer is gone — the page shows the post above the box instead
+    const replyLink = el('a', { class: 'btn sm primary reply-right', 'data-reply-open': '1',
+      href: replyPath(p.id, p.id, src.feedSlug === 'thread' ? null : src.feedSlug) }, 'Reply');
     const head = el('div', { class: 'card', style: 'display:flex;gap:10px' },
       el('div', {},
       el('div', { class: 'row wrap', style: 'gap:6px' },
@@ -2318,12 +2402,18 @@ export function lensThreadView(params, query) {
       // The placeholder heading ('[image]', '[video]') drops when the media
       // renders below — the picture is the thing the heading stood in for.
       // A real title (text or alt-derived) keeps its heading above the media.
-      p.placeholderTitle && p.media ? null : el('h1', {}, p.title.slice(0, 300)),
-      el('div', { class: 'actions' },
+      // feed-row v1: a post's text at the head is text — one step up from the
+      // body, body face and weight — not a 26px serif heading (the owner's
+      // phone, 2026-08-30: a four-line post filled the screen above its
+      // picture). A link post's headline keeps the heading.
+      p.placeholderTitle && p.media ? null : el('h1', p.format === 'link' ? {} : { class: 'posttext' }, p.title.slice(0, 300)),
+      el('div', { class: 'actions head-actions' },
         vote('post', p.id, p, !!session, { onVote: lensVote(p), onGuest: session ? null : openAuthSheet }), // Phase 6c: the head's pill
         el('div', { class: 'postmeta' },
-          p.author ? el('a', { href: `/u/${encodeURIComponent(p.author)}` }, p.author) : '[muted]',
-          ` · ${timeAgo(p.createdTs)} ago · ${plural(p.commentCount, 'reply', 'replies')}`)),
+          // feed-row v2: the chosen name, the handle in the tooltip
+          p.author ? el('a', { href: `/u/${encodeURIComponent(p.author)}` }, whoNode(p.author, p.authorName)) : '[muted]',
+          ` · ${timeAgo(p.createdTs)} ago · ${plural(p.commentCount, 'reply', 'replies')}`),
+        replyLink),
       // The post's own media, at full board size — until 2026-08-28 an image
       // post's thread page rendered no image at all.
       p.media && !p.maskedRemoved ? mediaNode(p) : null,
@@ -2339,19 +2429,12 @@ export function lensThreadView(params, query) {
       p.quoted ? quotedContext(p.quoted) : null,
       t.quotesFailed ? el('div', { class: 'row', style: 'gap:6px;margin-top:6px' },
         chip(`${t.quoteCount} quote${t.quoteCount === 1 ? '' : 's'} — couldn't fetch`, 'getQuotes failed; replies still render. Reload to retry.')) : null,
-      el('div', { class: 'row', style: 'gap:6px;margin-top:8px;align-items:center' },
-        (() => {
-          const b = el('button', { class: 'btn sm primary', 'data-reply-open': '1' }, 'Reply');
-          b.addEventListener('click', () => openReply(rootRef)); // replying to the post: parent IS root
-          return b;
-        })(),
-        // phase 2: only ever rendered for a post that is genuinely yours
-        deleteControl(p, () => {
-          main.replaceChildren(emptyState('This post was deleted',
-            'It is gone from your Bluesky account. Anyone who already saw it may still have a copy — deleting removes the record, it does not un-send it.',
-            el('a', { class: 'btn', href: `/f/${src.feedSlug}` }, 'Back to the board')));
-        })),
-      replyHost));
+      // phase 2: only ever rendered for a post that is genuinely yours
+      deleteControl(p, () => {
+        main.replaceChildren(emptyState('This post was deleted',
+          'It is gone from your Bluesky account. Anyone who already saw it may still have a copy — deleting removes the record, it does not un-send it.',
+          el('a', { class: 'btn', href: `/f/${src.feedSlug}` }, 'Back to the board')));
+      })));
     const ctx = { ...LENS_PERMS, // save/mod still gate; replying does not —
       // Reply sits on every node (mock v18 claim C; on forage.fyi 2026-08-30 only
       // the head offered it), the composer mounting under the node you answered
@@ -2359,7 +2442,9 @@ export function lensThreadView(params, query) {
         const gate = sessionGate('reply');
         if (gate) return toast(gate, 'err');
         if (host.querySelector('[data-composer]')) { host.replaceChildren(); return; } // a second press folds it
-        host.replaceChildren(composerCard({ replyTo: { root: rootRef, parent: { uri: n.id, cid: n.cid } }, onDone: () => rerender() }));
+        // feed-row v4: the quick box — textarea, Send, Cancel; the draft survives Cancel
+        host.replaceChildren(replyBox({ parentUri: n.id, replyTo: { root: rootRef, parent: { uri: n.id, cid: n.cid } },
+          quick: true, autofocus: true, onDone: () => rerender(), onCancel: () => host.replaceChildren() }));
       },
       // A reply's stack is the same like the head's pill is (owner, 2026-08-29:
       // signed in, the comment arrow did nothing — it was the guest span).
@@ -2368,6 +2453,9 @@ export function lensThreadView(params, query) {
       menuGroups: (n) => lensMenuGroups(n, { kind: 'comment' }), // 4b: the ⋯ on every reply
       permalink: (n) => `${location.origin}/p?uri=${encodeURIComponent(p.id)}&focus=${encodeURIComponent(n.id)}`, // decision 10
       authorHref: (n) => `/u/${encodeURIComponent(n.author)}`, // 3k: authors reach OUR profile page (which links out)
+      // feed-row v2: the provider mark on comments too, unless switched off
+      providerOf: providerMark.enabled() ? providerMark.providerOf : null,
+      providerLabel: (h) => providerMark.markLabel(providerMark.providerOf(h), h),
       nodeRenderer: (n, c) => lensNode(n, c), // 3r: a quote nested under a reply is still a quote
       // phase 2: a reply you regret is the commoner case than a post you
       // regret, so your own replies carry the same control. Same guard, same
