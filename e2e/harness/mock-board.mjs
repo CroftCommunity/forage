@@ -25,7 +25,18 @@ const post = (rkey, did, handle, ts, text, { likes = 0, replies = 0, reposts = 0
   ...(embed ? { embed } : {}),
   replyCount: replies, repostCount: reposts, likeCount: likes,
 });
-const img = (n, aspectRatio) => ({ thumb: `https://cdn.test/${n}-thumb.jpg`, fullsize: `https://cdn.test/${n}.jpg`, alt: `picture ${n}`, aspectRatio });
+// A real picture, no network: an SVG in a data URI at the declared aspect ratio,
+// so the stage shows contain-fit and the blurred backdrop instead of a broken
+// image (the first capture, 2026-08-30, was a black frame with alt text — a
+// fenced picture can prove the frame's SIZE, never its look)
+const svg = (n, { width, height }) => {
+  const hue = (n.charCodeAt(0) * 37) % 360;
+  return 'data:image/svg+xml;utf8,' + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">` +
+    `<stop offset="0" stop-color="hsl(${hue},45%,55%)"/><stop offset="1" stop-color="hsl(${(hue + 60) % 360},40%,30%)"/></linearGradient></defs>` +
+    `<rect width="${width}" height="${height}" fill="url(#g)"/><circle cx="${width * 0.6}" cy="${height * 0.4}" r="${Math.min(width, height) * 0.22}" fill="hsl(${(hue + 180) % 360},50%,70%)"/></svg>`);
+};
+const img = (n, aspectRatio) => ({ thumb: svg(n, aspectRatio), fullsize: svg(n, aspectRatio), alt: `picture ${n}`, aspectRatio });
 const images = (...list) => ({ $type: 'app.bsky.embed.images#view', images: list });
 
 const plain = post('plain', 'did:plc:plain', 'quietcartographer.bsky.social', T(9),
