@@ -11,7 +11,7 @@
 // through the vendored client (Phase 0 D1).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { HOSTS, SIGNUP, hostById, featuredHosts, canCreateAccount, validateHosts }
+import { HOSTS, SIGNUP, hostById, featuredHosts, otherHosts, canCreateAccount, validateHosts }
   from '../js/auth/hosts.js';
 
 test('4k: every host declares an entryway, a label, and a signup posture', () => {
@@ -69,4 +69,34 @@ test('4k: the registry knows bsky.social and blacksky.app are the OPEN ones (pro
   assert.equal(byId['https://bsky.social'], SIGNUP.OPEN);
   assert.equal(byId['https://blacksky.app'], SIGNUP.OPEN);
   assert.equal(byId['https://northsky.social'], SIGNUP.INVITE);
+});
+
+// 2026-08-29 (owner): the front page of the sheet is the OPEN hosts only —
+// the ones a newcomer can actually join from here. Invite-only hosts are not
+// dropped; they move to the "Another server" panel, next to the handle field,
+// where a member of one still gets a Sign in and the words that explain why
+// there is no Create beside it. So the split is a function of posture, and
+// both halves are asserted so a host cannot silently fall out of both.
+test('4k: featured hosts are ONLY the open-signup ones; invite-only hosts live on the other panel', () => {
+  const reg = [
+    { id: 'o1', label: 'O1', entryway: 'https://o1.test', signups: SIGNUP.OPEN },
+    { id: 'i1', label: 'I1', entryway: 'https://i1.test', signups: SIGNUP.INVITE },
+    { id: 'o2', label: 'O2', entryway: 'https://o2.test', signups: SIGNUP.OPEN },
+  ];
+  assert.deepEqual(featuredHosts(reg).map((h) => h.id), ['o1', 'o2'], 'featured keeps registry order, open only');
+  assert.deepEqual(otherHosts(reg).map((h) => h.id), ['i1'], 'invite-only hosts go to the other panel');
+  const all = [...featuredHosts(reg), ...otherHosts(reg)].map((h) => h.id).sort();
+  assert.deepEqual(all, ['i1', 'o1', 'o2'], 'every registered host is on exactly one panel');
+});
+
+test('4k: the real registry has open hosts on the front page and Northsky behind Another server', () => {
+  assert.ok(featuredHosts().every((h) => h.signups === SIGNUP.OPEN));
+  assert.ok(otherHosts().some((h) => h.entryway === 'https://northsky.social'));
+});
+
+test('4k: the registry knows eurosky.social is OPEN and speaks OAuth (probed 2026-08-29)', () => {
+  const h = hostById('eurosky');
+  assert.equal(h.entryway, 'https://eurosky.social');
+  assert.equal(h.signups, SIGNUP.OPEN);
+  assert.equal(h.label, 'EuroSky');
 });

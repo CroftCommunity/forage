@@ -571,6 +571,11 @@ someday-SVG.
   markup), so it is ActivityPub and this client cannot speak to it at all. `muni.town` is
   not a PDS either. Both recorded in `js/auth/hosts.js` so neither is re-proposed.
   Registry updated and re-verified against the network the same day.
+  **AMENDED 2026-08-29 (owner):** `eurosky.social` added (open signups, OAuth with
+  `prompt=create`, probed 2026-08-29), and invite-only hosts moved OFF the front page onto
+  the "Another server" panel above the handle field — the first screen is now only the
+  servers a newcomer can join from here. `featuredHosts()`/`otherHosts()` derive both
+  panels from posture, so a host that changes posture moves panels in one registry edit.
   ~~Original: Which hosts, and how many, in the capped list?
   Currently four (2 open, 2 invite-only). *Rationale: more is more welcoming and more
   scrolling; the cap is settled, the membership is not.*

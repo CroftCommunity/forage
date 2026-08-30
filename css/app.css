@@ -469,6 +469,10 @@ dialog.authsheet::backdrop { background: var(--scrim); }
   color: var(--muted); font-size: var(--t-xs); }
 .sheet-more { width: 100%; justify-content: center; }
 .sheet-other { margin-top: var(--s3); }
+/* The panel's own row list sits flush under the divider line; the handle form
+   keeps the gap the rows used to have to the button above them. */
+.sheet-other .sheet-list { margin: 0 0 var(--s3); }
+.sheet-other-form { margin-top: var(--s3); }
 .sheet-other input { flex: 1; min-width: 0; padding: 8px 10px;
   border: 1px solid var(--border); border-radius: var(--radius-sm);
   background: var(--card); color: var(--text); font-size: var(--t-sm); }

@@ -29,7 +29,7 @@
 // not from the stack alone.
 import assert from 'node:assert/strict';
 import { scenario } from './harness/scenario.mjs';
-import { HOSTS, featuredHosts, SIGNUP } from '../js/auth/hosts.js';
+import { HOSTS, featuredHosts, otherHosts, SIGNUP } from '../js/auth/hosts.js';
 
 // A manager that RECORDS instead of redirecting. signIn never resolves, which
 // is what a real authorize redirect looks like from the page's point of view:
@@ -74,15 +74,22 @@ const RESPONSES = {
   'getQuotes': { posts: [] },
 };
 
-const OPEN = featuredHosts().filter((h) => h.signups === SIGNUP.OPEN);
-const INVITE = featuredHosts().filter((h) => h.signups === SIGNUP.INVITE);
+// 2026-08-29 (owner): the front page is the OPEN hosts; invite-only hosts sit
+// on the "Another server" panel with the handle field. Both lists come from
+// the registry so this workflow cannot agree with a stale picture of it.
+const OPEN = featuredHosts();
+const INVITE = otherHosts();
 
-const rows = (page) => page.evaluate(() => [...document.querySelectorAll('[data-host-row]')].map((r) => ({
-  id: r.getAttribute('data-host-row'),
-  create: !!r.querySelector('[data-host-create]'),
-  signin: !!r.querySelector('[data-host-signin]'),
-  text: r.innerText.replace(/\s+/g, ' ').trim(),
-})));
+// `within` scopes the read to one panel, because a row that is in the DOM but
+// on the wrong panel would otherwise count as present.
+const rows = (page, within = 'dialog[data-auth-sheet]') => page.evaluate((sel) =>
+  [...document.querySelectorAll(`${sel} [data-host-row]`)].map((r) => ({
+    id: r.getAttribute('data-host-row'),
+    create: !!r.querySelector('[data-host-create]'),
+    signin: !!r.querySelector('[data-host-signin]'),
+    visible: r.getClientRects().length > 0,
+    text: r.innerText.replace(/\s+/g, ' ').trim(),
+  })), within);
 
 const open = (page) => page.evaluate(() => {
   const d = document.querySelector('dialog[data-auth-sheet]');
@@ -109,24 +116,45 @@ export async function run() {
     await s.page.waitForSelector('dialog[data-auth-sheet][open]');
     assert.equal(await open(s.page), true, 'the trigger opens the sheet');
 
-    // ---- the rows are the registry, capped -------------------------------
-    const seen = await rows(s.page);
-    assert.deepEqual(seen.map((r) => r.id), featuredHosts().map((h) => h.id),
-      `the sheet shows the capped registry in order — ${HOSTS.length} known, ${featuredHosts().length} featured`);
-
+    // ---- the front page is the OPEN registry, capped, in order -----------
+    const front = await rows(s.page, 'dialog[data-auth-sheet] > .sheet-list');
+    assert.deepEqual(front.map((r) => r.id), OPEN.map((h) => h.id),
+      `the front page shows the open hosts in registry order — ${HOSTS.length} known, ${OPEN.length} featured`);
     for (const h of OPEN) {
-      const row = seen.find((r) => r.id === h.id);
+      const row = front.find((r) => r.id === h.id);
+      assert.ok(row.visible, `${h.id} is on screen before anything is tapped`);
       assert.ok(row.create && row.signin,
         `${h.id} has open signups, so it offers BOTH create and sign in: ${JSON.stringify(row)}`);
     }
     for (const h of INVITE) {
-      const row = seen.find((r) => r.id === h.id);
+      assert.ok(!front.some((r) => r.id === h.id),
+        `${h.id} is invite-only and does not belong on the front page`);
+    }
+
+    // ---- invite-only hosts are BEHIND "Another server", not gone ---------
+    // Rendered with the panel and hidden with it: a member of Northsky finds
+    // their server one tap in, with Sign in and the words that explain the
+    // missing Create — the same two-direction rule the front page used to carry.
+    const before = await rows(s.page, '.sheet-other');
+    assert.deepEqual(before.map((r) => r.id), INVITE.map((h) => h.id),
+      'the other panel carries the invite-only hosts in registry order');
+    assert.ok(before.every((r) => !r.visible), 'the other panel is hidden until asked for');
+    await s.page.click('[data-host-other]');
+    const other = await rows(s.page, '.sheet-other');
+    for (const h of INVITE) {
+      const row = other.find((r) => r.id === h.id);
+      assert.ok(row.visible, `${h.id} shows once Another server is opened`);
       assert.equal(row.create, false,
         `${h.id} is invite-only — no create control, because the button would land on a screen that asks for a code`);
       assert.ok(row.signin, `${h.id} is still somewhere you can SIGN IN`);
       assert.match(row.text, /invite only/i,
         `${h.id} says why the create control is missing, in the slot where it would have been: ${JSON.stringify(row.text)}`);
     }
+    await s.page.click(`[data-host-row="${INVITE[0].id}"] [data-host-signin]`);
+    assert.deepEqual(await s.page.evaluate(() => window.__signInCalls),
+      [{ handle: INVITE[0].entryway, options: null }],
+      'Sign in on an invite-only row starts the flow at that host, with no prompt');
+    await s.page.evaluate(() => { window.__signInCalls = []; });
 
     // ---- it fits the narrowest phone we support --------------------------
     // W6 measures overflow and tap targets on the surfaces it visits, and it
