@@ -249,8 +249,9 @@ export async function run() {
     // the one the plan happened to mention.
     const threadTabs = await page.evaluate(() =>
       [...document.querySelectorAll('.tabs .tab')].map((t) => t.textContent.trim()));
-    assert.deepEqual(threadTabs, ['Best', 'Top', 'New'],
-      `a thread offers three comment sorts and Controversial is not one: ${JSON.stringify(threadTabs)}`);
+    // Phase 10 (plan 2026-08-29 post-and-thread, decision 9): Best is retired; Hot leads
+    assert.deepEqual(threadTabs, ['Hot', 'Top', 'New'],
+      `a thread offers three comment sorts, Hot first, and neither Best nor Controversial: ${JSON.stringify(threadTabs)}`);
 
     await page.goto(`${mem.origin}/popular`);
     await page.waitForSelector('.postrow');

@@ -324,3 +324,10 @@ This is the exact trap CLAUDE.md documents, and knowing it did not prevent it �
 says *commit the green state BEFORE mutating*, and the mutation felt too small to be worth
 a commit. The order is the rule, and "small" is not an exemption. Phases 1 and 2 were
 committed before any further mutation for exactly this reason.
+
+### Follow-up — 2026-08-29
+
+"Best" survived this plan as prose and as a tab. With downs gone, `confidence(n)` reduced
+to `1/(1+z²/n)`, strictly increasing in likes — Best ordered a thread exactly as Top did.
+It is retired in `plans/2026-08-29-plan-post-and-thread.md` (decision 9, Phase 10): Hot,
+on likes + replies + reposts, is the thread's default; `?sort=best` falls to it.

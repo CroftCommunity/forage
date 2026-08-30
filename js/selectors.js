@@ -168,7 +168,7 @@ function timeframeMs(tf) {
 }
 
 // ---- thread (post + comment tree) ----
-export function thread(state, viewerId, postId, sort = 'best', now) {
+export function thread(state, viewerId, postId, sort = 'hot', now) {
   const post = state.posts[postId];
   if (!post) return null;
   const perms = permissions(state, viewerId, post.feedId, now);

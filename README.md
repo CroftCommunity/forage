@@ -72,9 +72,11 @@ from every seat. (In the Bluesky view, identity is a real OAuth session.)
   today) and dispatches to it (`js/substrates/memory.js` is the only module that touches
   the store's commit); the dev bar's latency toggle and Fail-Next wrap that dispatch, so
   the optimistic-vote rollback path is observable on any substrate.
-- **Engines** (`js/engines/`) — the ranking math as pure, swappable functions. Hot, Best
-  (Wilson), Controversial and Rising carry the build spec's formulas verbatim; the Limits
-  engine runs rolling-window rate limits over the event log.
+- **Engines** (`js/engines/`) — the ranking math as pure, swappable functions. Hot (the
+  build spec's decay, on engagement — likes + replies + reposts — since 2026-08-29), Top,
+  New and Rising; Best (Wilson) and Controversial retired with downvotes, because without a
+  denominator both reduced to Top. The Limits engine runs rolling-window rate limits over
+  the event log.
 
 ## Skins
 
@@ -185,7 +187,8 @@ What the two populations do *not* share is what a feed can promise:
 |---|---|---|
 | The place posts live | **feed** (`/f/:slug`) | **feed** (`/f/@creator/:rkey`) or **hashtag** (`/h/:tag`) |
 | Who governs it | its **stewards** — you join, they moderate, the audit log is public | nobody. A Bluesky feed is somebody else's program; you cannot join it in that sense, and you cannot post into it |
-| Rating | **Boost / Bury** | **Boost** only — a real like; Bluesky has no bury (DL-011) |
+| Rating | **Like** (one arrow, no bury since 2026-08-27) | **Like** — a real like; Bluesky has no bury |
+| Ranking | **Hot** on likes + replies + reposts; Top; New; Rising | the same Hot over the loaded window; Top; New; the feed's own order |
 | The rendered stream | **board** | **board** |
 
 So "feed" names the same *shape* in both, and the governance is what differs — which

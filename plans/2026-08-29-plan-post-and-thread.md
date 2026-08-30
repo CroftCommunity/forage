@@ -4,7 +4,7 @@
 applied the same day** — see Review Log. **Pass 3 (quality gates) applied the same day** — see
 Review Log. **Not started: Phase 0 first.** Open-question severities (O2–O8) **confirmed as recommended by the owner
 2026-08-29** ("accept all as recommended"): O5/O6/O8 PHASE-GATED, O2/O3/O4/O7 ADVISORY.
-**Progress tracker:** this Status line. last green: Phase 9 (branch C) — At every phase end append `last green: <phase> @ <sha>`;
+**Progress tracker:** this Status line. last green: Phase 10 (branch D) — At every phase end append `last green: <phase> @ <sha>`;
 at every landing the CHANGELOG entry and the mock's `mock-baseline` sha are the markers.
 **Origin:** owner session 2026-08-29 — Reddit (web + Android) and Bluesky screenshots
 studied against Forage as it renders, worked through twelve revisions of a mock, and
@@ -793,7 +793,14 @@ gets "landed <sha>".
 
 ### Landing branch D — Hot on engagement, the sort bar
 
-#### Phase 10: Hot takes engagement; Best is retired
+#### Phase 10: Hot takes engagement; Best is retired — ✅ SHIPPED (branch D)
+**Delivered:** 10a `engagement(item)` exported from `rank.js` (`likes + (commentCount ??
+replyCount ?? children.length ?? 0) + repostCount`) — the shaped field is **`commentCount`**
+on both tiers, which the plan called `replyCount` (the raw API name); `confidence` removed;
+`'best'` falls to hot through the existing unknown-sort fallback (O7). 10b: `selectors.js`
+default, `views.js:136/:181/:624`, README `:75` and the rating table, the 2026-08-27-1 plan's
+follow-up note, `no-downvote`'s thread tabs read Hot. `repostCount` was already shaped in
+4a — nothing to do in `lens.js`. Edges from Pass 3 all pinned in `engines.test.js`.
 **Changes:**
 - [ ] `js/engines/rank.js` — `hot(engagement, createdSec)` unchanged in shape; `sortItems`
   computes `likes + replies + reposts` per item (`i.likes + (i.replyCount ?? i.children?.length ?? 0) + (i.repostCount ?? 0)`);

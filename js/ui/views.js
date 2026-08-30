@@ -137,7 +137,7 @@ export function feedView(params, query) {
 
 // ---------- thread ----------
 export function threadView(params, query) {
-  const t = sel.thread(S(), V(), params.id, 'best', NOW());
+  const t = sel.thread(S(), V(), params.id, 'hot', NOW());
   if (!t) return { main: emptyState('No such post', 'This post does not exist.'), side: null };
   const p = t.post;
   const main = el('div', {});
@@ -183,9 +183,11 @@ export function threadView(params, query) {
   // named only the board's `SORTS`; this one was found by grepping rather than
   // by reading the plan, and it is the kind of duplicate a phase list assembled
   // from a description reliably misses.
-  const sortRow = tabs([['Best', `/f/${p.feedSlug}/p/${p.id}?sort=best`], ['Top', `/f/${p.feedSlug}/p/${p.id}?sort=top`],
+  // Best is retired (plan 2026-08-29 post-and-thread, decision 9): Hot, on
+  // engagement, is the thread's default; an old ?sort=best falls to it (O7).
+  const sortRow = tabs([['Hot', `/f/${p.feedSlug}/p/${p.id}?sort=hot`], ['Top', `/f/${p.feedSlug}/p/${p.id}?sort=top`],
     ['New', `/f/${p.feedSlug}/p/${p.id}?sort=new`]],
-    (query.sort || 'best'));
+    (query.sort === 'best' ? 'hot' : (query.sort || 'hot')));
   main.append(el('div', { class: 'card' },
     el('div', { class: 'row spread' }, el('h2', {}, plural(t.total, 'comment')), null), sortRow,
     ...(t.comments.length ? t.comments.map((c) => commentNode(c, ctx)) : [el('div', { class: 'muted small' }, 'No comments yet.')])));
@@ -644,7 +646,9 @@ export function settingsView() {
       el('p', { class: 'muted small', style: 'margin-top:12px' }, 'Log in to set comment and feed preferences.')), side: null };
   }
   const prefs = S().users[V()].prefs;
-  const sort = el('select', { class: 'form', id: 'pref-sort' }, ...['hot', 'new', 'top', 'best'].map((s) => el('option', { value: s, selected: prefs.defaultSort === s || false }, s)));
+  // 'best' left the list with decision 9; a stored 'best' preference renders
+  // as hot (rank.js's unknown-sort fallback) and re-saves as whatever is picked
+  const sort = el('select', { class: 'form', id: 'pref-sort' }, ...['hot', 'new', 'top'].map((s) => el('option', { value: s, selected: prefs.defaultSort === s || false }, s)));
   sort.addEventListener('change', async () => { await actions.updatePrefs({ defaultSort: sort.value }); });
   return { main: el('div', {}, el('h1', {}, 'Preferences'),
     themeCard,
