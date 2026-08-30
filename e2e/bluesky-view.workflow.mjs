@@ -205,13 +205,13 @@ export async function run() {
   assert.match(zeroRow, /\b0 comments\b/, `no replies is "0 comments", never "0 comment": ${zeroRow}`);
 
   // 3c segment: boost the top post — a REAL like write, optimistically painted
-  const scoreBefore = await row.locator('.score').innerText();
-  await row.locator('button.boost').click();
+  const scoreBefore = await row.locator('[data-vote] .n').innerText();
+  await row.locator('button[data-vote]').click();
   await page.waitForFunction((prev) => {
     const r = [...document.querySelectorAll('.postrow')].find((x) => x.innerText.includes('post b1'));
-    return r && r.querySelector('.score').innerText !== prev;
+    return r && r.querySelector('[data-vote] .n').innerText !== prev;
   }, scoreBefore);
-  assert.ok(await row.locator('button.boost.on').count(), 'boost paints on');
+  assert.ok(await row.locator('button[data-vote][aria-pressed="true"]').count(), 'boost paints on');
   const hits = await page.evaluate(() => window.__shimHits.filter((h) => h.url.includes('createRecord')));
   assert.equal(hits.length, 1, 'exactly one like create hit the wire');
   const body = JSON.parse(hits[0].body);
@@ -221,7 +221,7 @@ export async function run() {
   assert.equal(body.record.subject.cid, 'cid-b1');
 
   // unboost: the exact rkey dies
-  await row.locator('button.boost').click();
+  await row.locator('button[data-vote]').click();
   await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('deleteRecord')));
   const del = await page.evaluate(() => JSON.parse(window.__shimHits.find((h) => h.url.includes('deleteRecord')).body));
   assert.deepEqual(del, { repo: 'did:plc:me', collection: 'app.bsky.feed.like', rkey: '3w3like' });

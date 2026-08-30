@@ -65,12 +65,17 @@ const FAKE_SIGNED_IN = `(() => {
 // the aria name. Checking only `.vote.bury` would pass against a control that
 // kept the arrow and lost the class.
 const downvotes = (page) => page.evaluate(() => ({
-  byClass: document.querySelectorAll('.vote.bury, .cvote.bury, [class*="bury"]').length,
+  byClass: document.querySelectorAll('[class*="bury"], [data-vote="bury"]').length,
   byGlyph: [...document.querySelectorAll('button')].filter((b) => b.textContent.includes('▼')).length,
   byName: [...document.querySelectorAll('[aria-label], [title]')]
     .filter((n) => /bury|downvote/i.test(`${n.getAttribute('aria-label') ?? ''} ${n.getAttribute('title') ?? ''}`))
     .map((n) => n.tagName.toLowerCase()),
-  boosts: document.querySelectorAll('.vote.boost, .cvote.boost').length,
+  // Phase 6 (plan 2026-08-29 post-and-thread): ONE vote control, two layouts —
+  // the pill on a post, the count-over-arrow stack on a comment. Both are a
+  // button[data-vote] with aria-pressed; a guest gets the same element as a
+  // read-only span. `.vote.boost` / `.cvote` are gone with the two old
+  // implementations that this suite existed to keep in step.
+  boosts: document.querySelectorAll('button[data-vote]').length,
   // The owner's vocabulary call, 2026-08-27: a like here is a PROMOTION, not an
   // affection — "Like/Promote", not "like/love". So the word may be "like" and
   // the shape must stay an upward arrow. A heart says the other thing, and a
@@ -82,10 +87,12 @@ const downvotes = (page) => page.evaluate(() => ({
   // been "fixed" by deleting the pin.
   hearts: [...document.querySelectorAll('*')]
     .filter((n) => !n.children.length && /[♥❤🤍💚🖤]/u.test(n.textContent)).length,
-  voteNames: [...new Set([...document.querySelectorAll('.vote, .cvote')]
+  voteNames: [...new Set([...document.querySelectorAll('button[data-vote]')]
     .map((b) => b.getAttribute('aria-label') ?? b.getAttribute('title') ?? '(unnamed)'))],
-  readonlyNames: [...new Set([...document.querySelectorAll('[data-readonly] .score')]
+  readonlyNames: [...new Set([...document.querySelectorAll('[data-vote][data-readonly]')]
     .map((n) => n.getAttribute('aria-label') ?? '(unnamed)'))],
+  // every pressed state is a real boolean, never a class
+  pressed: [...document.querySelectorAll('button[data-vote]')].map((b) => b.getAttribute('aria-pressed')),
 }));
 
 async function assertNone(page, label, { expectBoosts }) {
@@ -103,6 +110,9 @@ async function assertNone(page, label, { expectBoosts }) {
   }
   for (const n of seen.readonlyNames) {
     assert.match(n, /^\d+ likes?$/, `${label}: the read-only count names itself in likes: ${JSON.stringify(n)}`);
+  }
+  for (const p of seen.pressed) {
+    assert.ok(p === 'true' || p === 'false', `${label}: aria-pressed is a boolean on every vote: ${JSON.stringify(p)}`);
   }
 }
 
@@ -126,7 +136,7 @@ export async function run() {
     mode: 'bluesky', initScripts: [FAKE_SIGNED_IN], responses: RESPONSES });
   try {
     await inn.page.goto(`${inn.origin}/f/whats-hot`);
-    await inn.page.waitForSelector('.vote.boost');
+    await inn.page.waitForSelector('button[data-vote]');
     await assertNone(inn.page, 'lens board, signed in', { expectBoosts: true });
 
     await inn.page.goto(`${inn.origin}/p?uri=${encodeURIComponent('at://did:plc:aa/app.bsky.feed.post/a')}`);
@@ -147,24 +157,28 @@ export async function run() {
 
     await page.waitForSelector('.devbar');
     await page.locator('.devbar select[title="Active persona"]').selectOption('u_fern');
-    await page.waitForFunction(() => !!document.querySelector('.vote.boost'));
+    await page.waitForFunction(() => !!document.querySelector('button[data-vote]'));
     await assertNone(page, 'sandbox board, logged in', { expectBoosts: true });
 
     // …and boost still round-trips through the store. The optimistic paint is
     // the part the removal could plausibly break: it used to toggle two classes
     // and now toggles one.
-    const first = page.locator('.vote.boost').first();
+    const first = page.locator('button[data-vote]').first();
     const scoreOf = () => page.evaluate(() =>
-      document.querySelector('.votebox .score')?.textContent.trim() ?? null);
+      document.querySelector('button[data-vote] .n')?.textContent.trim() ?? null);
     const before = await scoreOf();
+    assert.equal(await first.getAttribute('aria-pressed'), 'false');
     await first.click();
     await page.waitForFunction((b) =>
-      (document.querySelector('.votebox .score')?.textContent.trim() ?? null) !== b, before);
-    assert.notEqual(await scoreOf(), before, 'boosting moves the score');
-    await page.locator('.vote.boost.on').first().click();
+      (document.querySelector('button[data-vote] .n')?.textContent.trim() ?? null) !== b, before);
+    // the count moves by exactly one, not just "changed"
+    assert.equal(Number(await scoreOf()), Number(before) + 1, 'boosting moves the score by one');
+    assert.equal(await first.getAttribute('aria-pressed'), 'true', 'and the control says it is pressed');
+    await page.locator('button[data-vote][aria-pressed="true"]').first().click();
     await page.waitForFunction((b) =>
-      (document.querySelector('.votebox .score')?.textContent.trim() ?? null) === b, before);
+      (document.querySelector('button[data-vote] .n')?.textContent.trim() ?? null) === b, before);
     assert.equal(await scoreOf(), before, 'and un-boosting puts it back — the toggle still toggles');
+    assert.equal(await first.getAttribute('aria-pressed'), 'false');
 
     // A comment carries the SECOND vote control, and it is the one easiest to
     // miss — `miniVote` is a separate implementation of the same idea.
@@ -182,6 +196,32 @@ export async function run() {
     await page.goto(`${mem.origin}${threadHref}`);
     await page.waitForSelector('.comment');
     await assertNone(page, 'sandbox thread, logged in', { expectBoosts: true });
+    // the comment's stack is the SAME control: count over arrow, one button,
+    // toggling the same way (Phase 6 edges)
+    const stack = page.locator('.comment button[data-vote]').first();
+    const stackN = () => stack.locator('.n').innerText();
+    const n0 = Number(await stackN());
+    await stack.click();
+    await page.waitForFunction((el, n) => el.querySelector('.n').textContent.trim() !== String(n), await stack.elementHandle(), n0);
+    assert.equal(Number(await stackN()), n0 + 1, 'a comment like counts up by one');
+    assert.equal(await stack.getAttribute('aria-pressed'), 'true');
+    await stack.click();
+    await page.waitForFunction((el, n) => el.querySelector('.n').textContent.trim() === String(n), await stack.elementHandle(), n0);
+    assert.equal(await stack.getAttribute('aria-pressed'), 'false', 'and back');
+    // a persona who cannot vote here: the flip reverts to the ORIGINAL count
+    await page.locator('.devbar select[title="Active persona"]').selectOption('u_thorn');
+    await page.waitForSelector('.comment');
+    const gatedCount = await page.locator('button[data-vote]').count();
+    if (gatedCount > 0) {
+      const g = page.locator('button[data-vote]').first();
+      const before = await g.locator('.n').innerText();
+      await g.click();
+      await page.waitForTimeout(300);
+      assert.equal(await g.locator('.n').innerText(), before, 'a refused vote reverts to the original count, not one off');
+      assert.equal(await g.getAttribute('aria-pressed'), 'false');
+    }
+    await page.locator('.devbar select[title="Active persona"]').selectOption('u_fern');
+    await page.waitForSelector('.comment');
 
     // ---- Phase 2: Controversial is gone from BOTH sort lists ----------
     // Two of them exist: the board's and the one for comments inside a thread.
