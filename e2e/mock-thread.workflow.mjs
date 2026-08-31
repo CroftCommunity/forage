@@ -38,6 +38,27 @@ export async function run() {
     await page.waitForSelector('.comment[data-kind="quote"]'); // the cascade landed
     const ids = await page.$$eval('.comment', (cs) => cs.map((c) => c.dataset.nodeId));
     assert.deepEqual(ids.sort(), [...NODE_IDS].sort(), 'every node in the fixture renders, quote included');
+    // v11: the frame caught the word "null" above every comment's byline — a null
+    // child handed to Element.append stringifies (the v7 board frame had the same)
+    assert.equal(await page.locator('.comment', { hasText: /\bnull\b|\bundefined\b/ }).count(), 0, 'a comment prints a stringified null or undefined');
+    // feed-row v11 decision 24 (owner, 2026-08-30: "I only want the pronounced left
+    // side quote bar on the actual repost, not on all of its comments — they can
+    // thread just like a normal comment"): the wall covers the quote's own rows
+    // — byline, text, action row — and stops before its replies, which thread
+    // beneath it like any reply
+    const wallGeo = await page.locator('.comment[data-kind="quote"][data-depth="0"]').first().evaluate((q) => { // the plain thread page — on the deep-link page this node is folded and its rows are 0px // the plain thread page: on the deep-link page this node is folded and its rows are 0px
+      const wall = q.querySelector(':scope > .wall'); const kid = q.querySelector(':scope > .kids > .comment');
+      const text = q.querySelector(':scope > .comment-body > .comment-text');
+      if (!wall) return { wall: false, border: parseFloat(getComputedStyle(q).borderLeftWidth) };
+      const w = wall.getBoundingClientRect(), t = text?.getBoundingClientRect();
+      return { wall: true, width: w.width, coversText: t ? w.top <= t.top && w.bottom >= t.bottom : null,
+        stopsBeforeKids: kid ? w.bottom <= kid.getBoundingClientRect().top + 1 : null, hasKid: !!kid };
+    });
+    assert.ok(wallGeo.wall, `the quote draws its wall as its own element (a ${wallGeo.border}px border on the node runs down its replies)`);
+    assert.ok(wallGeo.width >= 2, `the wall is pronounced (${wallGeo.width}px)`);
+    assert.ok(wallGeo.coversText, `the wall covers the quote’s own text ${JSON.stringify(wallGeo)}`);
+    assert.ok(wallGeo.hasKid, 'the fixture quote has a reply, so the claim has something to fail under');
+    assert.ok(wallGeo.stopsBeforeKids, 'the wall runs down the quote’s replies');
 
     // feed-row v1 claim 6: the post's text at the head is text — one step up
     // from the body (20px), body weight — not a 26px serif heading. The
@@ -132,13 +153,7 @@ export async function run() {
     const headReply = page.locator('#main [data-reply-open]');
     assert.equal(await headReply.evaluate((a) => a.tagName), 'A', 'the head’s Reply is a link to a page, not a button that unfolds');
     assert.ok((await headReply.getAttribute('href')).startsWith('/reply?uri='), 'and it opens /reply');
-    const geo = await page.evaluate(() => {
-      const a = document.querySelector('#main [data-reply-open]'); const row = a.parentElement; const pill = row.querySelector('[data-vote]');
-      const ra = a.getBoundingClientRect(), rr = row.getBoundingClientRect(), rp = pill.getBoundingClientRect();
-      return { rightGap: Math.round(rr.right - ra.right), sameLine: Math.abs((ra.top + ra.height / 2) - (rp.top + rp.height / 2)) <= 4 };
-    });
-    assert.ok(geo.rightGap <= 4, `Reply is not at the right end of its row (gap ${geo.rightGap}px)`);
-    assert.ok(geo.sameLine, 'Reply shares the line with the like pill');
+    // (v4's claim that Reply sits at the right end of the like's row is superseded by v11 decision 23, below)
     // feed-row v6 (owner: "move the name here to the human display name in the top
     // left and put the f/threads content on the top right"): the head opens with
     // a byline — avatar, the chosen name, the mark, the time — and the board's
@@ -164,6 +179,31 @@ export async function run() {
     assert.ok(hb.crumbRightGap <= 10 && hb.kebabRightGap <= 2, `f/thread is not right-aligned beside the ⋯ (${hb.crumbRightGap}px from the ⋯, ⋯ ${hb.kebabRightGap}px from the edge)`);
     assert.ok(hb.sameLine && hb.aboveText, 'name and breadcrumb share the top line, above the text');
     assert.equal(hb.authorInLikeRow, false, 'the like row no longer repeats the author');
+    // feed-row v11 decision 23 (owner, 2026-08-30, a thread whose post carried a
+    // continuation and a quote under its like row: "move the reply button to the
+    // bottom of this top post comments page section … just reply alone, like
+    // should be top towards the right"): Reply is the LAST thing in the head —
+    // under the picture, the continuation and the quote — right-aligned; the like
+    // row stays under the text with the like at its right end. The fixture's post
+    // carries a picture so there is something to be under (P2: a load the claim
+    // can fail under; on main Reply sat on the like row, above the picture).
+    const order = await page.evaluate(() => {
+      const a = document.querySelector('#main [data-reply-open]'); const col = document.querySelector('#main .head-actions').parentElement;
+      const kids = [...col.children]; const stage = col.querySelector('.stage'); const row = col.querySelector('.head-actions');
+      const holder = kids.find((k) => k.contains(a));
+      const cs = getComputedStyle(col); const right = col.getBoundingClientRect().right - parseFloat(cs.paddingRight);
+      const pill = row.querySelector('[data-vote]'); const rr = row.getBoundingClientRect(), rp = pill.getBoundingClientRect();
+      return { stage: !!stage, last: kids.indexOf(holder) === kids.length - 1, onLikeRow: row.contains(a),
+        underStage: stage ? a.getBoundingClientRect().top >= stage.getBoundingClientRect().bottom : null,
+        rightGap: Math.round(right - a.getBoundingClientRect().right), likeRightGap: Math.round(rr.right - rp.right),
+        after: kids.slice(kids.indexOf(holder) + 1).map((k) => k.className || k.tagName) };
+    });
+    assert.ok(order.stage, 'the fixture post carries a picture, so there is something for Reply to be under');
+    assert.equal(order.onLikeRow, false, 'Reply is still on the like row');
+    assert.ok(order.last, `Reply is not the last thing in the head — ${order.after.join(' · ')} follow it`);
+    assert.ok(order.underStage, 'Reply sits under the picture, not between the text and it');
+    assert.ok(order.rightGap <= 4, `Reply is not at the right edge of the head (gap ${order.rightGap}px)`);
+    assert.ok(order.likeRightGap <= 4, `the like is not at the right end of its row (gap ${order.likeRightGap}px)`);
     const pillH = await page.$eval('#main .head-actions [data-vote]', (b) => b.getBoundingClientRect().height);
     assert.ok(pillH <= 44, `the like pill was squeezed onto two lines by the row (height ${Math.round(pillH)}px)`);
     await headReply.click();

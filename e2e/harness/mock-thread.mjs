@@ -17,14 +17,19 @@
 // Shared by the mock-thread workflow (the claims) and scripts/mock-snaps.mjs
 // (the pictures), so the picture the owner approves is of the tree the gate
 // runs. Hermetic: every Bluesky host is fenced by the shim; misses fail.
+import { img, images } from './mock-board.mjs';
 const AV = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 const WH = 'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot';
 
 // feed-row v6: the names people chose — the head shows the root's; a long one on a
 // comment keeps the byline's one-line claim honest
 const NAMES = { 'quietcartographer.bsky.social': 'The Quiet Cartographer', 'averyveryverylonghandle.bsky.social': 'A Very, Very, Very Long Display Name Indeed' };
-const post = (rkey, did, handle, ts, text, { likes = 0, replies = 0, reposts = 0, embed = null } = {}) => ({
-  uri: `at://${did}/app.bsky.feed.post/${rkey}`, cid: `cid-${rkey}`,
+// `embed` is the RECORD's (what the author wrote — a quote's record marks it a
+// quote); `view` is the hydrated embed on the post view (what the lens reads
+// for media). feed-row v11: the root carries a picture so the head is judged
+// under the owner's load — text, then something under it, then the controls.
+const post = (rkey, did, handle, ts, text, { likes = 0, replies = 0, reposts = 0, embed = null, view = null } = {}) => ({
+  uri: `at://${did}/app.bsky.feed.post/${rkey}`, cid: `cid-${rkey}`, ...(view ? { embed: view } : {}),
   author: { did, handle, avatar: AV, ...(NAMES[handle] ? { displayName: NAMES[handle] } : {}) },
   record: { text, createdAt: ts, ...(embed ? { embed } : {}) }, indexedAt: ts,
   replyCount: replies, repostCount: reposts, likeCount: likes,
@@ -34,7 +39,7 @@ export const ROOT = 'at://did:plc:root/app.bsky.feed.post/root';
 
 const root = post('root', 'did:plc:root', 'quietcartographer.bsky.social', '2026-08-30T08:00:00Z',
   'If we invent the Pneumatic Pie Tube Network today it will still be 49 years too late to follow up on the good work of the original proposal. Might as well just use it for quiche at that point, I guess.',
-  { likes: 11, replies: 4, reposts: 1 });
+  { likes: 11, replies: 4, reposts: 1, view: images(img('root', { width: 1600, height: 1000 })) });
 
 // four deep: the elbows, the indent, and the phone's 14px step all show
 const d4 = { post: post('d4', 'did:plc:d4', 'moss.bsky.social', '2026-08-30T08:41:00Z',

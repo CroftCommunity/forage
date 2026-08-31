@@ -2112,8 +2112,9 @@ export function lensFeedsView() {
         disabled: searching || undefined }), 'Video only');
     vid.querySelector('input').addEventListener('change', (e) => { videoOnly = e.target.checked; paint(); });
 
-    // 4d: on search this is checked by default — a third of search results are
-    // dead or stale — and it is a real control, not a hidden behaviour.
+    // 4d: checked by default (search since 4d — a third of results were dead or
+    // stale; the popular list since v11 decision 26) and a real control, not a
+    // hidden behaviour.
     const alive = el('label', { class: 'xs', style: 'display:flex;gap:4px;align-items:center' },
       el('input', { type: 'checkbox', 'data-feed-alive': '1', checked: hideDead || undefined }),
       'Hide inactive');
@@ -2160,7 +2161,12 @@ export function lensFeedsView() {
         corpus = feeds;
         windows = new Map();   // a new corpus invalidates the measurements
         states = new Map();
-        hideDead = searching;  // on for search, off for the curated popular list
+        // feed-row v11 decision 26 (owner, 2026-08-30: "make the hide inactive on
+        // browse all feeds the default"): ON for the popular list too — that day
+        // 46 of its 111 were stale, empty or silent (30 / 3 / 13). It was on
+        // for search only (4d); the line still says how many went, and the box
+        // still turns it off.
+        hideDead = true;
         if (!searching) { platform = ''; videoOnly = false; }
         if (searching && sort.startsWith('rising')) sort = 'popular';
         buildControls();
@@ -2484,9 +2490,10 @@ export function lensThreadView(params, query) {
     // thread, which for a lens thread is always the post being read. Defined
     // before the head, which uses them.
     const rootRef = { uri: p.id, cid: p.cid };
-    // feed-row v4: Reply is a link to the /reply page, at the right end of the
-    // like's row (owner: "put reply on the right side"); the inline head
-    // composer is gone — the page shows the post above the box instead
+    // feed-row v4: Reply is a link to the /reply page (owner: "put reply on the
+    // right side"); the inline head composer is gone — the page shows the post
+    // above the box instead. v11 decision 23 moved it off the like's row to the
+    // bottom of the head.
     const replyLink = el('a', { class: 'btn sm primary reply-right', 'data-reply-open': '1',
       href: replyPath(p.id, p.id, src.feedSlug === 'thread' ? null : src.feedSlug) }, 'Reply');
     // feed-row v6 (owner, 2026-08-30: "move the name here to the human display
@@ -2514,10 +2521,12 @@ export function lensThreadView(params, query) {
       // phone, 2026-08-30: a four-line post filled the screen above its
       // picture). A link post's headline keeps the heading.
       p.placeholderTitle && p.media ? null : el('h1', p.format === 'link' ? {} : { class: 'posttext' }, p.title.slice(0, 300)),
+      // feed-row v11 decision 23 (owner: "just reply alone, like should be top
+      // towards the right"): the like row keeps the reply count at the left and
+      // the like at its right end; Reply alone moves to the bottom of the head
       el('div', { class: 'actions head-actions' },
-        vote('post', p.id, p, !!session, { onVote: lensVote(p), onGuest: session ? null : openAuthSheet }), // Phase 6c: the head's pill
         el('div', { class: 'postmeta' }, plural(p.commentCount, 'reply', 'replies')), // the author and the time moved up into the byline (v6)
-        replyLink),
+        vote('post', p.id, p, !!session, { onVote: lensVote(p), onGuest: session ? null : openAuthSheet })), // Phase 6c: the head's pill
       // The post's own media, at full board size — until 2026-08-28 an image
       // post's thread page rendered no image at all.
       p.media && !p.maskedRemoved ? mediaNode(p) : null,
@@ -2533,6 +2542,10 @@ export function lensThreadView(params, query) {
       p.quoted ? quotedContext(p.quoted) : null,
       t.quotesFailed ? el('div', { class: 'row', style: 'gap:6px;margin-top:6px' },
         chip(`${t.quoteCount} quote${t.quoteCount === 1 ? '' : 's'} — couldn't fetch`, 'getQuotes failed; replies still render. Reload to retry.')) : null,
+      // feed-row v11 decision 23: Reply is the last thing in the head — under the
+      // picture, the continuation and the quote — at the right (it sat on the like
+      // row, above all of them, where a long post split around it)
+      el('div', { class: 'head-reply' }, replyLink),
       // phase 2: only ever rendered for a post that is genuinely yours
       deleteControl(p, () => {
         main.replaceChildren(emptyState('This post was deleted',

@@ -8,6 +8,13 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-08
 
+- 2026-08-30 **Reply at the bottom of the post; a quote's bar on the quote only; Browse hides
+  the dead by default.** In a thread, **Reply** now sits at the bottom right of the post, under
+  its picture and its quote; the like row stays under the text with the like at its right. A
+  post that quoted the thread's post keeps its coloured left bar, but the replies under it no
+  longer share it — they thread like any reply. **Browse feeds** starts with *Hide inactive*
+  on for the popular list too (that day 46 of 111 were stale, empty or not answering); the line
+  says how many went, and unchecking brings them back. (mock feed-row v11, decisions 23–24, 26)
 - 2026-08-30 **The post under your pointer lights up.** On a desktop, moving the mouse over a
   post no longer underlines its text; the whole row takes a subtle highlight instead, the way
   bsky.app and reddit do it, in every skin's own colour. Phones are unchanged — a tap never

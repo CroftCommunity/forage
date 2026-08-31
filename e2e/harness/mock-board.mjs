@@ -52,8 +52,8 @@ const svg = (n, { width, height }) => {
     `<stop offset="0" stop-color="hsl(${hue},45%,55%)"/><stop offset="1" stop-color="hsl(${(hue + 60) % 360},40%,30%)"/></linearGradient></defs>` +
     `<rect width="${width}" height="${height}" fill="url(#g)"/><circle cx="${width * 0.6}" cy="${height * 0.4}" r="${Math.min(width, height) * 0.22}" fill="hsl(${(hue + 180) % 360},50%,70%)"/></svg>`);
 };
-const img = (n, aspectRatio) => ({ thumb: svg(n, aspectRatio), fullsize: svg(n, aspectRatio), alt: `picture ${n}`, aspectRatio });
-const images = (...list) => ({ $type: 'app.bsky.embed.images#view', images: list });
+export const img = (n, aspectRatio) => ({ thumb: svg(n, aspectRatio), fullsize: svg(n, aspectRatio), alt: `picture ${n}`, aspectRatio });
+export const images = (...list) => ({ $type: 'app.bsky.embed.images#view', images: list });
 
 const plain = post('plain', 'did:plc:plain', 'quietcartographer.bsky.social', T(9),
   'If we invent the Pneumatic Pie Tube Network today it will still be 49 years too late to follow up on the good work of the original proposal.',

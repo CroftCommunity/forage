@@ -8,7 +8,7 @@
 //   node scripts/mock-snaps.mjs --as proposed         # files get a .proposed suffix
 //   node scripts/mock-snaps.mjs --only board-lens,menu-lens   # a subset of the routes below
 //       (routes: board thread board-lens board-lens-media board-lens-compact board-lens-in
-//        board-lens-hover thread-lens menu-lens focus-lens reply-lens thread-lens-reply)
+//        board-lens-hover thread-lens thread-lens-quote menu-lens focus-lens reply-lens thread-lens-reply)
 //   node scripts/mock-snaps.mjs --as current --serve ../../forage
 //       # the same script and fixtures, rendering ANOTHER checkout (main): the
 //       # Current frames come from the tree the owner is running, captured by
@@ -121,6 +121,19 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
   await l.close();
   }
 
+  // feed-row v11 decision 24: the quote-response and the reply threaded under it,
+  // scrolled to the top of the frame — the wall on the quote's own rows only
+  if (wanted('thread-lens-quote')) {
+    const qz = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: RESPONSES });
+    await qz.page.setViewportSize({ width: vp.width, height: vp.height });
+    await qz.page.goto(`${qz.origin}${THREAD_PATH}`);
+    await qz.page.waitForSelector('.comment[data-kind="quote"]', { timeout: 15000 });
+    await qz.page.evaluate(() => document.fonts?.ready);
+    await qz.page.evaluate(() => { document.querySelector('.comment[data-kind="quote"][data-depth="0"]')?.scrollIntoView({ block: 'start' }); window.scrollBy(0, -72); });
+    await qz.page.waitForTimeout(200);
+    await shoot(qz.page, 'thread-lens-quote', 'lens:mock-thread', name, vp);
+    await qz.close();
+  }
   // feed-row v4: the /reply page (signed in, a draft already kept, so the frame shows
   // the draft line) and the thread with the quick box open under a comment
   if (wanted('reply-lens')) {

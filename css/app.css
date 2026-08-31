@@ -322,7 +322,8 @@ h1.posttext { font-family: var(--font-body); font-size: var(--t-lg); font-weight
 /* the head's row keeps ONE line: the meta yields (wraps inside itself) before Reply drops */
 .actions.head-actions { flex-wrap: nowrap; }
 .head-actions .postmeta { flex: 1 1 auto; min-width: 0; }
-.head-actions .reply-right { flex: none; }
+/* feed-row v11 decision 23: Reply alone at the bottom of the head, at the right */
+.head-reply { display: flex; justify-content: flex-end; margin-top: 10px; }
 .head-actions .vote { flex: none; white-space: nowrap; }
 /* feed-row v6: the head's top line — the byline with the breadcrumb pushed to the right,
    one line like a row's; the name yields before anything else does */
@@ -514,7 +515,14 @@ dialog.menu::backdrop { background: transparent; }
 @media (max-width: 480px) { .cbtn { min-height: 44px; } }
 /* Phase 9 (decision 5): a quote is a walled COMMENT — the brand rule on the node's own
    outer edge, outside the avatar; no tint, no box */
-.comment.quote { border-left: 3px solid var(--brand-ink); padding-left: 10px; margin: 4px 0; }
+/* feed-row v11 decision 24 (owner: "I only want the pronounced left side quote bar
+   on the actual repost, not on all of its comments"): the wall is a grid item over
+   the quote's own three rows — byline, text, action row — at the node's left
+   edge; it was a border on the node, which ran down the replies threaded under
+   it. The replies keep the indent (the node's padding) and thread like any reply. */
+.comment.quote { padding-left: 13px; margin: 4px 0; }
+.comment.quote > .wall { grid-column: 1; grid-row: 1 / span 3; justify-self: start; width: 3px; margin-left: -13px;
+  background: var(--brand-ink); border-radius: var(--radius-sm); pointer-events: none; }
 .kids > .comment.quote::before, .kids > .comment.quote::after { left: -10px; }
 .kind { display: inline-flex; align-items: center; gap: 2px; color: var(--muted); }
 .cbtn { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 0 8px; border-radius: var(--radius-chip); border: 0;

@@ -293,7 +293,7 @@ export async function run() {
   // carries neither. Each child draws its own elbow (a ::before). Folding
   // hides .kids and the button says how many it hid.
   const chrome = (n) => ({
-    wall: parseFloat(getComputedStyle(n).borderLeftWidth),
+    wall: n.querySelector(':scope > .wall')?.getBoundingClientRect().width ?? 0, // v11 decision 24: an element on the quote's own rows, not a border
     folds: n.querySelectorAll(':scope > .comment-body > .comment-actions > [data-fold]').length,
     rails: n.querySelectorAll(':scope > .avcol > .line').length,
     elbow: getComputedStyle(n, '::before').content !== 'none',
@@ -352,7 +352,7 @@ export async function run() {
   assert.equal(cascade.nestedQuotes, 1, 'the quote-of-the-quote nests INSIDE the quote it answers');
   assert.equal(cascade.nestedReplies, 1, 'and so does the reply to the quote');
   const nested = page.locator('[data-kind="quote"][data-depth="1"]');
-  assert.ok(await nested.evaluate((n) => parseFloat(getComputedStyle(n).borderLeftWidth) >= 2),
+  assert.ok(await nested.evaluate((n) => (n.querySelector(':scope > .wall')?.getBoundingClientRect().width ?? 0) >= 2), // v11 decision 24: the wall is an element
     'a wall nests inside a wall — the grammar holds at every depth');
 
   // 3w: a thread takes replies. The reply threads onto the post it answers —

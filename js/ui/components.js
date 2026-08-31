@@ -433,6 +433,9 @@ export function commentNode(node, ctx) {
   const wrap = el('div', { class: 'comment' + (hasKids ? '' : ' leaf') + (isQuote ? ' quote' : ''), 'data-node-id': node.id,
     ...(node.kind ? { 'data-kind': node.kind } : {}), ...(node.depth != null ? { 'data-depth': String(node.depth) } : {}) });
 
+  // feed-row v11 decision 24: the wall is an element on the quote's OWN rows —
+  // a border on the node ran down its replies, which thread like any reply
+  const wall = isQuote ? el('span', { class: 'wall', 'aria-hidden': 'true' }) : null;
   const avcol = el('div', { class: 'avcol' }, avatarSlot(node.author, node.avatar || null),
     hasKids ? el('span', { class: 'line', 'aria-hidden': 'true' }) : null);
 
@@ -511,7 +514,7 @@ export function commentNode(node, ctx) {
   const bodyWrap = el('div', { class: 'comment-body' }, meta, text, actionsRow, replyHost);
   const childrenWrap = el('div', { class: 'kids' });
 
-  wrap.append(avcol, bodyWrap, childrenWrap);
+  wrap.append(...[wall, avcol, bodyWrap, childrenWrap].filter(Boolean)); // a null child would print as the word "null"
 
   // render children with paging + continuation stubs
   renderChildren(childrenWrap, node, ctx);
