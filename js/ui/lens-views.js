@@ -644,12 +644,9 @@ const lensRow = (p, view = 'card') => {
     // feed-row v2: the provider mark, unless the reader switched it off
     ...(providerMark.enabled() ? { provider: providerMark.providerOf(p.author), providerLabel: providerMark.markLabel(providerMark.providerOf(p.author), p.author) } : {}),
     metaExtra: langChip(p),
-    // an author board's row points back at the author board, and says so —
-    // `f/pds.ls` linked a feed path nothing resolved ("Unknown feed", the
-    // owner, 2026-08-30)
-    ...(p.feedKind === 'author'
-      ? { feedHref: `/u/${encodeURIComponent(p.feedSlug)}`, feedLabel: `@${p.feedSlug}` }
-      : { feedHref: feedHrefFor(p.feedSlug) }),
+    // feed-row v7: no feed line under a lens row — the board's own header names
+    // it once (v5's `@handle` crumb for author boards went with it)
+    feedCrumb: false,
     compact: view === 'compact',
   });
 };
@@ -1576,6 +1573,27 @@ function composerCard({ tag, replyTo, onDone }) {
 }
 
 // 3k: the profile header — the bsky card, read-only (editing lives there).
+// feed-row v7 (owner, 2026-08-31): Follow lives on the profile page. Signed
+// out it is the door to sign-in (board-cards decision 1's shape); your own page
+// has none. Optimistic like the like; a refusal reverts and says so.
+function followButton(p) {
+  if (session && p.did === session.did) return null;
+  let uri = p.followingUri || null;
+  const btn = el('button', { type: 'button', class: 'btn sm' + (uri ? '' : ' primary'), 'data-follow': '1', 'aria-pressed': String(!!uri),
+    ...(session ? {} : { 'data-guest': '1', title: 'Sign in to follow' }) }, uri ? 'Following' : 'Follow');
+  const paint = () => { btn.textContent = uri ? 'Following' : 'Follow'; btn.setAttribute('aria-pressed', String(!!uri)); btn.classList.toggle('primary', !uri); };
+  btn.addEventListener('click', async () => {
+    if (!session) return openAuthSheet();
+    const had = uri; uri = had ? null : 'pending'; paint(); btn.disabled = true;
+    try {
+      if (had) { await lens.unfollow(had); uri = null; }
+      else { uri = (await lens.follow(p.did)).followUri; }
+    } catch (e) { uri = had; toast((had ? 'Unfollow' : 'Follow') + ' failed: ' + e.message, 'err'); }
+    paint(); btn.disabled = false;
+  });
+  return btn;
+}
+
 function profileHeader(p, extra) {
   return el('div', { class: 'card', 'data-profile-header': '1' },
     p.banner ? el('img', { src: p.banner, alt: '', class: 'profile-banner', loading: 'lazy' }) : null,
@@ -1643,7 +1661,7 @@ export function lensUserView(params) {
     .then(([p, board]) => {
       const card = el('div', { class: 'card' });
       const repaint = () => renderBoard(card, board.posts);
-      main.replaceChildren(profileHeader(p), boardToolbar(repaint),
+      main.replaceChildren(profileHeader(p, followButton(p)), boardToolbar(repaint),
         board.posts.length ? card : emptyState('No posts', 'Nothing here yet.'));
       repaint();
     })

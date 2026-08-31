@@ -23,6 +23,7 @@ function makeTransport(log) {
     const json = (d) => ({ ok: true, status: 200, json: async () => d });
     if (u.pathname.endsWith('getFeed') || u.pathname.endsWith('getAuthorFeed') || u.pathname.endsWith('getListFeed')) return json(fixture('wide-getFeed'));
     if (u.pathname.endsWith('getPostThread')) return json(fixture('wide-getPostThread'));
+    if (u.pathname.endsWith('getProfile')) return json({ did: 'did:plc:x', handle: 'x.test', viewer: { following: 'at://did:plc:me/app.bsky.graph.follow/3fol' } });
     if (u.pathname.endsWith('getPreferences')) return json({ preferences: [{
       $type: 'app.bsky.actor.defs#savedFeedsPrefV2',
       items: [
@@ -95,6 +96,15 @@ test('rows carry the author\'s display name, null when they set none', async () 
     assert.equal(p.authorName, want, `${p.author}: authorName`);
   }
   assert.ok(feed.posts.some((p) => p.authorName), 'the fixture has at least one chosen name, or this test proves nothing');
+});
+
+// feed-row v7: a profile says whether I already follow it (the follow record's
+// uri, which unfollow deletes); follow writes app.bsky.graph.follow by did
+test('a profile carries my follow, and follow/unfollow are one record each', async () => {
+  const log = [];
+  const lens = createLens({ transport: makeTransport(log) });
+  const p = await lens.profile('x.test');
+  assert.equal(p.followingUri, 'at://did:plc:me/app.bsky.graph.follow/3fol');
 });
 
 test('a session routes through the DPoP fetchHandler with a relative /xrpc path — no header building', async () => {
@@ -902,6 +912,7 @@ test('3k: profile() shapes the bsky profile card — avatar, banner, counts, bio
     avatar: 'https://cdn/av.png', banner: 'https://cdn/bn.png',
     description: 'He/Him\n\nTo be a loving human being is enough.',
     followers: 34, following: 102, posts: 266, verified: 'valid',
+    followingUri: null, // feed-row v7: no viewer block → I do not follow them
   });
 });
 

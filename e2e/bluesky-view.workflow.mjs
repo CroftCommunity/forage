@@ -715,14 +715,30 @@ export async function run() {
     'a pasted feed link resolves for someone who has never opened the app');
   assert.deepEqual(await s.shimMisses(), [], 'every network read had a fixture');
 
-  // feed-row v1: an author board's row links back to the author board, and
-  // says whose it is — `f/pds.ls` linked /f/pds.ls, which nothing resolves
-  // ("Unknown feed": the owner, forage.fyi, 2026-08-30).
+  // feed-row v7 (owner: "we also still need to put in a follow icon or ability …
+  // on the user profile page"): /u/<handle> carries Follow; pressing it writes
+  // an app.bsky.graph.follow record naming the account, and the control says
+  // Following; pressing again deletes that record. (v1's breadcrumb claim went
+  // with the breadcrumb — a lens row no longer prints its feed line.)
   await page.goto(`${s.origin}/u/aa.test`);
-  await page.waitForSelector('.postrow');
-  const crumb = page.locator('.postrow .postmeta a').first();
-  assert.equal(await crumb.getAttribute('href'), '/u/aa.test', 'an author board\'s breadcrumb opens the author board');
-  assert.equal(await crumb.innerText(), '@aa.test', 'and names the author, not a feed');
+  await page.waitForSelector('[data-profile-header] [data-follow]');
+  const follow = page.locator('[data-profile-header] [data-follow]');
+  assert.equal((await follow.innerText()).trim(), 'Follow');
+  assert.equal(await follow.getAttribute('aria-pressed'), 'false');
+  const beforeFollow = await page.evaluate(() => window.__shimHits.filter((h) => h.url.includes('createRecord')).length);
+  await follow.click();
+  await page.waitForFunction((n) => window.__shimHits.filter((h) => h.url.includes('createRecord')).length > n, beforeFollow);
+  const fr = await page.evaluate(() => JSON.parse(window.__shimHits.filter((h) => h.url.includes('createRecord')).at(-1).body));
+  assert.equal(fr.collection, 'app.bsky.graph.follow');
+  assert.equal(fr.record.subject, 'did:plc:aa', 'the follow names the account by did');
+  assert.equal((await follow.innerText()).trim(), 'Following');
+  assert.equal(await follow.getAttribute('aria-pressed'), 'true');
+  const beforeUn = await page.evaluate(() => window.__shimHits.filter((h) => h.url.includes('deleteRecord')).length);
+  await follow.click();
+  await page.waitForFunction((n) => window.__shimHits.filter((h) => h.url.includes('deleteRecord')).length > n, beforeUn);
+  const ur = await page.evaluate(() => JSON.parse(window.__shimHits.filter((h) => h.url.includes('deleteRecord')).at(-1).body));
+  assert.equal(ur.collection, 'app.bsky.graph.follow', 'unfollow deletes the follow record');
+  assert.equal((await follow.innerText()).trim(), 'Follow');
 
   await s.close();
 

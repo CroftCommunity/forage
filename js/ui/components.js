@@ -279,8 +279,10 @@ export function postRow(p, viewerCanVote, opts = {}) {
   const meta = el('div', { class: 'postmeta' },
     // 3v: the lens passes a creator-qualified href when it has one, so a
     // copied breadcrumb resolves for a stranger. Memory Feeds are local and
-    // need no creator, so the plain slug stays the default.
-    el('a', { href: opts.feedHref || `/f/${p.feedSlug}` }, opts.feedLabel || `f/${p.feedSlug}`),
+    // need no creator, so the plain slug stays the default. feed-row v7: a
+    // lens row passes `feedCrumb: false` — on a lens board every row's feed IS
+    // the board, and the line read the same under every post (owner).
+    opts.feedCrumb === false ? null : el('a', { href: opts.feedHref || `/f/${p.feedSlug}` }, opts.feedLabel || `f/${p.feedSlug}`),
     p.format === 'link' && p.url ? el('span', { class: 'domain' }, domainOf(p.url)) : null,
     p.edited ? el('span', { class: 'muted' }, 'edited') : null,
     opts.metaExtra || null, // 3u: the lens hangs a language chip here
@@ -352,7 +354,7 @@ export function postRow(p, viewerCanVote, opts = {}) {
       // the lens passes its sheet; a sandbox row decides from its feed-scoped perms
       onGuest: opts.onGuest ?? (opts.perms?.(p)?.loggedIn ? null : guestGate) }),
     shareButton(opts.permalink ?? `${location.origin}${link}`, 'post')),
-  meta);
+  meta.childElementCount ? meta : null); // no empty line where the crumb was
   return el('div', { class: 'postrow' + (p.pinned ? ' pinned-row' : '') + (opts.compact ? ' compact' : '') }, right);
 }
 

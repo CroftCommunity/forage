@@ -851,6 +851,7 @@ const slugForSource = (source) => {
 // search, timeline) open up.
 // THE write pair (DL-013): boost = a real Bluesky like.
 const LIKE_COLLECTION = 'app.bsky.feed.like';
+const FOLLOW_COLLECTION = 'app.bsky.graph.follow';
 
 // 3w: THE publish write. The second kind of record the lens creates, and the
 // one that makes Forage a forum rather than a reader. Deliberately narrow:
@@ -1395,6 +1396,21 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
         repo: session?.did, collection: LIKE_COLLECTION, rkey,
       }, 'unlike');
     },
+    // feed-row v7 (owner, 2026-08-31): Follow, on the profile page. One record in
+    // MY repo naming the account by did; unfollow deletes it (the like's shape).
+    async follow(did) {
+      const data = await post('com.atproto.repo.createRecord', {
+        repo: session?.did, collection: FOLLOW_COLLECTION,
+        record: { $type: FOLLOW_COLLECTION, subject: did, createdAt: new Date().toISOString() },
+      }, 'follow');
+      return { followUri: data.uri };
+    },
+    async unfollow(followUri) {
+      const rkey = followUri.split('/').pop();
+      return post('com.atproto.repo.deleteRecord', {
+        repo: session?.did, collection: FOLLOW_COLLECTION, rkey,
+      }, 'unfollow');
+    },
 
     // P5: your published hashtag subscriptions. The repo IS the set — that is
     // what makes "published means synced" true across every Forage client, and
@@ -1682,6 +1698,7 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
         did: v.did, handle: v.handle, displayName: v.displayName || v.handle,
         avatar: v.avatar || null, banner: v.banner || null, description: v.description || '',
         followers: v.followersCount ?? 0, following: v.followsCount ?? 0, posts: v.postsCount ?? 0,
+        followingUri: v.viewer?.following || null, // feed-row v7: my follow of them, if any
         verified: v.verification?.verifiedStatus === 'valid' ? 'valid'
           : v.verification?.trustedVerifierStatus === 'valid' ? 'trusted' : null,
       };
