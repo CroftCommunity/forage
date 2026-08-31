@@ -87,22 +87,28 @@ export async function run() {
     assert.equal(body.record.reply.parent.uri, target, 'the reply names the comment as its parent');
     assert.equal(body.record.reply.root.uri, ROOT, 'and the post as its root');
 
-    // Claim B (decision 1, as amended 2026-08-29 in c8af809): the vote stack sits
-    // in the avatar column at the vertical middle of the body, a BUTTON when
-    // signed in, and the quote's stack is no different from a reply's.
+    // Claim B — as re-decided by the owner 2026-08-31 (feed-row v9: "move away
+    // from the upvote in the thread line and put it in the middle of the comment
+    // at the bottom similar to other places"): the like is a pill on the
+    // comment's ACTION ROW, in the cell before share (third of four under a
+    // comment with children, the middle one otherwise), a BUTTON when signed
+    // in; nothing sits in the avatar column but the avatar and the rail. The
+    // row is one line, and its cells line up like a post row's.
     const stacks = await page.$$eval('.comment', (cs) => cs.map((c) => {
-      const st = c.querySelector(':scope > .comment-body > button.avvote');
-      const av = c.querySelector(':scope > .avcol .av').getBoundingClientRect();
-      const text = c.querySelector(':scope > .comment-body > .comment-text').getBoundingClientRect();
-      const acts = c.querySelector(':scope > .comment-body > .comment-actions').getBoundingClientRect();
-      const r = st?.getBoundingClientRect();
-      return { id: c.dataset.nodeId, isButton: !!st, inColumn: r ? Math.abs((r.left + r.right) / 2 - (av.left + av.right) / 2) <= 2 : false,
-        middle: r ? Math.abs((r.top + r.bottom) / 2 - (text.top + acts.bottom) / 2) <= 6 : false };
+      const acts = c.querySelector(':scope > .comment-body > .comment-actions');
+      const kids = [...acts.children].map((k) => k.matches('[data-fold]') ? 'fold' : k.matches('.reply') ? 'reply' : k.matches('[data-vote]') ? 'like' : k.matches('.share') ? 'share' : k.matches('[data-repost]') ? 'repost' : k.className);
+      const like = acts.querySelector('button[data-vote]');
+      const mids = [...acts.children].map((k) => { const r = k.getBoundingClientRect(); return r.top + r.height / 2; });
+      return { id: c.dataset.nodeId, kids, isButton: !!like, inColumn: !!c.querySelector(':scope > .comment-body > .avvote, :scope > .avcol [data-vote]'),
+        oneLine: Math.max(...mids) - Math.min(...mids) <= 2 };
     }));
     for (const st of stacks) {
-      assert.ok(st.isButton, `${st.id}: signed in, the stack is a button`);
-      assert.ok(st.inColumn, `${st.id}: the stack is centred in the avatar column`);
-      assert.ok(st.middle, `${st.id}: the stack sits at the vertical middle of the body`);
+      assert.ok(st.isButton, `${st.id}: signed in, the like on the action row is a button`);
+      assert.equal(st.inColumn, false, `${st.id}: nothing votes from the avatar column any more`);
+      const li = st.kids.indexOf('like'), sh = st.kids.indexOf('share');
+      assert.ok(li >= 0 && sh === li + 1, `${st.id}: the like sits right before share (${st.kids.join(' · ')})`);
+      assert.ok(st.kids.indexOf('reply') < li, `${st.id}: Reply comes before the like (${st.kids.join(' · ')})`);
+      assert.ok(st.oneLine, `${st.id}: the action row wrapped`);
     }
     // Claim F (decision 10, mock v19 § F): a deep link lands on ITS comment and
     // stays there — the quote cascade repaints the list after the first paint,

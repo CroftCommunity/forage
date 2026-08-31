@@ -276,7 +276,7 @@ export async function run() {
   assert.match((await qByline.innerText()).replace(/\s+/g, ' '), /quoted this/, 'the byline names the kind');
   assert.match(await qnode.locator(':scope > .comment-body > .comment-text').innerText(), /post quote1/, 'the quote body renders in the thread');
   assert.equal(await qnode.locator('a:has-text("open its thread")').count(), 0, 'no "open its thread" — the ⋯ carries Open on bsky.app');
-  assert.equal(await qnode.locator(':scope > .comment-body > [data-vote]').count(), 1, 'the quote carries the vote stack');
+  assert.equal(await qnode.locator(':scope > .comment-body > .comment-actions [data-vote]').count(), 1, 'the quote carries the like on its action row (v9)');
   const repostBtn = qnode.locator(':scope > .comment-body > .comment-actions > [data-repost]');
   assert.equal(await repostBtn.count(), 1, 'and a repost control — the glyph alone, no word');
   assert.equal(await repostBtn.getAttribute('aria-pressed'), 'false');

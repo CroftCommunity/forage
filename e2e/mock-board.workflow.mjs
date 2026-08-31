@@ -88,6 +88,12 @@ export async function run() {
     // meta line is left behind
     assert.equal(await page.locator('.postrow .postmeta a[href^="/f/"], .postrow .postmeta a[href^="/u/"]').count(), 0, 'no feed line under a lens row');
     assert.equal(await page.locator('.postrow .postmeta:empty').count(), 0, 'and no empty meta line where it was');
+    // v9 (owner: "neither repost nor comment icon show the hand"): the replies link is a
+    // control and says so with the pointer; the repost glyph is a COUNT on a row (O2) and does not
+    const cursors = await page.$eval('.postrow .actions', (a) => ({ replies: getComputedStyle(a.querySelector('.replies')).cursor, repost: getComputedStyle(a.querySelector('[data-repost]')).cursor, like: getComputedStyle(a.querySelector('[data-vote]')).cursor }));
+    assert.equal(cursors.replies, 'pointer', 'the replies link shows the hand');
+    assert.equal(cursors.like, 'pointer', 'the like shows the hand');
+    assert.notEqual(cursors.repost, 'pointer', 'the repost count does not pretend to be a control');
     assert.equal(await page.locator('.postrow', { hasText: /\bnull\b|\bundefined\b/ }).count(), 0, 'no row prints a stringified null or undefined (Element.append does that to a null child — the v7 frame)');
     // feed-row v5 claim 17 (owner: 'change "Feed order" to "Default"'): the sort's
     // first choice — the order the feed's own generator hands us — is called Default
