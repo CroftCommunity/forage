@@ -56,6 +56,9 @@
   --panel:       #FFFFFF;
   --row-odd:     #FFFFFF;
   --row-even:    #FFF6EC;
+  /* the lit row (feed-row 22): one step past the even stripe along the
+     card → card-2 tint, so it is off BOTH stripes */
+  --row-hover:   #FDECDB;
   --row-head:    #FAE3CC;
 
   --boost:       #A54118;

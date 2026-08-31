@@ -37,6 +37,13 @@
   --bg:          #F8F4EC;   /* app background (illustration paper) */
   --card:        #FFFFFF;   /* cards */
   --card-2:      #F2EDE2;   /* hover / elevated (warm) */
+  /* The row under the pointer (feed-row v10, decision 22 — bsky.app's and
+     reddit's model: the CARD lights, the text does not underline). One step
+     off the card toward --card-2 and short of it, so a control's own hover
+     still shows on a lit row. EVERY skin declares its own (test/skins.test.js
+     grades it: >= 3 L* off the row's resting ground, <= 12 — a hover, not a
+     selection — and AA for text, muted and link on it). */
+  --row-hover:   #F9F6F1;
   --text:        #2B251C;   /* primary text (warm ink) */
   --muted:       #68604F;   /* metadata, timestamps (AA on bg) */
   --border:      #E3DCCD;   /* borders, collapse gutter at rest (twig-warm) */

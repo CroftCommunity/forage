@@ -254,6 +254,18 @@ kbd { background: var(--green-100); border: 1px solid var(--border); border-radi
 .postrow:nth-child(odd) { background: var(--row-odd); }
 .postrow:nth-child(even) { background: var(--row-even); }
 .postrow:last-child { border-bottom: 0; }
+/* feed-row v10, decision 22 (owner, 2026-08-30: "we give a mouseover underline …
+   bsky and reddit both give a subtle highlight to the moused over card and that's
+   a better model"): under the pointer the ROW lights and the text stays as it is.
+   Only where a pointer exists — on a phone :hover sticks to the last tap, and a
+   row that stays lit after a tap reads as selected. The rule sits after the
+   stripes so it wins the tie on an even row. A control on a lit row still
+   shows its own hover: --card-2 is where --row-hover points on most skins, so
+   the control mixes the ink in over the lit ground instead. */
+@media (hover: hover) {
+  .postrow:hover { background: var(--row-hover); }
+  .postrow:hover .actions > :is(button, a):hover { background: color-mix(in srgb, var(--text) 10%, var(--row-hover)); }
+}
 /* the vote — one control, two layouts (plan 2026-08-29 post-and-thread, decision 1) */
 /* the row's action row (board-cards decision 2): like · replies · reposts · share */
 .actions { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; margin-top: 4px; }
@@ -288,6 +300,7 @@ button.vote[aria-pressed="true"] { color: var(--boost); border-color: var(--boos
 .vote .glyph svg { width: 100%; height: 100%; }
 .posttitle { font-size: var(--title-size); font-weight: 600; }
 .posttitle a { color: var(--text); }
+.posttitle a:hover { text-decoration: none; } /* feed-row 22: the row lights instead */
 /* feed-row v1: a Bluesky post's TEXT is body text, not a heading — on the row at the
    title's size and body weight; at the thread head one step up (20px), body face and
    weight, where it was a 26px serif heading (the owner's phone, 2026-08-30). */

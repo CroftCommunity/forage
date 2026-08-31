@@ -54,7 +54,7 @@ registry), and a test pins the convention so it cannot drift.
 
 ## The role vocabulary
 
-Fifteen roles, named for what a **forum** has rather than for Forage's
+Sixteen roles, named for what a **forum** has rather than for Forage's
 components. The names come from the selectors real phpBB styles carry, which is
 what makes importing a near-identity mapping instead of a translation with
 judgement in it.
@@ -75,6 +75,7 @@ judgement in it.
 | `row-odd` | `--row-odd` | `.bg1` | `.row1` |
 | `row-even` | `--row-even` | `.bg2` | `.row2` |
 | `row-head` | `--row-head` | `.bg3` | `.row3` |
+| `row-hover` | `--row-hover` | *(absent — Forage's own; feed-row 22)* | *(absent)* |
 | `font-body` | `--font-body` | `body{font-family}` | `body{font-family}` |
 
 Plus chrome that is not a role: `--card-shadow` (bevels — a value token, because
@@ -84,6 +85,16 @@ Plus chrome that is not a role: `--card-shadow` (bevels — a value token, becau
 
 Every default is a **passthrough** to whatever the rule used before, so the
 default skin renders exactly as it did and only a skin changes anything.
+
+`--row-hover` is the one role with a value of its own rather than a passthrough:
+the row under the pointer lights (feed-row v10, decision 22 — bsky.app's and
+reddit's model, replacing the underline on the row's text). **Every skin
+declares it**, and `test/skins.test.js` grades the value: at least 3 L* off the
+row's resting ground (its stripe where the skin stripes, the card otherwise) so
+a pointer can be trusted to show it, at most 12 so it reads as a hover and not
+a selection, and AA for `--text`, `--muted` and `--link` on it. Author it one
+step off the ground toward `--card-2` and short of it where the ramp allows —
+a control on a lit row mixes the ink in over the lit ground for its own hover.
 
 ## Art slots
 

@@ -15,6 +15,8 @@
   --bg:          #262019;   /* warm umber, lifted from near-black */
   --card:        #31291F;
   --card-2:      #3B3226;
+  /* the lit row (feed-row 22): one step off the card toward --card-2 */
+  --row-hover:   #383024;
   --text:        #EFE7D9;   /* warm paper */
   --muted:       #B5A88F;
   --border:      #4C4232;   /* twig */

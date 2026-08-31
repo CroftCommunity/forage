@@ -13,6 +13,8 @@
   --surface:     #0F0F08;
   --card:        #101008;
   --card-2:      #16160C;
+  /* the lit row (feed-row 22): one step off the card toward --card-2 */
+  --row-hover:   #18180D;
   --text:        #D8D2B8;
   --ink:         #D8D2B8;
   --ink-soft:    #A8A288;

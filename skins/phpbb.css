@@ -57,6 +57,9 @@
   --panel:       #FFFFFF;
   --row-odd:     #ECECEC;
   --row-even:    #DCE1E5;
+  /* the lit row (feed-row 22): LIGHTER than both stripes — the grey ramp
+     runs down from white here, and a step below .bg2 fails the link's AA */
+  --row-hover:   #F5F5F5;
   --row-head:    #DBE0E5;
 
   --boost:       #006597;

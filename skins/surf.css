@@ -53,6 +53,10 @@
   --panel:       #FFFFFF;
   --row-odd:     #FFFFFF;
   --row-even:    #F7ECDA;
+  /* the lit row (feed-row 22): BETWEEN the stripes — surf's muted ink cannot
+     clear AA a step below the sand stripe, so the lit row sits between white
+     and the sand (3.1 L* off each) */
+  --row-hover:   #FCF6E4;
   --row-head:    #F0E6D4;
 
   --boost:       #0F6E8C;
