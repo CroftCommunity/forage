@@ -561,7 +561,9 @@ function countDesc(node) {
 function replyButton(node, ctx, replyHost) {
   // the return arrow IS the verb (mock v17 § C: "Two icons, two verbs" — the
   // bubble counts, the arrow answers)
-  const btn = el('button', { class: 'reply', type: 'button' }, el('span', { 'aria-hidden': 'true' }, '\u21A9 '), 'Reply');
+  // v12: the word is its own span so a narrow row can keep the glyph and drop
+  // the word (five controls at 390px); the name stays for a screen reader
+  const btn = el('button', { class: 'reply', type: 'button', 'aria-label': 'Reply' }, el('span', { 'aria-hidden': 'true' }, '\u21A9 '), el('span', { class: 'word' }, 'Reply'));
   btn.addEventListener('click', () => {
     if (ctx.onReply) { ctx.onReply(node, replyHost); return; }
     if (btn.nextSibling && btn.nextSibling.classList?.contains('reply-form')) { btn.nextSibling.remove(); return; }

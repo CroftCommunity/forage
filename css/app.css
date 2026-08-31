@@ -467,6 +467,11 @@ dialog.menu::backdrop { background: transparent; }
 .fold .lbl:empty { display: none; }
 .fold:hover, .fold:focus-visible { background: var(--card-2); color: var(--text); }
 .comment-text { font-size: var(--t-sm); margin: 4px 0; }
+/* feed-row v12 decision 25: five controls on a comment's row (fold · Reply · ⟳ · ▲ ·
+   share) — at 390px "↩ Reply" ran 9px into ⟳'s cell. On a narrow screen the word
+   goes and the glyph stays (bsky.app's mobile row is glyphs only); the button keeps
+   its name. mock-thread holds "no cell runs into the next". */
+@media (max-width: 480px) { .comment-actions .reply .word { display: none; } }
 /* feed-row v9: the comment's action row is equal cells like a post row's — fold · Reply ·
    like · share (the like third of four under a comment with children, the middle one
    otherwise); the like is the unboxed pill the rows use */

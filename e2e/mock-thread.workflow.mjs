@@ -124,7 +124,10 @@ export async function run() {
       const kids = [...acts.children].map((k) => k.matches('[data-fold]') ? 'fold' : k.matches('.reply') ? 'reply' : k.matches('[data-vote]') ? 'like' : k.matches('.share') ? 'share' : k.matches('[data-repost]') ? 'repost' : k.className);
       const like = acts.querySelector('button[data-vote]');
       const mids = [...acts.children].map((k) => { const r = k.getBoundingClientRect(); return r.top + r.height / 2; });
-      return { id: c.dataset.nodeId, kids, isButton: !!like, inColumn: !!c.querySelector(':scope > .comment-body > .avvote, :scope > .avcol [data-vote]'),
+      // v12: a cell's content must not run into the next cell — five controls at 390px
+      const rects = [...acts.children].map((k) => k.getBoundingClientRect());
+      const overlaps = rects.slice(1).map((r, i) => (rects[i].right > r.left + 1 ? `${kids[i]}→${kids[i + 1]} by ${Math.round(rects[i].right - r.left)}px` : null)).filter(Boolean);
+      return { id: c.dataset.nodeId, kids, overlaps, isButton: !!like, inColumn: !!c.querySelector(':scope > .comment-body > .avvote, :scope > .avcol [data-vote]'),
         oneLine: Math.max(...mids) - Math.min(...mids) <= 2 };
     }));
     for (const st of stacks) {
@@ -134,6 +137,7 @@ export async function run() {
       assert.ok(li >= 0 && sh === li + 1, `${st.id}: the like sits right before share (${st.kids.join(' · ')})`);
       assert.ok(st.kids.indexOf('reply') < li, `${st.id}: Reply comes before the like (${st.kids.join(' · ')})`);
       assert.ok(st.oneLine, `${st.id}: the action row wrapped`);
+      assert.deepEqual(st.overlaps, [], `${st.id}: action-row cells overlap — ${st.overlaps.join(', ')} (v12: five controls in the row; the sheet frame showed Reply running into ⟳)`);
     }
     // Claim F (decision 10, mock v19 § F): a deep link lands on ITS comment and
     // stays there — the quote cascade repaints the list after the first paint,
