@@ -7,7 +7,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@7d138e0",
+      "baseline": "forage@270bd10",
       "population": "lens:mock-thread"
     },
     {
@@ -52,7 +52,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@7d138e0",
+      "baseline": "forage@270bd10",
       "population": "lens:mock-thread"
     },
     {
@@ -417,7 +417,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@7d138e0",
+      "baseline": "forage@270bd10",
       "population": "lens:mock-thread"
     },
     {
@@ -426,7 +426,43 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@7d138e0",
+      "baseline": "forage@270bd10",
+      "population": "lens:mock-thread"
+    },
+    {
+      "file": "thread-lens-sheet.phone.current.png",
+      "route": "thread-lens-sheet",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@ad29be5",
+      "population": "lens:mock-thread"
+    },
+    {
+      "file": "thread-lens-sheet.desktop.current.png",
+      "route": "thread-lens-sheet",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@ad29be5",
+      "population": "lens:mock-thread"
+    },
+    {
+      "file": "thread-lens-sheet.phone.proposed.png",
+      "route": "thread-lens-sheet",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@270bd10",
+      "population": "lens:mock-thread"
+    },
+    {
+      "file": "thread-lens-sheet.desktop.proposed.png",
+      "route": "thread-lens-sheet",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@270bd10",
       "population": "lens:mock-thread"
     }
   ]
