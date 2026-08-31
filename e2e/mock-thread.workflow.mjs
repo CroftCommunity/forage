@@ -40,7 +40,11 @@ export async function run() {
     assert.deepEqual(ids.sort(), [...NODE_IDS].sort(), 'every node in the fixture renders, quote included');
     // v11: the frame caught the word "null" above every comment's byline — a null
     // child handed to Element.append stringifies (the v7 board frame had the same)
-    assert.equal(await page.locator('.comment', { hasText: /\bnull\b|\bundefined\b/ }).count(), 0, 'a comment prints a stringified null or undefined');
+    // (a text-node walk, not hasText: the stray "null" abuts the next text —
+    // "nullA Very…" — so a word boundary never finds it; measured 2026-08-30)
+    const strays = await page.evaluate(() => { const w = document.createTreeWalker(document.querySelector('#main'), NodeFilter.SHOW_TEXT); const out = []; let n;
+      while ((n = w.nextNode())) { const t = n.textContent.trim(); if ((t === 'null' || t === 'undefined') && n.parentElement.closest('.comment')) out.push(n.parentElement.className); } return out; });
+    assert.deepEqual(strays, [], `a comment prints a stringified null or undefined (in ${strays.join(', ')})`);
     // feed-row v11 decision 24 (owner, 2026-08-30: "I only want the pronounced left
     // side quote bar on the actual repost, not on all of its comments — they can
     // thread just like a normal comment"): the wall covers the quote's own rows
