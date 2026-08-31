@@ -7,7 +7,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@e255fe5",
+      "baseline": "forage@7d138e0",
       "population": "lens:mock-thread"
     },
     {
@@ -52,7 +52,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@e255fe5",
+      "baseline": "forage@7d138e0",
       "population": "lens:mock-thread"
     },
     {
@@ -97,7 +97,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@7c4ee03",
+      "baseline": "forage@ad29be5",
       "population": "lens:mock-thread"
     },
     {
@@ -142,7 +142,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@7c4ee03",
+      "baseline": "forage@ad29be5",
       "population": "lens:mock-thread"
     },
     {
@@ -392,6 +392,42 @@
       "baseline": "forage@ba62395",
       "population": "lens:mock-board",
       "skin": "phpbb"
+    },
+    {
+      "file": "thread-lens-quote.phone.current.png",
+      "route": "thread-lens-quote",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@ad29be5",
+      "population": "lens:mock-thread"
+    },
+    {
+      "file": "thread-lens-quote.desktop.current.png",
+      "route": "thread-lens-quote",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@ad29be5",
+      "population": "lens:mock-thread"
+    },
+    {
+      "file": "thread-lens-quote.phone.proposed.png",
+      "route": "thread-lens-quote",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@7d138e0",
+      "population": "lens:mock-thread"
+    },
+    {
+      "file": "thread-lens-quote.desktop.proposed.png",
+      "route": "thread-lens-quote",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@7d138e0",
+      "population": "lens:mock-thread"
     }
   ]
 }
