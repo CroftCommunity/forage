@@ -217,6 +217,15 @@ export async function run() {
   await page.goto(`${s.origin}/feeds`);
   await page.waitForSelector('[data-discover-feed]');
   await page.waitForSelector('text=Garden Talk');
+  // feed-row v11 decision 26 (owner, 2026-08-30 ("make the hide inactive on browse all feeds the default"):
+  // the popular list hides its dead, stale and silent feeds by default too —
+  // on the live list that day 46 of 111 went (30 stale, 3 empty, 13 silent) —
+  // and says so; unchecking it brings the whole list back, which the claims
+  // below count on (they were written when the list showed all five)
+  assert.equal(await page.locator('[data-feed-alive]').isChecked(), true, 'hide-inactive defaults ON for browse');
+  await page.waitForSelector('text=of 5 feeds. Hiding');
+  await page.locator('[data-feed-alive]').uncheck();
+  await page.waitForSelector('text=All 5 feeds Bluesky lists as popular.');
   // 3v: the link discovery hands out is the SHAREABLE one — creator-qualified,
   // so pasting it works for someone who has never opened Forage.
   const shared = await page.locator('[data-discover-feed] a').first().getAttribute('href');
@@ -241,7 +250,6 @@ export async function run() {
 
   // 4b: the whole popular corpus is loaded, so the controls describe all of it
   await page.waitForSelector('[data-feed-controls]');
-  await page.waitForSelector('text=All 5 feeds Bluesky lists as popular.');
   const titles = async () => page.locator('[data-discover-feed] a[href^="/f/"]').allTextContents();
   assert.deepEqual(await titles(), ['Garden Talk', 'Loudest', 'Freshest', 'Rough Stuff', 'Cleared Feed'],
     'the default is Bluesky\'s own order, untouched');

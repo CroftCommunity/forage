@@ -8,7 +8,7 @@
 //   node scripts/mock-snaps.mjs --as proposed         # files get a .proposed suffix
 //   node scripts/mock-snaps.mjs --only board-lens,menu-lens   # a subset of the routes below
 //       (routes: board thread board-lens board-lens-media board-lens-compact board-lens-in
-//        thread-lens menu-lens focus-lens)
+//        board-lens-hover thread-lens thread-lens-quote thread-lens-sheet menu-lens focus-lens reply-lens thread-lens-reply)
 //   node scripts/mock-snaps.mjs --as current --serve ../../forage
 //       # the same script and fixtures, rendering ANOTHER checkout (main): the
 //       # Current frames come from the tree the owner is running, captured by
@@ -121,6 +121,33 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
   await l.close();
   }
 
+  // feed-row v11 decision 24: the quote-response and the reply threaded under it,
+  // scrolled to the top of the frame — the wall on the quote's own rows only
+  if (wanted('thread-lens-quote')) {
+    const qz = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: RESPONSES });
+    await qz.page.setViewportSize({ width: vp.width, height: vp.height });
+    await qz.page.goto(`${qz.origin}${THREAD_PATH}`);
+    await qz.page.waitForSelector('.comment[data-kind="quote"]', { timeout: 15000 });
+    await qz.page.evaluate(() => document.fonts?.ready);
+    await qz.page.evaluate(() => { document.querySelector('.comment[data-kind="quote"][data-depth="0"]')?.scrollIntoView({ block: 'start' }); window.scrollBy(0, -72); });
+    await qz.page.waitForTimeout(200);
+    await shoot(qz.page, 'thread-lens-quote', 'lens:mock-thread', name, vp);
+    await qz.close();
+  }
+  // feed-row v12 decision 25: the repost sheet, opened from the quote-response's ⟳
+  // (on main the press toggles a repost and nothing opens — an honest Current)
+  if (wanted('thread-lens-sheet')) {
+    const sh = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: RESPONSES });
+    await sh.page.setViewportSize({ width: vp.width, height: vp.height });
+    await sh.page.goto(`${sh.origin}${THREAD_PATH}`);
+    await sh.page.waitForSelector('.comment[data-kind="quote"]', { timeout: 15000 });
+    await sh.page.evaluate(() => document.fonts?.ready);
+    await sh.page.evaluate(() => { document.querySelector('.comment[data-kind="quote"][data-depth="0"]')?.scrollIntoView({ block: 'start' }); window.scrollBy(0, -72); });
+    await sh.page.locator('.comment[data-kind="quote"][data-depth="0"] > .comment-body > .comment-actions > [data-repost]').click();
+    await sh.page.waitForTimeout(400);
+    await shoot(sh.page, 'thread-lens-sheet', 'lens:mock-thread', name, vp);
+    await sh.close();
+  }
   // feed-row v4: the /reply page (signed in, a draft already kept, so the frame shows
   // the draft line) and the thread with the quick box open under a comment
   if (wanted('reply-lens')) {
@@ -184,6 +211,24 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
     await shoot(cmp.page, 'board-lens-compact', 'lens:mock-board', name, vp);
     cmp.consoleErrors(); cmp.errors();
     await cmp.close();
+  }
+  // feed-row v10, decision 22: the row under the pointer — desktop only, since a
+  // phone has no pointer and the rule is fenced by (hover: hover). The second
+  // row scrolled to the top of the frame and its text hovered: on main the text
+  // underlines and the row stays as it is; on the branch the row lights.
+  if (wanted('board-lens-hover') && name === 'desktop') {
+    const hov = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: SKIN_INIT, responses: BOARD });
+    await hov.page.setViewportSize({ width: vp.width, height: vp.height });
+    await hov.page.goto(`${hov.origin}${BOARD_PATH}`);
+    await hov.page.waitForSelector('.postrow', { timeout: 15000 });
+    await hov.page.evaluate(() => document.fonts?.ready);
+    // the row's top clear of the sticky masthead, so the lit band's whole extent is in the frame
+    await hov.page.evaluate(() => { document.querySelectorAll('.postrow')[1]?.scrollIntoView({ block: 'start' }); window.scrollBy(0, -72); });
+    await hov.page.locator('.postrow').nth(1).locator('.posttitle a').hover();
+    await hov.page.waitForTimeout(200);
+    await shoot(hov.page, 'board-lens-hover', 'lens:mock-board', name, vp);
+    hov.consoleErrors(); hov.errors();
+    await hov.close();
   }
   if (wanted('board-lens-in')) {
     const inn = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: BOARD });

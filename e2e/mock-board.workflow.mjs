@@ -120,6 +120,35 @@ export async function run() {
     assert.equal(fh.blank, '_blank', 'in a new tab — it leaves Forage');
     assert.equal(fh.blurb, 'trending', 'the description sits under it, quoted');
     assert.ok(fh.highlight && fh.shadow !== 'none', `the card carries a highlight outline (class ${fh.highlight}, shadow ${fh.shadow})`);
+    // feed-row v10 claim 27 (owner: "we give a mouseover underline … bsky and reddit
+    // both give a subtle highlight to the moused over card and that's a better
+    // model"): under the pointer the ROW lights — with the skin's own --row-hover,
+    // so a skin's value reaches the row — and its text does not underline; a
+    // control on the lit row still shows a hover of its own; the row the pointer
+    // left is back at rest
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const lit = await (async () => {
+      const row = page.locator('.postrow').nth(1);
+      await row.scrollIntoViewIfNeeded();
+      const rest = await row.evaluate((r) => getComputedStyle(r).backgroundColor);
+      await row.locator('.posttitle a').hover();
+      const on = await row.evaluate((r) => {
+        const probe = document.createElement('div'); probe.style.background = 'var(--row-hover)'; document.body.append(probe);
+        const want = getComputedStyle(probe).backgroundColor; probe.remove();
+        return { bg: getComputedStyle(r).backgroundColor, want, underline: getComputedStyle(r.querySelector('.posttitle a')).textDecorationLine };
+      });
+      await row.locator('.actions [data-vote]').hover();
+      const control = await row.evaluate((r) => ({ row: getComputedStyle(r).backgroundColor, like: getComputedStyle(r.querySelector('.actions [data-vote]')).backgroundColor }));
+      await page.mouse.move(0, 0);
+      const after = await row.evaluate((r) => getComputedStyle(r).backgroundColor);
+      return { rest, on, control, after };
+    })();
+    assert.notEqual(lit.on.bg, lit.rest, `the row under the pointer is not lit (${lit.on.bg} at rest and under the pointer)`);
+    assert.equal(lit.on.bg, lit.on.want, `the lit row paints ${lit.on.bg}, not the skin's --row-hover ${lit.on.want}`);
+    assert.equal(lit.on.underline, 'none', `the row's text underlines under the pointer (${lit.on.underline}) — the row lights instead`);
+    assert.notEqual(lit.control.like, lit.control.row, 'the like on a lit row shows no hover of its own');
+    assert.equal(lit.after, lit.rest, 'the row the pointer left is not back at rest');
+    await page.setViewportSize({ width: 390, height: 844 });
     assert.equal(new Set(list.map((r) => r.likeLeft)).size, 1,
       `the like does not line up down the board: lefts ${list.map((r) => r.likeLeft).join(', ')}`);
     // board-cards decision D: a picture post stands on a stage, sized from its

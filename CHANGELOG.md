@@ -8,6 +8,22 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-08
 
+- 2026-08-30 **⟳ reposts, or quotes with a comment.** In a thread every post and comment carries
+  ⟳ with one figure — reposts and quotes together, the way bsky.app counts it. Pressing it opens a
+  sheet: add a comment and **Post** to quote it (a post of yours that shows this one; it appears
+  under it here once the thread refreshes), or Post with nothing to repost it as it is. A post you
+  already reposted offers **Remove repost**. (mock feed-row v12, decision 25)
+- 2026-08-30 **Reply at the bottom of the post; a quote's bar on the quote only; Browse hides
+  the dead by default.** In a thread, **Reply** now sits at the bottom right of the post, under
+  its picture and its quote; the like row stays under the text with the like at its right. A
+  post that quoted the thread's post keeps its coloured left bar, but the replies under it no
+  longer share it — they thread like any reply. **Browse feeds** starts with *Hide inactive*
+  on for the popular list too (that day 46 of 111 were stale, empty or not answering); the line
+  says how many went, and unchecking brings them back. (mock feed-row v11, decisions 23–24, 26)
+- 2026-08-30 **The post under your pointer lights up.** On a desktop, moving the mouse over a
+  post no longer underlines its text; the whole row takes a subtle highlight instead, the way
+  bsky.app and reddit do it, in every skin's own colour. Phones are unchanged — a tap never
+  leaves a row lit. (mock feed-row v10, decision 22)
 - 2026-08-31 **The thread opens with who wrote it; the reply box is Bluesky's shape.** A thread's
   top line is now the author — picture, chosen name, provider mark, time — with the board's
   `f/…` link at the right; the like row keeps the reply count and Reply. On the reply page the

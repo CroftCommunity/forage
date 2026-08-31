@@ -17,6 +17,9 @@
   --surface:     #2A2A25;
   --card:        #2C2C27;
   --card-2:      #34342E;
+  /* the lit row (feed-row 22): the elevated surface itself — one step off the
+     card IS --card-2 on this short ramp */
+  --row-hover:   #34342E;
   --text:        #D9D9D2;
   --ink:         #D9D9D2;
   --ink-soft:    #B0B0A8;

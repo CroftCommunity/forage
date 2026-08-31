@@ -124,7 +124,7 @@ function imagesEmbed(images) {
   };
 }
 
-export function buildPost({ text, langs, navLang, images, replyTo, now = new Date() } = {}) {
+export function buildPost({ text, langs, navLang, images, replyTo, quote, now = new Date() } = {}) {
   const body = String(text ?? '').trim();
   const pics = images || [];
   // Phase 3.0 finding D: the network accepts an image post with empty text, so
@@ -149,6 +149,13 @@ export function buildPost({ text, langs, navLang, images, replyTo, now = new Dat
   const claim = languageClaim(langs, navLang);
   if (claim) record.langs = claim;
   if (pics.length) record.embed = imagesEmbed(pics);
+  // feed-row v12 decision 25: a quote post embeds the quoted post's strong ref.
+  // Both halves of the ref, or nothing — a ref without a cid is a quote the
+  // network cannot resolve, the reply rule below.
+  if (quote) {
+    if (!quote.uri || !quote.cid) throw new Error('a quote needs both the uri and the cid of the post it quotes');
+    record.embed = { $type: 'app.bsky.embed.record', record: { uri: quote.uri, cid: quote.cid } };
+  }
   if (replyTo) {
     const { root, parent } = replyTo;
     // Both refs need a cid; a ref without one produces a reply the network

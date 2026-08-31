@@ -744,6 +744,8 @@ const ROLE_PAIRS = [
   ['--muted', '--bg', 4.5], ['--muted', '--card', 4.5],
   ['--link', '--card', 4.5], ['--link', '--bg', 4.5], ['--link', '--row-even', 4.5], ['--link', '--nav-fill', 4.5],
   ['--link-hover', '--card', 4.5],
+  // feed-row 22: everything on a row is read while the row is lit
+  ['--text', '--row-hover', 4.5], ['--muted', '--row-hover', 4.5], ['--link', '--row-hover', 4.5],
   ['--brand-ink', '--bg', 4.5], ['--brand-ink', '--tint', 4.5],
   ['--band-ink', '--band-fill', 4.5], ['--band-link', '--band-fill', 4.5], ['--band-brand', '--band-fill', 4.5],
   ['--on-brand', '--brand-fill', 4.5], ['--on-brand', '--brand-fill-hover', 4.5],
@@ -836,4 +838,61 @@ test('graphical: an art skin keeps its cards OPAQUE hex — the one surface text
     if ((tokenValue(css, '--page-art') ?? 'none') === 'none') continue;
     assert.match(tokenValue(css, '--card') ?? '', /^#[0-9a-f]{6}$/i, `${id} paints the page but its --card is not opaque hex`);
   }
+});
+
+
+// ---------------------------------------------------------------------------
+// feed-row v10, decision 22 (owner, 2026-08-30: "we give a mouseover underline …
+// bsky and reddit both give a subtle highlight to the moused over card and
+// that's a better model … we'll have to bake a representation into every
+// skin"). The row under the pointer is LIT — `.postrow:hover` paints
+// --row-hover — and its text stops underlining. A skin can only reach the
+// row through a declared token, so every skin declares one, and the value is
+// graded here for the two things a hover must be: visible against the row's
+// resting ground, and subtle — a hover, not a selection.
+// ---------------------------------------------------------------------------
+
+// CIE L* — perceptual lightness. Two greys 3 L* apart are the least a pointer
+// can be trusted to show (white → #F5F5F5 is 3.7; bsky.app's dark hover is ~5,
+// reddit's ~6); 12 apart is a selected row, not a hovered one.
+function lstarOf(hex) {
+  const h = String(hex).trim().replace(/^#/, '');
+  const full = h.length === 3 ? [...h].map((c) => c + c).join('') : h;
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16) / 255)
+    .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+  const y = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return y > 0.008856 ? 116 * Math.cbrt(y) - 16 : 903.3 * y;
+}
+
+const HOVER_MIN_DL = 3, HOVER_MAX_DL = 12;
+
+test('feed-row 22: --row-hover is declared in tokens.css, so a skin can light the row', () => {
+  const tokens = declaredTokens(readFileSync(join(root, 'css/tokens.css'), 'utf8'));
+  assert.ok(tokens.has('--row-hover'), '--row-hover must be declared or no skin can assign it');
+  const r = skinScan(':root { --row-hover: #F9F6F1; }', tokens);
+  assert.deepEqual(r.violations, []);
+});
+
+test('feed-row 22: EVERY skin bakes its own row hover — a hex, visible against the row at rest, and subtle', () => {
+  const hex = (v) => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
+  const base = readFileSync(join(root, 'css/tokens.css'), 'utf8');
+  const subjects = [['default', base, base]];
+  for (const [id, s] of Object.entries(SKINS)) {
+    if (!s.file) continue;
+    const own = readFileSync(join(root, s.file), 'utf8');
+    subjects.push([id, base + '\n' + own, own]);
+  }
+  const failures = [];
+  for (const [id, css, own] of subjects) {
+    const hover = tokenValue(own, '--row-hover');
+    if (!hex(hover)) { failures.push(`${id}: declares no --row-hover hex (got ${hover})`); continue; }
+    // the row's resting ground: its stripe where the skin stripes, the card otherwise
+    const stripes = ['--row-odd', '--row-even'].map((n) => tokenValue(css, n)).filter(hex);
+    const grounds = stripes.length ? stripes : [tokenValue(css, '--card')];
+    const dls = grounds.map((g) => Math.abs(lstarOf(hover) - lstarOf(g)));
+    const nearest = Math.min(...dls);
+    if (nearest < HOVER_MIN_DL) failures.push(`${id}: --row-hover ${hover} is ${nearest.toFixed(1)} L* from a row ground (${grounds.join(', ')}) — invisible under the pointer (floor ${HOVER_MIN_DL})`);
+    if (nearest > HOVER_MAX_DL) failures.push(`${id}: --row-hover ${hover} is ${nearest.toFixed(1)} L* from the nearest row ground — a selection, not a hover (ceiling ${HOVER_MAX_DL})`);
+  }
+  assert.deepEqual(failures, [], failures.join('\n  '));
 });

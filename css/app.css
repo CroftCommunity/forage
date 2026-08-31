@@ -254,6 +254,18 @@ kbd { background: var(--green-100); border: 1px solid var(--border); border-radi
 .postrow:nth-child(odd) { background: var(--row-odd); }
 .postrow:nth-child(even) { background: var(--row-even); }
 .postrow:last-child { border-bottom: 0; }
+/* feed-row v10, decision 22 (owner, 2026-08-30: "we give a mouseover underline …
+   bsky and reddit both give a subtle highlight to the moused over card and that's
+   a better model"): under the pointer the ROW lights and the text stays as it is.
+   Only where a pointer exists — on a phone :hover sticks to the last tap, and a
+   row that stays lit after a tap reads as selected. The rule sits after the
+   stripes so it wins the tie on an even row. A control on a lit row still
+   shows its own hover: --card-2 is where --row-hover points on most skins, so
+   the control mixes the ink in over the lit ground instead. */
+@media (hover: hover) {
+  .postrow:hover { background: var(--row-hover); }
+  .postrow:hover .actions > :is(button, a):hover { background: color-mix(in srgb, var(--text) 10%, var(--row-hover)); }
+}
 /* the vote — one control, two layouts (plan 2026-08-29 post-and-thread, decision 1) */
 /* the row's action row (board-cards decision 2): like · replies · reposts · share */
 .actions { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; margin-top: 4px; }
@@ -288,6 +300,7 @@ button.vote[aria-pressed="true"] { color: var(--boost); border-color: var(--boos
 .vote .glyph svg { width: 100%; height: 100%; }
 .posttitle { font-size: var(--title-size); font-weight: 600; }
 .posttitle a { color: var(--text); }
+.posttitle a:hover { text-decoration: none; } /* feed-row 22: the row lights instead */
 /* feed-row v1: a Bluesky post's TEXT is body text, not a heading — on the row at the
    title's size and body weight; at the thread head one step up (20px), body face and
    weight, where it was a 26px serif heading (the owner's phone, 2026-08-30). */
@@ -309,7 +322,8 @@ h1.posttext { font-family: var(--font-body); font-size: var(--t-lg); font-weight
 /* the head's row keeps ONE line: the meta yields (wraps inside itself) before Reply drops */
 .actions.head-actions { flex-wrap: nowrap; }
 .head-actions .postmeta { flex: 1 1 auto; min-width: 0; }
-.head-actions .reply-right { flex: none; }
+/* feed-row v11 decision 23: Reply alone at the bottom of the head, at the right */
+.head-reply { display: flex; justify-content: flex-end; margin-top: 10px; }
 .head-actions .vote { flex: none; white-space: nowrap; }
 /* feed-row v6: the head's top line — the byline with the breadcrumb pushed to the right,
    one line like a row's; the name yields before anything else does */
@@ -453,6 +467,11 @@ dialog.menu::backdrop { background: transparent; }
 .fold .lbl:empty { display: none; }
 .fold:hover, .fold:focus-visible { background: var(--card-2); color: var(--text); }
 .comment-text { font-size: var(--t-sm); margin: 4px 0; }
+/* feed-row v12 decision 25: five controls on a comment's row (fold · Reply · ⟳ · ▲ ·
+   share) — at 390px "↩ Reply" ran 9px into ⟳'s cell. On a narrow screen the word
+   goes and the glyph stays (bsky.app's mobile row is glyphs only); the button keeps
+   its name. mock-thread holds "no cell runs into the next". */
+@media (max-width: 480px) { .comment-actions .reply .word { display: none; } }
 /* feed-row v9: the comment's action row is equal cells like a post row's — fold · Reply ·
    like · share (the like third of four under a comment with children, the middle one
    otherwise); the like is the unboxed pill the rows use */
@@ -501,7 +520,14 @@ dialog.menu::backdrop { background: transparent; }
 @media (max-width: 480px) { .cbtn { min-height: 44px; } }
 /* Phase 9 (decision 5): a quote is a walled COMMENT — the brand rule on the node's own
    outer edge, outside the avatar; no tint, no box */
-.comment.quote { border-left: 3px solid var(--brand-ink); padding-left: 10px; margin: 4px 0; }
+/* feed-row v11 decision 24 (owner: "I only want the pronounced left side quote bar
+   on the actual repost, not on all of its comments"): the wall is a grid item over
+   the quote's own three rows — byline, text, action row — at the node's left
+   edge; it was a border on the node, which ran down the replies threaded under
+   it. The replies keep the indent (the node's padding) and thread like any reply. */
+.comment.quote { padding-left: 13px; margin: 4px 0; }
+.comment.quote > .wall { grid-column: 1; grid-row: 1 / span 3; justify-self: start; width: 3px; margin-left: -13px;
+  background: var(--brand-ink); border-radius: var(--radius-sm); pointer-events: none; }
 .kids > .comment.quote::before, .kids > .comment.quote::after { left: -10px; }
 .kind { display: inline-flex; align-items: center; gap: 2px; color: var(--muted); }
 .cbtn { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 0 8px; border-radius: var(--radius-chip); border: 0;
@@ -722,6 +748,9 @@ hr.rule { border: none; border-top: 1px solid var(--border); margin: var(--s4) 0
    same element by two selectors, where the more specific one won and the sheet
    rendered see-through over the page. Caught by looking at it; no assertion in
    this repo can see a transparent modal. */
+/* feed-row v12 decision 25: the repost sheet's box — the reply box's shape, one field */
+.repost-sheet textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: var(--t-md); padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--card); color: var(--text); resize: vertical; }
+.repost-sheet .btn.danger { margin-right: auto; }
 dialog.authsheet, dialog.sheet {
   border: 0; padding: var(--s4); color: var(--text);
   background: var(--card);
