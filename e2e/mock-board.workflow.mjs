@@ -194,6 +194,11 @@ export async function run() {
     assert.ok(bookGeo.centred, 'the portrait cover is centred in its frame, not pinned to an edge');
     assert.equal(bookGeo.title, 'The Bog Book', 'the card names the link');
     assert.equal(bookGeo.host, 'example.org', 'and its host');
+    // the card carries the host, so the old domain line under a link post's action row is gone
+    assert.equal(await page.locator('.postrow .postmeta .domain').count(), 0, 'no domain line under a row — the card names the host');
+    // a tag in the text reads as a link (the title rule painted the row's anchors as text)
+    const tagColour = await portrait.evaluate((r) => { const a = r.querySelector('.posttext a[data-tag]'); const probe = document.createElement('a'); probe.href = '/x'; r.append(probe); const want = getComputedStyle(probe).color; probe.remove(); return { got: getComputedStyle(a).color, want }; });
+    assert.equal(tagColour.got, tagColour.want, 'a #tag in the text is painted as a link, not as body text');
     // H (owner: "this youtube video should be playable in place and should be
     // clearly a youtube video"): the card says YouTube; nothing from YouTube
     // loads until the press; the press swaps in the player, and stays on Forage

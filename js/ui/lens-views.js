@@ -721,6 +721,7 @@ const lensRow = (p, view = 'card') => {
     // feed-row v7: no feed line under a lens row — the board's own header names
     // it once (v5's `@handle` crumb for author boards went with it)
     feedCrumb: false,
+    domainLine: false, // v13 (J): the card carries the host
     compact: view === 'compact',
   });
 };

@@ -303,6 +303,10 @@ button.vote[aria-pressed="true"] { color: var(--boost); border-color: var(--boos
 .posttitle { font-size: var(--title-size); font-weight: 600; }
 .posttitle a { color: var(--text); }
 .posttitle a:hover { text-decoration: none; } /* feed-row 22: the row lights instead */
+/* feed-row v13 (E): the row's text is faceted — its anchors are links (a tag, a url, a
+   mention), not the title link the rule above paints as text */
+.posttitle.posttext a { color: var(--link); }
+.posttitle.posttext a:hover { text-decoration: underline; }
 /* feed-row v1: a Bluesky post's TEXT is body text, not a heading — on the row at the
    title's size and body weight; at the thread head one step up (20px), body face and
    weight, where it was a 26px serif heading (the owner's phone, 2026-08-30). */

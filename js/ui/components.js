@@ -286,7 +286,8 @@ export function postRow(p, viewerCanVote, opts = {}) {
     // lens row passes `feedCrumb: false` — on a lens board every row's feed IS
     // the board, and the line read the same under every post (owner).
     opts.feedCrumb === false ? null : el('a', { href: opts.feedHref || `/f/${p.feedSlug}` }, opts.feedLabel || `f/${p.feedSlug}`),
-    p.format === 'link' && p.url ? el('span', { class: 'domain' }, domainOf(p.url)) : null,
+    // v13: a lens row's card names the host itself (opts.domainLine === false)
+    p.format === 'link' && p.url && opts.domainLine !== false ? el('span', { class: 'domain' }, domainOf(p.url)) : null,
     p.edited ? el('span', { class: 'muted' }, 'edited') : null,
     opts.metaExtra || null, // 3u: the lens hangs a language chip here
   );
