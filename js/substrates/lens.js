@@ -245,7 +245,8 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
   const media = mediaEmb?.$type === 'app.bsky.embed.images#view'
     ? { kind: 'images', items: (mediaEmb.images || []).map((i) => ({ thumb: i.thumb, full: i.fullsize, alt: i.alt || '', aspect: aspectOf(i.aspectRatio) })) }
     : mediaEmb?.$type === 'app.bsky.embed.video#view'
-      ? { kind: 'video', thumb: mediaEmb.thumbnail || null, aspect: aspectOf(mediaEmb.aspectRatio) }
+      // v13 decision 30: the playlist is what plays in place (HLS; Safari natively, elsewhere through vendored hls.js)
+      ? { kind: 'video', thumb: mediaEmb.thumbnail || null, aspect: aspectOf(mediaEmb.aspectRatio), playlist: mediaEmb.playlist || null }
       : mediaEmb?.$type === 'app.bsky.embed.external#view' && mediaEmb.external?.thumb
         // 4i: `title` rides along because it is the external card's only human
         // name, and the view needs one — an <a> around a decorative thumbnail
@@ -254,7 +255,7 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
         // title that looks like a url is what lets the view name the link
         // honestly instead of inventing one.
         ? { kind: 'external', thumb: mediaEmb.external.thumb, uri: mediaEmb.external.uri,
-            title: mediaEmb.external.title || null }
+            title: mediaEmb.external.title || null, description: mediaEmb.external.description || '' } // v13 decision 31: the card's words
         : undefined;
   // an image/video-only post titles from its alt text, never renders blank.
   // When even the alt is missing the title is a PLACEHOLDER — a name for
@@ -277,7 +278,8 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
     removedReason: '',
     // 3i: rows never duplicate the title as a preview — bluesky text posts ARE
     // their title (300/300). Thread/comment rendering keeps using body.
-    preview: text && external?.uri ? text : '',
+    // v13 (E/H): an external post's words are its text, the card is the link — nothing is previewed twice
+    preview: '',
     ...(media ? { media } : {}),
     ...(placeholder ? { placeholderTitle: true } : {}),
     ...(quoted ? { quoted } : {}),

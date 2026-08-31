@@ -8,7 +8,7 @@
 //   node scripts/mock-snaps.mjs --as proposed         # files get a .proposed suffix
 //   node scripts/mock-snaps.mjs --only board-lens,menu-lens   # a subset of the routes below
 //       (routes: board thread board-lens board-lens-media board-lens-compact board-lens-in
-//        board-lens-hover thread-lens thread-lens-quote thread-lens-sheet menu-lens focus-lens reply-lens thread-lens-reply)
+//        board-lens-cards board-lens-hover thread-lens thread-lens-quote thread-lens-sheet menu-lens focus-lens reply-lens thread-lens-reply)
 //   node scripts/mock-snaps.mjs --as current --serve ../../forage
 //       # the same script and fixtures, rendering ANOTHER checkout (main): the
 //       # Current frames come from the tree the owner is running, captured by
@@ -174,13 +174,20 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
   }
 
   // ---- lens:mock-board — the board, signed out (board-cards A–F, post-and-thread A/E) and signed in ----
-  if (wanted('board-lens') || wanted('board-lens-media')) {
+  if (wanted('board-lens') || wanted('board-lens-media') || wanted('board-lens-cards')) {
     const out = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: SKIN_INIT, responses: BOARD });
     await out.page.setViewportSize({ width: vp.width, height: vp.height });
     await out.page.goto(`${out.origin}${BOARD_PATH}`);
     await out.page.waitForSelector('.postrow', { timeout: 15000 });
     await out.page.evaluate(() => document.fonts?.ready);
     await shoot(out.page, 'board-lens', 'lens:mock-board', name, vp);
+    // feed-row v13 (H, I, J): the link cards and the clip — the YouTube row scrolled to the top
+    if (wanted('board-lens-cards')) {
+      await out.page.evaluate(() => [...document.querySelectorAll('.postrow')].find((r) => r.querySelector('[data-extcard][data-provider="youtube"]'))?.scrollIntoView({ block: 'start' }));
+      await out.page.evaluate(() => window.scrollBy(0, -72));
+      await out.page.waitForTimeout(200);
+      await shoot(out.page, 'board-lens-cards', 'lens:mock-board', name, vp);
+    }
     // board-cards § D: the media stage — the portrait post scrolled to the top of the frame
     if (wanted('board-lens-media')) {
       await out.page.evaluate(() => document.querySelector('.postrow .media-stage, .postrow .stage, .postrow img')?.closest('.postrow')?.scrollIntoView({ block: 'start' }));
@@ -224,7 +231,7 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
     await hov.page.evaluate(() => document.fonts?.ready);
     // the row's top clear of the sticky masthead, so the lit band's whole extent is in the frame
     await hov.page.evaluate(() => { document.querySelectorAll('.postrow')[1]?.scrollIntoView({ block: 'start' }); window.scrollBy(0, -72); });
-    await hov.page.locator('.postrow').nth(1).locator('.posttitle a').hover();
+    await hov.page.locator('.postrow').nth(1).locator('.posttitle').hover(); // v13: the text is text
     await hov.page.waitForTimeout(200);
     await shoot(hov.page, 'board-lens-hover', 'lens:mock-board', name, vp);
     hov.consoleErrors(); hov.errors();

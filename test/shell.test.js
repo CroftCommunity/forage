@@ -12,7 +12,10 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 // Files that are NOT runtime modules — every exclusion is explicit and visible.
 // (Nothing test-only lives under js/ today; scenario/ledger modules join the
 // scan when they become runtime imports in phase 4.)
-const EXCLUDED = new Set([]);
+// vendored hls.js (feed-row v13 decision 30) is loaded by the video player on
+// the press that plays, and video needs the network anyway — 385KB the shell
+// does not carry offline. test/vendor.test.js pins its bytes.
+const EXCLUDED = new Set(['vendor/hls.light.min.js']);
 
 function jsFilesUnder(dir) {
   const out = [];

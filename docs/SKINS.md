@@ -54,7 +54,7 @@ registry), and a test pins the convention so it cannot drift.
 
 ## The role vocabulary
 
-Sixteen roles, named for what a **forum** has rather than for Forage's
+Seventeen roles, named for what a **forum** has rather than for Forage's
 components. The names come from the selectors real phpBB styles carry, which is
 what makes importing a near-identity mapping instead of a translation with
 judgement in it.
@@ -76,6 +76,7 @@ judgement in it.
 | `row-even` | `--row-even` | `.bg2` | `.row2` |
 | `row-head` | `--row-head` | `.bg3` | `.row3` |
 | `row-hover` | `--row-hover` | *(absent — Forage's own; feed-row 22)* | *(absent)* |
+| `like-glyph` | `--like-glyph` | *(absent — a string token: the like's glyph, `'▲'` by default, `'♥'` on the Bluesky skins; feed-row 27)* | *(absent)* |
 | `font-body` | `--font-body` | `body{font-family}` | `body{font-family}` |
 
 Plus chrome that is not a role: `--card-shadow` (bevels — a value token, because

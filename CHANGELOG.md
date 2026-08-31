@@ -8,6 +8,18 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-08
 
+- 2026-08-30 **Tags in the text, not twice; the row opens the thread; links, YouTube and video
+  play in place; a Bluesky skin; "Open on" follows your provider; bigger names.** A post's #tags,
+  links and @mentions are now live in its text on the board, and the chip row that repeated the
+  tags is gone. The post's words are text (a link post's included) and a press on the row's own
+  ground opens the thread, the way bsky.app's card does. A link's card stands its picture on the
+  stage, centred, with the title, description and host under it; a **YouTube** link says so and
+  plays in place on a press; a **Bluesky video** plays in place too (Safari natively; other
+  browsers load a small player on the press). Settings → Skin gains **Bluesky** (light and dim) —
+  bsky.app's colours, and the like is a heart there. The ⋯ menu's "Open on …" names your
+  signed-in provider's app when it has one (today: bsky.app; Blacksky, EuroSky and Northsky
+  are providers without a web app, so it still says bsky.app). Bylines read at the post's size.
+  (mock feed-row v13, decisions 27–33; E's hashtags as option 1)
 - 2026-08-30 **⟳ reposts, or quotes with a comment.** In a thread every post and comment carries
   ⟳ with one figure — reposts and quotes together, the way bsky.app counts it. Pressing it opens a
   sheet: add a comment and **Post** to quote it (a post of yours that shows this one; it appears

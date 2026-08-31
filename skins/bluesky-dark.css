@@ -1,0 +1,68 @@
+/* Bluesky (dim) — feed-row v13 decision 27 (owner, 2026-08-30: "let's do a classic bsky
+   skin as well … we can even make the upvote a heart in this case"). Sibling of `bluesky`.
+
+   bsky.app's DIM theme as a token sheet: the blue-black ground, the #1083FE blue for
+   fills and links, white ink, and — the one thing no other skin does — the like drawn
+   as a HEART (--like-glyph) in bsky's pink. Read off bsky.app's screenshots and its
+   published palette (the "dim" scheme), not synthesised. The rows are unstriped like
+   bsky.app's feed; the lit row is its hover.
+
+   CONTRAST (all measured by test/skins.test.js, AA):
+     ink   #F1F3F5 on page #161E27  ~14.6:1   body
+     muted #AEBBC9 on card #1E2936   ~7.3:1   body
+     link  #4C9EFF on card           ~5.7:1   body
+     white on --brand-fill #0B66CC  >= 4.5   body (bsky's #1083FE is 3.7 on white; the fill is the one value moved, and only for the button's text) */
+
+:root {
+  --bg:          #161E27;
+  --card:        #1E2936;
+  --card-2:      #2A3A4D;
+  --text:        #F1F3F5;
+  --muted:       #AEBBC9;
+  --border:      #2E3F50;
+
+  --link:        #4C9EFF;
+  --link-hover:  #7CB8FF;
+  --brand-ink:   #4C9EFF;
+  --brand-fill:  #0B66CC;
+  --brand-fill-hover: #0A5CB8;
+  --on-brand:    #FFFFFF;
+
+  --band-fill:   #161E27;
+  --band-ink:    #F1F3F5;
+  --band-link:   #4C9EFF;
+  --band-brand:  #4C9EFF;
+  --nav-fill:    #161E27;
+  --panel:       #1E2936;
+  --row-odd:     transparent;
+  --row-even:    transparent;
+  --row-head:    transparent;
+  /* the lit row (feed-row 22): bsky.app's own hover step over its card */
+  --row-hover:   #253243;
+
+  --boost:       #EC4899;   /* the heart, filled: bsky's like pink */
+  --bury:        #F0938A;
+  --tint:        #12293F;
+
+  --gold-500:    #D4A94E;
+  --gold-strong: #E2BC64;
+  --danger:      #F0938A;
+  --danger-ink:  #F0938A;
+  --danger-tint: #3A2320;
+  --clay-600:    #A24D2C;
+  --stripe:      rgba(255,255,255,.04);
+
+  --font-body:   Inter, "Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: Inter, "Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --radius-card:  10px;
+  --radius-chip:  999px;
+  --radius-sm:    6px;
+  --radius-media: 12px;
+  --radius-round: 50%;
+
+  /* the like is a heart here — the one glyph a skin may change (decision 27) */
+  --like-glyph:  '♥';
+
+  --color-scheme: dark;
+}

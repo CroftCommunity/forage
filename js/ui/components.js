@@ -70,7 +70,7 @@ export const guestGate = () => toast('Log in to vote.', 'err'); // the sandbox's
 // before share, like a post row's and the thread head's.
 export function vote(subjectType, id, data, canVote, { onVote = null, onGuest = null } = {}) {
   const n = el('span', { class: 'n' }, fmtScore(data.likes));
-  const arrow = el('span', { class: 'arrow', 'aria-hidden': 'true' }, '\u25B2');
+  const arrow = el('span', { class: 'arrow', 'aria-hidden': 'true' }); // the glyph is painted from --like-glyph (v13 decision 27)
   const cls = 'vote';
   if (!canVote && onGuest) {
     const person = el('span', { class: 'glyph', 'aria-hidden': 'true', html: PERSON_GLYPH });
@@ -360,7 +360,22 @@ export function postRow(p, viewerCanVote, opts = {}) {
   // no empty line where the crumb was — and appended conditionally, because
   // Element.append stringifies a null into the word "null" (the v7 frame)
   if (meta.childElementCount) right.append(meta);
-  return el('div', { class: 'postrow' + (p.pinned ? ' pinned-row' : '') + (opts.compact ? ' compact' : '') }, right);
+  const wrap = el('div', { class: 'postrow' + (p.pinned ? ' pinned-row' : '') + (opts.compact ? ' compact' : '') }, right);
+  // feed-row v13 (E, bsky.app's card): the ROW opens its thread on a press on its
+  // own ground — the text is text now (tags, links and mentions live in it), so
+  // it is no longer the link. Anything that is a control keeps its own press;
+  // a drag that selected text is not a press. The replies control stays the
+  // accessible path to the thread (its name says so).
+  if (opts.open) {
+    wrap.dataset.open = '1';
+    wrap.addEventListener('click', (e) => {
+      if (e.defaultPrevented || e.button !== 0) return;
+      if (e.target.closest('a, button, input, textarea, select, label, dialog, video, iframe, [data-no-open]')) return;
+      if (window.getSelection?.()?.toString()) return;
+      opts.open(wrap);
+    });
+  }
+  return wrap;
 }
 
 // ---------- deep links (plan 2026-08-29 post-and-thread, decision 10) ----------

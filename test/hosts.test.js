@@ -11,7 +11,7 @@
 // through the vendored client (Phase 0 D1).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { HOSTS, SIGNUP, hostById, featuredHosts, otherHosts, canCreateAccount, validateHosts }
+import { HOSTS, SIGNUP, hostById, featuredHosts, otherHosts, canCreateAccount, validateHosts, appFor }
   from '../js/auth/hosts.js';
 
 test('4k: every host declares an entryway, a label, and a signup posture', () => {
@@ -99,4 +99,19 @@ test('4k: the registry knows eurosky.social is OPEN and speaks OAuth (probed 202
   assert.equal(h.entryway, 'https://eurosky.social');
   assert.equal(h.signups, SIGNUP.OPEN);
   assert.equal(h.label, 'EuroSky');
+});
+
+// feed-row v13 decision 28 (owner: "can we make this open on bsky.app respective
+// to the user's actual logged in provider?"): the ⋯ menu's "Open on …" follows
+// the signed-in provider when the registry names a web app for it. Probed
+// 2026-08-30: blacksky.app, eurosky.social and northsky.social are PDS hosts
+// with no /profile route (404) — no app to name — so they fall back to bsky.app,
+// and the item SAYS bsky.app rather than pretending. bsky.social is Bluesky's
+// PDS; its app is bsky.app.
+test('appFor: the signed-in provider names its app, or bsky.app stands in and says so', () => {
+  assert.deepEqual(appFor('https://bsky.social'), { url: 'https://bsky.app', host: 'bsky.app', own: true });
+  assert.deepEqual(appFor('https://blacksky.app'), { url: 'https://bsky.app', host: 'bsky.app', own: false });
+  assert.deepEqual(appFor(null), { url: 'https://bsky.app', host: 'bsky.app', own: false });
+  assert.equal(HOSTS.find((h) => h.id === 'bsky').app, 'https://bsky.app');
+  for (const h of HOSTS) if (h.id !== 'bsky') assert.equal(h.app, null, `${h.id}: no app probed yet — null, never a guess`);
 });

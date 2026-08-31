@@ -131,11 +131,11 @@ export async function run() {
       const row = page.locator('.postrow').nth(1);
       await row.scrollIntoViewIfNeeded();
       const rest = await row.evaluate((r) => getComputedStyle(r).backgroundColor);
-      await row.locator('.posttitle a').hover();
+      await row.locator('.posttitle').hover(); // v13: the text is text, not a link — the pointer rests on it
       const on = await row.evaluate((r) => {
         const probe = document.createElement('div'); probe.style.background = 'var(--row-hover)'; document.body.append(probe);
         const want = getComputedStyle(probe).backgroundColor; probe.remove();
-        return { bg: getComputedStyle(r).backgroundColor, want, underline: getComputedStyle(r.querySelector('.posttitle a')).textDecorationLine };
+        return { bg: getComputedStyle(r).backgroundColor, want, underline: getComputedStyle(r.querySelector('.posttitle')).textDecorationLine };
       });
       await row.locator('.actions [data-vote]').hover();
       const control = await row.evaluate((r) => ({ row: getComputedStyle(r).backgroundColor, like: getComputedStyle(r.querySelector('.actions [data-vote]')).backgroundColor }));
@@ -158,6 +158,65 @@ export async function run() {
     assert.ok(byWho['erislovesgardens.bsky.social']?.stage, 'the portrait post stands on a stage');
     assert.ok(byWho['misterhooperspecial.bsky.social']?.pictures >= 1, 'the four-picture post stands on a stage too');
     assert.equal(byWho['quietcartographer.bsky.social']?.pictures, 0, 'a text post has no stage and no empty frame');
+    // ---- feed-row v13 (plan 2026-08-30-plan-feed-row-pointer-reply-quotes, E and H–K) ----
+    const rowOf = (handle) => page.locator('.postrow').filter({ has: page.locator(`.who[data-handle="${handle}"]`) }).first();
+    // K (owner: "bump the size up on the top left author attribution too"): the
+    // chosen name reads at the post text's size — bsky.app's byline is the post's size
+    const sizes = await page.evaluate(() => { const r = document.querySelector('.postrow'); return { who: parseFloat(getComputedStyle(r.querySelector('.byline .who')).fontSize), text: parseFloat(getComputedStyle(r.querySelector('.posttitle')).fontSize) }; });
+    assert.ok(sizes.who >= sizes.text, `the byline's name is smaller than the post text (${sizes.who}px < ${sizes.text}px)`);
+    // E, option 1 (owner: "I don't love how we extract every hashtag and present it
+    // under and have it in the original"): no chip row; the tags stay in the
+    // text as links; the ROW opens its thread (bsky.app's card), a tag opens its board
+    assert.equal(await page.locator('.postrow .tag').count(), 0, 'no hashtag chips under a row — the tags are in the text');
+    const portrait = rowOf('erislovesgardens.bsky.social');
+    assert.equal(await portrait.locator('.posttext a[data-tag="bog"]').getAttribute('href'), '/h/bog', 'a #tag in the row’s text is a link to its board');
+    assert.equal(await portrait.locator('.posttext a[href^="/h/"]').count(), 4, 'all four tags, in place');
+    await portrait.scrollIntoViewIfNeeded();
+    const padding = await portrait.evaluate((r) => { const b = r.getBoundingClientRect(); const cs = getComputedStyle(r); return { x: b.left + parseFloat(cs.paddingLeft) / 2, y: b.top + parseFloat(cs.paddingTop) / 2 }; });
+    await page.mouse.click(padding.x, padding.y);
+    await page.waitForFunction(() => location.pathname !== '/f/whats-hot');
+    await page.waitForSelector('#main .head-actions', { timeout: 15000 }); // the thread head has rendered
+    assert.ok(decodeURIComponent(page.url()).includes('/portrait'), `a press on the row’s own ground opens its thread (${page.url()})`);
+    await page.goBack(); await page.waitForSelector('.postrow');
+    await rowOf('erislovesgardens.bsky.social').locator('.posttext a[data-tag="bog"]').click(); // Playwright scrolls a locator into view itself
+    await page.waitForFunction(() => location.pathname.startsWith('/h/'));
+    assert.equal(new URL(page.url()).pathname, '/h/bog', 'a press on a tag opens the tag’s board, not the thread');
+    await page.goBack(); await page.waitForSelector('.postrow');
+    // J (owner: a link to a book — "the image should be centered? can we improve that?"):
+    // the external card stands its picture on a stage, centred, with the title
+    // and the host under it
+    const bookCard = rowOf('briarpatchradio.bsky.social').locator('[data-extcard]');
+    assert.equal(await bookCard.count(), 1, 'a link post carries an external card');
+    const bookGeo = await bookCard.evaluate((c) => { const st = c.querySelector('.stage'); const img = c.querySelector('.stage img.stage-fore'); if (!st || !img) return { stage: !!st, img: !!img };
+      const s = st.getBoundingClientRect(), r = img.getBoundingClientRect(); const ratio = img.naturalWidth / img.naturalHeight; const drawnW = Math.min(r.width, r.height * ratio); const left = (r.width - drawnW) / 2;
+      return { stage: true, img: true, centred: Math.abs((s.left + left) - (s.right - left - drawnW)) <= 2 && left > 20, title: c.querySelector('[data-ext-title]')?.textContent.trim(), host: c.querySelector('[data-ext-host]')?.textContent.trim() }; });
+    assert.ok(bookGeo.stage && bookGeo.img, `the book’s picture stands on a stage (stage ${bookGeo.stage}, picture ${bookGeo.img})`);
+    assert.ok(bookGeo.centred, 'the portrait cover is centred in its frame, not pinned to an edge');
+    assert.equal(bookGeo.title, 'The Bog Book', 'the card names the link');
+    assert.equal(bookGeo.host, 'example.org', 'and its host');
+    // H (owner: "this youtube video should be playable in place and should be
+    // clearly a youtube video"): the card says YouTube; nothing from YouTube
+    // loads until the press; the press swaps in the player, and stays on Forage
+    const yt = rowOf('grickle.bsky.social').locator('[data-extcard]');
+    assert.equal(await yt.getAttribute('data-provider'), 'youtube', 'the card knows it is YouTube');
+    assert.match(await yt.locator('[data-ext-provider]').textContent(), /YouTube/, 'and says so');
+    assert.equal(await yt.locator('iframe').count(), 0, 'no player, and nothing from YouTube, before the press');
+    await yt.locator('button[data-play]').click();
+    assert.match(await yt.locator('iframe').getAttribute('src'), /^https:\/\/www\.youtube-nocookie\.com\/embed\/dok0rJSo8ug\b/, 'the press embeds the video (nocookie), in place');
+    assert.equal(new URL(page.url()).pathname, '/f/whats-hot', 'and Forage is still the page');
+    // I (owner: "this video seems to open directly on bluesky instead of playing
+    // the content"): a native video plays in place — a button, not a link out;
+    // the press mounts a <video> with the poster and the playlist; still on Forage
+    const clip = rowOf('tiredactor.bsky.social').locator('.stage[data-stage="video"]');
+    assert.equal(await clip.count(), 1, 'the clip stands on a video stage');
+    assert.equal(await clip.locator('a[href*="bsky.app"]').count(), 0, 'the stage no longer links out to bsky.app');
+    assert.equal(await clip.locator('video').count(), 0, 'no <video> before the press');
+    await clip.locator('button[data-play]').click();
+    const v = clip.locator('video');
+    assert.equal(await v.count(), 1, 'the press mounts the player');
+    assert.match(await v.getAttribute('data-playlist'), /^https:\/\/video\.cdn\.test\/clip\/playlist\.m3u8$/, 'on the post’s playlist');
+    assert.ok((await v.getAttribute('poster') || '').startsWith('data:image/svg'), 'with the thumbnail as its poster');
+    assert.equal(new URL(page.url()).pathname, '/f/whats-hot', 'and Forage is still the page');
     assert.deepEqual(await s.shimMisses(), []);
     assert.deepEqual(s.errors(), []);
   } finally { await s.close(); }
