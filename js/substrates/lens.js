@@ -826,6 +826,9 @@ export function feedCardModel(info) {
   return {
     avatar: info.avatar || null,
     headline: a.headline,
+    // feed-row v7: the curator, and where they live — the card links them out
+    creator: info.creator || null,
+    creatorUrl: info.creator ? `https://bsky.app/profile/${encodeURIComponent(info.creator)}` : null,
     likeCount: info.likeCount || 0,
     blurb: a.detail,
     blurbIsOwnWords: Boolean(info.description),

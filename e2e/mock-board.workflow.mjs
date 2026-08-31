@@ -85,6 +85,22 @@ export async function run() {
     // feed-row v5 claim 17 (owner: 'change "Feed order" to "Default"'): the sort's
     // first choice — the order the feed's own generator hands us — is called Default
     assert.equal(await page.locator('#main .sortbar select').first().locator('option').first().innerText(), 'Default', 'the sort’s first choice is "Default"');
+    // feed-row v7 claim 22 (owner: '"123 likes curated by @bsky.app" > description …
+    // a bit of a highlight outline … make bsky.app a link out'): one line — likes,
+    // then the curator as a link out to bsky.app — the description quoted under
+    // it, and the card outlined
+    const fh = await page.$eval('#main [data-feed-header]', (c) => ({
+      line: c.querySelector('[data-feed-line]')?.textContent.replace(/\s+/g, ' ').trim() ?? null,
+      link: c.querySelector('[data-feed-line] a')?.getAttribute('href') ?? null,
+      blank: c.querySelector('[data-feed-line] a')?.getAttribute('target') ?? null,
+      blurb: c.querySelector('[data-feed-blurb]')?.textContent.trim() ?? null,
+      highlight: c.classList.contains('highlight'), shadow: getComputedStyle(c).boxShadow,
+    }));
+    assert.equal(fh.line, '39.4k likes · Curated by @bsky.app', `the card's first line (${fh.line})`);
+    assert.equal(fh.link, 'https://bsky.app/profile/bsky.app', 'the curator links out to bsky.app');
+    assert.equal(fh.blank, '_blank', 'in a new tab — it leaves Forage');
+    assert.equal(fh.blurb, 'trending', 'the description sits under it, quoted');
+    assert.ok(fh.highlight && fh.shadow !== 'none', `the card carries a highlight outline (class ${fh.highlight}, shadow ${fh.shadow})`);
     assert.equal(new Set(list.map((r) => r.likeLeft)).size, 1,
       `the like does not line up down the board: lefts ${list.map((r) => r.likeLeft).join(', ')}`);
     // board-cards decision D: a picture post stands on a stage, sized from its

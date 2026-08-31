@@ -951,6 +951,9 @@ test('3p: feedCardModel never restates the feed title — the <h1> above it alre
   assert.equal(m.title, undefined, 'the card carries no title feed at all — it cannot drift back');
   assert.doesNotMatch(m.headline, /Funny/, 'the headline says who curates, not what it is called');
   assert.equal(m.headline, 'Curated by @alexismadd.bsky.social.');
+  // feed-row v7: the card's first line links the curator out to bsky.app
+  assert.equal(m.creator, 'alexismadd.bsky.social');
+  assert.equal(m.creatorUrl, 'https://bsky.app/profile/alexismadd.bsky.social');
   assert.equal(m.avatar, 'https://cdn.test/a.png', 'the logo stays — it is the one thing worth the space');
   assert.equal(m.likeCount, 16);
   assert.equal(m.blurb, info.description, 'the feed’s own words, verbatim (DL-025)');

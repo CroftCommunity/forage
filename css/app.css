@@ -705,6 +705,8 @@ hr.rule { border: none; border-top: 1px solid var(--border); margin: var(--s4) 0
 .feed-avatar { width: 40px; height: 40px; border-radius: var(--radius-card); border: 1px solid var(--border); flex: none; }
 /* 3p: the feed's own description, quoted like a thread quote — the rule is the
    feed's words, so it reads as a quotation, not as our copy. */
+/* feed-row v7: the feed's own box, outlined a step brighter than the rows */
+.card.highlight { border-color: var(--brand-ink); box-shadow: 0 0 0 3px var(--tint); }
 .feed-blurb { margin: 8px 0 0; padding-left: 10px; border-left: 3px solid var(--border); font-size: var(--t-sm); white-space: pre-wrap; overflow-wrap: anywhere; }
 .profile-banner { width: 100%; max-height: 140px; object-fit: cover; border-radius: var(--radius-card); margin-bottom: 8px; }
 .profile-avatar { width: 72px; height: 72px; border-radius: var(--radius-chip); border: 2px solid var(--card); flex: none; }

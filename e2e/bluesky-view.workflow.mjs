@@ -579,7 +579,7 @@ export async function run() {
   // 3m: a FEED promises nothing — curator + verbatim description, no compose
   // 3p: and it is ONE box, which never restates the <h1> above it
   await page.waitForSelector('[data-affordance="curated"]');
-  await page.waitForSelector('text=Curated by @curator.test.');
+  await page.waitForSelector('text=Curated by @curator.test');
   await page.waitForSelector('[data-feed-blurb="feed"]:has-text("Post with #meadow to be considered.")');
   assert.equal(await page.locator('[data-affordance="curated"] [data-compose]').count(), 0,
     'no post-to button on a feed — it would be a lie (DL-025)');
@@ -710,7 +710,7 @@ export async function run() {
   // rkey has no did. The creator-qualified path can.
   await page.goto(`${s.origin}/f/@curator.test/meadow1`);
   await page.waitForSelector('[data-feed-header]', { timeout: 15000 });
-  await page.waitForSelector('text=Curated by @curator.test.');
+  await page.waitForSelector('text=Curated by @curator.test');
   assert.equal(await page.locator('text=Unknown lens Feed').count(), 0,
     'a pasted feed link resolves for someone who has never opened the app');
   assert.deepEqual(await s.shimMisses(), [], 'every network read had a fixture');
