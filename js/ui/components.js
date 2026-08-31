@@ -65,19 +65,22 @@ const PERSON_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
 // are not wired) keeps the read-only count — a door for someone already inside
 // would be a lie. The door is a claim about the viewer, so the caller makes it.
 export const guestGate = () => toast('Log in to vote.', 'err'); // the sandbox's answer (O1) — the same words as actions.setVote's gate
-export function vote(subjectType, id, data, canVote, { layout = 'pill', onVote = null, onGuest = null } = {}) {
+// feed-row v9 (owner, 2026-08-31): ONE layout — the pill. The comment's
+// column stack ('avvote') is gone: the like sits on the comment's action row
+// before share, like a post row's and the thread head's.
+export function vote(subjectType, id, data, canVote, { onVote = null, onGuest = null } = {}) {
   const n = el('span', { class: 'n' }, fmtScore(data.likes));
   const arrow = el('span', { class: 'arrow', 'aria-hidden': 'true' }, '\u25B2');
-  const cls = layout === 'stack' ? 'avvote' : 'vote';
+  const cls = 'vote';
   if (!canVote && onGuest) {
     const person = el('span', { class: 'glyph', 'aria-hidden': 'true', html: PERSON_GLYPH });
     const door = el('button', { type: 'button', class: cls, 'data-vote': subjectType, 'data-guest': '1',
       'aria-label': `${plural(data.likes, 'like')} \u2014 sign in to like`, title: 'Sign in to like' },
-      ...(layout === 'stack' ? [n, person] : [person, n]));
+      person, n);
     door.addEventListener('click', onGuest);
     return door;
   }
-  const parts = layout === 'stack' ? [n, arrow] : [arrow, n];
+  const parts = [arrow, n];
   if (!canVote) {
     // role="img" + aria-label: a bare "12" says nothing about twelve of what
     return el('span', { class: cls, 'data-vote': subjectType, 'data-readonly': '1', role: 'img',
@@ -251,9 +254,11 @@ function stewardItems(type, subject) {
 // away as the name's tooltip, and in the accessible name. A row with no chosen
 // name shows the handle. `data-handle` is the stable hook for tests and
 // tooling, since the text is no longer the handle.
-export function whoNode(author, authorName, badge = '') {
+// `href` makes it a link (the thread head's name opens the profile) and keeps
+// it a direct `.who` child of the byline, so the one-line rules still apply.
+export function whoNode(author, authorName, badge = '', href = null) {
   const name = authorName || author;
-  return el('span', { class: 'who', 'data-handle': author,
+  return el(href ? 'a' : 'span', { class: 'who', 'data-handle': author, ...(href ? { href } : {}),
     ...(authorName ? { title: `@${author}`, 'aria-label': `${authorName} (@${author})` } : {}) }, name, badge || '');
 }
 
@@ -277,8 +282,10 @@ export function postRow(p, viewerCanVote, opts = {}) {
   const meta = el('div', { class: 'postmeta' },
     // 3v: the lens passes a creator-qualified href when it has one, so a
     // copied breadcrumb resolves for a stranger. Memory Feeds are local and
-    // need no creator, so the plain slug stays the default.
-    el('a', { href: opts.feedHref || `/f/${p.feedSlug}` }, opts.feedLabel || `f/${p.feedSlug}`),
+    // need no creator, so the plain slug stays the default. feed-row v7: a
+    // lens row passes `feedCrumb: false` — on a lens board every row's feed IS
+    // the board, and the line read the same under every post (owner).
+    opts.feedCrumb === false ? null : el('a', { href: opts.feedHref || `/f/${p.feedSlug}` }, opts.feedLabel || `f/${p.feedSlug}`),
     p.format === 'link' && p.url ? el('span', { class: 'domain' }, domainOf(p.url)) : null,
     p.edited ? el('span', { class: 'muted' }, 'edited') : null,
     opts.metaExtra || null, // 3u: the lens hangs a language chip here
@@ -349,8 +356,10 @@ export function postRow(p, viewerCanVote, opts = {}) {
     vote('post', p.id, p, viewerCanVote, { onVote: opts.onVote,
       // the lens passes its sheet; a sandbox row decides from its feed-scoped perms
       onGuest: opts.onGuest ?? (opts.perms?.(p)?.loggedIn ? null : guestGate) }),
-    shareButton(opts.permalink ?? `${location.origin}${link}`, 'post')),
-  meta);
+    shareButton(opts.permalink ?? `${location.origin}${link}`, 'post')));
+  // no empty line where the crumb was — and appended conditionally, because
+  // Element.append stringifies a null into the word "null" (the v7 frame)
+  if (meta.childElementCount) right.append(meta);
   return el('div', { class: 'postrow' + (p.pinned ? ' pinned-row' : '') + (opts.compact ? ' compact' : '') }, right);
 }
 
@@ -472,12 +481,12 @@ export function commentNode(node, ctx) {
 
   const actionsRow = el('div', { class: 'comment-actions' });
   const replyHost = el('div', { class: 'reply-host' }); // where a lens composer lands, under this node
-  // the vote stack is a grid sibling in the avatar column, on the action row's
-  // line, the rail passing behind it (decision 1)
-  // ctx.onVote(node) hands the lens its like/unlike for THIS node, the same
-  // seam postRow already had; the memory tier passes none and writes locally
+  // feed-row v9 (owner): the like is a pill on the action row, before share —
+  // the same cell a post row gives it. (Decision 1's column stack, 2026-08-29,
+  // is retired.) ctx.onVote(node) hands the lens its like/unlike for THIS node,
+  // the same seam postRow already had; the memory tier passes none and writes locally
   const voteEl = node.maskedRemoved || node.deleted ? null
-    : vote('comment', node.id, node, ctx.canVote, { layout: 'stack', onGuest: ctx.onGuest, onVote: ctx.onVote ? ctx.onVote(node) : null });
+    : vote('comment', node.id, node, ctx.canVote, { onGuest: ctx.onGuest, onVote: ctx.onVote ? ctx.onVote(node) : null });
   if (fold) actionsRow.append(fold);
   if (!node.maskedRemoved && !node.deleted) {
     // Reply on EVERY node (post-and-thread decision 2's row, mock v18 claim C):
@@ -490,6 +499,7 @@ export function commentNode(node, ctx) {
     // rows are untouched.
     const extra = ctx.extraActions?.(node);
     if (extra) actionsRow.append(...[].concat(extra).filter(Boolean));
+    if (voteEl) actionsRow.append(voteEl); // v9: the like, then share last (decision 10)
     // decision 10: the permalink — the lens supplies its own address (Phase 13)
     const permalink = ctx.permalink ? ctx.permalink(node)
       : `${location.origin}/f/${ctx.feedSlug}/p/${node.postId}?focus=${encodeURIComponent(node.id)}`;
@@ -498,7 +508,7 @@ export function commentNode(node, ctx) {
 
   // .comment-body is display:contents — its children sit in the comment's
   // grid, and every suite's `> .comment-body > .byline` keeps working
-  const bodyWrap = el('div', { class: 'comment-body' }, meta, text, voteEl, actionsRow, replyHost);
+  const bodyWrap = el('div', { class: 'comment-body' }, meta, text, actionsRow, replyHost);
   const childrenWrap = el('div', { class: 'kids' });
 
   wrap.append(avcol, bodyWrap, childrenWrap);

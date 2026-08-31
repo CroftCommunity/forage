@@ -168,7 +168,7 @@ export async function run() {
     // on production (2026-08-29): the head's pill liked; the reply's stack did
     // nothing, because the thread's comment context inherited the guest perms.
     const reply = inn.page.locator('.comment[data-node-id="at://did:plc:bb/app.bsky.feed.post/b"]');
-    const stack = reply.locator('> .comment-body > button[data-vote="comment"]');
+    const stack = reply.locator('> .comment-body > .comment-actions button[data-vote="comment"]'); // v9: the like is on the action row
     assert.equal(await stack.count(), 1, 'signed in, a reply\u2019s vote stack is a button');
     await stack.click();
     await inn.page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('createRecord')));
@@ -189,17 +189,17 @@ export async function run() {
     const av = await reply.locator('> .avcol > .av').evaluate((a) => ({ img: !!a.querySelector('img'), text: a.textContent.trim() }));
     assert.deepEqual(av, { img: true, text: '' }, 'a picture replaces the initials outright');
 
-    // Placement (owner, 2026-08-29): the stack sits at the vertical middle of
-    // the comment's own body — text through action row — not parked at the
-    // bottom of the avatar column.
+    // Placement (owner, 2026-08-31 — feed-row v9, retiring the 2026-08-29 column
+    // stack): the like is a pill ON the action row, on that row's line, before share.
     const geo = await reply.evaluate((c) => {
       const r = (sel) => c.querySelector(sel).getBoundingClientRect();
-      const text = r(':scope > .comment-body > .comment-text'), acts = r(':scope > .comment-body > .comment-actions');
-      const v = r(':scope > .comment-body > [data-vote]');
-      return { bodyMid: (text.top + acts.bottom) / 2, voteMid: (v.top + v.bottom) / 2 };
+      const acts = r(':scope > .comment-body > .comment-actions');
+      const v = r(':scope > .comment-body > .comment-actions [data-vote]');
+      const kids = [...c.querySelector(':scope > .comment-body > .comment-actions').children];
+      return { actsMid: (acts.top + acts.bottom) / 2, voteMid: (v.top + v.bottom) / 2, beforeShare: kids.findIndex((k) => k.matches('[data-vote]')) === kids.findIndex((k) => k.matches('.share')) - 1 };
     });
-    assert.ok(Math.abs(geo.bodyMid - geo.voteMid) <= 4,
-      `the vote stack is centred on the comment body: body mid ${geo.bodyMid}, vote mid ${geo.voteMid}`);
+    assert.ok(Math.abs(geo.actsMid - geo.voteMid) <= 4, `the like sits on the action row's line: row mid ${geo.actsMid}, like mid ${geo.voteMid}`);
+    assert.ok(geo.beforeShare, 'and right before share');
   } finally { await inn.close(); }
 
   // ---------- the sandbox, signed OUT and IN ----------

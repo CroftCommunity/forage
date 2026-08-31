@@ -12,11 +12,14 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 
 ## Needs the owner
 
-- **Images on a reply (feed-row O7).** The `/reply` page and the quick box under a comment
-  are text-only since feed-row v4 (2026-08-30); the composer that used to unfold there
-  carried an image strip with required alt text. Bring "Add image" back on the page
-  (`replyBox` in `js/ui/lens-views.js`, the strip logic in `composerCard`); the quick box
-  stays text. Mock: `plans/mocks/feed-row.html` § F/G.
+- ~~**Images on a reply (feed-row O7).**~~ — DONE 2026-08-31 (feed-row v6): the reply page
+  carries the composer's picker (`imagePicker` in `js/ui/lens-views.js`); the quick box
+  stays text.
+
+- **GIF search on the reply box (feed-row O9).** The GIF button attaches a `.gif` from the
+  device. bsky.app searches Tenor through its own proxy — endpoint and key unverified from
+  here; probe first (CLAUDE.md § External APIs), then a picker. Mock: `plans/mocks/feed-row.html`
+  decision 16.
 
 - **A native mirror of drafts (feed-row O8).** Drafts live in this browser (`js/drafts.js`).
   `app.bsky.draft.createDraft/updateDraft/getDrafts/deleteDraft` (private stash) could hold

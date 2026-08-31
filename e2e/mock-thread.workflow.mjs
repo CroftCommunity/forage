@@ -87,22 +87,28 @@ export async function run() {
     assert.equal(body.record.reply.parent.uri, target, 'the reply names the comment as its parent');
     assert.equal(body.record.reply.root.uri, ROOT, 'and the post as its root');
 
-    // Claim B (decision 1, as amended 2026-08-29 in c8af809): the vote stack sits
-    // in the avatar column at the vertical middle of the body, a BUTTON when
-    // signed in, and the quote's stack is no different from a reply's.
+    // Claim B — as re-decided by the owner 2026-08-31 (feed-row v9: "move away
+    // from the upvote in the thread line and put it in the middle of the comment
+    // at the bottom similar to other places"): the like is a pill on the
+    // comment's ACTION ROW, in the cell before share (third of four under a
+    // comment with children, the middle one otherwise), a BUTTON when signed
+    // in; nothing sits in the avatar column but the avatar and the rail. The
+    // row is one line, and its cells line up like a post row's.
     const stacks = await page.$$eval('.comment', (cs) => cs.map((c) => {
-      const st = c.querySelector(':scope > .comment-body > button.avvote');
-      const av = c.querySelector(':scope > .avcol .av').getBoundingClientRect();
-      const text = c.querySelector(':scope > .comment-body > .comment-text').getBoundingClientRect();
-      const acts = c.querySelector(':scope > .comment-body > .comment-actions').getBoundingClientRect();
-      const r = st?.getBoundingClientRect();
-      return { id: c.dataset.nodeId, isButton: !!st, inColumn: r ? Math.abs((r.left + r.right) / 2 - (av.left + av.right) / 2) <= 2 : false,
-        middle: r ? Math.abs((r.top + r.bottom) / 2 - (text.top + acts.bottom) / 2) <= 6 : false };
+      const acts = c.querySelector(':scope > .comment-body > .comment-actions');
+      const kids = [...acts.children].map((k) => k.matches('[data-fold]') ? 'fold' : k.matches('.reply') ? 'reply' : k.matches('[data-vote]') ? 'like' : k.matches('.share') ? 'share' : k.matches('[data-repost]') ? 'repost' : k.className);
+      const like = acts.querySelector('button[data-vote]');
+      const mids = [...acts.children].map((k) => { const r = k.getBoundingClientRect(); return r.top + r.height / 2; });
+      return { id: c.dataset.nodeId, kids, isButton: !!like, inColumn: !!c.querySelector(':scope > .comment-body > .avvote, :scope > .avcol [data-vote]'),
+        oneLine: Math.max(...mids) - Math.min(...mids) <= 2 };
     }));
     for (const st of stacks) {
-      assert.ok(st.isButton, `${st.id}: signed in, the stack is a button`);
-      assert.ok(st.inColumn, `${st.id}: the stack is centred in the avatar column`);
-      assert.ok(st.middle, `${st.id}: the stack sits at the vertical middle of the body`);
+      assert.ok(st.isButton, `${st.id}: signed in, the like on the action row is a button`);
+      assert.equal(st.inColumn, false, `${st.id}: nothing votes from the avatar column any more`);
+      const li = st.kids.indexOf('like'), sh = st.kids.indexOf('share');
+      assert.ok(li >= 0 && sh === li + 1, `${st.id}: the like sits right before share (${st.kids.join(' · ')})`);
+      assert.ok(st.kids.indexOf('reply') < li, `${st.id}: Reply comes before the like (${st.kids.join(' · ')})`);
+      assert.ok(st.oneLine, `${st.id}: the action row wrapped`);
     }
     // Claim F (decision 10, mock v19 § F): a deep link lands on ITS comment and
     // stays there — the quote cascade repaints the list after the first paint,
@@ -133,6 +139,31 @@ export async function run() {
     });
     assert.ok(geo.rightGap <= 4, `Reply is not at the right end of its row (gap ${geo.rightGap}px)`);
     assert.ok(geo.sameLine, 'Reply shares the line with the like pill');
+    // feed-row v6 (owner: "move the name here to the human display name in the top
+    // left and put the f/threads content on the top right"): the head opens with
+    // a byline — avatar, the chosen name, the mark, the time — and the board's
+    // breadcrumb sits at the right end of that same line; the like row no
+    // longer carries the author
+    const hb = await page.evaluate(() => {
+      const card = document.querySelector('#main .card'); const cs = getComputedStyle(card); const cr = card.getBoundingClientRect();
+      const left = cr.left + parseFloat(cs.paddingLeft), right = cr.right - parseFloat(cs.paddingRight);
+      const who = card.querySelector('.head-byline .who'); const crumb = card.querySelector('.head-byline .head-crumb');
+      if (!who || !crumb) return { who: !!who, crumb: !!crumb };
+      const w = who.getBoundingClientRect(), c = crumb.getBoundingClientRect(), av = card.querySelector('.head-byline .av')?.getBoundingClientRect();
+      const kebab = card.querySelector('.head-byline .kebab').getBoundingClientRect(); // the ⋯ keeps the corner (post-and-thread decision 7)
+      const text = card.querySelector('h1').getBoundingClientRect();
+      return { who: true, crumb: true, shown: who.textContent.trim(), handle: who.dataset.handle,
+        avLeftGap: av ? Math.round(av.left - left) : null, crumbRightGap: Math.round(kebab.left - c.right), kebabRightGap: Math.round(right - kebab.right),
+        sameLine: Math.abs((w.top + w.height / 2) - (c.top + c.height / 2)) <= 3, aboveText: c.bottom <= text.top,
+        authorInLikeRow: !!card.querySelector('.head-actions a[href^="/u/"]') };
+    });
+    assert.ok(hb.who && hb.crumb, `the head opens with a byline and carries the breadcrumb (who ${hb.who}, crumb ${hb.crumb})`);
+    assert.equal(hb.shown, 'The Quiet Cartographer', 'the head shows the chosen name');
+    assert.equal(hb.handle, 'quietcartographer.bsky.social', 'the handle rides as data (and the tooltip)');
+    assert.ok(hb.avLeftGap !== null && hb.avLeftGap <= 2, `the byline starts at the card's left edge (avatar ${hb.avLeftGap}px in)`);
+    assert.ok(hb.crumbRightGap <= 10 && hb.kebabRightGap <= 2, `f/thread is not right-aligned beside the ⋯ (${hb.crumbRightGap}px from the ⋯, ⋯ ${hb.kebabRightGap}px from the edge)`);
+    assert.ok(hb.sameLine && hb.aboveText, 'name and breadcrumb share the top line, above the text');
+    assert.equal(hb.authorInLikeRow, false, 'the like row no longer repeats the author');
     const pillH = await page.$eval('#main .head-actions [data-vote]', (b) => b.getBoundingClientRect().height);
     assert.ok(pillH <= 44, `the like pill was squeezed onto two lines by the row (height ${Math.round(pillH)}px)`);
     await headReply.click();
@@ -142,7 +173,34 @@ export async function run() {
     assert.ok(tb <= 4, `the answered post's ⋯ left its byline (${Math.round(tb)}px off the line)`);
     const pageBox = page.locator('[data-composer]:not([data-quick])');
     assert.equal(await pageBox.count(), 1, 'one box, the page’s');
+    // feed-row v6 claims 19–21 (owner: "a 300char count thing like in bsky,
+    // bottom right … image, gif, emoji selectors like at the bottom left"):
+    // the count (with its ring) sits right, the three tools sit left; the
+    // emoji palette inserts at the caret; an image needs alt text before Send
+    const bar = await pageBox.evaluate((b) => {
+      const box = b.getBoundingClientRect(); const mid = box.left + box.width / 2;
+      const x = (sel) => { const e = b.querySelector(sel); if (!e) return null; const r = e.getBoundingClientRect(); return r.left + r.width / 2; };
+      return { mid, count: x('[data-count]'), ring: !!b.querySelector('[data-count-ring]'), img: x('[data-attach-image]'), gif: x('[data-attach-gif]'), emoji: x('[data-emoji]'),
+        gifAccept: b.querySelector('[data-image-input="gif"]')?.getAttribute('accept') ?? null, countText: b.querySelector('[data-count]')?.textContent.trim() };
+    });
+    assert.ok(bar.count !== null && bar.count > bar.mid && bar.ring, `the count sits bottom-right with its ring (x ${Math.round(bar.count ?? -1)} vs mid ${Math.round(bar.mid)})`);
+    assert.equal(bar.countText, '300', 'an empty box has 300 left');
+    for (const [k, v] of Object.entries({ img: bar.img, gif: bar.gif, emoji: bar.emoji })) assert.ok(v !== null && v < bar.mid, `${k} selector sits bottom-left (x ${v})`);
+    assert.equal(bar.gifAccept, 'image/gif', 'the GIF selector takes a .gif from the device');
+    await pageBox.locator('[data-emoji]').click();
+    await pageBox.locator('[data-emoji-palette] button').first().click();
+    const firstEmoji = await pageBox.locator('textarea').inputValue();
+    assert.ok(firstEmoji.length > 0 && /\p{Extended_Pictographic}/u.test(firstEmoji), `the palette inserted an emoji (${JSON.stringify(firstEmoji)})`);
+    assert.equal(await pageBox.locator('[data-count]').innerText(), '299', 'one emoji is one grapheme off the count');
+    await pageBox.locator('[data-image-input="image"]').setInputFiles({ name: 'one.png', mimeType: 'image/png',
+      buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64') });
+    await pageBox.locator('[data-image-alt]').waitFor();
+    assert.equal(await pageBox.locator('[data-send]').isDisabled(), true, 'an image without alt text cannot be sent');
+    await pageBox.locator('[data-image-alt]').fill('one pixel');
+    assert.equal(await pageBox.locator('[data-send]').isDisabled(), false, 'described, it can');
+    await pageBox.locator('[data-image-remove]').click();
     await pageBox.locator('textarea').fill('a draft, not yet sent');
+    assert.equal(await pageBox.locator('[data-count]').innerText(), '279', 'the count follows the text');
     await page.waitForFunction((k) => !!localStorage.getItem(k), `forage.draft:${ROOT}`);
     await page.reload();
     await page.waitForSelector('[data-composer] textarea');

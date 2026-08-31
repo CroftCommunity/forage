@@ -80,12 +80,16 @@ test('the lens exception holds: writes are records-none, likes-one-pair, prefere
   // RECORD kinds — app.bsky.graph.block (a block is a record the blocked
   // account can see) and app.bsky.feed.repost (O6: the ⟳ on a quote is a
   // real repost, the like pair's shape) — so create/delete go 3 → 5 each.
-  assert.equal((src.match(/createRecord/g) || []).length, 5, 'exactly five createRecord (the like, the post, the tagsub, the block, the repost)');
+  // feed-row v7 (owner, 2026-08-31): Follow on the profile page — app.bsky.graph.follow,
+  // a record in MY repo naming the account by did; the like pair's shape, 5 → 6 each.
+  assert.equal((src.match(/createRecord/g) || []).length, 6, 'exactly six createRecord (the like, the post, the tagsub, the block, the repost, the follow)');
   // Phase 2 widens this to two deletes — unlike, and remove-your-own-post.
   // The count alone is weak, so every occurrence is inspected: the OLD version
   // of this check read src.indexOf('deleteRecord'), which with two deletes
   // would have silently examined only the first (caught in Pass 2 review).
-  assert.equal((src.match(/deleteRecord/g) || []).length, 5, 'exactly five deleteRecord (the unlike, the post delete, the tagsub delete, the unblock, the unrepost)');
+  assert.equal((src.match(/deleteRecord/g) || []).length, 6, 'exactly six deleteRecord (the unlike, the post delete, the tagsub delete, the unblock, the unrepost, the unfollow)');
+  assert.match(src, /FOLLOW_COLLECTION = 'app\.bsky\.graph\.follow'/, 'the follow collection is a named constant');
+  assert.equal((src.match(/collection: FOLLOW_COLLECTION/g) || []).length, 2, 'follow and unfollow bind to it');
   assert.match(src, /BLOCK_COLLECTION = 'app\.bsky\.graph\.block'/, 'the block collection is a named constant');
   assert.equal((src.match(/collection: BLOCK_COLLECTION/g) || []).length, 2, 'block and unblock bind to it');
   assert.match(src, /REPOST_COLLECTION = 'app\.bsky\.feed\.repost'/, 'and the repost collection');

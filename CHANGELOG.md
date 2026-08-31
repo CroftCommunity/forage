@@ -8,6 +8,16 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-08
 
+- 2026-08-31 **The thread opens with who wrote it; the reply box is Bluesky's shape.** A thread's
+  top line is now the author — picture, chosen name, provider mark, time — with the board's
+  `f/…` link at the right; the like row keeps the reply count and Reply. On the reply page the
+  box has Cancel · Send on top, **image · GIF · emoji** at the bottom left (images need alt text
+  before Send; GIF takes a .gif from your device) and the **300-character count with a ring** at
+  the bottom right. The box above a feed reads **39.4k likes · Curated by @bsky.app** on one
+  line — the curator a link to their bsky.app profile — with the description under it, and
+  is outlined. The `f/…` line under every post on a Bluesky board is gone (it named the board
+  you were already on). A profile page (`/u/handle`) has **Follow**. In a thread, a comment's
+  **like sits on its action row** beside Reply and share, not in the margin. (mock feed-row v9)
 - 2026-08-30 **Two picture skins: Surf and Nebula.** Settings → Skin now offers **Surf** (sand,
   a sunset band with a line of foam along its edge, ocean-blue links; *night swell* after dark)
   and **Nebula** (a starfield with violet and teal nebula veils, an indigo-to-teal band, a soft
