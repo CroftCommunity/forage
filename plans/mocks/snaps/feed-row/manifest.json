@@ -354,6 +354,44 @@
       "baseline": "forage@e255fe5",
       "population": "lens:mock-board",
       "skin": "phpbb"
+    },
+    {
+      "file": "board-lens-hover.desktop.current.png",
+      "route": "board-lens-hover",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@ad29be5",
+      "population": "lens:mock-board"
+    },
+    {
+      "file": "board-lens-hover.desktop.proposed.png",
+      "route": "board-lens-hover",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@ba62395",
+      "population": "lens:mock-board"
+    },
+    {
+      "file": "board-lens-hover.desktop.forage-dark.proposed.png",
+      "route": "board-lens-hover",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@ba62395",
+      "population": "lens:mock-board",
+      "skin": "forage-dark"
+    },
+    {
+      "file": "board-lens-hover.desktop.phpbb.proposed.png",
+      "route": "board-lens-hover",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@ba62395",
+      "population": "lens:mock-board",
+      "skin": "phpbb"
     }
   ]
 }

@@ -8,6 +8,10 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-08
 
+- 2026-08-30 **The post under your pointer lights up.** On a desktop, moving the mouse over a
+  post no longer underlines its text; the whole row takes a subtle highlight instead, the way
+  bsky.app and reddit do it, in every skin's own colour. Phones are unchanged — a tap never
+  leaves a row lit. (mock feed-row v10, decision 22)
 - 2026-08-31 **The thread opens with who wrote it; the reply box is Bluesky's shape.** A thread's
   top line is now the author — picture, chosen name, provider mark, time — with the board's
   `f/…` link at the right; the like row keeps the reply count and Reply. On the reply page the

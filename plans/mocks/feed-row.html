@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forage Feed Row Proposals v9</title>
-<meta name="mock-version" content="9">
-<meta name="mock-baseline" content="forage@7c4ee03">
-<meta name="mock-proposal" content="forage@e255fe5">
+<title>Forage Feed Row Proposals v10</title>
+<meta name="mock-version" content="10">
+<meta name="mock-baseline" content="forage@ad29be5">
+<meta name="mock-proposal" content="forage@ba62395">
 <style>
 :root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
   --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
@@ -43,13 +43,13 @@ code{font-size:.92em}
 <body>
 <div class="wrap">
   <header>
-    <div class="eyebrow">Forage · mock · feed-row <b>v9</b> · Current forage@7c4ee03 · Proposed forage@e255fe5 · 2026-08-31</div>
+    <div class="eyebrow">Forage · mock · feed-row <b>v10</b> · Current forage@ad29be5 · Proposed forage@ba62395 · 2026-08-30</div>
     <h1>The feed row, made to agree with the phone</h1>
-    <p class="sub"><b>One proposal in twenty-one decisions, for one purpose:</b> the lens feed row on forage.fyi should look the way the owner's phone expected it to, with Bluesky's own row as the reference — and this time the thing being agreed on is the app, not a drawing.
+    <p class="sub"><b>One proposal in twenty-two decisions, for one purpose:</b> the lens feed row on forage.fyi should look the way the owner's phone expected it to, with Bluesky's own row as the reference — and this time the thing being agreed on is the app, not a drawing.
       Origin: six phone screenshots of forage.fyi and bsky.app taken 2026-08-30 16:17–16:28 (phpBB skin, <code>f/whats-hot</code> and two threads), plus a desktop pair (<code>/u/pds.ls</code> → <code>f/pds.ls</code> → "Unknown feed").
       They showed: the picture the thread page renders missing from the feed; a post's text set as a bold heading; and an action row whose share arrow wrapped under "7315 · 270 comments · 1225", with the dashed like box two lines tall beside it.
       <b>None of it was visible in board-cards v9's captures</b> — default skin, card density, "1284 · 40 comments · 12".</p>
-    <p class="sub"><b>Every frame on this page is a capture of the engine</b> (MOCKS.md P1): Current is <code>main</code> at <code>7c4ee03</code> (v1–v5 landed there 2026-08-30 night; v6 measures against it), Proposed is <code>claude/thread-head</code> at <code>e255fe5</code>, both by <code>scripts/mock-snaps.mjs</code> against <code>e2e/harness/mock-board.mjs</code> / <code>mock-thread.mjs</code>, in the default skin (rule 4) — and, from v4 at the owner's ask, § H shows the board, the thread and the reply page in three skins (Forage light, Forage dark, phpBB — the phone's), at 390 × 844 and 1280 × 900.
+    <p class="sub"><b>Every frame on this page is a capture of the engine</b> (MOCKS.md P1): Current is <code>main</code> at <code>ad29be5</code> (v1–v9 landed there; v10 measures against it), Proposed is <code>claude/feed-row-hover</code> at <code>ba62395</code>, both by <code>scripts/mock-snaps.mjs</code> against <code>e2e/harness/mock-board.mjs</code> / <code>mock-thread.mjs</code>, in the default skin (rule 4) — and, from v4 at the owner's ask, § H shows the board, the thread and the reply page in three skins (Forage light, Forage dark, phpBB — the phone's), at 390 × 844 and 1280 × 900.
       The population now carries the phone's load (P2): a row with 7315 likes, 270 replies and 1225 reposts, a four-line text-plus-picture post, and (v2) the names people choose at the widths the network allows — a 64-grapheme name, an emoji name, no name, and one that impersonates. Nothing here is drawn; there is no sketch to fall short of.</p>
   </header>
 
@@ -80,10 +80,12 @@ code{font-size:.92em}
         <tr><td>19</td><td><b>Follow, on the profile page</b> (v7, owner: "we also still need to put in a follow icon or ability … on the user profile page")</td><td><code>/u/&lt;handle&gt;</code> carries <b>Follow</b> / <b>Following</b> beside the bio: one <code>app.bsky.graph.follow</code> record in your repo naming the account by did; pressing again deletes it (the like pair's shape; the write ledger in <code>test/invariants</code> goes 5 → 6 each, named). Signed out it is the door to sign-in; your own page has none. <i>No frame on this page: the hermetic populations have no profile fixture yet — the claim in <code>bluesky-view</code> holds it.</i></td><td>Follow on every row's byline (bsky.app's hover card) — heavier, and not asked for</td><td>nothing decided before</td></tr>
         <tr><td>20</td><td><b>A comment's like is on its action row</b> (v9, owner: "we agreed to move away from the upvote in the thread line and to put it in the middle of the comment at the bottom similar to other places")</td><td>The pill sits on the comment's action row right before share — fold · ↩ Reply · ▲ 11 · share, equal cells like a post row's (third of four under a comment with children, the middle one otherwise). Nothing sits in the avatar column but the avatar and the rail. <b>Retires post-and-thread decision 1's column stack</b> (2026-08-29) and the 'stack' layout of the vote control.</td><td>Keep the stack in the column (as drawn 2026-08-29)</td><td>post-and-thread decision 1; the mock-thread, no-downvote and bluesky-view claims that measured the column</td></tr>
         <tr><td>21</td><td><b>The replies link shows the hand</b> (v9, owner: "neither repost nor comment icon show the hand for selection like the upvote")</td><td><code>a.cbtn</code> gets the pointer — the replies link is a control and inherited <code>.cbtn</code>'s arrow cursor. The <b>repost glyph keeps the arrow</b> on purpose: on a row it is a <i>count</i>, not a control (post-and-thread O2 — no repost write from a row). Making it one is <b>O11</b>.</td><td>A repost control on every row (bsky.app's) — <code>lens.repost</code> exists; it is a write the row was kept from on purpose</td><td>nothing decided before on the cursor; O2 on the repost</td></tr>
+        <tr><td>22</td><td><b>The row under the pointer lights; its text does not underline</b> (v10, owner: "we give a mouseover underline … bsky and reddit both give a subtle highlight to the moused over card and that's a better model … we'll have to bake a representation into every skin")</td><td>On a device with a pointer, <code>.postrow:hover</code> paints <code>--row-hover</code> and the row's text keeps its resting look (the global <code>a:hover</code> underline no longer reaches it). A control on a lit row still shows a hover of its own (the ink mixed 10% over the lit ground). <b>Every skin declares its own <code>--row-hover</code></b>, graded by the gate: ≥ 3 L* off the row's resting ground (its stripe where the skin stripes, the card otherwise), ≤ 12 L* so it reads as a hover and not a selection, AA for text, muted and link on it. Fenced by <code>(hover: hover)</code>: a phone's last tap does not leave a row lit.</td><td>Keep the underline and add the highlight; or one universal ink-overlay (<code>color-mix</code> of <code>--text</code> at 5%) instead of a per-skin value — cheaper, but not a value a skin author chooses</td><td>nothing decided before on hover; SKINS.md's role vocabulary gains <code>row-hover</code>, the one role with a value of its own rather than a passthrough</td></tr>
         <tr><td>5</td><td><b>An author board's row points home</b> (desktop pair)</td><td>On <code>/u/&lt;handle&gt;</code> a row's breadcrumb reads <code>@handle</code> and opens <code>/u/&lt;handle&gt;</code>. Before: <code>f/pds.ls</code> → <code>/f/pds.ls</code> → "Unknown feed — this link is missing the feed's creator".</td><td>Resolve <code>/f/&lt;handle&gt;</code> as an author board when the slug looks like a handle (also fixes old links; not done here)</td><td>nothing decided before — a gap</td></tr>
       </tbody>
     </table></div>
     <div class="callout"><h3>Open — not built, the owner's call</h3><ul>
+      <li><b>O12 — the hashtags, twice.</b> (owner, 2026-08-30: "I don't love how we extract every hashtag and present it under and have it in the original, it's not helpful and it's confusing"). A text post's tags sit in its text AND as a chip row under its picture (<code>tagChips</code>, kept since 3i for rows with no preview to carry the doorways). Three ways out: <b>(1) Bluesky's — no chip row</b>, the tags stay in the text as links to <code>/h/…</code>; <b>(2) fold the tail</b> — a trailing run of nothing-but-tags is cut from the text and shown once as chips, a tag inside a sentence stays put (edits the author's words; needs a rule for one trailing tag that ends a sentence, and for line breaks); (3) chips only, every tag stripped from the text — breaks sentences. <i>Recommend: 1 now, 2 only if the tag dumps still bother once the chips are gone. Awaiting the owner's word; built as decision 23 when it comes.</i></li>
       <li><b>O0 — the handle's visibility (decision 6's alternative).</b> As built, an impersonating name is caught only by hovering. <i>Recommend: the muted handle after the name, at least on the row — it costs one line nothing on desktop and ellipsises on a phone; say the word and v3 captures it.</i></li>
       <li><b>O7 — images on a reply.</b> <b>Closed in v6</b> (decision 16): the page carries the composer's picker; the quick box stays text.</li>
       <li><b>O9 — GIF search.</b> bsky.app searches Tenor through its own proxy; the endpoint and key are unverified from here (CLAUDE.md § External APIs: probe first). Until then the GIF button attaches a .gif from the device. <i>Recommend: a probe, then a picker in a later revision.</i></li>
@@ -226,6 +228,25 @@ code{font-size:.92em}
   </section>
 
   <section>
+    <div class="eyebrow">Proposal I</div>
+    <h2>I. The row under the pointer — lit, not underlined (v10)</h2>
+    <p class="sub">Desktop only: a phone has no pointer, and the rule is fenced by <code>(hover: hover)</code>. The pointer rests on the second row's text in every frame (<code>board-lens-hover</code>, the row scrolled clear of the masthead). Current underlines the text and leaves the row as it is; Proposed lights the row with the skin's own <code>--row-hover</code> and the text stays as it was. The two skin frames are the same tree — only the token moves; a difference in <i>shape</i> between them would be a bug.</p>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Desktop · board-lens-hover · CURRENT (forage@ad29be5)</div>
+        <img class="shot" src="snaps/feed-row/board-lens-hover.desktop.current.png" alt="Board at 1280 with the pointer on the second row's text: the text is underlined, the row unchanged"></div>
+      <div class="device desk"><div class="device-label">Desktop · board-lens-hover · PROPOSED (forage@ba62395)</div>
+        <img class="shot" src="snaps/feed-row/board-lens-hover.desktop.proposed.png" alt="Board at 1280 with the pointer on the second row's text: the row is lit a warm step off white, no underline"></div>
+    </div>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Desktop · board-lens-hover · PROPOSED · Forage dark</div>
+        <img class="shot" src="snaps/feed-row/board-lens-hover.desktop.forage-dark.proposed.png" alt="The same frame in Forage dark: the lit row a step lighter than the card"></div>
+      <div class="device desk"><div class="device-label">Desktop · board-lens-hover · PROPOSED · phpBB</div>
+        <img class="shot" src="snaps/feed-row/board-lens-hover.desktop.phpbb.proposed.png" alt="The same frame in the phpBB skin: the lit row lighter than both stripes"></div>
+    </div>
+    <div class="callout"><p><b>Every skin's value, graded</b> (test/skins.test.js): default #F9F6F1 · forage-dark #383024 · phpbb #F5F5F5 (lighter than both stripes — a step below .bg2 fails the link's AA) · phpbb-dark #323943 · usenet #EBEBE6 · usenet-dark #34342E · bbs #18180D · apricot #FDECDB / #3F2D1E · cornflower #E2EBF4 / #273444 · lavender #EDE6F6 / #342E48 · nebula #E5E7F2 / #1E2245 · rosewater #F7E6EA / #432D36 · seaglass #E0F0EA / #263B35 · surf #FCF6E4 (between white and the sand — surf's muted ink cannot clear AA a step below the sand stripe) / #1E4257. Found on the way: surf's <code>--muted</code> on its own <code>--card-2</code> is 4.47, under AA, in a pair no test grades — recorded in TODO.md, not fixed here.</p></div>
+  </section>
+
+  <section>
     <div class="eyebrow">What the frames claim, and what holds it</div>
     <h2>Claims → checks (MOCKS.md P5)</h2>
     <div class="tablewrap"><table>
@@ -255,6 +276,7 @@ code{font-size:.92em}
         <tr><td>24</td><td>/u/handle carries Follow; pressing it writes app.bsky.graph.follow by did and reads Following; again deletes the record and reads Follow</td><td>behaviour</td><td><code>bluesky-view</code> — the /u/aa.test flow; <code>test/lens-intake</code> — followingUri from the viewer block; <code>test/invariants</code> — the write ledger, 6 and 6, FOLLOW_COLLECTION bound twice</td></tr>
         <tr><td>25</td><td>Signed in, every comment's like is a button on its action row right before share, Reply before it, the row one line; nothing votes from the avatar column</td><td>structure · measure</td><td>mock-thread — Claim B (v9); <code>no-downvote</code> — "the like sits on the action row's line" / "right before share"; <code>bluesky-view</code> — "the quote carries the like on its action row"</td></tr>
         <tr><td>26</td><td>The replies link and the like show the pointer; the repost count does not</td><td>look</td><td>mock-board — "the replies link shows the hand" / "the like shows the hand" / "the repost count does not pretend to be a control"</td></tr>
+        <tr><td>27</td><td>Under the pointer the row paints the skin's <code>--row-hover</code>, its text does not underline, a control on the lit row shows its own hover, and the row the pointer left is back at rest</td><td>look · behaviour</td><td>mock-board — "the row under the pointer is not lit" / "the lit row paints … not the skin's --row-hover" / "the row's text underlines under the pointer" / "the like on a lit row shows no hover of its own" / "the row the pointer left is not back at rest"; <code>test/skins.test.js</code> — "EVERY skin bakes its own row hover" (≥ 3 L*, ≤ 12 L*, AA on text · muted · link); RED without the CSS: rgba(0,0,0,0) at rest and under the pointer</td></tr>
         <tr><td>16</td><td>No frontier chips over a reader's board</td><td>structure</td><td>mock-board — "no frontier chips over a reader’s board"</td></tr>
         <tr><td>8</td><td>An author board's breadcrumb is <code>@handle</code> → <code>/u/handle</code></td><td>structure</td><td><code>test/lens-intake.test.js</code> — "rows carry the kind of source they came from"; <code>bluesky-view</code> — "an author board's breadcrumb opens the author board"</td></tr>
       </tbody>
@@ -285,6 +307,7 @@ code{font-size:.92em}
         <tr><td>19 Follow</td><td><code>lens.js</code> <code>follow / unfollow</code>, <code>profile().followingUri</code>; <code>lens-views.js</code> <code>followButton</code> in <code>lensUserView</code>'s header</td></tr>
         <tr><td>20 the comment's like</td><td><code>components.js</code> <code>vote()</code> (one layout), <code>commentNode</code> (the like appended before share); <code>css/app.css</code> <code>.comment-actions</code> grid, <code>.avvote</code> rules removed</td></tr>
         <tr><td>21 the hand</td><td><code>css/app.css</code> <code>button.cbtn, a.cbtn { cursor: pointer }</code></td></tr>
+        <tr><td>22 the lit row</td><td><code>css/tokens.css</code> <code>--row-hover</code>; <code>css/app.css</code> <code>@media (hover: hover) .postrow:hover</code> + the control's mix, <code>.posttitle a:hover</code>; every file in <code>skins/</code>; <code>docs/SKINS.md</code> (the sixteenth role); <code>test/skins.test.js</code>; <code>scripts/mock-snaps.mjs</code> <code>board-lens-hover</code></td></tr>
         <tr><td>the captures</td><td><code>scripts/mock-snaps.mjs</code> — a <code>board-lens-compact</code> route; <code>--out plans/mocks/snaps/feed-row</code> so this mock's files never overwrite another mock's (the first run of this session did exactly that — see MOCKS.md rule 3)</td></tr>
       </tbody>
     </table></div>
@@ -293,6 +316,7 @@ code{font-size:.92em}
   <section>
     <div class="eyebrow">Revisions</div>
     <ul class="small" style="margin:0;padding-left:18px">
+      <li><b>v10</b> — 2026-08-30 (the owner's desktop: the underline; bsky.app and reddit beside it): decision 22 — the row under the pointer lights with a per-skin <code>--row-hover</code>, the text no longer underlines; O12 (the hashtags twice) filed with three options. Current re-captured at main <code>ad29be5</code> (v9 landed), Proposed <code>forage@ba62395</code>; a <code>board-lens-hover</code> desktop frame, plus Forage dark and phpBB.</li>
       <li><b>v9</b> — 2026-08-31: decisions 20–21 — the comment's like joins its action row (the column stack retired); the replies link shows the hand, the repost count does not (O11 filed). Proposed <code>forage@e255fe5</code>.</li>
       <li><b>v8</b> — 2026-08-31: the curator right-aligned on the likes line (owner); Proposed <code>forage@ce5a415</code>. The dropped period reached <code>signin.workflow</code>'s selector — fixed there.</li>
       <li><b>v7</b> — 2026-08-31: decisions 17–19 — the feed card on one line, outlined, the curator linking out; no feed line under lens rows (O4 closed); Follow on the profile page (no frame: no profile fixture in the hermetic populations yet). O10 records the ☆/Join question. Proposed <code>forage@61fcf2b</code>. The frame caught what no claim had: the word "null" under every row (a null child handed to Element.append) — fixed before capture, and now a claim.</li>
