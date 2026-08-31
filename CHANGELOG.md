@@ -16,7 +16,8 @@ below are the landings of that month, and everything earlier is in `git log`.
   the bottom right. The box above a feed reads **39.4k likes · Curated by @bsky.app** on one
   line — the curator a link to their bsky.app profile — with the description under it, and
   is outlined. The `f/…` line under every post on a Bluesky board is gone (it named the board
-  you were already on). A profile page (`/u/handle`) has **Follow**. (mock feed-row v7)
+  you were already on). A profile page (`/u/handle`) has **Follow**. In a thread, a comment's
+  **like sits on its action row** beside Reply and share, not in the margin. (mock feed-row v9)
 - 2026-08-30 **Two picture skins: Surf and Nebula.** Settings → Skin now offers **Surf** (sand,
   a sunset band with a line of foam along its edge, ocean-blue links; *night swell* after dark)
   and **Nebula** (a starfield with violet and teal nebula veils, an indigo-to-teal band, a soft
