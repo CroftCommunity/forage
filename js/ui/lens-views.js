@@ -1082,7 +1082,7 @@ function quoteNode(node, ctx) {
       ? el('span', { class: 'kind', title: 'A quote-response: this author quoted the post above' },
         el('span', { 'aria-hidden': 'true' }, '\u27F3 '), `quoted ${n.depth ? 'that' : 'this'}`)
       : ctx.bylineExtra?.(n) || null),
-    extraActions: (n) => [].concat(ctx.extraActions?.(n) || [], n.kind === 'quote' ? [repostControl(n)] : []),
+    extraActions: (n) => ctx.extraActions?.(n) || null, // v12 decision 25: ⟳ comes from the thread ctx for every node, the quote included
     continueStub: (n) => (n.kind === 'quote'
       ? el('a', { class: 'continue-stub', href: `/p?uri=${encodeURIComponent(n.quoteUri)}` },
         `→ ${n.deferred} more quote${n.deferred === 1 ? '' : 's'} of this, in its own thread`)
@@ -1091,29 +1091,75 @@ function quoteNode(node, ctx) {
 }
 
 // 4a-iii / Phase 9: the Repost glyph — icon only, a count beside it, pressed
-// when it is your repost. Optimistic like the vote; a refusal reverts.
+// when it is your repost. feed-row v12 decision 25 (owner: "the same button
+// for us should just popup with a dialogue that allows us to add commentary
+// or not and if we hit post without then it's just a plain repost"): the
+// figure is reposts + quotes (bsky.app's: social-app PostControls sums them),
+// and a press opens the sheet below instead of toggling. A guest sees the
+// figure and nothing opens (the like's door pattern is the sheet's Post).
+const repostFigure = (p) => (p.repostCount || 0) + (p.quoteCount || 0);
 function repostControl(p) {
-  const n = el('span', { class: 'n' }, fmtScore(p.repostCount || 0));
+  const n = el('span', { class: 'n' }, fmtScore(repostFigure(p)));
   if (!session) {
     return el('span', { class: 'cbtn', 'data-repost': '1', 'data-readonly': '1', role: 'img',
-      'aria-label': plural(p.repostCount || 0, 'repost') }, el('span', { 'aria-hidden': 'true' }, '\u27F3'), n);
+      'aria-label': plural(repostFigure(p), 'repost') }, el('span', { 'aria-hidden': 'true' }, '\u27F3'), n);
   }
   const b = el('button', { type: 'button', class: 'cbtn', 'data-repost': '1', 'aria-pressed': String(!!p.repostUri),
-    'aria-label': 'Repost', title: 'Repost' }, el('span', { 'aria-hidden': 'true' }, '\u27F3'), n);
-  b.addEventListener('click', async () => {
-    const was = p.repostUri, count = p.repostCount || 0;
-    const on = !was;
-    p.repostCount = count + (on ? 1 : -1); n.textContent = fmtScore(p.repostCount);
-    b.setAttribute('aria-pressed', String(on));
-    try {
-      if (on) { const { repostUri } = await lens.repost(p.id, p.cid); p.repostUri = repostUri; }
-      else { await lens.unrepost(was); p.repostUri = null; }
-    } catch (e) {
-      p.repostCount = count; n.textContent = fmtScore(count); b.setAttribute('aria-pressed', String(!!was));
-      console.warn('forage: repost refused', e); toast(e.message, 'err');
-    }
-  });
+    'aria-haspopup': 'dialog', 'aria-label': 'Repost', title: 'Repost, or quote with a comment' }, el('span', { 'aria-hidden': 'true' }, '\u27F3'), n);
+  b.addEventListener('click', () => repostSheet(p, { onChange: () => { n.textContent = fmtScore(repostFigure(p)); b.setAttribute('aria-pressed', String(!!p.repostUri)); } }));
   return b;
+}
+
+// Decision 25's sheet: one box, one Post. Words → a QUOTE post of mine that
+// embeds the node (it lands in the thread under the node it quotes, with the
+// ⟳ tell, once the thread refetches); no words → a plain repost, which no
+// thread shows; already reposted → Remove repost. A quote is a post: it goes
+// away through its own ⋯ → Delete, not through this sheet. Native <dialog>,
+// the mute-words sheet's pattern (DESIGN.md's one exception to pages).
+function repostSheet(p, { onChange } = {}) {
+  const box = el('textarea', { rows: '4', 'data-repost-text': '1', placeholder: 'Add a comment — or leave this empty to repost as it is', 'aria-label': 'Your comment (optional)' });
+  const count = countRing();
+  const post = el('button', { type: 'button', class: 'btn primary', 'data-repost-post': '1' }, 'Post');
+  const cancel = el('button', { type: 'button', class: 'btn', 'data-repost-cancel': '1' }, 'Cancel');
+  const remove = p.repostUri ? el('button', { type: 'button', class: 'btn danger', 'data-repost-remove': '1' }, 'Remove repost') : null;
+  const dialog = el('dialog', { class: 'sheet repost-sheet', 'data-repost-sheet': '1', 'aria-label': 'Repost' },
+    el('div', { class: 'row spread' }, el('strong', {}, 'Repost'),
+      el('button', { type: 'button', class: 'sheet-x', 'aria-label': 'Close' }, '✕')),
+    el('p', { class: 'small muted' }, 'With a comment it is a quote — a post of yours that shows this one, and it appears under it here. Without one it is a plain repost.'),
+    box, el('div', { class: 'row spread' }, el('span', {}), count.node),
+    el('div', { class: 'sheet-actions' }, remove, cancel, post));
+  const sync = () => { const left = POST_LIMITS.graphemes - graphemes(box.value.trim()); count.paint(left); post.disabled = left < 0; };
+  box.addEventListener('input', sync); sync();
+  dialog.querySelector('.sheet-x').addEventListener('click', () => dialog.close());
+  cancel.addEventListener('click', () => dialog.close());
+  remove?.addEventListener('click', async () => {
+    remove.disabled = true;
+    try {
+      await lens.unrepost(p.repostUri);
+      p.repostUri = null; p.repostCount = Math.max(0, (p.repostCount || 0) - 1); onChange?.();
+      dialog.close(); toast('Repost removed.', 'ok');
+    } catch (e) { remove.disabled = false; toast(e.message, 'err'); }
+  });
+  post.addEventListener('click', async () => {
+    const text = box.value.trim();
+    post.disabled = true;
+    try {
+      if (!text) {
+        const { repostUri } = await lens.repost(p.id, p.cid);
+        p.repostUri = repostUri; p.repostCount = (p.repostCount || 0) + 1; onChange?.();
+        dialog.close(); toast('Reposted.', 'ok');
+      } else {
+        await lens.publish({ text, quote: { uri: p.id, cid: p.cid } });
+        p.quoteCount = (p.quoteCount || 0) + 1; onChange?.();
+        dialog.close(); toast('Posted — your quote will show under this once the thread refreshes.', 'ok');
+        rerender();
+      }
+    } catch (e) { post.disabled = false; console.warn('forage: repost refused', e); toast(e.message, 'err'); }
+  });
+  dialog.addEventListener('close', () => dialog.remove());
+  document.body.append(dialog);
+  dialog.showModal();
+  box.focus();
 }
 
 // 3r: one dispatch for every thread node. The substrate says which kind it is;
@@ -2526,6 +2572,7 @@ export function lensThreadView(params, query) {
       // the like at its right end; Reply alone moves to the bottom of the head
       el('div', { class: 'actions head-actions' },
         el('div', { class: 'postmeta' }, plural(p.commentCount, 'reply', 'replies')), // the author and the time moved up into the byline (v6)
+        repostControl(p), // v12 decision 25: ⟳ on the head too
         vote('post', p.id, p, !!session, { onVote: lensVote(p), onGuest: session ? null : openAuthSheet })), // Phase 6c: the head's pill
       // The post's own media, at full board size — until 2026-08-28 an image
       // post's thread page rendered no image at all.
@@ -2577,11 +2624,13 @@ export function lensThreadView(params, query) {
       // phase 2: a reply you regret is the commoner case than a post you
       // regret, so your own replies carry the same control. Same guard, same
       // two-click arming; the node simply removes itself when it is gone.
-      extraActions: (n) => deleteControl(n, () => {
+      // v12 decision 25: ⟳ on every node, between Reply and the like; then the
+      // delete-your-own control where it applies
+      extraActions: (n) => [repostControl(n), deleteControl(n, () => {
         const host = commentsCard.querySelector(`[data-node-id="${CSS.escape(n.id)}"]`);
         if (host) host.replaceChildren(el('div', { class: 'xs muted', style: 'padding:6px 0' }, 'You deleted this reply.'));
         else rerender();
-      }) };
+      })] };
     const commentsCard = el('div', { class: 'card' });
     // Phase 11c: the thread's sort bar — the top-level replies re-sorted
     // CLIENT-SIDE (the thread is already loaded whole; nothing to re-query),

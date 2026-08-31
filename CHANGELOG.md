@@ -8,6 +8,11 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-08
 
+- 2026-08-30 **⟳ reposts, or quotes with a comment.** In a thread every post and comment carries
+  ⟳ with one figure — reposts and quotes together, the way bsky.app counts it. Pressing it opens a
+  sheet: add a comment and **Post** to quote it (a post of yours that shows this one; it appears
+  under it here once the thread refreshes), or Post with nothing to repost it as it is. A post you
+  already reposted offers **Remove repost**. (mock feed-row v12, decision 25)
 - 2026-08-30 **Reply at the bottom of the post; a quote's bar on the quote only; Browse hides
   the dead by default.** In a thread, **Reply** now sits at the bottom right of the post, under
   its picture and its quote; the like row stays under the text with the like at its right. A

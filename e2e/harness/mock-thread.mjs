@@ -28,18 +28,18 @@ const NAMES = { 'quietcartographer.bsky.social': 'The Quiet Cartographer', 'aver
 // quote); `view` is the hydrated embed on the post view (what the lens reads
 // for media). feed-row v11: the root carries a picture so the head is judged
 // under the owner's load — text, then something under it, then the controls.
-const post = (rkey, did, handle, ts, text, { likes = 0, replies = 0, reposts = 0, embed = null, view = null } = {}) => ({
+const post = (rkey, did, handle, ts, text, { likes = 0, replies = 0, reposts = 0, quotes = 0, embed = null, view = null } = {}) => ({
   uri: `at://${did}/app.bsky.feed.post/${rkey}`, cid: `cid-${rkey}`, ...(view ? { embed: view } : {}),
   author: { did, handle, avatar: AV, ...(NAMES[handle] ? { displayName: NAMES[handle] } : {}) },
   record: { text, createdAt: ts, ...(embed ? { embed } : {}) }, indexedAt: ts,
-  replyCount: replies, repostCount: reposts, likeCount: likes,
+  replyCount: replies, repostCount: reposts, likeCount: likes, quoteCount: quotes,
 });
 
 export const ROOT = 'at://did:plc:root/app.bsky.feed.post/root';
 
 const root = post('root', 'did:plc:root', 'quietcartographer.bsky.social', '2026-08-30T08:00:00Z',
   'If we invent the Pneumatic Pie Tube Network today it will still be 49 years too late to follow up on the good work of the original proposal. Might as well just use it for quiche at that point, I guess.',
-  { likes: 11, replies: 4, reposts: 1, view: images(img('root', { width: 1600, height: 1000 })) });
+  { likes: 11, replies: 4, reposts: 1, quotes: 1, view: images(img('root', { width: 1600, height: 1000 })) });
 
 // four deep: the elbows, the indent, and the phone's 14px step all show
 const d4 = { post: post('d4', 'did:plc:d4', 'moss.bsky.social', '2026-08-30T08:41:00Z',
@@ -57,7 +57,8 @@ const leaf = { post: post('leaf', 'did:plc:leaf', 'joshandtheargonauts.bsky.soci
 // a quote-response: it arrives through getQuotes, walled, with a reply of its own
 const quote = post('q1', 'did:plc:q1', 'misterhooperspecial.bsky.social', '2026-08-30T08:50:00Z',
   "I'm sorry, but the cheeseburger is the optimal treat unit for this delivery method.",
-  { likes: 5, replies: 1, embed: { $type: 'app.bsky.embed.record', record: { uri: ROOT, cid: 'cid-root' } } });
+  // v12 decision 25: two reposts and a quote, so the ⟳ figure (reposts + quotes) reads 3
+  { likes: 5, replies: 1, reposts: 2, quotes: 1, embed: { $type: 'app.bsky.embed.record', record: { uri: ROOT, cid: 'cid-root' } } });
 const quoteReply = { post: post('q1r', 'did:plc:q1r', 'briarpatchradio.bsky.social', '2026-08-30T09:05:00Z',
   'Quiche is a treat unit if you are brave.', { likes: 1 }), replies: [] };
 

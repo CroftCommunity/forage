@@ -208,6 +208,57 @@ export async function run() {
     assert.ok(order.underStage, 'Reply sits under the picture, not between the text and it');
     assert.ok(order.rightGap <= 4, `Reply is not at the right edge of the head (gap ${order.rightGap}px)`);
     assert.ok(order.likeRightGap <= 4, `the like is not at the right end of its row (gap ${order.likeRightGap}px)`);
+    // feed-row v12 decision 25 (owner, 2026-08-30: "the same button for us should
+    // just popup with a dialogue that allows us to add commentary or not and if
+    // we hit post without then it's just a plain repost"): ⟳ on every node — the
+    // head's like row and every comment's action row — shows reposts + quotes
+    // (bsky.app's figure) and opens a sheet; Post with nothing writes a plain
+    // repost of that node; Post with words writes a quote post embedding it (no
+    // reply field — it is a top-level post of mine); a node I reposted offers
+    // Remove repost, which deletes the record
+    const rp = await page.evaluate(() => {
+      const q = document.querySelector('.comment[data-kind="quote"][data-depth="0"]');
+      const btn = q?.querySelector(':scope > .comment-body > .comment-actions > [data-repost]');
+      return { everyComment: [...document.querySelectorAll('.comment')].every((c) => c.querySelector(':scope > .comment-body > .comment-actions > button[data-repost]')),
+        head: !!document.querySelector('#main .head-actions button[data-repost]'),
+        quoteFigure: btn?.querySelector('.n')?.textContent ?? null, popup: btn?.getAttribute('aria-haspopup') ?? null };
+    });
+    assert.ok(rp.everyComment, 'every comment carries ⟳ as a button on its action row');
+    assert.ok(rp.head, 'and so does the head’s like row');
+    assert.equal(rp.quoteFigure, '3', `the quote’s ⟳ reads reposts + quotes, 2 + 1 (got ${rp.quoteFigure})`);
+    assert.equal(rp.popup, 'dialog', '⟳ says it opens a dialog');
+    const qnodeId = NODE_IDS[5];
+    const qRepost = page.locator(`.comment[data-node-id="${qnodeId}"] > .comment-body > .comment-actions > [data-repost]`);
+    await qRepost.click();
+    const sheet = page.locator('dialog[data-repost-sheet]');
+    assert.equal(await sheet.count(), 1, '⟳ opens the repost sheet');
+    assert.equal(await sheet.locator('textarea').count(), 1, 'with a box for words');
+    assert.equal(await sheet.locator('[data-repost-remove]').count(), 0, 'no Remove repost — I have not reposted this');
+    await sheet.locator('[data-repost-post]').click();
+    await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('createRecord') && (h.body || '').includes('app.bsky.feed.repost')));
+    const repostBody = await page.evaluate(() => JSON.parse(window.__shimHits.findLast((h) => h.url.includes('createRecord')).body));
+    assert.equal(repostBody.record.subject.uri, qnodeId, 'Post with nothing is a plain repost of that node');
+    await page.waitForSelector('dialog[data-repost-sheet]', { state: 'detached', timeout: 5000 }); // the sheet closes on Post (after the write returns)
+    assert.equal(await qRepost.getAttribute('aria-pressed'), 'true', 'the button reads pressed — mine now');
+    assert.equal(await qRepost.locator('.n').textContent(), '4', 'and the figure moved up by one');
+    await qRepost.click();
+    assert.equal(await page.locator('dialog[data-repost-sheet] [data-repost-remove]').count(), 1, 'reposted already: the sheet offers Remove repost');
+    await page.locator('dialog[data-repost-sheet] [data-repost-remove]').click();
+    await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('deleteRecord') && (h.body || '').includes('app.bsky.feed.repost')));
+    await page.waitForSelector('dialog[data-repost-sheet]', { state: 'detached', timeout: 5000 });
+    assert.equal(await qRepost.getAttribute('aria-pressed'), 'false', 'removed: not mine any more');
+    assert.equal(await qRepost.locator('.n').textContent(), '3', 'and the figure is back');
+    const leafId = NODE_IDS[4];
+    await page.locator(`.comment[data-node-id="${leafId}"] > .comment-body > .comment-actions > [data-repost]`).click();
+    await page.locator('dialog[data-repost-sheet] textarea').fill('a treat unit is a treat unit');
+    await page.locator('dialog[data-repost-sheet] [data-repost-post]').click();
+    await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('createRecord') && (h.body || '').includes('app.bsky.embed.record')));
+    const quoteBody = await page.evaluate(() => JSON.parse(window.__shimHits.findLast((h) => h.url.includes('createRecord')).body));
+    assert.equal(quoteBody.collection, 'app.bsky.feed.post', 'Post with words is a post of mine');
+    assert.equal(quoteBody.record.text, 'a treat unit is a treat unit');
+    assert.equal(quoteBody.record.embed?.$type, 'app.bsky.embed.record', 'that embeds the node — a quote post');
+    assert.equal(quoteBody.record.embed?.record?.uri, leafId, 'the node I pressed ⟳ on');
+    assert.equal(quoteBody.record.reply, undefined, 'and is not a reply');
     const pillH = await page.$eval('#main .head-actions [data-vote]', (b) => b.getBoundingClientRect().height);
     assert.ok(pillH <= 44, `the like pill was squeezed onto two lines by the row (height ${Math.round(pillH)}px)`);
     await headReply.click();

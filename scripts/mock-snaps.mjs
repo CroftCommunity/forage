@@ -8,7 +8,7 @@
 //   node scripts/mock-snaps.mjs --as proposed         # files get a .proposed suffix
 //   node scripts/mock-snaps.mjs --only board-lens,menu-lens   # a subset of the routes below
 //       (routes: board thread board-lens board-lens-media board-lens-compact board-lens-in
-//        board-lens-hover thread-lens thread-lens-quote menu-lens focus-lens reply-lens thread-lens-reply)
+//        board-lens-hover thread-lens thread-lens-quote thread-lens-sheet menu-lens focus-lens reply-lens thread-lens-reply)
 //   node scripts/mock-snaps.mjs --as current --serve ../../forage
 //       # the same script and fixtures, rendering ANOTHER checkout (main): the
 //       # Current frames come from the tree the owner is running, captured by
@@ -133,6 +133,20 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
     await qz.page.waitForTimeout(200);
     await shoot(qz.page, 'thread-lens-quote', 'lens:mock-thread', name, vp);
     await qz.close();
+  }
+  // feed-row v12 decision 25: the repost sheet, opened from the quote-response's ⟳
+  // (on main the press toggles a repost and nothing opens — an honest Current)
+  if (wanted('thread-lens-sheet')) {
+    const sh = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: RESPONSES });
+    await sh.page.setViewportSize({ width: vp.width, height: vp.height });
+    await sh.page.goto(`${sh.origin}${THREAD_PATH}`);
+    await sh.page.waitForSelector('.comment[data-kind="quote"]', { timeout: 15000 });
+    await sh.page.evaluate(() => document.fonts?.ready);
+    await sh.page.evaluate(() => { document.querySelector('.comment[data-kind="quote"][data-depth="0"]')?.scrollIntoView({ block: 'start' }); window.scrollBy(0, -72); });
+    await sh.page.locator('.comment[data-kind="quote"][data-depth="0"] > .comment-body > .comment-actions > [data-repost]').click();
+    await sh.page.waitForTimeout(400);
+    await shoot(sh.page, 'thread-lens-sheet', 'lens:mock-thread', name, vp);
+    await sh.close();
   }
   // feed-row v4: the /reply page (signed in, a draft already kept, so the frame shows
   // the draft line) and the thread with the quick box open under a comment

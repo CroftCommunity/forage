@@ -204,6 +204,7 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
     saved: !!post.viewer?.bookmarked,
     commentCount: post.replyCount ?? 0,
     repostCount: post.repostCount ?? 0,
+    quoteCount: post.quoteCount ?? 0, // v12 decision 25: the ⟳ figure is reposts + quotes, bsky.app's
     repostUri: post.viewer?.repost ?? null, // 4a-iii: the unrepost input, like likeUri
     threadMute: !!post.viewer?.threadMuted, // 4b: Mute thread / Unmute thread (named so no "muted" string reaches a shaped board — lens-posture.test pins that)
     // Decision 8 (plan 2026-08-29 post-and-thread): the byline draws the
@@ -323,7 +324,7 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
     removed: false, deleted: false,
     likes: p.likes, myVote: p.myVote, saved: p.saved, cid: p.cid,
     likeUri: p.likeUri, // the unlike input, as on the head post — dropped here until 2026-08-29
-    repostCount: p.repostCount, repostUri: p.repostUri,
+    repostCount: p.repostCount, quoteCount: p.quoteCount ?? 0, repostUri: p.repostUri,
     body: p.body, author: p.author, authorId: p.authorId, authorName: p.authorName ?? null, avatar: p.avatar,
     ...(p.maskedRemoved ? { maskedRemoved: true, title: p.title } : { removedReason: '' }),
     depth,
@@ -1366,9 +1367,9 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
       return data.blob;
     },
 
-    async publish({ text, tag, langs, navLang, images, replyTo } = {}) {
+    async publish({ text, tag, langs, navLang, images, replyTo, quote } = {}) {
       if (!session) throw new Error('lens: publishing needs a session — sign in first');
-      const record = buildPost({ text: tag ? withTag(text, tag) : text, langs, navLang, images, replyTo });
+      const record = buildPost({ text: tag ? withTag(text, tag) : text, langs, navLang, images, replyTo, quote });
       const data = await post('com.atproto.repo.createRecord', {
         repo: session.did, collection: POST_COLLECTION, record,
       }, 'publish');

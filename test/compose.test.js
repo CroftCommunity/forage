@@ -230,3 +230,14 @@ test('3.2 finding: aspectRatio is passed when known and omitted when not', () =>
     assert.equal('aspectRatio' in rec.embed.images[0], false, `${JSON.stringify(bad)} is not a usable ratio`);
   }
 });
+
+// feed-row v12 decision 25: a QUOTE is a post of mine that embeds another
+// post — app.bsky.embed.record with the quoted post's strong ref. Words are
+// optional on the network (a quote may say nothing), but the sheet only calls
+// this with words: no words is a plain repost, a different record.
+test('buildPost: a quote embeds the post it quotes, and is not a reply', () => {
+  const r = buildPost({ text: 'a treat unit is a treat unit', quote: { uri: 'at://did:plc:x/app.bsky.feed.post/q', cid: 'bafyq' } });
+  assert.deepEqual(r.embed, { $type: 'app.bsky.embed.record', record: { uri: 'at://did:plc:x/app.bsky.feed.post/q', cid: 'bafyq' } });
+  assert.equal(r.reply, undefined);
+  assert.throws(() => buildPost({ text: 'x', quote: { uri: 'at://did:plc:x/app.bsky.feed.post/q' } }), /cid/, 'a ref without a cid cannot be embedded');
+});

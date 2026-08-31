@@ -743,6 +743,9 @@ hr.rule { border: none; border-top: 1px solid var(--border); margin: var(--s4) 0
    same element by two selectors, where the more specific one won and the sheet
    rendered see-through over the page. Caught by looking at it; no assertion in
    this repo can see a transparent modal. */
+/* feed-row v12 decision 25: the repost sheet's box — the reply box's shape, one field */
+.repost-sheet textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: var(--t-md); padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--card); color: var(--text); resize: vertical; }
+.repost-sheet .btn.danger { margin-right: auto; }
 dialog.authsheet, dialog.sheet {
   border: 0; padding: var(--s4); color: var(--text);
   background: var(--card);
