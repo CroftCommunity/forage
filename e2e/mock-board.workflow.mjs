@@ -88,6 +88,7 @@ export async function run() {
     // meta line is left behind
     assert.equal(await page.locator('.postrow .postmeta a[href^="/f/"], .postrow .postmeta a[href^="/u/"]').count(), 0, 'no feed line under a lens row');
     assert.equal(await page.locator('.postrow .postmeta:empty').count(), 0, 'and no empty meta line where it was');
+    assert.equal(await page.locator('.postrow', { hasText: /\bnull\b|\bundefined\b/ }).count(), 0, 'no row prints a stringified null or undefined (Element.append does that to a null child — the v7 frame)');
     // feed-row v5 claim 17 (owner: 'change "Feed order" to "Default"'): the sort's
     // first choice — the order the feed's own generator hands us — is called Default
     assert.equal(await page.locator('#main .sortbar select').first().locator('option').first().innerText(), 'Default', 'the sort’s first choice is "Default"');

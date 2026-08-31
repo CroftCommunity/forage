@@ -353,8 +353,10 @@ export function postRow(p, viewerCanVote, opts = {}) {
     vote('post', p.id, p, viewerCanVote, { onVote: opts.onVote,
       // the lens passes its sheet; a sandbox row decides from its feed-scoped perms
       onGuest: opts.onGuest ?? (opts.perms?.(p)?.loggedIn ? null : guestGate) }),
-    shareButton(opts.permalink ?? `${location.origin}${link}`, 'post')),
-  meta.childElementCount ? meta : null); // no empty line where the crumb was
+    shareButton(opts.permalink ?? `${location.origin}${link}`, 'post')));
+  // no empty line where the crumb was — and appended conditionally, because
+  // Element.append stringifies a null into the word "null" (the v7 frame)
+  if (meta.childElementCount) right.append(meta);
   return el('div', { class: 'postrow' + (p.pinned ? ' pinned-row' : '') + (opts.compact ? ' compact' : '') }, right);
 }
 
