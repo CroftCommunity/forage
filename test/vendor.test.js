@@ -52,3 +52,25 @@ test('the bundle parses under node and exports the two client symbols', () => {
   `], { encoding: 'utf8', timeout: 30000 });
   assert.equal(r.status, 0, `child import failed: ${r.stderr}`);
 });
+
+// feed-row v13 decision 30 (native video in place): hls.js, the SECOND vendored
+// runtime artifact. Chromium and Firefox cannot play Bluesky's HLS playlists
+// without it; Safari can, and the player only loads this file when it must.
+// Same two-way pin: content sha256 + the version the header names.
+const HLS_FILE = join(root, 'vendor', 'hls.light.min.js');
+const HLS_PINNED_VERSION = '1.7.1';
+const HLS_PINNED_SHA256 = '839aa4ef944a01ed62b07f0f5deeb323732e8fc0e93f1d725c01e73dc2d615b1';
+
+test('hls.js: the header records provenance and the content matches the pin', () => {
+  const rawHls = readFileSync(HLS_FILE, 'utf8');
+  const idx = rawHls.indexOf('content sha256');
+  assert.ok(idx > 0, 'header carries the content sha256 line');
+  const end = rawHls.indexOf('\n', idx) + 1;
+  const header = rawHls.slice(0, end);
+  assert.match(header, new RegExp(`hls\\.js@${HLS_PINNED_VERSION.replace(/\./g, '\\.')}`), 'the header names the pinned version');
+  assert.match(header, /Apache-2\.0/, 'and the licence (rung 2 decides licences the way it decides CVEs)');
+  assert.match(header, /cdn\.jsdelivr\.net\/npm\/hls\.js@/, 'and where the bytes came from');
+  const sha = createHash('sha256').update(rawHls.slice(end)).digest('hex');
+  assert.equal(sha, HLS_PINNED_SHA256, 'vendored hls.js drifted — if deliberate, re-fetch per the header and re-pin');
+  assert.ok(header.includes(HLS_PINNED_SHA256), 'the header’s sha line agrees with the pin');
+});

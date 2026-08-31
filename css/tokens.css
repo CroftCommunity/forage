@@ -134,6 +134,12 @@
   --band-art:     none;
   --card-art:     none;
   --accent-glow:  none;
+  /* The like's glyph (feed-row v13 decision 27). A skin restyles and restructures
+     nothing — but bsky.app's like IS a heart, and a Bluesky skin that drew a
+     triangle would be a costume. The glyph is painted from this token by
+     css/app.css (a ::before on .vote .arrow), so a skin may set '♥' and nothing
+     else moves: the control, its name, its count and its states are the same. */
+  --like-glyph:   '▲';
 
   --radius-sm:    4px;
   --radius-media: 8px;

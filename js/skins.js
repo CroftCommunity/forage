@@ -82,6 +82,10 @@ export const FAMILIES = Object.freeze({
   // owner's images drop into.
   surf: { label: 'Surf' },
   nebula: { label: 'Nebula' },
+  // feed-row v13 decision 27 (owner: "let's do a classic bsky skin as well … we can
+  // even make the upvote a heart in this case"): bsky.app's own light and dim
+  // palettes as a family; the like is a heart here (--like-glyph).
+  bluesky: { label: 'Bluesky' },
 });
 
 export const SKINS = Object.freeze({
@@ -112,6 +116,8 @@ export const SKINS = Object.freeze({
   'surf-dark': { label: 'Surf (night swell)', file: 'skins/surf-dark.css', palette: 'dark', family: 'surf' },
   nebula: { label: 'Nebula (observatory)', file: 'skins/nebula.css', palette: 'light', family: 'nebula' },
   'nebula-dark': { label: 'Nebula (deep field)', file: 'skins/nebula-dark.css', palette: 'dark', family: 'nebula' },
+  bluesky: { label: 'Bluesky (light)', file: 'skins/bluesky.css', palette: 'light', family: 'bluesky' },
+  'bluesky-dark': { label: 'Bluesky (dim)', file: 'skins/bluesky-dark.css', palette: 'dark', family: 'bluesky' },
 });
 
 // ---- families -------------------------------------------------------------

@@ -26,6 +26,21 @@ export async function run() {
   const before = await fontOf();
   assert.equal(await linkCount(), 0, 'default = no skin sheet');
 
+  // feed-row v13 decision 27 (owner: "we can even make the upvote a heart in this
+  // case"): the like's glyph is a token. The default draws the triangle; the
+  // Bluesky skin draws a heart; nothing else about the control moves.
+  // the token at the root, and — where a signed-in like is on the page — the glyph
+  // painted from it (a guest's door draws the person, not the arrow)
+  const glyph = () => page.evaluate(() => { const tok = getComputedStyle(document.documentElement).getPropertyValue('--like-glyph').trim().replace(/["']/g, '');
+    const a = document.querySelector('.vote .arrow'); const painted = a ? getComputedStyle(a, '::before').content.replace(/["']/g, '') : null;
+    return painted === null ? tok : (painted === tok ? tok : `${tok} but painted ${painted}`); });
+  await page.goto(`${s.origin}/popular`); await page.waitForSelector('.postrow [data-vote]');
+  assert.equal(await glyph(), '\u25B2', 'the default like is the triangle');
+  await page.evaluate(() => localStorage.setItem('forage.skin', 'bluesky-dark')); await page.reload(); await page.waitForSelector('.postrow [data-vote]');
+  assert.equal(await glyph(), '\u2665', 'on the Bluesky skin the like is a heart');
+  assert.match(await page.locator('link#skin-sheet').getAttribute('href'), /bluesky-dark\.css/, 'and it is the Bluesky sheet that did it');
+  await page.evaluate(() => localStorage.removeItem('forage.skin')); await page.goto(`${s.origin}/settings`); await page.waitForSelector('text=Skin');
+
   // pick the BBS skin — the terminal takes over
   await page.locator('.field-row:has-text("Skin") select').selectOption('bbs');
   await page.waitForFunction(() => document.getElementById('skin-sheet'));

@@ -16,18 +16,26 @@ let saidSizedOnLoad = false;
 
 // One picture on its stage. `link` is where the tap goes (full size, or bsky.app
 // for a video), `linkLabel` the anchor's name when the picture has no alt.
-export function stage({ kind, thumb, alt = '', aspect = null, link, linkLabel = null, linkAttrs = {} }) {
+// feed-row v13 decisions 29–30: `onPlay` makes the stage a PLAYER's poster —
+// a button over the picture, no link out — and the caller swaps the player in
+// (a <video> for a Bluesky clip, YouTube's embed for a YouTube link). Nothing
+// is fetched from the video's host until the press.
+export function stage({ kind, thumb, alt = '', aspect = null, link, linkLabel = null, linkAttrs = {}, onPlay = null, playLabel = 'Play' }) {
   const fore = el('img', { class: 'stage-fore', src: thumb, alt, loading: 'lazy', decoding: 'async' });
   const attrs = { class: 'stage', 'data-stage': kind };
   if (aspect) attrs.style = `--aspect: ${aspect.w} / ${aspect.h}`;
   else attrs['data-aspect'] = 'none';
-  const node = el('div', attrs,
-    el('a', { class: 'stage-link', href: link, ...(linkLabel ? { 'aria-label': linkLabel } : {}), ...linkAttrs },
-      // the backdrop is the picture again, blurred — decorative, so alt='' and
-      // hidden from the tree; a video gets black bands instead (no blur layer)
-      kind === 'video' ? null : el('img', { class: 'stage-back', src: thumb, alt: '', 'aria-hidden': 'true', loading: 'lazy', decoding: 'async' }),
-      fore,
-      kind === 'video' ? el('span', { class: 'stage-play', 'aria-hidden': 'true' }, '▶') : null));
+  // the backdrop is the picture again, blurred — decorative, so alt='' and
+  // hidden from the tree; a video gets black bands instead (no blur layer)
+  const back = kind === 'video' ? null : el('img', { class: 'stage-back', src: thumb, alt: '', 'aria-hidden': 'true', loading: 'lazy', decoding: 'async' });
+  const node = onPlay
+    ? el('div', attrs, back, fore,
+        el('button', { type: 'button', class: 'stage-play', 'data-play': '1', 'aria-label': playLabel }, el('span', { 'aria-hidden': 'true' }, '▶')))
+    : el('div', attrs,
+        el('a', { class: 'stage-link', href: link, ...(linkLabel ? { 'aria-label': linkLabel } : {}), ...linkAttrs },
+          back, fore,
+          kind === 'video' ? el('span', { class: 'stage-play', 'aria-hidden': 'true' }, '▶') : null));
+  if (onPlay) node.querySelector('[data-play]').addEventListener('click', () => onPlay(node));
   if (!aspect) {
     fore.addEventListener('load', () => {
       if (!(fore.naturalWidth > 0 && fore.naturalHeight > 0)) return;

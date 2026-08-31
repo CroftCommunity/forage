@@ -11,6 +11,7 @@ import { postRow, commentNode, vote, focusComment, skeleton, emptyState, toast, 
 import * as providerMark from '../provider-mark.js';
 import * as drafts from '../drafts.js';
 import { go } from '../router.js';
+import { appFor } from '../auth/hosts.js';
 import { navTree } from './nav.js';
 import { LADDER, RUNG_IDS, labelFor } from '../rings.js';
 import { lastBoard, setLastBoard, landingBoard, DIRECTORY } from '../last-board.js';
@@ -419,16 +420,16 @@ function lensVote(p) {
 // 3f: facet-aware body — links live, mentions link OUT (the lens tenet),
 // #tags emphasized (they become /h/ doorways at 3g). Byte-indexed decode in
 // the substrate; this only renders segments.
-// 3i: a row's tag doorways survive even when there is no preview — the
-// facet #tags render as chips under the title.
-function tagChips(p) {
-  const tags = (p.facets || []).flatMap((f) => (f.features || [])
-    .filter((ft) => (ft.$type || '').endsWith('#tag')).map((ft) => ft.tag));
-  if (!tags.length) return null;
-  return el('div', { class: 'row wrap', style: 'gap:4px' },
-    ...tags.map((t) => el('a', { class: 'tag', 'data-tag': t, href: `/h/${encodeURIComponent(t)}` }, `#${t}`)));
+// (tagChips — the chip row under a post — retired by v13: the tags are links in the text)
+function facetNodes(text, facets) {
+  return facetSegments(text, facets).map((seg) => {
+    if (!seg.facet) return seg.text;
+    if (seg.facet.type === 'link') return el('a', { href: seg.facet.value, target: '_blank', rel: 'noopener noreferrer' }, seg.text);
+    if (seg.facet.type === 'mention') return el('a', { href: `https://bsky.app/profile/${seg.facet.value}`, target: '_blank', rel: 'noopener noreferrer', title: 'Profiles live on bsky.app — Forage is a lens' }, seg.text);
+    if (seg.facet.type === 'tag') return el('a', { href: `/h/${encodeURIComponent(seg.facet.value)}`, 'data-tag': seg.facet.value, title: 'Open this hashtag as a board' }, seg.text);
+    return seg.text;
+  });
 }
-
 function facetedBody(p) {
   if (p.maskedRemoved || !p.body) return null;
   const segs = facetSegments(p.body, p.facets);
@@ -477,28 +478,91 @@ function mediaNode(p) {
       linkLabel: i.alt ? null : 'Image, opens full size', linkAttrs });
   }
   if (p.media.kind === 'video') {
+    // v13 decision 30 (owner: "this video seems to open directly on bluesky
+    // instead of playing the content"): the clip plays HERE. The stage is the
+    // poster; the press mounts a <video> on the post's HLS playlist — Safari
+    // plays HLS natively, Chromium and Firefox through vendored hls.js, loaded
+    // only now. Nothing is fetched from the video host before the press.
     const link = `https://bsky.app/profile/${p.author}/post/${p.id.split('/').pop()}`;
-    if (!p.media.thumb) {
+    if (!p.media.playlist) {
       return el('div', { class: 'media-strip' },
         el('a', { href: link, target: '_blank', rel: 'noopener noreferrer', title: 'Video — plays on bsky.app' }, el('span', { class: 'tag' }, '▶ video')));
     }
-    return stage({ kind: 'video', thumb: p.media.thumb, alt: '[video]', aspect: p.media.aspect, link,
-      linkAttrs: { target: '_blank', rel: 'noopener noreferrer', title: 'Video — plays on bsky.app' } });
+    return stage({ kind: 'video', thumb: p.media.thumb || '', alt: '[video]', aspect: p.media.aspect, playLabel: 'Play video',
+      onPlay: (node) => mountVideo(node, { playlist: p.media.playlist, poster: p.media.thumb, fallback: link }) });
   }
-  if (p.media.kind === 'external') {
-    // 4i: the thumbnail is DECORATIVE — alt='' is correct and stays. What the
-    // link means is its destination, so the ANCHOR is the thing that needs a
-    // name, and the card's own title is that name (carried through the shaper
-    // for exactly this). With no title, the host is the honest fallback: it
-    // says where you are going, which is more than "link" and less than a
-    // guess. Live SERIOUS violation until 2026-08-26.
-    const name = p.media.title || domainOf(p.media.uri) || 'external link';
-    return el('div', { class: 'media-strip' },
-      el('a', { href: p.media.uri, target: '_blank', rel: 'noopener noreferrer',
-        'aria-label': `${name} — opens in a new tab` },
-        el('img', { src: p.media.thumb, alt: '', loading: 'lazy' })));
-  }
+  if (p.media.kind === 'external') return externalCard(p);
   return null;
+}
+
+// v13 decisions 29 and 31: the EXTERNAL CARD — the picture on a stage (centred,
+// contain-fit, the blurred backdrop; a book cover is no longer pinned to an
+// edge), then the title, the description and the host, the whole caption one
+// link out. A YouTube link says so and PLAYS IN PLACE: the press swaps the
+// stage for YouTube's embed (the nocookie host, autoplay on the press only);
+// until then nothing loads from YouTube — the picture is the post's own.
+// 4i still holds: the thumbnail is decorative (alt=''), the anchor is named.
+function youtubeId(uri) {
+  try {
+    const u = new URL(uri);
+    const host = u.hostname.replace(/^www\.|^m\./, '');
+    if (host === 'youtu.be') return u.pathname.slice(1).split('/')[0] || null;
+    if (host === 'youtube.com' || host === 'music.youtube.com') {
+      if (u.pathname === '/watch') return u.searchParams.get('v');
+      const m = /^\/(?:shorts|embed|live)\/([^/?]+)/.exec(u.pathname);
+      return m ? m[1] : null;
+    }
+  } catch { /* not a url */ }
+  return null;
+}
+function externalCard(p) {
+  const { uri, thumb, title, description } = p.media;
+  const host = domainOf(uri) || '';
+  const name = title || host || 'external link';
+  const yt = youtubeId(uri);
+  const linkAttrs = { target: '_blank', rel: 'noopener noreferrer' };
+  const picture = yt
+    ? stage({ kind: 'external', thumb, alt: '', playLabel: `Play ${name} on YouTube, here`,
+        onPlay: (node) => {
+          const frame = el('iframe', { class: 'ext-embed', src: `https://www.youtube-nocookie.com/embed/${encodeURIComponent(yt)}?autoplay=1`,
+            title: name, allow: 'autoplay; encrypted-media; picture-in-picture; fullscreen', allowfullscreen: '', referrerpolicy: 'strict-origin-when-cross-origin' });
+          node.replaceChildren(frame);
+        } })
+    : stage({ kind: 'external', thumb, alt: '', link: uri, linkLabel: `${name} — opens in a new tab`, linkAttrs });
+  return el('div', { class: 'extcard', 'data-extcard': '1', ...(yt ? { 'data-provider': 'youtube' } : {}) },
+    picture,
+    el('a', { class: 'ext-caption', href: uri, ...linkAttrs, 'aria-label': `${name} — opens in a new tab` },
+      el('div', { class: 'ext-title', 'data-ext-title': '1' }, name),
+      description ? el('div', { class: 'ext-desc' }, description.length > 160 ? description.slice(0, 160) + '…' : description) : null,
+      el('div', { class: 'ext-host' },
+        yt ? el('span', { class: 'ext-provider', 'data-ext-provider': '1' }, el('span', { 'aria-hidden': 'true' }, '▶ '), 'YouTube') : null,
+        el('span', { 'data-ext-host': '1' }, host))));
+}
+
+// the vendored HLS demuxer, loaded once and only when a browser needs it
+let hlsLoading = null;
+function loadHls() {
+  if (window.Hls) return Promise.resolve(window.Hls);
+  if (!hlsLoading) {
+    hlsLoading = new Promise((resolve, reject) => {
+      const sc = el('script', { src: '/vendor/hls.light.min.js' });
+      sc.addEventListener('load', () => (window.Hls ? resolve(window.Hls) : reject(new Error('hls.js loaded but defined nothing'))));
+      sc.addEventListener('error', () => reject(new Error('the video player could not load')));
+      document.head.append(sc);
+    });
+  }
+  return hlsLoading;
+}
+function mountVideo(node, { playlist, poster, fallback }) {
+  const video = el('video', { class: 'stage-video', controls: '', autoplay: '', playsinline: '', poster: poster || '', 'data-playlist': playlist, preload: 'metadata' });
+  node.replaceChildren(video);
+  if (video.canPlayType('application/vnd.apple.mpegurl')) { video.src = playlist; return; }
+  loadHls().then((Hls) => {
+    if (!Hls.isSupported()) throw new Error('this browser cannot play HLS video');
+    const hls = new Hls();
+    hls.on(Hls.Events.ERROR, (_, data) => { if (data?.fatal) { hls.destroy(); toast(`The video would not play here — it is on bsky.app: ${fallback}`, 'err'); } });
+    hls.loadSource(playlist); hls.attachMedia(video);
+  }).catch((e) => toast(`${e.message} — it plays on bsky.app: ${fallback}`, 'err'));
 }
 
 // The board view preference (card | compact) — device-local, like theme/skin.
@@ -624,22 +688,32 @@ const lensRow = (p, view = 'card') => {
   // beside a thread page with them; the 40px title-thumb that stood in for a
   // placeholder-titled compact row went with the rule.
   const showsMedia = !!p.media && !p.maskedRemoved;
+  const threadPath = `/p?uri=${encodeURIComponent(p.id)}`;
+  // v13 (E, H): a post's words are TEXT — faceted, so its #tags, links and
+  // mentions are live in place (owner: "I don't love how we extract every
+  // hashtag and present it under and have it in the original") — and an
+  // external post's words are text too; the card under them is the link. A
+  // title with no words (the alt-derived one) stays plain.
+  const titleNode = p.maskedRemoved ? undefined
+    : showsMedia && p.placeholderTitle ? null
+    : p.body ? el('div', { class: 'posttitle posttext' }, ...facetNodes(p.body, p.facets))
+    : undefined;
   return postRow(p, !!session, {
     onVote: lensVote(p),
     onGuest: session ? null : openAuthSheet, // board-cards decision 1: the guest's pill is the door
-    permalink: `${location.origin}/p?uri=${encodeURIComponent(p.id)}`, // decision 2: the row's share
+    permalink: `${location.origin}${threadPath}`, // decision 2: the row's share
+    // v13 (E): the row's own ground opens the thread — through the replies LINK's
+    // press, so it is a link navigation (scroll to the top, history) and not go()'s
+    // popstate, which keeps the scroll the way back/forward must
+    open: (wrap) => wrap.querySelector('.actions a.replies')?.click(),
     menuGroups: (row) => lensMenuGroups(row, { kind: 'post' }), // 4b
     aboveNode: kindContext(p),
-    // 3i: never duplicate the title — a preview renders only when it adds
-    // content. Card mode carries media and tag doorways; compact is dense.
-    bodyNode: showsMedia ? el('div', {}, mediaNode(p), view === 'compact' ? '' : tagChips(p) || '')
-      : view === 'compact' ? null
-      : p.preview ? facetedBody({ ...p, body: p.preview }) : tagChips(p),
-    // A placeholder title ('[image]', '[video]') exists so a row is never
-    // blank. A row showing the media IS the content, so the placeholder drops.
-    ...(showsMedia && p.placeholderTitle ? { titleNode: null } : {}),
-    // a Bluesky post's text is body text; a link post's title is the card's headline
-    textPost: p.format !== 'link',
+    // 3i: never duplicate the text. Card mode carries the media or the link card;
+    // compact is dense (the picture stays — feed-row v1). No chip row (v13).
+    bodyNode: showsMedia ? mediaNode(p) : null,
+    ...(titleNode !== undefined ? { titleNode } : {}),
+    // a Bluesky post's text is body text, a link post's included (v13)
+    textPost: true,
     authorBadge: verifiedBadge(p),
     // feed-row v2: the provider mark, unless the reader switched it off
     ...(providerMark.enabled() ? { provider: providerMark.providerOf(p.author), providerLabel: providerMark.markLabel(providerMark.providerOf(p.author), p.author) } : {}),
@@ -647,6 +721,7 @@ const lensRow = (p, view = 'card') => {
     // feed-row v7: no feed line under a lens row — the board's own header names
     // it once (v5's `@handle` crumb for author boards went with it)
     feedCrumb: false,
+    domainLine: false, // v13 (J): the card carries the host
     compact: view === 'compact',
   });
 };
@@ -1208,6 +1283,7 @@ function muteWordSheet() {
 
 function lensMenuGroups(p, { kind }) {
   const rkey = String(p.id).split('/').pop();
+  const app = appFor(session?.serverMetadata?.issuer ?? null); // v13 decision 28
   // decision 10: a comment's link is its root's thread, focused on it
   const link = kind === 'comment' && p.postId && p.postId !== p.id
     ? `${location.origin}/p?uri=${encodeURIComponent(p.postId)}&focus=${encodeURIComponent(p.id)}`
@@ -1215,7 +1291,8 @@ function lensMenuGroups(p, { kind }) {
   const first = [
     { label: 'Copy text', icon: '⧉', onSelect: () => copyText(p.body || p.title || '', 'Text') },
     { label: 'Copy link', icon: '🔗', onSelect: () => copyText(link, 'Link') },
-    { label: 'Open on bsky.app', icon: '↗', onSelect: () => window.open(`https://bsky.app/profile/${encodeURIComponent(p.author)}/post/${rkey}`, '_blank', 'noopener') },
+    // v13 decision 28: the reader's own provider's app when the registry names one; bsky.app otherwise, and the item says so
+    { label: `Open on ${app.host}`, icon: '↗', onSelect: () => window.open(`${app.url}/profile/${encodeURIComponent(p.author)}/post/${rkey}`, '_blank', 'noopener') },
   ];
   // board-cards decision 8: the guest's menu ends with the door, behind a rule
   if (!session) return [first, [{ label: 'Sign in to like, save and reply', icon: '\u2192', onSelect: () => openAuthSheet() }]];

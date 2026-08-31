@@ -1,7 +1,7 @@
 # Plan: the feed row and the thread head under a pointer — lit rows, Reply at the bottom, the quote's own bar, repost-or-quote, and Browse hiding its dead
 
 date: 2026-08-30
-status: Phases A–D BUILT on `claude/feed-row-hover` (PR CroftCommunity/forage#39; mock v12 at `forage@270bd10`; unit gate 660/660, workflows 29 found 0 failed). E awaits the owner's pick; F–K filed 2026-08-30 evening from the owner's screenshots, not started. Landing via PR — the owner merges.
+status: Phases A–D LANDED (forage `f32efa1`, mock v12). E–K BUILT on `claude/feed-row-next` (worktree `worktrees/feed-row-next/forage`; mock v13) — E as option 1 with the row-press (decision 33); G's non-Bluesky providers probed 2026-08-30 and found app-less (recorded in `js/auth/hosts.js`). Landing via PR — the owner merges.
 repo: `CroftCommunity/forage`
 baseline: `main` @ `ad29be5` (feed-row v9 landed)
 mock: `plans/mocks/feed-row.html` v10 → v12 (decisions 22–26, O12); F–K are decisions 27–32, drawn when built. The mock is the record (MOCKS.md P3); this file is the order the promises get kept in.
@@ -64,7 +64,7 @@ before it is built (RED first), the frames captured from the engine (MOCKS.md P1
 | I | 30 | A **native Bluesky video** (`app.bsky.embed.video#view`) plays in place — today the stage's play button opens the post on bsky.app. Bluesky serves HLS (`playlist` m3u8 + thumbnail); Safari plays HLS natively, Chromium and Firefox need hls.js — a new dependency, so SUPPLY-CHAIN.md's ladder first (DECISIONS.md grep, osv, the allowlist) before any code. The player is the native `<video>` with controls, the thumbnail as poster, nothing fetched until the press | `bluesky-view` — the video stage: poster from the view, `<video>` only after the press, the playlist URL on it |
 | J | 31 | The **external link card** (a link to a book, owner's screenshot): the preview picture sits centred and contained in its frame rather than pinned to an edge, with the title, description and domain under it — bsky.app's card. Measured on the owner's example before drawing | `bluesky-view` — the external card's picture is centred in its frame; the title and domain are under it |
 | K | 32 | The row's **byline is a step larger** (owner: "bump the size up on the top left author attribution too"): the chosen name at the body size and weight 600, the mark and time beside it — bsky.app's byline is 15px bold on a 15px post. Today it is `--t-xs` (13px). Measured under the v2 load (the 64-grapheme name, the 30-character handle) so the line still holds at 390 and 320 | mock-board — the byline's computed size ≥ the post text's; the one-line claims already there |
-| E | O12 | The hashtags: (1) no chip row, tags stay in the text as links; (2) fold a trailing tag run into the chips; (3) chips only. Recommended 1. **Awaiting the owner's pick.** | — |
+| E | O12 → 33 | Option 1, on the owner's "let's do it": no chip row; the row's TEXT is faceted (tags → `/h/`, links live, mentions out) — which meant the text could no longer be the thread link, so **the row's own ground opens the thread** (bsky.app's card) through the replies link's press; a link post's words are text too, the card under them is the link | mock-board — "no hashtag chips under a row" / "a #tag in the row’s text is a link" / "a press on the row’s own ground opens its thread" / "a press on a tag opens the tag’s board"; open-at-top |
 
 Captures: `scripts/mock-snaps.mjs` — `board-lens-hover` (desktop only, A) and `thread-lens`
 (both viewports, both columns — the fixture's root gained a picture for C, which is a new

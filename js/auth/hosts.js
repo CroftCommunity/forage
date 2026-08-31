@@ -32,12 +32,28 @@
 
 export const SIGNUP = Object.freeze({ OPEN: 'open', INVITE: 'invite' });
 
+// `app` (feed-row v13 decision 28): the provider's own WEB APP, where "Open on …"
+// in the ⋯ menu goes for a reader signed in there — or null, and bsky.app stands
+// in. Probed 2026-08-30 (GET /profile/bsky.app): blacksky.app, eurosky.social and
+// northsky.social answer 404 — they are PDS hosts, not apps — and bsky.social
+// itself 404s too (Bluesky's app is bsky.app, a different host). A null here is a
+// fact recorded, never a guess (CLAUDE.md § External APIs); re-probe before filling one.
 export const HOSTS = Object.freeze([
-  Object.freeze({ id: 'bsky', label: 'Bluesky', entryway: 'https://bsky.social', signups: SIGNUP.OPEN }),
-  Object.freeze({ id: 'blacksky', label: 'Blacksky', entryway: 'https://blacksky.app', signups: SIGNUP.OPEN }),
-  Object.freeze({ id: 'eurosky', label: 'EuroSky', entryway: 'https://eurosky.social', signups: SIGNUP.OPEN }),
-  Object.freeze({ id: 'northsky', label: 'Northsky', entryway: 'https://northsky.social', signups: SIGNUP.INVITE }),
+  Object.freeze({ id: 'bsky', label: 'Bluesky', entryway: 'https://bsky.social', signups: SIGNUP.OPEN, app: 'https://bsky.app' }),
+  Object.freeze({ id: 'blacksky', label: 'Blacksky', entryway: 'https://blacksky.app', signups: SIGNUP.OPEN, app: null }),
+  Object.freeze({ id: 'eurosky', label: 'EuroSky', entryway: 'https://eurosky.social', signups: SIGNUP.OPEN, app: null }),
+  Object.freeze({ id: 'northsky', label: 'Northsky', entryway: 'https://northsky.social', signups: SIGNUP.INVITE, app: null }),
 ]);
+const FALLBACK_APP = 'https://bsky.app';
+// The app a post opens on for a reader whose session was issued by `issuer` (the
+// OAuth server — the provider's entryway). `own` says whether it is the provider's
+// own app or bsky.app standing in, so the menu item can say which.
+export function appFor(issuer, list = HOSTS) {
+  const norm = (u) => String(u || '').replace(/\/+$/, '').toLowerCase();
+  const host = list.find((h) => norm(h.entryway) === norm(issuer));
+  const url = host?.app || FALLBACK_APP;
+  return { url, host: new URL(url).hostname, own: !!host?.app };
+}
 // MEMBERSHIP is the owner's: settled 2026-08-27 at two open-signup hosts and
 // ONE invite-only, chosen for reputation rather than for count; EuroSky added
 // 2026-08-29. The same day the owner moved the invite-only host OFF the front

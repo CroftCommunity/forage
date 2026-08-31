@@ -38,7 +38,7 @@ export async function run() {
     await last.scrollIntoViewIfNeeded();
     const before = await s.page.evaluate(() => window.scrollY);
     assert.ok(before > 300, `the board must actually be scrolled for this to prove anything (scrollY ${before})`);
-    await last.locator('.posttitle a').first().click();
+    await last.click({ position: { x: 6, y: 6 } }); // v13 (E): the row's own ground opens the thread — the text is text, not a link
     await s.page.waitForSelector('.comment');
     const after = await s.page.evaluate(() => window.scrollY);
     assert.equal(after, 0, `a post opens at its top, not at the board's scroll offset (scrollY ${after})`);

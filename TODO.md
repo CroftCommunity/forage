@@ -16,6 +16,10 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
   carries the composer's picker (`imagePicker` in `js/ui/lens-views.js`); the quick box
   stays text.
 
+- **Providers without a web app (feed-row 28).** "Open on …" names the signed-in provider's app
+  only where `js/auth/hosts.js` records one; blacksky.app, eurosky.social and northsky.social were
+  probed 2026-08-30 and answer 404 at `/profile/…` (PDS hosts, not apps). If one of them ships a
+  client, re-probe and fill `app` — never from memory.
 - **Surf's muted ink on its own elevated surface is under AA.** `--muted` #5C6B75 on
   `--card-2` #F3E6D0 measures 4.47 (floor 4.5) — a pair `test/skins.test.js` does not grade
   (`--muted` is graded on `--bg` and `--card` only), found 2026-08-30 while authoring surf's

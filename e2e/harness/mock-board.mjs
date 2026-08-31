@@ -15,6 +15,7 @@
 //     commonest shape), so the text's weight and the stage read together
 //
 // Shared by scripts/mock-snaps.mjs and any workflow that wants this board.
+import { detectFacets } from '../../js/compose.js';
 const AV = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 const WH = 'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot';
 const T = (h) => `2026-08-30T${String(h).padStart(2, '0')}:00:00Z`;
@@ -31,10 +32,12 @@ const NAMES = {
   'misterhooperspecial.bsky.social': 'mister hooper',
   'thefrostwarning.bsky.social': 'Frost Warning',
 };
+// v13 (E): a real record carries FACETS for its #tags, links and @mentions —
+// the lens links them from the facets, never by scanning the text (3f)
 const post = (rkey, did, handle, ts, text, { likes = 0, replies = 0, reposts = 0, embed = null, reply = null } = {}) => ({
   uri: `at://${did}/app.bsky.feed.post/${rkey}`, cid: `cid-${rkey}`,
   author: { did, handle, avatar: AV, ...(NAMES[handle] ? { displayName: NAMES[handle] } : {}) },
-  record: { text, createdAt: ts, ...(reply ? { reply } : {}) }, indexedAt: ts,
+  record: { text, createdAt: ts, facets: detectFacets(text), ...(reply ? { reply } : {}) }, indexedAt: ts,
   // the hydrated embed (#view) sits on the POST, beside the record — the raw
   // record's embed is the blob ref, which the lens never reads (a fixture that
   // put it in the record rendered no stage at all, 2026-08-30)
@@ -54,6 +57,13 @@ const svg = (n, { width, height }) => {
 };
 export const img = (n, aspectRatio) => ({ thumb: svg(n, aspectRatio), fullsize: svg(n, aspectRatio), alt: `picture ${n}`, aspectRatio });
 export const images = (...list) => ({ $type: 'app.bsky.embed.images#view', images: list });
+// v13 (H, I, J — the owner's screenshots, 2026-08-30): a YouTube link, a native
+// Bluesky video, and a link to a book. The video's playlist points at a fenced
+// host so nothing plays here; the frame proves the shape, the claims the wiring.
+const external = ({ uri, title, description, n, aspect }) => ({ $type: 'app.bsky.embed.external#view',
+  external: { uri, title, description, thumb: svg(n, aspect) } });
+const video = (n, aspectRatio) => ({ $type: 'app.bsky.embed.video#view', cid: `cid-video-${n}`,
+  playlist: `https://video.cdn.test/${n}/playlist.m3u8`, thumbnail: svg(n, aspectRatio), aspectRatio });
 
 const plain = post('plain', 'did:plc:plain', 'quietcartographer.bsky.social', T(9),
   'If we invent the Pneumatic Pie Tube Network today it will still be 49 years too late to follow up on the good work of the original proposal.',
@@ -68,7 +78,19 @@ const portrait = post('portrait', 'did:plc:pic', 'erislovesgardens.bsky.social',
 const four = post('four', 'did:plc:four', 'misterhooperspecial.bsky.social', T(4), 'four from the allotment',
   { likes: 0, replies: 0, embed: images(img('4a', { width: 1600, height: 1200 }), img('4b', { width: 1080, height: 1920 }), img('4c', { width: 1920, height: 1080 }), img('4d', { width: 1200, height: 1200 })) });
 
+const youtube = post('yt', 'did:plc:grickle', 'grickle.bsky.social', T(3),
+  "School's about to start! Check out the Grickle Youtube Channel and relive the memories/nightmare of a school run by a living skeleton in a suit (there are 5 episodes to be found!) youtu.be/dok0rJSo8ug?... #grickledoodle #principalskeleton #animation #horror #funny #humor",
+  { likes: 64, replies: 2, reposts: 14, embed: external({ uri: 'https://youtu.be/dok0rJSo8ug?si=5grTGjKFq_2148Xn', title: 'Principal Skeleton',
+    description: 'Supervising education in autumn can be a lonely affair. Principal Skeleton continues to do his best at Charlston Elementary year after year.', n: 'yt', aspect: { width: 1280, height: 720 } }) });
+const clip = post('clip', 'did:plc:tiredactor', 'tiredactor.bsky.social', T(2), "That's my job 😉 #comedy #funny #relatable #smile",
+  { likes: 30, replies: 0, reposts: 1, embed: video('clip', { width: 1080, height: 1920 }) });
+const book = post('book', 'did:plc:reader', 'briarpatchradio.bsky.social', T(1), 'the one book about bogs everyone should read this autumn',
+  { likes: 4, replies: 0, embed: external({ uri: 'https://example.org/books/the-bog-book', title: 'The Bog Book', description: 'A field guide to peatlands.', n: 'book', aspect: { width: 600, height: 900 } }) });
+
 export const FEED = { feed: [
+  { post: youtube },
+  { post: clip },
+  { post: book },
   { post: plain },
   { post: replyRow, reply: { root: parent, parent } },
   { post: reposted, reason: { $type: 'app.bsky.feed.defs#reasonRepost', by: { did: 'did:plc:rp', handle: 'moss.bsky.social', avatar: AV }, indexedAt: T(8) } },

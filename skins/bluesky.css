@@ -1,0 +1,64 @@
+/* Bluesky (light) — feed-row v13 decision 27. Sibling of `bluesky-dark`.
+
+   bsky.app's LIGHT theme as a token sheet: white cards on a white page, the #1083FE
+   blue for fills and links, near-black ink, and the like drawn as a HEART
+   (--like-glyph) in bsky's pink. Unstriped rows, the lit row a whisper of blue-grey.
+
+   CONTRAST (measured by test/skins.test.js, AA):
+     ink   #0B0F14 on page #FFFFFF  ~19.6:1   body
+     muted #42576C on card          ~7.1:1   body
+     link  #0070E0 on card          ~5.0:1   body
+     white on --brand-fill #0B66CC  >= 4.5   body (bsky's #1083FE is 3.7 on white; moved for the button's text) */
+
+:root {
+  --bg:          #FFFFFF;
+  --card:        #FFFFFF;
+  --card-2:      #F1F3F5;
+  --text:        #0B0F14;
+  --muted:       #42576C;
+  --border:      #D4DBE2;
+
+  --link:        #0A5FC4;
+  --link-hover:  #08488F;
+  --brand-ink:   #0A5FC4;
+  --brand-fill:  #0B66CC;
+  --brand-fill-hover: #0A5CB8;
+  --on-brand:    #FFFFFF;
+
+  --band-fill:   #FFFFFF;
+  --band-ink:    #0B0F14;
+  --band-link:   #0A5FC4;
+  --band-brand:  #0A5FC4;
+  --nav-fill:    #FFFFFF;
+  --panel:       #FFFFFF;
+  --row-odd:     transparent;
+  --row-even:    transparent;
+  --row-head:    transparent;
+  /* the lit row (feed-row 22): bsky.app's hover over white */
+  --row-hover:   #F4F6F8;
+
+  --boost:       #EC4899;   /* the heart, filled: bsky's like pink */
+  --bury:        #B42318;
+  --tint:        #EDF4FC;
+
+  --gold-500:    #C99A3C;
+  --gold-strong: #7A6110;
+  --danger:      #B42318;
+  --danger-ink:  #8F2A22;
+  --danger-tint: #FBEAE8;
+  --clay-600:    #A24D2C;
+  --stripe:      rgba(0,0,0,.03);
+
+  --font-body:   Inter, "Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: Inter, "Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --radius-card:  10px;
+  --radius-chip:  999px;
+  --radius-sm:    6px;
+  --radius-media: 12px;
+  --radius-round: 50%;
+
+  --like-glyph:  '♥';
+
+  --color-scheme: light;
+}
