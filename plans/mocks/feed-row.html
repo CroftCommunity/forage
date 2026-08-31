@@ -6,7 +6,7 @@
 <title>Forage Feed Row Proposals v7</title>
 <meta name="mock-version" content="7">
 <meta name="mock-baseline" content="forage@7c4ee03">
-<meta name="mock-proposal" content="forage@6abf8dd">
+<meta name="mock-proposal" content="forage@61fcf2b">
 <style>
 :root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
   --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
@@ -43,7 +43,7 @@ code{font-size:.92em}
 <body>
 <div class="wrap">
   <header>
-    <div class="eyebrow">Forage · mock · feed-row <b>v7</b> · Current forage@7c4ee03 · Proposed forage@6abf8dd · 2026-08-31</div>
+    <div class="eyebrow">Forage · mock · feed-row <b>v7</b> · Current forage@7c4ee03 · Proposed forage@61fcf2b · 2026-08-31</div>
     <h1>The feed row, made to agree with the phone</h1>
     <p class="sub"><b>One proposal in nineteen decisions, for one purpose:</b> the lens feed row on forage.fyi should look the way the owner's phone expected it to, with Bluesky's own row as the reference — and this time the thing being agreed on is the app, not a drawing.
       Origin: six phone screenshots of forage.fyi and bsky.app taken 2026-08-30 16:17–16:28 (phpBB skin, <code>f/whats-hot</code> and two threads), plus a desktop pair (<code>/u/pds.ls</code> → <code>f/pds.ls</code> → "Unknown feed").
@@ -174,13 +174,13 @@ code{font-size:.92em}
     <div class="stage">
       <div class="device phone"><div class="device-label">Phone · thread-lens · CURRENT (forage@7c4ee03)</div>
         <img class="shot" src="snaps/feed-row/thread-lens.phone.current.png" alt="Thread head today: Reply as a button under the post, left-aligned" width="390"></div>
-      <div class="device phone"><div class="device-label">Phone · thread-lens · PROPOSED (forage@6abf8dd)</div>
+      <div class="device phone"><div class="device-label">Phone · thread-lens · PROPOSED (forage@61fcf2b)</div>
         <img class="shot" src="snaps/feed-row/thread-lens.phone.proposed.png" alt="Thread head on the branch: Reply at the right end of the like's row" width="390"></div>
-      <div class="device phone"><div class="device-label">Phone · reply-lens · PROPOSED (forage@6abf8dd) — no Current: the page did not exist</div>
+      <div class="device phone"><div class="device-label">Phone · reply-lens · PROPOSED (forage@61fcf2b) — no Current: the page did not exist</div>
         <img class="shot" src="snaps/feed-row/reply-lens.phone.proposed.png" alt="The /reply page: the post being answered above a text box with a kept draft, Discard draft, Cancel and Send" width="390"></div>
     </div>
     <div class="stage">
-      <div class="device desk"><div class="device-label">Desktop · reply-lens · PROPOSED (forage@6abf8dd)</div>
+      <div class="device desk"><div class="device-label">Desktop · reply-lens · PROPOSED (forage@61fcf2b)</div>
         <img class="shot" src="snaps/feed-row/reply-lens.desktop.proposed.png" alt="The /reply page at 1280"></div>
     </div>
   </section>
@@ -192,7 +192,7 @@ code{font-size:.92em}
     <div class="stage">
       <div class="device phone"><div class="device-label">Phone · thread-lens-reply · CURRENT (forage@7c4ee03)</div>
         <img class="shot" src="snaps/feed-row/thread-lens-reply.phone.current.png" alt="Today: the full composer opens under the comment" width="390"></div>
-      <div class="device phone"><div class="device-label">Phone · thread-lens-reply · PROPOSED (forage@6abf8dd)</div>
+      <div class="device phone"><div class="device-label">Phone · thread-lens-reply · PROPOSED (forage@61fcf2b)</div>
         <img class="shot" src="snaps/feed-row/thread-lens-reply.phone.proposed.png" alt="On the branch: a quick box — textarea, counter, Cancel and Send — under the comment" width="390"></div>
     </div>
   </section>
@@ -286,7 +286,7 @@ code{font-size:.92em}
   <section>
     <div class="eyebrow">Revisions</div>
     <ul class="small" style="margin:0;padding-left:18px">
-      <li><b>v7</b> — 2026-08-31: decisions 17–19 — the feed card on one line, outlined, the curator linking out; no feed line under lens rows (O4 closed); Follow on the profile page (no frame: no profile fixture in the hermetic populations yet). O10 records the ☆/Join question. Proposed <code>forage@6abf8dd</code>.</li>
+      <li><b>v7</b> — 2026-08-31: decisions 17–19 — the feed card on one line, outlined, the curator linking out; no feed line under lens rows (O4 closed); Follow on the profile page (no frame: no profile fixture in the hermetic populations yet). O10 records the ☆/Join question. Proposed <code>forage@61fcf2b</code>. The frame caught what no claim had: the word "null" under every row (a null child handed to Element.append) — fixed before capture, and now a claim.</li>
       <li><b>v6</b> — 2026-08-31, after v1–v5 landed (<code>7c4ee03</code>): decisions 15–16 — the head opens with the byline and the breadcrumb sits right; the reply box takes bsky's shape (tools left, count ring right, images back — O7 closed; GIF from the device, search as O9). Proposed <code>forage@6457ac3</code>, Current re-captured at main.</li>
       <li><b>v5</b> — 2026-08-30, night: decision 14 — the sort's first choice is "Default"; every Proposed frame re-captured at <code>forage@37007fd</code> (the toolbar is on every board frame).</li>
       <li><b>v4</b> — 2026-08-30, night: rebased onto main's warm-skins landing (Current re-captured at <code>forage@7a701c3</code>); decisions 9–13 built and captured (Proposed <code>forage@dcca0e1</code>) — the head's Reply at the right, the <code>/reply</code> page, drafts in this browser (with the lexicon finding that a native draft has no reply target), the quick box under a comment, the frontier chips gone; § H shows three skins at the owner's ask. Two things the frames caught that the claims had not — the squeezed pill, the dropped ⋯ — became claims before the re-capture.</li>
