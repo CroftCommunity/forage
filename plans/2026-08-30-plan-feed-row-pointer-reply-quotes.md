@@ -1,10 +1,10 @@
 # Plan: the feed row and the thread head under a pointer — lit rows, Reply at the bottom, the quote's own bar, repost-or-quote, and Browse hiding its dead
 
 date: 2026-08-30
-status: Phases A–B BUILT (F–K filed 2026-08-30 evening, owner's screenshots of bsky.app and the ⋯ menu) on `claude/feed-row-hover` (worktree `worktrees/feed-row-hover/forage`); C in progress; D–E open. Landing via PR — the owner merges.
+status: Phases A–D BUILT on `claude/feed-row-hover` (PR CroftCommunity/forage#39; mock v12 at `forage@270bd10`; unit gate 660/660, workflows 29 found 0 failed). E awaits the owner's pick; F–K filed 2026-08-30 evening from the owner's screenshots, not started. Landing via PR — the owner merges.
 repo: `CroftCommunity/forage`
 baseline: `main` @ `ad29be5` (feed-row v9 landed)
-mock: `plans/mocks/feed-row.html` v10 → v11 (decisions 22–26, O12); F–G are decisions 27–28, drawn when built. The mock is the record (MOCKS.md P3); this file is the order the promises get kept in.
+mock: `plans/mocks/feed-row.html` v10 → v12 (decisions 22–26, O12); F–K are decisions 27–32, drawn when built. The mock is the record (MOCKS.md P3); this file is the order the promises get kept in.
 parent: plan `2026-08-29-plan-post-and-thread.md` (the head, the quote as a walled comment) and feed-row v1–v9 (Bluesky's row as the reference).
 
 ## Problem Statement
