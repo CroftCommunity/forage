@@ -1746,9 +1746,11 @@ function feedHeaderCard(info, onChange) {
       el('div', { class: 'row', style: 'gap:10px;align-items:center;min-width:0' },
         m.avatar ? el('img', { src: m.avatar, alt: '', class: 'feed-avatar', loading: 'lazy' }) : null,
         el('div', { style: 'min-width:0' },
-          el('div', { class: 'small', 'data-feed-line': '1' },
-            el('strong', {}, `${fmtScore(m.likeCount)} likes`), ' · Curated by ',
-            m.creator ? el('a', { href: m.creatorUrl, target: '_blank', rel: 'noopener noreferrer', title: 'Their profile, on bsky.app' }, `@${m.creator}`) : '@unknown'),
+          // v8 (owner): likes at the left, the curator right-aligned on the same line
+          el('div', { class: 'small feed-line', 'data-feed-line': '1' },
+            el('strong', { 'data-feed-likes': '1' }, `${fmtScore(m.likeCount)} likes`),
+            el('span', { 'data-feed-curator': '1' }, 'Curated by ',
+              m.creator ? el('a', { href: m.creatorUrl, target: '_blank', rel: 'noopener noreferrer', title: 'Their profile, on bsky.app' }, `@${m.creator}`) : '@unknown')),
           adoption)),
       // A guest manages nothing here — the header reads as a thing you are
       // looking at rather than one you own. Absent, not disabled (owner).

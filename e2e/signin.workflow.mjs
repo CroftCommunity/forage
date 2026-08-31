@@ -340,7 +340,7 @@ export async function run() {
   // 3j: a feed board carries its header card, and Join writes preferences
   await page.goto(`${s.origin}/f/whats-hot`);
   await page.waitForSelector('[data-feed-header]');
-  await page.waitForSelector('text=Curated by @bsky.app.');
+  await page.waitForSelector('text=Curated by @bsky.app');
   // 4g: the feed card carries adoption signals the AppView does not have —
   // shares (posts quoting this feed) and starter-pack inclusions, both
   // windowed from the backlink rkeys alone.

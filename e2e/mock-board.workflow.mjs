@@ -97,13 +97,19 @@ export async function run() {
     // then the curator as a link out to bsky.app — the description quoted under
     // it, and the card outlined
     const fh = await page.$eval('#main [data-feed-header]', (c) => ({
-      line: c.querySelector('[data-feed-line]')?.textContent.replace(/\s+/g, ' ').trim() ?? null,
+      line: [c.querySelector('[data-feed-likes]'), c.querySelector('[data-feed-curator]')].map((e) => e?.textContent.replace(/\s+/g, ' ').trim() ?? null).join(' | '),
+      // v8 (owner: "right align the Curated by"): likes at the left edge, the curator at the right edge of the same line
+      ...((() => { const l = c.querySelector('[data-feed-likes]'), r = c.querySelector('[data-feed-curator]'), row = c.querySelector('[data-feed-line]');
+        if (!l || !r || !row) return { aligned: false };
+        const lb = l.getBoundingClientRect(), rb = r.getBoundingClientRect(), rw = row.getBoundingClientRect();
+        return { aligned: Math.round(lb.left - rw.left) <= 1 && Math.round(rw.right - rb.right) <= 1 && Math.abs((lb.top + lb.height / 2) - (rb.top + rb.height / 2)) <= 3 }; })()),
       link: c.querySelector('[data-feed-line] a')?.getAttribute('href') ?? null,
       blank: c.querySelector('[data-feed-line] a')?.getAttribute('target') ?? null,
       blurb: c.querySelector('[data-feed-blurb]')?.textContent.trim() ?? null,
       highlight: c.classList.contains('highlight'), shadow: getComputedStyle(c).boxShadow,
     }));
-    assert.equal(fh.line, '39.4k likes · Curated by @bsky.app', `the card's first line (${fh.line})`);
+    assert.equal(fh.line, '39.4k likes | Curated by @bsky.app', `the card's first line, likes then curator (${fh.line})`);
+    assert.ok(fh.aligned, 'likes sit at the left edge and the curator at the right edge of one line');
     assert.equal(fh.link, 'https://bsky.app/profile/bsky.app', 'the curator links out to bsky.app');
     assert.equal(fh.blank, '_blank', 'in a new tab — it leaves Forage');
     assert.equal(fh.blurb, 'trending', 'the description sits under it, quoted');
