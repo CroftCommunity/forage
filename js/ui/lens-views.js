@@ -553,16 +553,66 @@ function loadHls() {
   }
   return hlsLoading;
 }
+
+// Could the demuxer play here? This is the test hls.js's own `Hls.isSupported()`
+// runs, hoisted so the routing decision can be made WITHOUT first downloading
+// 385 KB to ask it.
+function mseHlsSupported() {
+  const MS = window.ManagedMediaSource || window.MediaSource || window.WebKitMediaSource;
+  try {
+    return !!MS && typeof MS.isTypeSupported === 'function'
+      && MS.isTypeSupported('video/mp4;codecs="avc1.42E01E,mp4a.40.2"');
+  } catch { return false; }
+}
+
+// LIVE 2026-08-31, the owner on Chrome for Android: a clip mounted, showed its
+// poster, and then sat at 0:00 behind a broken-media glyph with nothing said.
+// The routing asked `canPlayType('application/vnd.apple.mpegurl')` FIRST and
+// took any non-empty answer as proof — but Chrome 147 answers "maybe" on
+// Android and macOS while its native HLS demuxer then fails on playlists like
+// Bluesky's (video-dev/hls.js#7827; hls.js's own README now warns that a
+// browser "may report support but potentially fail to play certain streams
+// natively"). So a non-empty canPlayType is NOT evidence, and the branch it
+// guarded was the silent one: only the hls.js path ever said anything.
+//
+// The gate that IS evidence: take the native path only where the browser
+// claims HLS and hls.js could not have helped anyway —
+//   · Safari 17.1+, where `ManagedMediaSource` is Safari's and Safari's alone,
+//     and native HLS is both the better player and 385 KB cheaper;
+//   · older iOS Safari, which has no MSE at all for hls.js to run on.
+// Everything else — Chrome, Edge, Chromium on Android, Firefox — goes through
+// the demuxer, which is what actually plays these playlists.
+function nativeHlsFirst(video) {
+  if (!video.canPlayType('application/vnd.apple.mpegurl')) return false;
+  return 'ManagedMediaSource' in window || !mseHlsSupported();
+}
+
 function mountVideo(node, { playlist, poster, fallback }) {
   const video = el('video', { class: 'stage-video', controls: '', autoplay: '', playsinline: '', poster: poster || '', 'data-playlist': playlist, preload: 'metadata' });
   node.replaceChildren(video);
-  if (video.canPlayType('application/vnd.apple.mpegurl')) { video.src = playlist; return; }
-  loadHls().then((Hls) => {
+  const viaHls = () => loadHls().then((Hls) => {
     if (!Hls.isSupported()) throw new Error('this browser cannot play HLS video');
     const hls = new Hls();
     hls.on(Hls.Events.ERROR, (_, data) => { if (data?.fatal) { hls.destroy(); toast(`The video would not play here — it is on bsky.app: ${fallback}`, 'err'); } });
     hls.loadSource(playlist); hls.attachMedia(video);
   }).catch((e) => toast(`${e.message} — it plays on bsky.app: ${fallback}`, 'err'));
+  if (nativeHlsFirst(video)) {
+    // `data-player` records the DECISION and never changes — it is what the
+    // workflow asserts on. Even here the browser's promise is a first try, not
+    // the last word: one media error and the demuxer takes over, so a browser
+    // that lies costs a retry rather than leaving a reader a broken box.
+    video.dataset.player = 'native';
+    video.addEventListener('error', () => {
+      video.removeAttribute('src');
+      video.load();
+      video.dataset.playerFallback = 'hls';
+      viaHls();
+    }, { once: true });
+    video.src = playlist;
+    return;
+  }
+  video.dataset.player = 'hls';
+  viaHls();
 }
 
 // The board view preference (card | compact) — device-local, like theme/skin.

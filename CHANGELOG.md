@@ -8,6 +8,14 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-08
 
+- 2026-08-31 **Bluesky videos play on Chrome again.** A clip on Chrome — on Android especially —
+  put up its poster and then went to a broken-media symbol at 0:00, with nothing said about why.
+  Forage was asking the browser whether it could play the video and believing the answer; Chrome
+  147 says yes and then cannot. Forage now decides for itself which player a clip needs, so
+  Chrome, Edge and Firefox all get the small player that actually plays these videos, Safari
+  keeps playing them itself (and still downloads nothing extra), and a browser that promises more
+  than it can do is quietly retried on the other player instead of leaving a broken box.
+  (owner, live on forage.fyi; upstream video-dev/hls.js#7827)
 - 2026-08-30 **Tags in the text, not twice; the row opens the thread; links, YouTube and video
   play in place; a Bluesky skin; "Open on" follows your provider; bigger names.** A post's #tags,
   links and @mentions are now live in its text on the board, and the chip row that repeated the
