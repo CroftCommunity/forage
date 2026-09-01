@@ -8,6 +8,19 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-01 **The thread's guide lines meet again on a phone.** Under every reply that has
+  replies of its own, a line runs down from the avatar and each child branches out of it into
+  its own. On a narrow screen that branch was drawn eight pixels to the left of the line it was
+  supposed to leave — a short hook hanging in the margin beside the rail rather than joining it,
+  which is why a thread read as two sets of guides ignoring each other. On a desktop it had
+  always been right, which is why it went unnoticed: the offset was a fixed number that only
+  matched the wider indent. It is now derived from the indent, so the two meet at any width.
+  Replies on a phone are indented exactly as before, and the branch there is a straight
+  continuation rather than a curve: at that indent the reply's own avatar begins where the line
+  comes down, and there is no room to curve into it without pushing deep replies off a small
+  screen.
+  (owner, on a phone frame: "why do these thread guides not line up?")
+
 - 2026-09-01 **A reply shows what it is showing you.** A reply's picture, its video, its
   link card and the post it quotes never rendered in a thread here: the reply's words came
   through and everything else was dropped before any of it reached the screen. With words
