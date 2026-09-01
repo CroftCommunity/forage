@@ -8,7 +8,7 @@
 //   node scripts/mock-snaps.mjs --as proposed         # files get a .proposed suffix
 //   node scripts/mock-snaps.mjs --only board-lens,menu-lens   # a subset of the routes below
 //       (routes: board thread board-lens board-lens-media board-lens-compact board-lens-in
-//        board-lens-cards board-lens-quote board-lens-hover post-lens-quote thread-lens thread-lens-quote thread-lens-sheet menu-lens focus-lens reply-lens thread-lens-reply
+//        board-lens-cards board-lens-quote board-lens-hover post-lens-quote thread-lens thread-lens-quote thread-lens-sheet thread-lens-embed menu-lens focus-lens reply-lens thread-lens-reply
 //        news-lens news-lens-replies news-board news-board-nothumb)
 //   node scripts/mock-snaps.mjs --as current --serve ../../forage
 //       # the same script and fixtures, rendering ANOTHER checkout (main): the
@@ -166,6 +166,22 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
     await r.page.evaluate(() => document.fonts?.ready);
     await shoot(r.page, 'reply-lens', 'lens:mock-thread', name, vp);
     await r.close();
+  }
+  // reply-embeds (owner, 2026-09-01, "reply with an image that doesn't load"):
+  // the two replies that carry embeds — a picture with words above it, and a
+  // WORDLESS reply whose whole content is a quote of a picture post. On main
+  // both draw a byline and an action row over nothing, which is what an honest
+  // Current frame has to be able to show.
+  if (wanted('thread-lens-embed')) {
+    const em = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: RESPONSES });
+    await em.page.setViewportSize({ width: vp.width, height: vp.height });
+    await em.page.goto(`${em.origin}${THREAD_PATH}`);
+    await em.page.waitForSelector('.comment[data-kind="quote"]', { timeout: 15000 });
+    await em.page.evaluate(() => document.fonts?.ready);
+    await em.page.evaluate((id) => { document.querySelector(`.comment[data-node-id="${id}"]`)?.scrollIntoView({ block: 'start' }); window.scrollBy(0, -72); }, NODE_IDS[7]);
+    await em.page.waitForTimeout(200);
+    await shoot(em.page, 'thread-lens-embed', 'lens:mock-thread', name, vp);
+    await em.close();
   }
   if (wanted('thread-lens-reply')) {
     const q = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: RESPONSES });
