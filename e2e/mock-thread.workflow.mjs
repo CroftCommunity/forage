@@ -220,11 +220,18 @@ export async function run() {
         after: kids.slice(kids.indexOf(holder) + 1).map((k) => k.className || k.tagName) };
     });
     assert.ok(order.stage, 'the fixture post carries a picture, so there is something for Reply to be under');
-    assert.equal(order.onLikeRow, false, 'Reply is still on the like row');
-    assert.ok(order.last, `Reply is not the last thing in the head — ${order.after.join(' · ')} follow it`);
-    assert.ok(order.underStage, 'Reply sits under the picture, not between the text and it');
+    // post-text v2 decision 7 SUPERSEDES feed-row v11 decision 23's second half.
+    // v11 moved Reply down here ALONE and left the counts on a row of their own
+    // above the picture; the owner, reading the post-text v1 frames (2026-09-01),
+    // asked for the counts to follow it down. So the claim inverts: Reply is on
+    // the like row again — but the whole row is now at the BOTTOM of the head,
+    // which is what v11 was actually after. What v11 fixed and this keeps: a long
+    // post no longer splits around Reply, because nothing sits between the text
+    // and the picture any more.
+    assert.equal(order.onLikeRow, true, 'the counts and Reply share one row (post-text decision 7)');
+    assert.ok(order.last, `the row is not the last thing in the head — ${order.after.join(' · ')} follow it`);
+    assert.ok(order.underStage, 'and it sits under the picture, not between the text and it');
     assert.ok(order.rightGap <= 4, `Reply is not at the right edge of the head (gap ${order.rightGap}px)`);
-    assert.ok(order.likeRightGap <= 4, `the like is not at the right end of its row (gap ${order.likeRightGap}px)`);
     // feed-row v12 decision 25 (owner, 2026-08-30: "the same button for us should
     // just popup with a dialogue that allows us to add commentary or not and if
     // we hit post without then it's just a plain repost"): ⟳ on every node — the

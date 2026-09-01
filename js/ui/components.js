@@ -501,7 +501,16 @@ export function commentNode(node, ctx) {
     ],
   });
 
-  const text = el('div', { class: 'comment-text', html: node.maskedRemoved || node.deleted ? esc(node.body) : mdLite(node.body) });
+  // post-text (2026-09-01): a comment's words. The memory tier keeps mdLite (its
+  // bodies are markdown-ish and carry no facets); the lens hands its own
+  // renderer through ctx.textNode, because a Bluesky reply's links, #tags and
+  // @mentions live in byte-indexed facets — rendered as markdown they were
+  // inert text on every thread. The seam is the one postRow already uses for
+  // titleNode: the component asks, the population answers.
+  const text = node.maskedRemoved || node.deleted
+    ? el('div', { class: 'comment-text', html: esc(node.body) })
+    : ctx.textNode ? el('div', { class: 'comment-text posttext' }, ...ctx.textNode(node))
+    : el('div', { class: 'comment-text', html: mdLite(node.body) });
 
   const actionsRow = el('div', { class: 'comment-actions' });
   const replyHost = el('div', { class: 'reply-host' }); // where a lens composer lands, under this node

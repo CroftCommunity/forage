@@ -1,0 +1,149 @@
+{
+  "capturedAt": "2026-09-01",
+  "files": [
+    {
+      "file": "news-lens.phone.current.png",
+      "route": "news-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@8081fc9",
+      "population": "lens:mock-newspost"
+    },
+    {
+      "file": "news-lens-replies.phone.current.png",
+      "route": "news-lens-replies",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@8081fc9",
+      "population": "lens:mock-newspost"
+    },
+    {
+      "file": "news-board.phone.current.png",
+      "route": "news-board",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@8081fc9",
+      "population": "lens:mock-newspost"
+    },
+    {
+      "file": "news-lens.desktop.current.png",
+      "route": "news-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@8081fc9",
+      "population": "lens:mock-newspost"
+    },
+    {
+      "file": "news-lens-replies.desktop.current.png",
+      "route": "news-lens-replies",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@8081fc9",
+      "population": "lens:mock-newspost"
+    },
+    {
+      "file": "news-board.desktop.current.png",
+      "route": "news-board",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@8081fc9",
+      "population": "lens:mock-newspost"
+    },
+    {
+      "file": "news-lens.phone.proposed.png",
+      "route": "news-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@b73b4f9",
+      "population": "lens:mock-newspost"
+    },
+    {
+      "file": "news-lens-replies.phone.proposed.png",
+      "route": "news-lens-replies",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@b73b4f9",
+      "population": "lens:mock-newspost"
+    },
+    {
+      "file": "news-board.phone.proposed.png",
+      "route": "news-board",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@b73b4f9",
+      "population": "lens:mock-newspost"
+    },
+    {
+      "file": "news-lens.desktop.proposed.png",
+      "route": "news-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@b73b4f9",
+      "population": "lens:mock-newspost"
+    },
+    {
+      "file": "news-lens-replies.desktop.proposed.png",
+      "route": "news-lens-replies",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@b73b4f9",
+      "population": "lens:mock-newspost"
+    },
+    {
+      "file": "news-board.desktop.proposed.png",
+      "route": "news-board",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@b73b4f9",
+      "population": "lens:mock-newspost"
+    },
+    {
+      "file": "news-board-nothumb.phone.proposed.png",
+      "route": "news-board-nothumb",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@b73b4f9",
+      "population": "lens:mock-newspost"
+    },
+    {
+      "file": "news-board-nothumb.desktop.proposed.png",
+      "route": "news-board-nothumb",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@b73b4f9",
+      "population": "lens:mock-newspost"
+    },
+    {
+      "file": "news-board-nothumb.phone.current.png",
+      "route": "news-board-nothumb",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@8081fc9",
+      "population": "lens:mock-newspost"
+    },
+    {
+      "file": "news-board-nothumb.desktop.current.png",
+      "route": "news-board-nothumb",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@8081fc9",
+      "population": "lens:mock-newspost"
+    }
+  ]
+}

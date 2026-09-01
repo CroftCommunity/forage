@@ -8,7 +8,8 @@
 //   node scripts/mock-snaps.mjs --as proposed         # files get a .proposed suffix
 //   node scripts/mock-snaps.mjs --only board-lens,menu-lens   # a subset of the routes below
 //       (routes: board thread board-lens board-lens-media board-lens-compact board-lens-in
-//        board-lens-cards board-lens-hover thread-lens thread-lens-quote thread-lens-sheet menu-lens focus-lens reply-lens thread-lens-reply)
+//        board-lens-cards board-lens-hover thread-lens thread-lens-quote thread-lens-sheet menu-lens focus-lens reply-lens thread-lens-reply
+//        news-lens news-lens-replies news-board news-board-nothumb)
 //   node scripts/mock-snaps.mjs --as current --serve ../../forage
 //       # the same script and fixtures, rendering ANOTHER checkout (main): the
 //       # Current frames come from the tree the owner is running, captured by
@@ -26,11 +27,17 @@
 //                    the load the mock is judged against (real handle lengths,
 //                    a quote, depth 4, signed in). The thread the owner sees on
 //                    forage.fyi is the lens, so this is the frame that matters.
+//   lens:mock-newspost e2e/harness/mock-newspost.mjs — the post-text load: a
+//                    verbatim news record (three blocks split by \n\n, a #link
+//                    facet over a truncated display URL, a link card), a
+//                    thumbnail-less external, a 298-char wall, a \n list, and
+//                    replies carrying a link, a tag and a mention.
 // It refuses to run with uncommitted UI files in the served tree — the sha
 // would otherwise name a tree the pixels are not from.
 import { scenario } from '../e2e/harness/scenario.mjs';
 import { RESPONSES, FAKE_SIGNED_IN, THREAD_PATH, NODE_IDS, ROOT as THREAD_ROOT } from '../e2e/harness/mock-thread.mjs';
 import { RESPONSES as BOARD, BOARD_PATH } from '../e2e/harness/mock-board.mjs';
+import { RESPONSES as NEWS, BOARD_PATH as NEWS_BOARD, THREAD_PATH as NEWS_THREAD, NODE_IDS as NEWS_NODES } from '../e2e/harness/mock-newspost.mjs';
 import { mergeManifest } from './lib/snaps-manifest.mjs';
 import { SKINS } from '../js/skins.js';
 import { execFileSync } from 'node:child_process';
@@ -236,6 +243,44 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
     await shoot(hov.page, 'board-lens-hover', 'lens:mock-board', name, vp);
     hov.consoleErrors(); hov.errors();
     await hov.close();
+  }
+  // ---- lens:mock-newspost — the post-text mock's frames -------------------
+  // The surface the owner compared on 2026-09-01: a news post's own words at the
+  // thread head, and the same words on the board row beside it.
+  if (wanted('news-lens') || wanted('news-lens-replies')) {
+    const nw = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: NEWS });
+    await nw.page.setViewportSize({ width: vp.width, height: vp.height });
+    await nw.page.goto(`${nw.origin}${NEWS_THREAD}`);
+    await nw.page.waitForSelector('.comment', { timeout: 15000 });
+    await nw.page.evaluate(() => document.fonts?.ready);
+    await shoot(nw.page, 'news-lens', 'lens:mock-newspost', name, vp);
+    // the replies: a link, a #tag and an @mention in the first one — dead text
+    // on main, because a thread node's shape carries no facets at all
+    if (wanted('news-lens-replies')) {
+      await nw.page.evaluate((id) => { document.querySelector(`.comment[data-node-id="${id}"]`)?.scrollIntoView({ block: 'start' }); window.scrollBy(0, -72); }, NEWS_NODES[0]);
+      await nw.page.waitForTimeout(200);
+      await shoot(nw.page, 'news-lens-replies', 'lens:mock-newspost', name, vp);
+    }
+    nw.consoleErrors(); nw.errors();
+    await nw.close();
+  }
+  // the same post as a ROW, above the thumbnail-less external, the 298-char wall
+  // and the \n list — the board's half of the same question
+  if (wanted('news-board')) {
+    const nb = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: SKIN_INIT, responses: NEWS });
+    await nb.page.setViewportSize({ width: vp.width, height: vp.height });
+    await nb.page.goto(`${nb.origin}${NEWS_BOARD}`);
+    await nb.page.waitForSelector('.postrow', { timeout: 15000 });
+    await nb.page.evaluate(() => document.fonts?.ready);
+    await shoot(nb.page, 'news-board', 'lens:mock-newspost', name, vp);
+    // the link whose page has no og:image, scrolled to the top of the frame: on
+    // main the lens builds no media for it at all and the link goes nowhere
+    await nb.page.evaluate(() => { [...document.querySelectorAll('.postrow')]
+      .find((r) => r.textContent.includes('press.example.org'))?.scrollIntoView({ block: 'start' }); window.scrollBy(0, -72); });
+    await nb.page.waitForTimeout(200);
+    await shoot(nb.page, 'news-board-nothumb', 'lens:mock-newspost', name, vp);
+    nb.consoleErrors(); nb.errors();
+    await nb.close();
   }
   if (wanted('board-lens-in')) {
     const inn = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: BOARD });

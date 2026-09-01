@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forage Post Text Proposals v2</title>
+<meta name="mock-version" content="2">
+<meta name="mock-baseline" content="forage@8081fc9">
+<meta name="mock-proposal" content="forage@b73b4f9">
+<style>
+:root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;--page-warn:#8A3A25;
+  --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page-bg:#1C1813;--page-card:#262019;--page-ink:#EFE7D9;--page-muted:#B5A88F;--page-line:#3D3527;--page-accent:#A5CD98;--page-warn:#E0956F}}
+:root[data-theme="dark"]{--page-bg:#1C1813;--page-card:#262019;--page-ink:#EFE7D9;--page-muted:#B5A88F;--page-line:#3D3527;--page-accent:#A5CD98;--page-warn:#E0956F}
+*{box-sizing:border-box}
+body{background:var(--page-bg);color:var(--page-ink);font-family:var(--f-body);line-height:1.55;margin:0;padding:32px 20px 72px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:30px}
+h1{font-family:var(--f-display);font-size:30px;font-weight:600;margin:0;letter-spacing:-.01em}
+h2{font-family:var(--f-display);font-size:22px;font-weight:600;margin:0}
+h3{font-family:var(--f-display);font-size:17px;margin:0 0 7px;font-weight:600}
+.sub{color:var(--page-muted);font-size:15px;max-width:78ch;margin:0}
+.sub b{color:var(--page-ink)}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+section{display:flex;flex-direction:column;gap:14px}
+.stage{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap}
+.device{display:flex;flex-direction:column;gap:9px;min-width:0}
+.device-label{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+.phone{width:390px;max-width:100%}
+.desk{flex:1 1 460px;min-width:0}
+.shot{width:100%;height:auto;display:block;border:1px solid var(--page-line);border-radius:10px;background:var(--page-card)}
+table{border-collapse:collapse;width:100%;font-size:14px;background:var(--page-card);border:1px solid var(--page-line);border-radius:10px;overflow:hidden}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--page-line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page-muted);font-weight:600}
+tr:last-child td{border-bottom:0}
+td.id{font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600;width:1%}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em;background:color-mix(in srgb,var(--page-ink) 8%,transparent);padding:1px 4px;border-radius:4px}
+.card{background:var(--page-card);border:1px solid var(--page-line);border-radius:10px;padding:16px 18px}
+.rec{color:var(--page-accent);font-weight:600}
+.open{color:var(--page-warn);font-weight:600}
+.wrapscroll{overflow-x:auto}
+.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px}
+button{font:inherit;padding:6px 12px;border-radius:999px;border:1px solid var(--page-line);background:var(--page-card);color:var(--page-ink);cursor:pointer}
+button[aria-pressed="true"]{background:var(--page-accent);color:var(--page-bg);border-color:var(--page-accent)}
+ul{margin:6px 0 0;padding-left:20px}li{margin:3px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">forage · mock · post-text · v2 · 2026-09-01</div>
+  <h1>A post's own words</h1>
+  <p class="sub"><b>Seven decisions, all built, about one thing: what
+  Forage does with the text a Bluesky author actually wrote.</b> The owner put forage.fyi beside
+  bsky.app on a VGC post about digital ownership and said ours "is much less readable". Measured on
+  the deployed tree the same hour, the thread head had rendered the whole 280-character record as a
+  single <code>&lt;h1&gt;</code> at <code>ui-serif 26px/600</code> with <code>white-space: normal</code>
+  and no facet markup at all — so the author's two blank lines were gone, the article's address was
+  inert text that broke mid-word at 390px, and on a phone the link card the post is about sat below
+  the fold.</p>
+  <p class="sub" style="margin-top:10px"><b>v2 (2026-09-01):</b> the owner approved proposal A —
+  decisions 1–4, the fork on 4 included — and asked for one more thing on the frames: "can we move
+  the reply count, repost count and upvote count down to the line where the reply button is now?"
+  That is <b>decision 7</b>, built and captured here, and it supersedes the second half of feed-row
+  v11 decision 23. Every frame on this page has been re-captured under it.</p>
+  <p class="sub" style="margin-top:10px">Every frame below is a capture of the engine — nothing on
+  this page is drawn. <b>Current</b> is <code>forage@8081fc9</code> (main, which is also what
+  forage.fyi serves: production's <code>app.css</code> was checked and carries the same rules).
+  <b>Proposed</b> is <code>forage@b73b4f9</code> on <code>claude/post-text</code>. Both columns come
+  from the same script and the same hermetic population
+  (<code>e2e/harness/mock-newspost.mjs</code>), at 390×844 and 1280×900, in the default Forage skin.</p>
+  <div class="controls" style="margin-top:14px">
+    <span class="eyebrow">Skin</span>
+    <button type="button" data-skin="light" aria-pressed="false">Light</button>
+    <button type="button" data-skin="dark" aria-pressed="false">Dark</button>
+    <button type="button" data-skin="system" aria-pressed="true">System</button>
+    <span class="sub" style="font-size:13px">— this recolours the page only; the frames are captures, and they were all taken in one skin (MOCKS.md rule 4).</span>
+  </div>
+</header>
+
+<section>
+  <h2>The load these frames carry</h2>
+  <p class="sub">MOCKS.md P2: a mock is judged under the load the surface carries, and the counts come
+  from the live surface rather than a round number. Every item below was measured from a 60-post
+  sample of <code>f/whats-hot</code> taken the same day, 2026-09-01:</p>
+  <div class="card">
+    <ul>
+      <li><b>30% of live posts carry line structure</b> — 14 of 60 have a blank line, 4 more a single
+        newline. Every one of them rendered as a single run.</li>
+      <li><b>30% carry facets</b> — 18 of 60 have a link, a <code>#tag</code> or an
+        <code>@mention</code> in the text.</li>
+      <li><b>25% run past 200 characters</b>; the median is 87, the p90 260, the longest 298.</li>
+      <li>The <b>VGC record is verbatim</b>, including its <code>#link</code> facet over bytes
+        237–280 — the fixture computes those offsets from the text and they come out byte-identical
+        to the record the network serves.</li>
+      <li>Its counts are that post's real ones the hour it was compared: 213 replies, 618 reposts,
+        338 likes.</li>
+      <li>Beside it: a <b>298-character wall with no embed</b>, an <b>external link whose page has no
+        og:image</b>, a <b>single-newline list</b> post, and replies carrying a link, a
+        <code>#tag</code> and an <code>@mention</code> at once.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2>Open decisions</h2>
+  <p class="sub">Five are built and want a yes; one is a genuine fork where Forage deliberately
+  differs from bsky.app, and is the one to look at hardest.</p>
+  <div class="wrapscroll"><table>
+    <tr><th>#</th><th>Decision</th><th>Why</th><th>Status</th></tr>
+    <tr><td class="id">1</td><td>A news post's words render at body treatment, like every other post — 20px, body face, weight&nbsp;400.</td>
+      <td>The head withheld the body class whenever <code>format === 'link'</code>. That exemption was written for a link post with a <i>real</i> title; a Bluesky external-embed post has none — its title <i>is</i> its text — so on this surface it fired on every news post and never once correctly.</td><td class="rec">Approved · A</td></tr>
+    <tr><td class="id">2</td><td>The author's paragraph breaks are kept, everywhere.</td>
+      <td>A Bluesky record keeps its newlines and 30% of live posts use them. Every surface collapsed them. <code>white-space: pre-wrap</code> restores them without touching the DOM — which matters, because the head is an <code>&lt;h1&gt;</code> and real block elements would make it invalid.</td><td class="rec">Approved · A</td></tr>
+    <tr><td class="id">3</td><td>The head is faceted like the row: links, <code>#tags</code> and <code>@mentions</code> are live.</td>
+      <td>The head rendered a raw string, so it was the only surface in the app with no facets. The row got this in feed-row v13; the thread head under it did not.</td><td class="rec">Approved · A</td></tr>
+    <tr><td class="id">4</td><td><b>The trailing URL is left off when the card below already carries it.</b></td>
+      <td>The author's link becomes a card here with its title, description and host. Printing the raw address directly above it says the same thing twice — and at 390px that 43-character token is wider than the column, so it has to break mid-word. <b>bsky.app keeps it</b> (theirs is a small blue link at 15px, above a smaller card). This is the fork: we can match them instead.</td><td class="rec">Approved · A, B</td></tr>
+    <tr><td class="id">5</td><td>A reply's links, tags and mentions are live too.</td>
+      <td>Found while mapping the same paths: a thread node's shape dropped <code>facets</code> entirely, so every link in every comment on every thread was dead text. Nobody had reported it because the row above it worked.</td><td class="rec">Built · C</td></tr>
+    <tr><td class="id">6</td><td>A link whose page has no picture still gets a card.</td>
+      <td>Also found while mapping: the lens guarded its card on <code>external.thumb</code>, so a link with no og:image produced no media at all — the post kept only its truncated display text, pointing nowhere. Press releases and statement links are the common case.</td><td class="rec">Built · D</td></tr>
+    <tr><td class="id">7</td><td><b>The reply, repost and like counts move down onto Reply's line, at the bottom of the post.</b></td>
+      <td>Owner, on the v1 frames: "can we move the reply count, repost count and upvote count down to the line where the reply button is now?" The counts had a row of their own directly under the words, so the head put a rule of numbers between the post and the card it is about — visible once decision 1 stopped the words above being a headline. The head now reads <b>words → what the post is about → what people did about it</b>, and every control that answers the post is on one line. <b>Supersedes the second half of feed-row v11 decision 23</b>, which moved Reply down here alone and left the counts behind; what v11 was after — a long post not splitting around a control — holds better now that nothing at all sits between the text and the picture.</td><td class="rec">Built · E</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <div class="eyebrow">Proposal E · decision 7</div>
+  <h2>E. The counts come down to Reply</h2>
+  <p class="sub"><b>Current here is post-text v1</b>, not main — this is the change the owner asked
+  for <i>on</i> the v1 frames, so the honest comparison is against them. <b>v1:</b>
+  <code>213 replies · ⟳ 693 · ▲ 338</code> on their own row between the words and the picture, with
+  Reply alone at the bottom. <b>v2:</b> one row under the card — <code>213 replies · ⟳ 693 · ▲ 338 ·
+  Reply</code> — with a rule above it, so the row closes the head instead of interrupting it. The
+  whole post still fits one phone screen.</p>
+  <div class="stage">
+    <div class="device phone"><div class="device-label">Phone · news-lens · v1 (forage@29e6858)</div>
+      <img class="shot" src="snaps/post-text/news-lens.phone.v1.png" alt="post-text v1: the counts on their own row directly under the words, above the picture, with Reply alone at the bottom" width="390"></div>
+    <div class="device phone"><div class="device-label">Phone · news-lens · v2 (forage@b73b4f9)</div>
+      <img class="shot" src="snaps/post-text/news-lens.phone.proposed.png" alt="post-text v2: the reply count, repost figure, like and Reply on one row under the card, with a rule above it" width="390"></div>
+  </div>
+  <div class="stage">
+    <div class="device desk"><div class="device-label">Desktop · news-lens · v1 (forage@29e6858)</div>
+      <img class="shot" src="snaps/post-text/news-lens.desktop.v1.png" alt="post-text v1 at 1280"></div>
+    <div class="device desk"><div class="device-label">Desktop · news-lens · v2 (forage@b73b4f9)</div>
+      <img class="shot" src="snaps/post-text/news-lens.desktop.proposed.png" alt="post-text v2 at 1280: the counts and Reply on one row under the card"></div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">Proposal A · decisions 1, 2, 3, 4 — APPROVED</div>
+  <h2>A. The post the owner compared</h2>
+  <p class="sub"><b>Current:</b> one bold serif run. The two blank lines the author wrote are gone,
+  <code>www.videogameschronicle.com/news/sony-sa…</code> is inert text broken mid-word across two
+  lines, and the card — the thing the post is about — begins at the very bottom edge of the phone.
+  <b>Proposed:</b> two paragraphs at body treatment, the duplicate address trimmed, and the whole
+  post — words, picture, headline, description, host and Reply — on one phone screen.</p>
+  <div class="stage">
+    <div class="device phone"><div class="device-label">Phone · news-lens · CURRENT (forage@8081fc9)</div>
+      <img class="shot" src="snaps/post-text/news-lens.phone.current.png" alt="The VGC post on a phone today: the whole 280-character record as one bold serif headline with the article's url broken across two lines, the link card starting at the bottom edge" width="390"></div>
+    <div class="device phone"><div class="device-label">Phone · news-lens · PROPOSED (forage@b73b4f9)</div>
+      <img class="shot" src="snaps/post-text/news-lens.phone.proposed.png" alt="The same post on the branch: two paragraphs of body text, no duplicate url, and the whole link card with its Reply button on the same screen" width="390"></div>
+  </div>
+  <div class="stage">
+    <div class="device desk"><div class="device-label">Desktop · news-lens · CURRENT (forage@8081fc9)</div>
+      <img class="shot" src="snaps/post-text/news-lens.desktop.current.png" alt="The VGC post at 1280 today"></div>
+    <div class="device desk"><div class="device-label">Desktop · news-lens · PROPOSED (forage@b73b4f9)</div>
+      <img class="shot" src="snaps/post-text/news-lens.desktop.proposed.png" alt="The VGC post at 1280 on the branch"></div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">Proposal B · decision 4, and the fork</div>
+  <h2>B. The board row — the same words, one step smaller</h2>
+  <p class="sub">The row already rendered its text at body weight and already painted facets
+  (feed-row v13), so what moves here is only the line structure and the trimmed address —
+  the two halves of the same record. <b>This is where to judge decision 4:</b> in the Current
+  column the address sits between the words and the card that carries the same link with its
+  headline, its description and its host.</p>
+  <div class="stage">
+    <div class="device phone"><div class="device-label">Phone · news-board · CURRENT (forage@8081fc9)</div>
+      <img class="shot" src="snaps/post-text/news-board.phone.current.png" alt="The board row today: the two paragraphs run together and the truncated url sits between the text and the card" width="390"></div>
+    <div class="device phone"><div class="device-label">Phone · news-board · PROPOSED (forage@b73b4f9)</div>
+      <img class="shot" src="snaps/post-text/news-board.phone.proposed.png" alt="The board row on the branch: two paragraphs, and the card directly under them" width="390"></div>
+  </div>
+  <div class="stage">
+    <div class="device desk"><div class="device-label">Desktop · news-board · CURRENT (forage@8081fc9)</div>
+      <img class="shot" src="snaps/post-text/news-board.desktop.current.png" alt="The board at 1280 today"></div>
+    <div class="device desk"><div class="device-label">Desktop · news-board · PROPOSED (forage@b73b4f9)</div>
+      <img class="shot" src="snaps/post-text/news-board.desktop.proposed.png" alt="The board at 1280 on the branch"></div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">Proposal C · decisions 2, 5</div>
+  <h2>C. The replies — a comment's links were dead text on every thread</h2>
+  <p class="sub">The first reply carries all three facet kinds at once: a truncated article link, an
+  <code>@mention</code>, and a <code>#tag</code>. <b>Current:</b> all three are plain text — a thread
+  node's shape carried no facets at all, so this has been true of every comment on every thread since
+  the lens shipped. <b>Proposed:</b> the link opens the article (not the truncated display string),
+  the mention goes out to the profile on bsky.app, and the tag opens as a board here. The second
+  reply's blank line is kept in both columns — comments already went through a renderer that
+  preserved it, which is what made the head the surface out of step.</p>
+  <div class="stage">
+    <div class="device phone"><div class="device-label">Phone · news-lens-replies · CURRENT (forage@8081fc9)</div>
+      <img class="shot" src="snaps/post-text/news-lens-replies.phone.current.png" alt="Replies today: the link, mention and hashtag in the first reply are all plain text" width="390"></div>
+    <div class="device phone"><div class="device-label">Phone · news-lens-replies · PROPOSED (forage@b73b4f9)</div>
+      <img class="shot" src="snaps/post-text/news-lens-replies.phone.proposed.png" alt="Replies on the branch: the link, the mention and the hashtag are underlined links" width="390"></div>
+  </div>
+  <div class="stage">
+    <div class="device desk"><div class="device-label">Desktop · news-lens-replies · CURRENT (forage@8081fc9)</div>
+      <img class="shot" src="snaps/post-text/news-lens-replies.desktop.current.png" alt="Replies at 1280 today"></div>
+    <div class="device desk"><div class="device-label">Desktop · news-lens-replies · PROPOSED (forage@b73b4f9)</div>
+      <img class="shot" src="snaps/post-text/news-lens-replies.desktop.proposed.png" alt="Replies at 1280 on the branch"></div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">Proposal D · decisions 2, 6</div>
+  <h2>D. A link with no picture, and a list post</h2>
+  <p class="sub">Two rows in one frame. <b>Top:</b> a statement link whose page has no og:image.
+  Current renders the post's truncated display text and nothing else — the lens refused to build any
+  media, so the link had nowhere to go; Proposed gives it a card with its title, its description and
+  its host, and no empty picture frame above them. <b>Bottom:</b> a post using single newlines as a
+  list ("in re… / 09:00 PT / streamed on the court's channel") — one run today, three lines on the
+  branch.</p>
+  <div class="stage">
+    <div class="device phone"><div class="device-label">Phone · news-board-nothumb · CURRENT (forage@8081fc9)</div>
+      <img class="shot" src="snaps/post-text/news-board-nothumb.phone.current.png" alt="Today: the statement link is a bare truncated url with no card, and the list post runs its three lines together" width="390"></div>
+    <div class="device phone"><div class="device-label">Phone · news-board-nothumb · PROPOSED (forage@b73b4f9)</div>
+      <img class="shot" src="snaps/post-text/news-board-nothumb.phone.proposed.png" alt="On the branch: the statement link has a card with title, description and host; the list post stands on three lines" width="390"></div>
+  </div>
+  <div class="stage">
+    <div class="device desk"><div class="device-label">Desktop · news-board-nothumb · CURRENT (forage@8081fc9)</div>
+      <img class="shot" src="snaps/post-text/news-board-nothumb.desktop.current.png" alt="The same two rows at 1280 today"></div>
+    <div class="device desk"><div class="device-label">Desktop · news-board-nothumb · PROPOSED (forage@b73b4f9)</div>
+      <img class="shot" src="snaps/post-text/news-board-nothumb.desktop.proposed.png" alt="The same two rows at 1280 on the branch"></div>
+  </div>
+</section>
+
+<section>
+  <h2>What holds these frames</h2>
+  <p class="sub">MOCKS.md P5: every promise a Proposed frame makes that a test can hold is held by a
+  test in the gate, so approving the frame approves what the gate runs. Nine claims live in
+  <code>e2e/mock-posttext.workflow.mjs</code>, against the same fixture these pictures come from.</p>
+  <div class="wrapscroll"><table>
+    <tr><th>#</th><th>Kind</th><th>Claim</th></tr>
+    <tr><td class="id">1</td><td>look</td><td>The head's words are ≤21px, weight 400, in the body face — computed, not asserted from the CSS source.</td></tr>
+    <tr><td class="id">2</td><td>measure</td><td><code>white-space</code> is <code>pre-wrap</code> and the two blocks are drawn ≥10px apart — measured with a Range over the real text node, so a break that exists in the string but not on screen fails.</td></tr>
+    <tr><td class="id">3</td><td>structure</td><td>The head does not contain the card's url, and still ends with <code>"obtaining ownership" of it.</code> — the trim cuts the duplicate and nothing else.</td></tr>
+    <tr><td class="id">4</td><td>measure</td><td>Nothing unclipped runs past 390px, and the page does not scroll sideways. Two checks, because a <code>scrollWidth</code> check cannot fail under <code>overflow-x: clip</code> and a rect check false-positives on the media stage's deliberately-wider blurred backdrop.</td></tr>
+    <tr><td class="id">5</td><td>measure</td><td>The card's top is within the first 844px — the reader reaches the article without scrolling.</td></tr>
+    <tr><td class="id">6</td><td>structure</td><td>The first reply has exactly three anchors, and each goes where its kind should: the article, <code>bsky.app/profile/…</code>, and <code>/h/…</code>.</td></tr>
+    <tr><td class="id">7</td><td>structure</td><td>A thumbnail-less external renders a card with its title and <em>no</em> empty stage.</td></tr>
+    <tr><td class="id">8</td><td>structure</td><td>The row trims the same url and keeps the same line structure — the row and the head agree.</td></tr>
+    <tr><td class="id">9</td><td>measure</td><td>The reply count, the ⟳ figure, the like and Reply are on one row, sharing a line to within 2px, with Reply at its right end — and the row's top is below the card's bottom.</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2>Where this lives in the code</h2>
+  <div class="wrapscroll"><table>
+    <tr><th>Decision</th><th>File</th><th>What changed</th></tr>
+    <tr><td class="id">1, 2, 3</td><td><code>js/ui/lens-views.js</code> · the thread head</td><td><code>el('h1', p.format === 'link' ? {} : {class:'posttext'}, p.title.slice(0,300))</code> → <code>el('h1', {class:'posttext'}, ...headWords(p))</code>.</td></tr>
+    <tr><td class="id">2</td><td><code>css/app.css</code> · <code>.posttext</code></td><td><code>white-space: pre-wrap; overflow-wrap: break-word</code>, and a 68ch measure on the head.</td></tr>
+    <tr><td class="id">4</td><td><code>js/substrates/lens.js</code> · <code>trimCardLink</code></td><td>New pure function. Trims only the last facet, only when it ends the text, only when its uri is the card's own (trailing slash aside), and never down to nothing. Cuts on UTF-8 bytes, because facet offsets are bytes.</td></tr>
+    <tr><td class="id">5</td><td><code>js/substrates/lens.js</code> · the node shape<br><code>js/ui/components.js</code> · <code>commentNode</code></td><td><code>facets</code> added to a thread node; <code>commentNode</code> gains a <code>ctx.textNode</code> seam — the same shape <code>postRow</code> already used for <code>titleNode</code>. The memory tier keeps its markdown renderer untouched.</td></tr>
+    <tr><td class="id">6</td><td><code>js/substrates/lens.js</code> · media shaping<br><code>js/ui/lens-views.js</code> · <code>externalCard</code></td><td>The guard moves from <code>external?.thumb</code> to <code>external?.uri</code>; <code>thumb</code> is explicitly <code>null</code> when absent and the card skips its stage.</td></tr>
+    <tr><td class="id">7</td><td><code>js/ui/lens-views.js</code> · the head<br><code>css/app.css</code> · <code>.head-actions</code></td><td>The <code>.head-actions</code> row moves from above the media to the bottom of the head and takes <code>replyLink</code> with it; <code>.head-reply</code> is retired and the row gains a rule above. <code>e2e/mock-thread.workflow.mjs</code>'s claim from feed-row v11 inverts — <b>the gate caught it on its own</b> and went red on "Reply is still on the like row".</td></tr>
+    <tr><td>—</td><td><code>js/ui/lens-views.js</code></td><td>Three copies of the facet segment mapping (the row's, the quoted body's, the self-thread continuation's) are now one.</td></tr>
+  </table></div>
+  <p class="sub">Gate on the branch: <code>npm test</code> 673/673, <code>npm run conformance</code>
+  86/86, <code>npm run reference-gate</code> 2/2, <code>npm run workflows</code> 31 found, 0 failed.</p>
+</section>
+
+<section>
+  <h2>Revisions</h2>
+  <div class="wrapscroll"><table>
+    <tr><th>v</th><th>Day</th><th>Commit</th><th>What</th></tr>
+    <tr><td class="id">2</td><td>2026-09-01</td><td><code>forage@b73b4f9</code></td><td>The owner approved proposal A, the fork on decision 4 included, and asked for decision 7 on the v1 frames — the counts down onto Reply's line. Built, captured, and every frame on the page re-captured under it. Proposal E stands v1 beside v2. feed-row v15 records the supersession of its decision 23.</td></tr>
+    <tr><td class="id">1</td><td>2026-09-01</td><td><code>forage@29e6858</code></td><td>First revision. Six decisions, four proposals, sixteen frames, all captured — Current from <code>forage@8081fc9</code>, Proposed from <code>forage@29e6858</code>. Nothing on this page is drawn.</td></tr>
+  </table></div>
+</section>
+
+</div>
+<script>
+const root = document.documentElement;
+for (const b of document.querySelectorAll('[data-skin]')) {
+  b.addEventListener('click', () => {
+    const s = b.dataset.skin;
+    if (s === 'system') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', s);
+    for (const o of document.querySelectorAll('[data-skin]')) o.setAttribute('aria-pressed', String(o === b));
+  });
+}
+</script>
+</body>
+</html>

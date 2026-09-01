@@ -311,7 +311,20 @@ button.vote[aria-pressed="true"] { color: var(--boost); border-color: var(--boos
    title's size and body weight; at the thread head one step up (20px), body face and
    weight, where it was a 26px serif heading (the owner's phone, 2026-08-30). */
 .posttext { font-weight: 400; }
+/* post-text (2026-09-01): the author's LINE STRUCTURE. A Bluesky record keeps
+   its newlines and 30% of live posts use them (a 60-post sample of f/whats-hot
+   that day); every surface here collapsed them into one run, so a three-block
+   post read as one paragraph. `pre-wrap` restores them without touching the
+   DOM, which matters because the head is an <h1> — facetNodes returns phrasing
+   content, and blocks would make it invalid. `break-word` is for the other half
+   of the same post: a 43-character url token that at 390px is wider than the
+   column, and would otherwise push the row sideways. */
+.posttext { white-space: pre-wrap; overflow-wrap: break-word; }
 h1.posttext { font-family: var(--font-body); font-size: var(--t-lg); font-weight: 400; line-height: 1.35; }
+/* the head's words are a paragraph of prose now, not a headline: give them a
+   measure. 68 characters is the readable line the rest of the app already
+   assumes (the 680px content column at the body size). */
+h1.posttext { max-width: 68ch; letter-spacing: 0; }
 .postmeta { color: var(--muted); font-size: var(--t-xs); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 2px; }
 .postmeta .domain { color: var(--link); }
 /* the byline — avatar slot · who · bare time · ⋯ (plan 2026-08-29 post-and-thread) */
@@ -331,8 +344,10 @@ h1.posttext { font-family: var(--font-body); font-size: var(--t-lg); font-weight
 /* the head's row keeps ONE line: the meta yields (wraps inside itself) before Reply drops */
 .actions.head-actions { flex-wrap: nowrap; }
 .head-actions .postmeta { flex: 1 1 auto; min-width: 0; }
-/* feed-row v11 decision 23: Reply alone at the bottom of the head, at the right */
-.head-reply { display: flex; justify-content: flex-end; margin-top: 10px; }
+/* post-text v2 decision 7: the head's counts moved down onto Reply's line, so the
+   row sits under the card with a rule above it — it closes the head rather than
+   interrupting it. `.head-reply` (feed-row v11's Reply-alone row) is retired. */
+.actions.head-actions { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
 .head-actions .vote { flex: none; white-space: nowrap; }
 /* feed-row v6: the head's top line — the byline with the breadcrumb pushed to the right,
    one line like a row's; the name yields before anything else does */

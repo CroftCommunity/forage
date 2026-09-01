@@ -154,6 +154,39 @@ export function facetSegments(text, facets) {
   return out.length ? out : [{ text: '' }];
 }
 
+// post-text (2026-09-01): the trailing URL the card already IS.
+//
+// Bluesky's composer writes a shortened display string into the text
+// ("www.videogameschronicle.com/news/sony-sa...") and puts the full uri in a
+// #link facet, then attaches the same uri as an external embed. Forage renders
+// the card WITH its title, description and host, so printing the raw url
+// directly above it says the same thing twice — and at 390px that 43-character
+// token has to break mid-word to fit. Trim it, and only it:
+//
+//   - the LAST facet only, and only when it ends the text (bar whitespace) —
+//     an author who wrote a sentence around the link keeps their sentence
+//   - only when the uri is the card's own (ignoring a trailing slash)
+//   - never down to nothing: a url-only post would otherwise render blank
+//
+// Pure, and byte-honest: facet offsets are UTF-8, so the cut is made on bytes
+// and decoded back, never on a UTF-16 index that an emoji would shift.
+export function trimCardLink(text, facets, cardUri) {
+  if (!text || !cardUri || !(facets || []).length) return { text, facets: facets || [] };
+  const same = (a, b) => a.replace(/\/+$/, '') === b.replace(/\/+$/, '');
+  const enc = new TextEncoder();
+  const bytes = enc.encode(text);
+  const last = [...facets].sort((a, b) => (a.index?.byteStart ?? 0) - (b.index?.byteStart ?? 0)).at(-1);
+  const feat = (last.features || [])[0] || {};
+  if ((feat.$type || '').split('#').pop() !== 'link') return { text, facets };
+  if (!feat.uri || !same(feat.uri, cardUri)) return { text, facets };
+  const end = last.index?.byteEnd ?? 0;
+  // the facet must run to the end of the text — trailing whitespace is allowed
+  if (new TextDecoder().decode(bytes.slice(end)).trim() !== '') return { text, facets };
+  const kept = new TextDecoder().decode(bytes.slice(0, last.index?.byteStart ?? 0)).replace(/\s+$/, '');
+  if (!kept) return { text, facets }; // a url-only post keeps its url
+  return { text: kept, facets: facets.filter((f) => f !== last) };
+}
+
 const maskedByViewer = (post) =>
   !!(post.author?.viewer?.muted || post.author?.viewer?.blockedBy || post.viewer?.muted);
 
@@ -247,14 +280,18 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
     : mediaEmb?.$type === 'app.bsky.embed.video#view'
       // v13 decision 30: the playlist is what plays in place (HLS; Safari natively, elsewhere through vendored hls.js)
       ? { kind: 'video', thumb: mediaEmb.thumbnail || null, aspect: aspectOf(mediaEmb.aspectRatio), playlist: mediaEmb.playlist || null }
-      : mediaEmb?.$type === 'app.bsky.embed.external#view' && mediaEmb.external?.thumb
+      : mediaEmb?.$type === 'app.bsky.embed.external#view' && mediaEmb.external?.uri
         // 4i: `title` rides along because it is the external card's only human
         // name, and the view needs one — an <a> around a decorative thumbnail
         // is otherwise an unnamed link (SERIOUS, live 2026-08-26). Explicitly
         // null when absent, never the uri: distinguishing "no title" from a
         // title that looks like a url is what lets the view name the link
         // honestly instead of inventing one.
-        ? { kind: 'external', thumb: mediaEmb.external.thumb, uri: mediaEmb.external.uri,
+        // post-text (2026-09-01): `thumb` is explicitly null when the page had
+        // no og:image — the card renders its words without a stage. The guard
+        // above used to be `external?.thumb`, so such a post produced no media
+        // at all and its link went nowhere (press releases, statements).
+        ? { kind: 'external', thumb: mediaEmb.external.thumb || null, uri: mediaEmb.external.uri,
             title: mediaEmb.external.title || null, description: mediaEmb.external.description || '' } // v13 decision 31: the card's words
         : undefined;
   // an image/video-only post titles from its alt text, never renders blank.
@@ -330,6 +367,11 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
     likeUri: p.likeUri, // the unlike input, as on the head post — dropped here until 2026-08-29
     repostCount: p.repostCount, quoteCount: p.quoteCount ?? 0, repostUri: p.repostUri,
     body: p.body, author: p.author, authorId: p.authorId, authorName: p.authorName ?? null, avatar: p.avatar,
+    // post-text (2026-09-01): a reply's own facets. The node shape dropped them,
+    // so every link, #tag and @mention in every comment on every thread was
+    // inert text — the row had been faceted since feed-row v13 and the thread
+    // under it had not. The memory tier passes none and renders as it did.
+    facets: p.facets || [],
     ...(p.maskedRemoved ? { maskedRemoved: true, title: p.title } : { removedReason: '' }),
     depth,
     children: [], deferred: 0,

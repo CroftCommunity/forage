@@ -15,7 +15,7 @@ import { appFor } from '../auth/hosts.js';
 import { navTree } from './nav.js';
 import { LADDER, RUNG_IDS, labelFor } from '../rings.js';
 import { lastBoard, setLastBoard, landingBoard, DIRECTORY } from '../last-board.js';
-import { createLens, LENS_PERMS, RING_CAP, facetSegments, slugifyFeedName, sortWindow, affordanceFor,
+import { createLens, LENS_PERMS, RING_CAP, facetSegments, trimCardLink, slugifyFeedName, sortWindow, affordanceFor,
   feedCardModel, threadNodeStyle, feedPath, parseFeedRoute, sessionGateMessage, canDelete, sourceLabel,
   sortFeeds, filterFeeds, platforms, liveFeeds } from '../substrates/lens.js';
 import { initSession, createAccountRoster, isOAuthCallback } from '../auth/session.js';
@@ -430,17 +430,19 @@ function facetNodes(text, facets) {
     return seg.text;
   });
 }
+// post-text: the words the thread head shows. The post's body when it has one
+// (the title is a placeholder or an alt-derived stand-in otherwise), minus the
+// trailing url that the external card below already carries in full.
+function headWords(p) {
+  const raw = p.body || p.title || '';
+  const { text, facets } = trimCardLink(raw, p.facets, p.media?.kind === 'external' ? p.media.uri : null);
+  return facetNodes(text.slice(0, 300), facets);
+}
 function facetedBody(p) {
   if (p.maskedRemoved || !p.body) return null;
-  const segs = facetSegments(p.body, p.facets);
-  const nodes = segs.map((seg) => {
-    if (!seg.facet) return seg.text;
-    if (seg.facet.type === 'link') return el('a', { href: seg.facet.value, target: '_blank', rel: 'noopener noreferrer' }, seg.text);
-    if (seg.facet.type === 'mention') return el('a', { href: `https://bsky.app/profile/${seg.facet.value}`, target: '_blank', rel: 'noopener noreferrer', title: 'Profiles live on bsky.app — Forage is a lens' }, seg.text);
-    if (seg.facet.type === 'tag') return el('a', { href: `/h/${encodeURIComponent(seg.facet.value)}`, 'data-tag': seg.facet.value, title: 'Open this hashtag as a board' }, seg.text);
-    return seg.text;
-  });
-  const bodyEl = el('div', { class: 'clamp' }, ...nodes);
+  // post-text: one renderer. This was a verbatim copy of facetNodes' segment
+  // mapping, and the two had already started to drift.
+  const bodyEl = el('div', { class: 'clamp' }, ...facetNodes(p.body, p.facets));
   if (p.warnLabels) {
     const veil = el('details', { 'data-warn': p.warnLabels.join(',') },
       el('summary', { class: 'xs muted' }, `content warning: ${p.warnLabels.join(', ')} — click to view`), bodyEl);
@@ -521,7 +523,11 @@ function externalCard(p) {
   const name = title || host || 'external link';
   const yt = youtubeId(uri);
   const linkAttrs = { target: '_blank', rel: 'noopener noreferrer' };
-  const picture = yt
+  // post-text: a page with no og:image gives us no thumbnail. The card is its
+  // words then — title, description, host — and NOT an empty stage; before this
+  // the lens refused to build the media at all and the link went nowhere.
+  const picture = !thumb ? null
+    : yt
     ? stage({ kind: 'external', thumb, alt: '', playLabel: `Play ${name} on YouTube, here`,
         onPlay: (node) => {
           const frame = el('iframe', { class: 'ext-embed', src: `https://www.youtube-nocookie.com/embed/${encodeURIComponent(yt)}?autoplay=1`,
@@ -529,7 +535,7 @@ function externalCard(p) {
           node.replaceChildren(frame);
         } })
     : stage({ kind: 'external', thumb, alt: '', link: uri, linkLabel: `${name} — opens in a new tab`, linkAttrs });
-  return el('div', { class: 'extcard', 'data-extcard': '1', ...(yt ? { 'data-provider': 'youtube' } : {}) },
+  return el('div', { class: 'extcard', 'data-extcard': '1', ...(thumb ? {} : { 'data-nothumb': '1' }), ...(yt ? { 'data-provider': 'youtube' } : {}) },
     picture,
     el('a', { class: 'ext-caption', href: uri, ...linkAttrs, 'aria-label': `${name} — opens in a new tab` },
       el('div', { class: 'ext-title', 'data-ext-title': '1' }, name),
@@ -746,7 +752,9 @@ const lensRow = (p, view = 'card') => {
   // title with no words (the alt-derived one) stays plain.
   const titleNode = p.maskedRemoved ? undefined
     : showsMedia && p.placeholderTitle ? null
-    : p.body ? el('div', { class: 'posttitle posttext' }, ...facetNodes(p.body, p.facets))
+    // post-text: the row trims the card's own url too — the row shows the card
+    // (bodyNode, below), so the raw url would be printed twice there as well
+    : p.body ? el('div', { class: 'posttitle posttext' }, ...headWords(p))
     : undefined;
   return postRow(p, !!session, {
     onVote: lensVote(p),
@@ -2693,40 +2701,56 @@ export function lensThreadView(params, query) {
       // body, body face and weight — not a 26px serif heading (the owner's
       // phone, 2026-08-30: a four-line post filled the screen above its
       // picture). A link post's headline keeps the heading.
-      p.placeholderTitle && p.media ? null : el('h1', p.format === 'link' ? {} : { class: 'posttext' }, p.title.slice(0, 300)),
-      // feed-row v11 decision 23 (owner: "just reply alone, like should be top
-      // towards the right"): the like row keeps the reply count at the left and
-      // the like at its right end; Reply alone moves to the bottom of the head
-      el('div', { class: 'actions head-actions' },
-        el('div', { class: 'postmeta' }, plural(p.commentCount, 'reply', 'replies')), // the author and the time moved up into the byline (v6)
-        repostControl(p), // v12 decision 25: ⟳ on the head too
-        vote('post', p.id, p, !!session, { onVote: lensVote(p), onGuest: session ? null : openAuthSheet })), // Phase 6c: the head's pill
+      // post-text (2026-09-01, the owner's forage.fyi/bsky.app comparison): the
+      // head shows the post's own WORDS — faceted like the row, with the line
+      // structure the author wrote. Three things were wrong here at once:
+      //   - `format === 'link'` withheld `posttext`, so a Bluesky news post's
+      //     280 characters rendered as a 26px serif headline. That exemption was
+      //     written for a link post with a REAL title; a Bluesky external-embed
+      //     post has none — `title` IS the body (shapeLensPost), so on this
+      //     surface the exemption fired on every news post and never correctly
+      //   - it rendered `p.title` as one raw string, so the head was the only
+      //     surface with no facets: links, #tags and @mentions were dead text
+      //   - it dropped every \n: 30% of live posts carry line structure
+      // `pre-wrap` on .posttext keeps the breaks; the h1 stays valid because
+      // facetNodes returns phrasing content only (text and anchors).
+      p.placeholderTitle && p.media ? null : el('h1', { class: 'posttext' }, ...headWords(p)),
       // The post's own media, at full board size — until 2026-08-28 an image
       // post's thread page rendered no image at all.
       p.media && !p.maskedRemoved ? mediaNode(p) : null,
       // 3i: the poster's own 1/3-2/3-3/3 chain reads as the post body
-      ...(t.selfThread || []).map((part) => el('div', { class: 'small', style: 'margin-top:8px' },
-        ...facetSegments(part.text, part.facets).map((seg) => {
-          if (!seg.facet) return seg.text;
-          if (seg.facet.type === 'link') return el('a', { href: seg.facet.value, target: '_blank', rel: 'noopener noreferrer' }, seg.text);
-          if (seg.facet.type === 'mention') return el('a', { href: `https://bsky.app/profile/${seg.facet.value}`, target: '_blank', rel: 'noopener noreferrer' }, seg.text);
-          if (seg.facet.type === 'tag') return el('a', { href: `/h/${encodeURIComponent(seg.facet.value)}`, 'data-tag': seg.facet.value }, seg.text);
-          return seg.text;
-        }))),
+      // post-text: the third copy of the segment mapping, collapsed onto
+      // facetNodes; `posttext` gives the continuation its line structure too
+      ...(t.selfThread || []).map((part) => el('div', { class: 'small posttext', style: 'margin-top:8px' },
+        ...facetNodes(part.text, part.facets))),
       p.quoted ? quotedContext(p.quoted) : null,
       t.quotesFailed ? el('div', { class: 'row', style: 'gap:6px;margin-top:6px' },
         chip(`${t.quoteCount} quote${t.quoteCount === 1 ? '' : 's'} — couldn't fetch`, 'getQuotes failed; replies still render. Reload to retry.')) : null,
-      // feed-row v11 decision 23: Reply is the last thing in the head — under the
-      // picture, the continuation and the quote — at the right (it sat on the like
-      // row, above all of them, where a long post split around it)
-      el('div', { class: 'head-reply' }, replyLink),
+      // post-text v2, decision 7 (owner, on the v1 frames: "can we move the reply
+      // count, repost count and upvote count down to the line where the reply
+      // button is now?"). The counts used to have a row of their own directly
+      // under the words, which put a rule of numbers between the post and the
+      // card it is about — the v1 frames made that obvious once the words above
+      // it stopped being a headline. They join Reply instead, so the head reads
+      // words → what the post is about → what people did about it, and every
+      // control that answers the post is on one line. (This supersedes feed-row
+      // v11 decision 23, which moved Reply down here alone and left them behind.)
+      el('div', { class: 'actions head-actions' },
+        el('div', { class: 'postmeta' }, plural(p.commentCount, 'reply', 'replies')), // the author and the time moved up into the byline (v6)
+        repostControl(p), // v12 decision 25: ⟳ on the head too
+        vote('post', p.id, p, !!session, { onVote: lensVote(p), onGuest: session ? null : openAuthSheet }), // Phase 6c: the head's pill
+        replyLink),
       // phase 2: only ever rendered for a post that is genuinely yours
       deleteControl(p, () => {
         main.replaceChildren(emptyState('This post was deleted',
           'It is gone from your Bluesky account. Anyone who already saw it may still have a copy — deleting removes the record, it does not un-send it.',
           el('a', { class: 'btn', href: `/f/${src.feedSlug}` }, 'Back to the board')));
       })));
-    const ctx = { ...LENS_PERMS, // save/mod still gate; replying does not —
+    const ctx = { ...LENS_PERMS,
+      // post-text: a reply's words, faceted — its links, #tags and @mentions are
+      // as live as the head's. The node shape carries `facets` as of this change.
+      textNode: (n) => facetNodes(n.body || '', n.facets),
+      // save/mod still gate; replying does not —
       // Reply sits on every node (mock v18 claim C; on forage.fyi 2026-08-30 only
       // the head offered it), the composer mounting under the node you answered
       onReply: (n, host) => {
