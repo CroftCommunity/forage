@@ -91,6 +91,35 @@ export async function scenario(state, { initScripts = [], mode, root, ...shimOpt
   }
   const pageErrors = [];
   const consoleErrors = [];
+  // ---- the network fence (2026-09-01) --------------------------------------
+  // e2e/harness/shim.mjs fences window.fetch. Nothing fenced the rest: an
+  // <img>, a <video>'s playlist, an <iframe>, a stylesheet or a font all load
+  // straight past it, so a "hermetic" workflow really did reach the network.
+  //
+  // Found through a flake — mock-board.workflow.mjs failed ~1 run in 5 on
+  // `net::ERR_NAME_NOT_RESOLVED` for https://video.cdn.test/clip/playlist.m3u8,
+  // the fixture's own video, whose Play press is a deliberate assertion. The
+  // host is RFC 2606 reserved so it never resolves, which was the intent; but
+  // the browser still asked, and whether the resolver's refusal arrived before
+  // close() decided the run. The flake was the cheap half of the bug. The other
+  // half: a resolver that ANSWERS — a captive portal, a wildcard DNS provider,
+  // an ISP that hijacks unknown names (this laptop's does) — would have served
+  // real bytes into a test that reports itself hermetic.
+  //
+  // So every request is routed and anything off the harness's own origin is
+  // refused HERE, before it becomes a DNS lookup, and recorded so it can be
+  // asserted on rather than merely not happening. Aborting would reproduce the
+  // same console error; an empty 200 is silent and is what a fenced host should
+  // look like from inside the page. No live workflow uses this harness (all
+  // four LIVE=1 ones drive the network directly), so nothing legitimate loses
+  // its network here.
+  const blockedExternals = [];
+  await context.route('**/*', async (route, request) => {
+    const url = request.url();
+    if (url.startsWith(server.origin) || /^(data|blob|about):/.test(url)) return route.continue();
+    blockedExternals.push(url);
+    await route.fulfill({ status: 204, body: '', headers: { 'content-type': 'text/plain' } });
+  });
   const page = await context.newPage();
   // Outstanding requests, for diagnoseLive(). A navigation that never fires
   // `load` is almost always one subresource that never settles; naming it is
@@ -137,6 +166,11 @@ export async function scenario(state, { initScripts = [], mode, root, ...shimOpt
     // NO `?? []` — if the shim is absent this returns undefined and the
     // hermeticity assertion FAILS instead of passing vacuously.
     shimMisses: () => page.evaluate(() => window.__shimMisses),
+    // Every request the fence refused. A workflow can assert on what the page
+    // TRIED to fetch from the network — which is a stronger statement than
+    // "no error was logged", and the reason the fence records instead of
+    // silently dropping.
+    blockedExternals: () => [...blockedExternals],
     async close() {
       LIVE.delete(diag);
       const errs = [...pageErrors, ...consoleErrors];

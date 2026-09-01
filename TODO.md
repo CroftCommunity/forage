@@ -337,15 +337,18 @@ tier's wire shape, and it persists to `forage.state` in localStorage.
   `listitem` could hold it; the cost is one record per member instead of a `literal:self`
   singleton. Recorded as convenience rather than justification, because that is what it is.
 
-- **`e2e/mock-board.workflow.mjs` flakes ~1 in 5 on a DNS lookup that escapes the shim's
-  fence.** Found 2026-09-01 while gating the post-text branch. The failure is
-  `scenario closed with 1 collected error(s): Failed to load resource:
-  net::ERR_NAME_NOT_RESOLVED` — a hostname the fixture reaches for that
-  `e2e/harness/shim.mjs` does not fence, so it goes to real DNS and fails only when the
-  resolver is slow or offline. **Measured as pre-existing, not branch-introduced:** five runs
-  of the whole corpus on `origin/main` (`8081fc9`) failed the same workflow twice, and five
-  runs on the branch failed it twice — the same rate on a tree that had not touched it. A
-  hermetic fixture that sometimes reaches the network is not hermetic, and worse, its green is
-  a coin flip rather than a result. The fix is to name the host in the shim's fence list (or
-  stop the fixture asking for it); the diagnosis is to log the failing URL, which the
-  collected error does not currently carry.
+- ~~**`e2e/mock-board.workflow.mjs` flakes ~1 in 5 on a DNS lookup that escapes the shim's
+  fence.**~~ — **DONE 2026-09-01.** Filed and fixed the same day. Worth keeping for the
+  correction: **the filed diagnosis was wrong.** It said the fix was to "name the host in the
+  shim's fence list", which could not have worked — `e2e/harness/shim.mjs` fences
+  `window.fetch`, and the failing request was a `<video>` element's own playlist load, which
+  never goes through `fetch`. No entry in that list would have caught it, and neither would
+  any of the `<img>`, `<iframe>`, stylesheet or font loads in every other workflow. Root cause
+  found by instrumenting `requestfailed` and running until it tripped:
+  `net::ERR_NAME_NOT_RESOLVED https://video.cdn.test/clip/playlist.m3u8`. Fixed by moving the
+  fence a layer down — `scenario.mjs` routes every request and refuses anything off the
+  harness's own origin locally, recording it as `blockedExternals()`. The flake was the cheap
+  half: the real bug was that a resolver which *answers* (a captive portal, a wildcard DNS
+  provider, this laptop's own OpenDNS hijack of unknown names) would have served real bytes
+  into a test reporting itself hermetic. Held by `e2e/harness-fence.workflow.mjs`; measured
+  12/12 clean on the previously-flaky workflow.
