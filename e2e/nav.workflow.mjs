@@ -66,6 +66,28 @@ export async function run() {
     // Feeds ARE readable signed out, so they stay.
     assert.ok(await guest.page.locator('[data-nav-item="whats-hot"]').count() > 0,
       'what a guest CAN read is kept');
+
+    // ---- 1b. v11 (owner, 2026-09-01): what the Feeds section holds ----
+    // "remove Bluesky from the default feed on the left under Discovery … and
+    // put Trending in its place". Trending MOVED — it is not a second copy of
+    // the row that used to sit below the rule, so a check that only counted
+    // rows would have missed the duplicate this had to avoid.
+    const groups = await guest.page.$eval('[data-nav="1"]', (n) => {
+      const out = []; let cur = null;
+      for (const kid of n.children) {
+        if (kid.classList.contains('navsec')) { cur = { section: kid.textContent.trim(), items: [] }; out.push(cur); continue; }
+        if (kid.tagName === 'HR') { cur = { section: '—', items: [] }; out.push(cur); continue; }
+        if (kid.dataset.navItem) (cur ??= (out.push({ section: '', items: [] }), out.at(-1))).items.push(kid.dataset.navItem);
+      }
+      return out;
+    });
+    assert.deepEqual(groups.map((g) => [g.section, g.items]),
+      [['Feeds', ['whats-hot', 'directory']], ['—', ['feeds', 'hashtags']]],
+      `a guest's nav: Discover then Trending under Feeds, then the browse surfaces (${JSON.stringify(groups)})`);
+    assert.equal(await guest.page.locator('[data-nav-item="directory"]').count(), 1,
+      'Trending appears ONCE — it moved up, it was not copied');
+    assert.equal(await guest.page.locator('[data-nav-item="bsky.app"]').count(), 0,
+      'and bsky.app is no longer a default board on the left');
   } finally { await guest.close(); }
 
   // ---- 2. one press, one thing ----
@@ -138,4 +160,69 @@ export async function run() {
     await s.page.waitForSelector('[data-nav="1"]:visible', { state: 'hidden' });
     assert.ok(s.page.url().endsWith('/r/fol'), 'and it actually navigated');
   } finally { await s.close(); }
+
+  // ---- 5. v11: the centre column scrolls on its own (owner: "can we make the
+  // center column scroll independently like reddit.com?") ----
+  // The claim is not "the rails have position: sticky" — it is that scrolling
+  // the page moves the column and leaves the rails where they are. So the check
+  // scrolls and measures both, which is also the only form of it that survives
+  // someone changing HOW it is done.
+  // A GUEST at `/`, deliberately: a ring board returns no rail at all and
+  // `#side` is then hidden, whose rect reads (0,0,0,0) — a measurement that
+  // looks like "pinned to the very top" and is really "not there". The home
+  // page draws both columns for a signed-out reader.
+  const scr = await scenario('first-visit', { mode: 'bluesky', responses: RESPONSES });
+  try {
+    await scr.page.setViewportSize({ width: 1280, height: 700 });
+    await scr.page.goto(`${scr.origin}/`);
+    await scr.page.waitForSelector('[data-nav="1"]');
+    await scr.page.waitForSelector('#side .card');
+    // enough content below the fold to have somewhere to scroll to
+    await scr.page.evaluate(() => {
+      const filler = document.createElement('div');
+      filler.style.height = '3000px';
+      document.getElementById('main').append(filler);
+    });
+    const at = () => scr.page.evaluate(() => ({
+      y: window.scrollY,
+      nav: Math.round(document.querySelector('.nav').getBoundingClientRect().top),
+      side: Math.round(document.getElementById('side').getBoundingClientRect().top),
+      main: Math.round(document.getElementById('main').getBoundingClientRect().top),
+      mast: Math.round(document.querySelector('.masthead').getBoundingClientRect().height),
+    }));
+    const top = await at();
+    await scr.page.evaluate(() => window.scrollTo(0, 900));
+    await scr.page.waitForFunction(() => window.scrollY > 800);
+    const down = await at();
+    assert.equal(down.y, 900, 'the page itself is still the scroller — window.scrollTo means what it meant');
+    assert.ok(down.main < top.main - 800, `the column moved with the scroll (${top.main} → ${down.main})`);
+    assert.equal(down.nav, down.side, 'both rails pin to the same line');
+    assert.ok(down.nav >= 0 && down.nav <= top.mast + 24,
+      `and they stay under the masthead instead of scrolling away (${down.nav}, masthead ${top.mast})`);
+    // the pinned line is the masthead's REAL height — --masthead-h is a
+    // measured constant, and a masthead that grew would slide under it
+    const stuck = await scr.page.evaluate(() => ({
+      declared: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--masthead-h')),
+      real: document.querySelector('.masthead').getBoundingClientRect().height,
+    }));
+    assert.ok(Math.abs(stuck.declared - stuck.real) <= 2,
+      `--masthead-h (${stuck.declared}) tracks the masthead's real height (${stuck.real})`);
+    // a rail taller than the viewport scrolls INSIDE itself rather than being clipped
+    const room = await scr.page.evaluate(() => {
+      const n = document.querySelector('.nav');
+      n.append(Object.assign(document.createElement('div'), { style: 'height:2000px' }));
+      const host = document.getElementById('navhost');
+      return { scrollable: host.scrollHeight > host.clientHeight + 4, overflow: getComputedStyle(host).overflowY };
+    });
+    assert.equal(room.overflow, 'auto', 'an over-tall rail gets its own scrollbar');
+    assert.ok(room.scrollable, 'and is not simply clipped');
+    // narrow: the rails fold back into the flow, so nothing may stay pinned
+    await scr.page.setViewportSize({ width: 700, height: 700 });
+    const narrow = await scr.page.evaluate(() => [
+      getComputedStyle(document.getElementById('navhost')).position,
+      getComputedStyle(document.getElementById('side')).position,
+    ]);
+    assert.deepEqual(narrow, ['static', 'static'],
+      'below the fold-in widths a stacked column is pinned to nothing — so it is not pinned');
+  } finally { await scr.close(); }
 }

@@ -129,10 +129,26 @@ export async function run() {
     assert.equal(on.rail, 'on', 'the side panel is on by default');
     assert.equal(on.tracks.length, 3, `nav · column · rail: three tracks (${on.tracks.join(' ')})`);
     assert.equal(on.signin, 1, 'signed out, the rail carries the sign-in card');
-    const railHrefs = await out.page.$$eval('#side .card a[href^="/f/"]', (as) => as.map((a) => a.getAttribute('href')));
-    for (const h of ['/f/whats-hot', '/f/bsky.app']) assert.ok(railHrefs.includes(h), `a guest's rail lists the curated ${h}: ${JSON.stringify(railHrefs)}`);
+    // v11 (owner, 2026-09-01: "remove this duplicate box on the right"): the
+    // rail's Feeds card is gone — it listed what the left nav's Feeds section
+    // lists, beside it, and pointed its "browse ›" where the nav's "Browse all
+    // feeds" points. The rail is now the door and trending, and the curated
+    // boards are named ONCE, in the nav.
     assert.deepEqual(await out.page.$$eval('#side .card', (cs) => cs.map((c) => c.hasAttribute('data-signin-card') ? 'sign-in' : c.querySelector('h2')?.textContent.trim())),
-      ['sign-in', 'Feeds', 'Trending'], 'the rail\'s order: the door, the feeds, trending');
+      ['sign-in', 'Trending'], 'the rail\'s order: the door, then trending');
+    assert.equal(await out.page.locator('#side .card a[href^="/f/"]').count(), 0,
+      'no feed list in the rail — the nav is where a guest\'s boards are named');
+    const navHrefs = await out.page.$$eval('.nav a[href^="/f/"], .nav a[href="/trending"]', (as) => as.map((a) => a.getAttribute('href')));
+    assert.deepEqual(navHrefs, ['/f/whats-hot', '/trending'],
+      `a guest's Feeds section is Discover then Trending — bsky.app is out and Trending moved up (${JSON.stringify(navHrefs)})`);
+    // out of the NAV, not out of the app: the registry still routes it, and the
+    // home page's Browse card still offers it
+    await out.page.goto(`${out.origin}/`);
+    await out.page.waitForSelector('.masthead');
+    assert.ok((await out.page.$$eval('#main a[href^="/f/"]', (as) => as.map((a) => a.getAttribute('href')))).includes('/f/bsky.app'),
+      'the home page still offers /f/bsky.app to browse');
+    await out.page.goto(`${out.origin}/f/whats-hot`);
+    await out.page.waitForSelector('.postrow');
     assert.ok(on.mainW >= 640 && on.mainW <= 680, `the column is 680 (${on.mainW})`);
     await out.page.evaluate(() => localStorage.setItem('forage.rail', 'off'));
     await out.page.reload();

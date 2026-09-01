@@ -219,6 +219,17 @@ export async function run() {
   await page.waitForSelector('a[href="/f/whats-hot"]');
   await page.waitForSelector('a[href="/f/following"]');
   assert.equal(await page.locator('#side [data-moderation-panel]').count(), 0, 'moderation lives on /me now');
+  // v11: the saved feeds are named in the LEFT NAV now — the rail's Feeds card
+  // was a second copy of this list and is gone. Drawing that card was also the
+  // only thing that registered a saved feed under its slug, so the bare
+  // `/f/<slug>` route is the check that the registration moved to
+  // ensureSavedFeeds rather than leaving with the card.
+  assert.equal(await page.locator('#side .card a[href="/feeds"]').count(), 0, 'no Feeds card on the rail');
+  assert.ok(await page.locator('.nav a[href="/f/whats-hot"]').count() === 1, 'the nav names the saved feed');
+  await page.goto(`${s.origin}/f/whats-hot`);
+  await page.waitForSelector('[data-feed-header]');
+  assert.equal(await page.locator('text=Unknown feed').count(), 0, 'a saved feed still resolves by its bare slug');
+  await page.goto(`${s.origin}/`);
 
   // the masthead @handle IS the profile link
   await page.goto(`${s.origin}/`);
@@ -383,6 +394,10 @@ export async function run() {
   // 3j: a feed board carries its header card, and Join writes preferences
   await page.goto(`${s.origin}/f/whats-hot`);
   await page.waitForSelector('[data-feed-header]');
+  // v11: this fixture's creator has no displayName, so there is no readable
+  // name to show and the handle IS the name. The pair of cases matters — the
+  // mock population's curator is named ("Curated by Bluesky") and this one is
+  // not, and the card must not invent one for either.
   await page.waitForSelector('text=Curated by @bsky.app');
   // 4g: the feed card carries adoption signals the AppView does not have —
   // shares (posts quoting this feed) and starter-pack inclusions, both

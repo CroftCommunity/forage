@@ -932,16 +932,44 @@ export function affordanceFor(stream) {
 // inclusion rule that exists anywhere (DL-025). When the feed says nothing we
 // substitute our own sentence, and blurbIsOwnWords goes false so the view
 // does not put OUR prose in quotation marks.
-export function feedCardModel(info) {
+//
+// v11 (owner, 2026-09-01): a feed whose description is written TO an account —
+// Discover's "Trending content from your personal network" — is describing a
+// result a signed-out reader is not getting, because there is no network of
+// theirs to trend over. Quoting it at a guest is the one case where DL-025's
+// "render the feed's own words verbatim" states something false, so signed out
+// those feeds show no description at all rather than a substituted one: we do
+// not know what the generator serves a viewerless request, and inventing a
+// sentence about it would trade one false claim for another.
+//
+// A SET of uris, not a heuristic over the prose. A "does it say 'your'?" rule
+// would have caught this string and also caught every feed that merely writes
+// in the second person, and the owner's instruction was explicit that this is
+// about Discover and not about descriptions in general.
+// e2e/curated-names-live.workflow.mjs (LIVE=1) is where a drift in this
+// description would surface, the same way it surfaces a drifted name.
+export const GUEST_BLIND_BLURBS = new Set([
+  'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot',
+]);
+
+export function feedCardModel(info, { signedIn = true } = {}) {
   const a = affordanceFor({ kind: 'feed', info });
+  const blurbHidden = !signedIn && GUEST_BLIND_BLURBS.has(info.uri);
   return {
     avatar: info.avatar || null,
     headline: a.headline,
     // feed-row v7: the curator, and where they live — the card links them out
     creator: info.creator || null,
+    // v11 (owner: "is there a human readable version?"): there is, and it is
+    // the account's OWN displayName — probed 2026-09-01, bsky.app reports
+    // "Bluesky". Not "Bluesky Team", which this repo shipped for a while and
+    // the account has never called itself (the same drift sourceLabel records
+    // above). The handle stays the link and the hover: a card is for reading,
+    // the identifier is one pointer away.
+    creatorName: info.creatorName || null,
     creatorUrl: info.creator ? `https://bsky.app/profile/${encodeURIComponent(info.creator)}` : null,
     likeCount: info.likeCount || 0,
-    blurb: a.detail,
+    blurb: blurbHidden ? null : a.detail,
     blurbIsOwnWords: Boolean(info.description),
     degraded: info.online === false || info.valid === false,
   };
@@ -1608,6 +1636,9 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
         uri: v.uri, title: v.displayName || v.uri?.split('/').pop(), description: v.description || '',
         avatar: v.avatar || null, likeCount: v.likeCount ?? 0,
         creator: v.creator?.handle || '[unknown]',
+        // v11: the curator's own name, for the card to READ out. Null when the
+        // account has never set one — the handle is then the only name it has.
+        creatorName: v.creator?.displayName || null,
         online: data.isOnline !== false, valid: data.isValid !== false,
         ...(disp?.mode === 'hide' ? { hidden: true } : {}),
         ...(disp?.mode === 'warn' ? { warnLabels: disp.labels } : {}),

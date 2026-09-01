@@ -108,9 +108,18 @@ export async function run() {
   const b = await scenario('first-visit', {
     responses: {
       'getTrendingTopics': { topics: [{ topic: LONG_WORD, displayName: LONG_WORD, description: LONG_URL, link: '/profile/did:plc:t/feed/x1' }] },
+      // Six rows, not two. The 1280 pinning check needs the page to be taller
+      // than the viewport, and it used to get that height from the RAIL — which
+      // v11 pinned and capped at the viewport, so the rail no longer lengthens
+      // the document. A check whose scroll depends on a column it is not about
+      // is a check waiting to go quietly untestable; the rows are the content.
       'getFeed': { feed: [
         post('long1', 'did:plc:aa', '2026-08-26T10:00:00Z', `${LONG_WORD} ${LONG_URL}`),
         post('long2', 'did:plc:aa', '2026-08-26T09:00:00Z', LONG_URL),
+        post('long3', 'did:plc:aa', '2026-08-26T08:00:00Z', `${LONG_WORD} ${LONG_URL}`),
+        post('long4', 'did:plc:aa', '2026-08-26T07:00:00Z', LONG_URL),
+        post('long5', 'did:plc:aa', '2026-08-26T06:00:00Z', `${LONG_WORD} ${LONG_URL}`),
+        post('long6', 'did:plc:aa', '2026-08-26T05:00:00Z', LONG_URL),
       ] },
       'getAuthorFeed': { feed: [post('long1', 'did:plc:aa', '2026-08-26T10:00:00Z', `${LONG_WORD} ${LONG_URL}`)] },
       'getPostThread': { thread: {

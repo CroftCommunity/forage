@@ -129,8 +129,16 @@ export const QUOTE_PATH = `/p?uri=${encodeURIComponent('at://did:plc:quoter/app.
 
 export const RESPONSES = {
   'getTrendingTopics': { topics: [] },
-  'getFeedGenerator?': { view: { uri: WH, displayName: 'Discover', description: 'trending',
-    likeCount: 39382, creator: { handle: 'bsky.app' } }, isOnline: true, isValid: true },
+  // v11 (2026-09-01): the generator card carries what the network actually
+  // reports for this feed — probed the same day: the description is
+  // "Trending content from your personal network" and the creator's display
+  // name is "Bluesky". The fixture used to carry a one-word stand-in, which is
+  // exactly the load a feed card is not stressed by: the real description is
+  // the one that reads as a promise to a signed-out reader, and the real
+  // display name is the one the card now shows instead of the handle.
+  'getFeedGenerator?': { view: { uri: WH, displayName: 'Discover',
+    description: 'Trending content from your personal network',
+    likeCount: 39382, creator: { handle: 'bsky.app', displayName: 'Bluesky' } }, isOnline: true, isValid: true },
   'getFeed?': FEED, 'getFeed': FEED,
   [`getPostThread?uri=${encodeURIComponent(quote.uri)}`]: { thread: { post: quote, replies: [] } },
   'getPostThread': { thread: { post: plain, replies: [] } },

@@ -70,6 +70,14 @@ function ensureSavedFeeds() {
     savedFeedsPromise = lens.feeds()
       .then((fs) => {
         for (const f of fs) {
+          // v11: registering a saved feed under its slug happens HERE, in the
+          // one place that fetches them. It used to happen in the rail's Feeds
+          // card as a side effect of drawing a row — so removing that card (a
+          // duplicate of the left nav) would have quietly broken `/f/<slug>`
+          // for every feed you had joined.
+          registerSource({ slug: f.slug, humanSlug: f.humanSlug, title: f.title, kind: f.kind, creator: f.creator,
+            source: f.kind === 'author' ? { kind: 'author', actor: f.id }
+              : f.kind === 'timeline' ? { kind: 'timeline' } : { kind: f.kind, uri: f.id } });
           if (f.kind !== 'feed') continue;
           savedFeedUris.add(f.id);
           if (f.pinned) pinnedFeedUris.add(f.id);
@@ -386,7 +394,16 @@ const CURATED = [
   // 4h: the FALLBACK name again — probed 2026-08-26, this account reports
   // displayName "Bluesky". It had been shipping as "Bluesky Team", which the
   // account has never called itself.
-  { slug: 'bsky.app', title: 'Bluesky', kind: 'author', source: { kind: 'author', actor: 'bsky.app' } },
+  //
+  // v11 (owner, 2026-09-01: "remove Bluesky from the default feed on the left"):
+  // `inNav: false` keeps it OUT of the left nav's Feeds list and nowhere else.
+  // It stays in this registry because that is what makes /f/bsky.app resolve,
+  // and it stays on the home page's Browse card, which is a list of what a
+  // guest can open rather than a list of their boards. A guest's Feeds section
+  // is now Discover and the directory — the two boards a signed-out reader can
+  // actually read — where one company's own account was a default nobody chose.
+  { slug: 'bsky.app', title: 'Bluesky', kind: 'author', inNav: false,
+    source: { kind: 'author', actor: 'bsky.app' } },
 ];
 const sources = new Map(CURATED.map((c) => [c.slug, c]));
 // Register a source under its canonical slug AND its human alias (3i: route
@@ -804,46 +821,17 @@ function langChip(p) {
   return code ? el('span', { class: 'chip lang-chip', 'data-lang-chip': code, title: `This post declares its language as ${code}` }, code) : null;
 }
 
-function lensSidebar() {
-  const feedsCard = el('div', { class: 'card' },
-    el('div', { class: 'row spread' },
-      el('h2', { style: 'margin:0' }, el('a', { href: '/feeds' }, 'Feeds')),
-      el('a', { href: '/feeds', class: 'xs' }, 'browse ›')));
-  const list = el('div', { class: 'stack' });
-  feedsCard.append(list);
-  if (!session) {
-    for (const c of CURATED) {
-      list.append(el('div', { class: 'row spread' },
-        el('a', { href: `/f/${c.slug}` }, `f/${sourceLabel(c)}`),
-        el('span', { class: 'xs muted' }, c.kind)));
-    }
-    list.append(el('div', { class: 'xs muted', style: 'margin-top:6px' },
-      'Guest boards. Sign in and these become YOUR feeds.'));
-  } else {
-    list.append(skeleton(3));
-    ensureSavedFeeds().then((feeds) => {
-      list.replaceChildren(...feeds.map((f) => {
-        const entry = { slug: f.slug, humanSlug: f.humanSlug, title: f.title, kind: f.kind, creator: f.creator,
-          source: f.kind === 'author' ? { kind: 'author', actor: f.id }
-            : f.kind === 'timeline' ? { kind: 'timeline' } : { kind: f.kind, uri: f.id } };
-        registerSource(entry);
-        // share links carry the FIXED identity (the rkey); the human alias
-        // still routes when typed
-        return el('div', { class: 'row spread' },
-          el('a', { href: feedPath({ creator: f.creator, rkey: f.slug }) || `/f/${f.slug}`,
-            title: f.creator ? `Shareable: /f/@${f.creator}/${f.slug}` : `/f/${f.slug}` }, `f/${sourceLabel(f)}`),
-          el('span', { class: 'xs muted' }, `${f.kind}${f.pinned ? ' · pinned' : ''}`));
-      }));
-    }).catch((e) => list.replaceChildren(el('div', { class: 'xs muted' }, 'Feeds failed: ' + e.message)));
-  }
-  return feedsCard;
-}
-
-// board-cards decision 6: the rail — the guest's sign-in card first, then the
-// Feeds card, then Trending last (the home page draws Trending in its column
-// and passes trending: false). One order, so seven views cannot each invent one.
+// board-cards decision 6: the rail — the guest's sign-in card first, then
+// Trending last (the home page draws Trending in its column and passes
+// trending: false). One order, so seven views cannot each invent one.
+//
+// v11 (owner, 2026-09-01: "remove this duplicate box on the right"): the Feeds
+// card is GONE. It listed exactly what the left nav's Feeds section lists — the
+// curated boards for a guest, your saved feeds signed in — and its "browse ›"
+// pointed where the nav's "Browse all feeds" already points. Two lists of one
+// thing, side by side, is a question about which one is authoritative.
 function lensRail({ trending = true } = {}) {
-  return [session ? null : sessionCard(), lensSidebar(), trending ? trendingRail() : null];
+  return [session ? null : sessionCard(), trending ? trendingRail() : null];
 }
 
 function sessionCard() {
@@ -1001,10 +989,10 @@ function ringBoard(ring, cursor) {
 
 // The left nav for the Bluesky population. Feeds arrive async, so the tree is
 // drawn immediately with what is known and the feed rows are filled in when
-// they land — the same shape lensSidebar used, moved to the side of the screen
-// navigation actually belongs on.
+// they land — the same shape the rail's Feeds card used, moved to the side of
+// the screen navigation actually belongs on.
 export function lensNav(current) {
-  const guestFeeds = CURATED.map((c) => ({ slug: c.slug, title: c.title }));
+  const guestFeeds = CURATED.filter((c) => c.inNav !== false).map((c) => ({ slug: c.slug, title: c.title }));
   const host = el('div', { 'data-navhost': '1' },
     navTree({ el, session, feeds: guestFeeds, tags: effectiveTags(session?.did), current }));
   if (session) {
@@ -1900,7 +1888,7 @@ export function lensUserView(params) {
 // prose is the only inclusion rule that exists (DL-025). feedCardModel decides
 // what belongs; this function only draws it.
 function feedHeaderCard(info, onChange) {
-  const m = feedCardModel(info);
+  const m = feedCardModel(info, { signedIn: !!session });
   const savedNow = () => savedFeedUris.has(info.uri);
   const favNow = () => pinnedFeedUris.has(info.uri);
 
@@ -1965,22 +1953,45 @@ function feedHeaderCard(info, onChange) {
   // a link OUT to bsky.app (their profile lives there, not here) — the
   // description quoted under it, and the card outlined so the feed's own box
   // reads apart from the rows
+  // v11 (owner, 2026-09-01): the curator READS as a name — "Curated by Bluesky"
+  // — and the handle it is really made of stays in the hover and the href. An
+  // account with no display name has only its handle, and that is what shows.
+  const curatorLabel = m.creatorName || (m.creator ? `@${m.creator}` : '@unknown');
+  const curatorTitle = m.creator
+    ? `@${m.creator} — their profile, on bsky.app`
+    : 'This feed’s creator could not be resolved';
+  // v11 (owner: "should be right aligned inside the feed information box"): v8
+  // right-aligned it inside the TEXT BLOCK, which shrink-wraps its content, so
+  // on a wide card the curator stopped a long way short of the box's edge and
+  // the alignment was invisible. `flex:1` on the group and on the block is what
+  // makes the line as wide as the card, which is what "inside the box" meant.
   return el('div', { class: 'card highlight', 'data-feed-header': '1', 'data-affordance': 'curated' },
     el('div', { class: 'row spread wrap', style: 'gap:10px;align-items:center' },
-      el('div', { class: 'row', style: 'gap:10px;align-items:center;min-width:0' },
+      el('div', { class: 'row', style: 'gap:10px;align-items:center;min-width:0;flex:1' },
         m.avatar ? el('img', { src: m.avatar, alt: '', class: 'feed-avatar', loading: 'lazy' }) : null,
-        el('div', { style: 'min-width:0' },
+        el('div', { style: 'min-width:0;flex:1' },
           // v8 (owner): likes at the left, the curator right-aligned on the same line
           el('div', { class: 'small feed-line', 'data-feed-line': '1' },
             el('strong', { 'data-feed-likes': '1' }, `${fmtScore(m.likeCount)} likes`),
             el('span', { 'data-feed-curator': '1' }, 'Curated by ',
-              m.creator ? el('a', { href: m.creatorUrl, target: '_blank', rel: 'noopener noreferrer', title: 'Their profile, on bsky.app' }, `@${m.creator}`) : '@unknown')),
+              m.creator
+                ? el('a', { href: m.creatorUrl, target: '_blank', rel: 'noopener noreferrer', title: curatorTitle }, curatorLabel)
+                : curatorLabel)),
           adoption)),
       // A guest manages nothing here — the header reads as a thing you are
       // looking at rather than one you own. Absent, not disabled (owner).
-      el('div', { class: 'row', style: 'gap:6px;align-items:center' }, ...(session ? [star, btn] : []))),
-    el('div', { class: 'feed-blurb' + (m.blurbIsOwnWords ? '' : ' muted'), 'data-feed-blurb': m.blurbIsOwnWords ? 'feed' : 'ours' },
-      m.blurb),
+      // v11: absent means the GROUP too. An empty flex item is zero-wide but
+      // still costs the row's 10px gap, and that gap was the whole reason the
+      // curator stopped 11px short of the card's edge once the line was made
+      // full-width — a nothing that was still taking up space.
+      session ? el('div', { class: 'row', style: 'gap:6px;align-items:center' }, star, btn) : null),
+    // v11: no blurb at all for a guest on a feed whose description addresses an
+    // account it does not have (GUEST_BLIND_BLURBS) — an absent line, not an
+    // empty one, so nothing is left behind where the quote was.
+    m.blurb
+      ? el('div', { class: 'feed-blurb' + (m.blurbIsOwnWords ? '' : ' muted'), 'data-feed-blurb': m.blurbIsOwnWords ? 'feed' : 'ours' },
+        m.blurb)
+      : null,
     m.degraded ? el('div', { class: 'xs muted' }, 'This feed’s server is not responding right now.') : null);
 }
 

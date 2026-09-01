@@ -631,15 +631,18 @@ export async function run() {
   await page.locator('[data-board-toolbar] select[data-density]').selectOption('card');
   await page.waitForSelector('.stage');
 
-  // board-cards Phase 7: the right rail is lensSidebar restyled — the same
-  // curated sources a guest was always offered, now beside the column with the
-  // sign-in card first and Trending last; and it is a setting (Side panel).
-  // (signed in here, so the Feeds card lists the ACCOUNT's saved feeds, which
-  // land async — the card and its browse link are the invariant; the guest's
-  // curated list is guest-surface's to pin)
-  assert.ok(await page.locator('#side .card a[href="/feeds"]').count() >= 1, 'the rail carries the Feeds card');
+  // board-cards Phase 7, revised by v11 (owner, 2026-09-01: "remove this
+  // duplicate box on the right"): the rail's Feeds card is GONE — signed in it
+  // listed the account's saved feeds, which is exactly what the left nav's
+  // Feeds section lists. Trending is what the rail is for now, and signed in it
+  // is the whole of it.
+  assert.equal(await page.locator('#side .card a[href="/feeds"]').count(), 0, 'no Feeds card on the rail');
   const railOrder = await page.$$eval('#side .card', (cs) => cs.map((c) => c.querySelector('h2')?.textContent.trim() ?? c.getAttribute('data-trending') ?? '?'));
-  assert.equal(railOrder.at(-1), 'Trending', `Trending is the last card on the rail: ${JSON.stringify(railOrder)}`);
+  assert.deepEqual(railOrder, ['Trending'], `signed in, the rail is Trending alone: ${JSON.stringify(railOrder)}`);
+  // (removing that card must not take the SLUG ROUTING with it — it was the
+  // only caller that registered a saved feed under its slug. This account has
+  // no saved feeds to route, so that check lives in signin.workflow, which
+  // signs in against a real savedFeedsPrefV2.)
   // (the Side panel switch itself is guest-surface's: a trending board is not
   // restorable by URL, so leaving it for /settings cannot come back)
 
