@@ -2715,13 +2715,6 @@ export function lensThreadView(params, query) {
       // `pre-wrap` on .posttext keeps the breaks; the h1 stays valid because
       // facetNodes returns phrasing content only (text and anchors).
       p.placeholderTitle && p.media ? null : el('h1', { class: 'posttext' }, ...headWords(p)),
-      // feed-row v11 decision 23 (owner: "just reply alone, like should be top
-      // towards the right"): the like row keeps the reply count at the left and
-      // the like at its right end; Reply alone moves to the bottom of the head
-      el('div', { class: 'actions head-actions' },
-        el('div', { class: 'postmeta' }, plural(p.commentCount, 'reply', 'replies')), // the author and the time moved up into the byline (v6)
-        repostControl(p), // v12 decision 25: ⟳ on the head too
-        vote('post', p.id, p, !!session, { onVote: lensVote(p), onGuest: session ? null : openAuthSheet })), // Phase 6c: the head's pill
       // The post's own media, at full board size — until 2026-08-28 an image
       // post's thread page rendered no image at all.
       p.media && !p.maskedRemoved ? mediaNode(p) : null,
@@ -2733,10 +2726,20 @@ export function lensThreadView(params, query) {
       p.quoted ? quotedContext(p.quoted) : null,
       t.quotesFailed ? el('div', { class: 'row', style: 'gap:6px;margin-top:6px' },
         chip(`${t.quoteCount} quote${t.quoteCount === 1 ? '' : 's'} — couldn't fetch`, 'getQuotes failed; replies still render. Reload to retry.')) : null,
-      // feed-row v11 decision 23: Reply is the last thing in the head — under the
-      // picture, the continuation and the quote — at the right (it sat on the like
-      // row, above all of them, where a long post split around it)
-      el('div', { class: 'head-reply' }, replyLink),
+      // post-text v2, decision 7 (owner, on the v1 frames: "can we move the reply
+      // count, repost count and upvote count down to the line where the reply
+      // button is now?"). The counts used to have a row of their own directly
+      // under the words, which put a rule of numbers between the post and the
+      // card it is about — the v1 frames made that obvious once the words above
+      // it stopped being a headline. They join Reply instead, so the head reads
+      // words → what the post is about → what people did about it, and every
+      // control that answers the post is on one line. (This supersedes feed-row
+      // v11 decision 23, which moved Reply down here alone and left them behind.)
+      el('div', { class: 'actions head-actions' },
+        el('div', { class: 'postmeta' }, plural(p.commentCount, 'reply', 'replies')), // the author and the time moved up into the byline (v6)
+        repostControl(p), // v12 decision 25: ⟳ on the head too
+        vote('post', p.id, p, !!session, { onVote: lensVote(p), onGuest: session ? null : openAuthSheet }), // Phase 6c: the head's pill
+        replyLink),
       // phase 2: only ever rendered for a post that is genuinely yours
       deleteControl(p, () => {
         main.replaceChildren(emptyState('This post was deleted',

@@ -344,8 +344,10 @@ h1.posttext { max-width: 68ch; letter-spacing: 0; }
 /* the head's row keeps ONE line: the meta yields (wraps inside itself) before Reply drops */
 .actions.head-actions { flex-wrap: nowrap; }
 .head-actions .postmeta { flex: 1 1 auto; min-width: 0; }
-/* feed-row v11 decision 23: Reply alone at the bottom of the head, at the right */
-.head-reply { display: flex; justify-content: flex-end; margin-top: 10px; }
+/* post-text v2 decision 7: the head's counts moved down onto Reply's line, so the
+   row sits under the card with a rule above it — it closes the head rather than
+   interrupting it. `.head-reply` (feed-row v11's Reply-alone row) is retired. */
+.actions.head-actions { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
 .head-actions .vote { flex: none; white-space: nowrap; }
 /* feed-row v6: the head's top line — the byline with the breadcrumb pushed to the right,
    one line like a row's; the name yields before anything else does */

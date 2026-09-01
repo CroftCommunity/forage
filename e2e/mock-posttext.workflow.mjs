@@ -118,8 +118,43 @@ export async function run() {
     assert.equal(await row.locator('.posttitle').evaluate((t) => getComputedStyle(t).whiteSpace), 'pre-wrap',
       'and keeps the same line structure');
 
+    // ---- claim 9 (measure): the head's counts sit on the Reply line --------
+    // v2, the owner on the v1 frames (2026-09-01): "can we move the reply count,
+    // repost count and upvote count down to the line where the reply button is
+    // now?" The counts had their own row directly under the words, so the head
+    // put a rule of numbers between the post and the card it is about. They
+    // belong with the one control that answers them.
+    await page.goto(`${s.origin}${THREAD_PATH}`);
+    await page.waitForSelector('.comment');
+    const foot = await page.evaluate(() => {
+      const head = document.querySelector('#main .card');
+      const row = head.querySelector('.head-actions');
+      if (!row) return { row: false };
+      const mid = (e) => { const r = e.getBoundingClientRect(); return Math.round(r.top + r.height / 2); };
+      const replies = row.querySelector('.postmeta');
+      const repost = row.querySelector('[data-repost], .repost');
+      const like = row.querySelector('.vote');
+      const reply = row.querySelector('a.reply-right, .reply-right');
+      const media = head.querySelector('[data-extcard]');
+      const kids = [...head.children];
+      return {
+        row: true, hasAll: !!(replies && repost && like && reply),
+        sameLine: [repost, like, reply].filter(Boolean).every((e) => Math.abs(mid(e) - mid(replies)) <= 2),
+        replyLast: reply ? Math.round(reply.getBoundingClientRect().right) >= Math.round(like.getBoundingClientRect().right) : false,
+        belowCard: media ? row.getBoundingClientRect().top > media.getBoundingClientRect().bottom : null,
+        rowIsLast: kids.indexOf(row.closest('#main .card > div > *') || row) >= 0,
+        separateReplyRow: !!head.querySelector('.head-reply'),
+      };
+    });
+    assert.ok(foot.row, 'the head keeps one action row');
+    assert.ok(foot.hasAll, 'the reply count, the ⟳ figure, the like and Reply are all on it');
+    assert.ok(foot.sameLine, 'and they share one line');
+    assert.ok(foot.replyLast, 'Reply is at the right end of it');
+    assert.equal(foot.belowCard, true, 'the row is BELOW the card now — the counts no longer split the post from what it is about');
+    assert.equal(foot.separateReplyRow, false, 'and Reply no longer has a row of its own');
+
     s.consoleErrors(); s.errors(); // the fixture's pictures are data URIs; nothing is fenced away here
-    return { ok: true, claims: 8 };
+    return { ok: true, claims: 9 };
   } finally {
     await s.close();
   }

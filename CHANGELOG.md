@@ -16,8 +16,11 @@ below are the landings of that month, and everything earlier is in `git log`.
   `@mentions` are live wherever they appear, and the trailing address is left off when the card
   right below already carries it in full. The same is true in the replies, which until now
   showed every link in a comment as dead text, and a link whose page has no picture finally
-  gets a card of its own instead of vanishing. (owner: "our version of this post is much less
-  readable"; mock post-text v1)
+  gets a card of its own instead of vanishing. The counts move too: how many replies, reposts and
+  likes a post has now sit on the same line as Reply, at the bottom of the post — they used to have
+  a row of their own between the words and the picture, which split the post from the thing it was
+  about. (owner: "our version of this post is much less readable", and "can we move the reply count,
+  repost count and upvote count down to the line where the reply button is now?"; mock post-text v2)
 
 - 2026-09-01 **One line down a repost, not two.** A post that quoted the thread's post used to
   carry two vertical lines: a coloured bar on its outer edge, plus the grey rail every comment
