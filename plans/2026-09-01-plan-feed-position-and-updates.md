@@ -1,7 +1,7 @@
 # Plan: come back to your place in the feed — and be told what changed while you were gone
 
 date: 2026-09-01
-status: **WRITTEN, nothing built.** Mechanism decided by measurement (below); phases 0–6 unstarted. D9 (the refresh control's placement) decided by the owner 2026-09-01; D13/D14 measured against that placement and open.
+status: **Phases 5a + 5b BUILT and captured** on `claude/feed-position` — mock `plans/mocks/feed-refresh.html` v1 (`forage@3345405` → `forage@04a9228`), nine claims in `e2e/mock-refresh.workflow.mjs`, gate green (680/680, 86/86 conformance, 34 workflows). **Phases 0–4 and 6 unstarted.** D9 decided by the owner 2026-09-01; D13 resolved in 5a; **D14 proposed as option (b) and awaiting the owner** — it is § C of the mock.
 repo: `CroftCommunity/forage`
 baseline: `main` @ `3345405` (quote-embed landed)
 related: `claude/logged-out-refine` item 7 (the centre column's scroller) — **decided compatibly, see Reasoning D0**; `e2e/open-at-top.workflow.mjs` (the rule this must not break)
@@ -83,7 +83,7 @@ So the work is in the **render pipeline**, not in scroll code. Six phases.
 | 4 | **The deep board.** More-paged posts survive the round trip (falls out of Phase 2), under the cap from D4 | Back after More ×3 restores a post from page 4 |
 | 5a | **The bar has to be able to hold it.** `.sortbar` shrink-wraps to 295px inside a 680px column, so its `.grow` spacer measures **0** and nothing in it is right-aligned today (D13). Stretch the bar to its host, which moves the density and card-size dials to the column's right edge — a visible change to an approved surface, so it is drawn and captured before it is built | `mock-board` at both viewports: the bar's right edge meets the feed card's right edge; the dials keep their order and their 44px |
 | 5b | **The control.** One control with states at the bar's right end: quiet ⟳ at rest, ⟳ + count when there is something, a spinner while fetching. After restoring, fetch page 1 in the background, diff against the record, and *announce* — never inject. Its count is a live region, so the change is heard and not only seen | a claim that the restored offset does not move when the background fetch lands; a claim that the count is announced; 44px at 390 |
-| 5c | **The reader who is deep in the feed.** The bar is `position: static` and leaves the viewport at scrollY 256 (desktop) / 274 (phone) — under one screen, so the control is invisible in exactly the case it exists for (D14). Needs a second affordance or a sticky bar; **open for the owner** | pending D14 |
+| 5c | **The reader who is deep in the feed.** The bar is `position: static` and leaves the viewport at scrollY 256 (desktop) / 274 (phone) — under one screen, so the control is invisible in exactly the case it exists for (D14). **Built as option (b)** — a pill that appears only while the bar is off-screen and there is something to say — and drawn as § C of the mock, awaiting the owner | `mock-refresh` R8, both frames |
 | 6 | **Prepend without moving anyone.** When the reader accepts new posts mid-list, measure the first visible row before and after and add the delta to the offset. Chrome and Firefox do a version of this automatically as CSS scroll anchoring; **Safari does not**, so it is done explicitly | a claim at 390×844 in webkit that a prepend leaves the anchored row's viewport position unchanged |
 
 ## Reasoning
@@ -250,3 +250,30 @@ Probes are scratch, not committed; each is reproduced by the workflow its phase 
    **295px** in both and `.grow` measures **0**; bar right edge 545 vs the feed card's 930 on
    desktop (303 vs 382 on the phone); the bar's bottom leaves the viewport at scrollY 256 /
    274; bar height 46 desktop / 56 phone, masthead 61.
+
+## Execution notes — 5a/5b/5c, 2026-09-01
+
+**The mock earned its keep on its first capture**, which is the case MOCKS.md P2 is written
+for. Two defects, neither caught by review, both fixed before publication:
+
+- At 390 **with a count showing**, the bar wraps to two rows and the control landed at the
+  **left** of row two — the opposite of the owner's ask. `.grow` right-aligns only while
+  everything fits one line; the spacer stays on row one. `margin-left: auto` fixes it, and R9
+  now measures it. **The at-rest frame fits one row and could never have shown this** — the
+  frame that found it is the one drawn under load.
+- The pill's brand green sat on the fixture's green video frame and all but vanished. It now
+  carries a 2px ring in the page's own ground.
+
+**Phase 0 bit the fixture before it bit a reader.** The harness's sequenced responses were
+first written to advance per request. They had run to the end of the sequence before the test
+could say "now the world changes", because the board mounts three times on arrival. Advancing
+on an explicit `__shimAdvance()` says *when*, which is the thing under test. Recording it here
+because it is the first concrete cost of the triple-mount beyond the wasted fetches.
+
+**Three mutations, three reds** (green state committed first, per CLAUDE.md): injecting instead
+of announcing kills R5; moving refresh inboard of the dials kills R2; dropping the wrapped-row
+alignment kills R9.
+
+**Two gate catches** on the way through: an orphaned class literal (`.refresh-words` with no
+stylesheet rule) and an unprecached module (`/js/ui/refresh-control.js` missing from the sw
+SHELL). Both are checks this repo already had, doing their job.

@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forage Feed Refresh v1</title>
+<meta name="mock-version" content="1">
+<meta name="mock-baseline" content="forage@3345405">
+<meta name="mock-proposal" content="forage@04a9228">
+<style>
+:root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
+  --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page-bg:#1C1813;--page-card:#262019;--page-ink:#EFE7D9;--page-muted:#B5A88F;--page-line:#3D3527;--page-accent:#A5CD98}}
+:root[data-theme="dark"]{--page-bg:#1C1813;--page-card:#262019;--page-ink:#EFE7D9;--page-muted:#B5A88F;--page-line:#3D3527;--page-accent:#A5CD98}
+*{box-sizing:border-box}
+body{background:var(--page-bg);color:var(--page-ink);font-family:var(--f-body);line-height:1.55;margin:0;padding:32px 20px 72px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:30px}
+h1{font-family:var(--f-display);font-size:30px;font-weight:600;margin:0;letter-spacing:-.01em}
+h2{font-family:var(--f-display);font-size:22px;font-weight:600;margin:0}
+h3{font-family:var(--f-display);font-size:17px;margin:0 0 7px;font-weight:600}
+.sub{color:var(--page-muted);font-size:15px;max-width:78ch;margin:0}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+section{display:flex;flex-direction:column;gap:14px}
+.stage{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap}
+.device{display:flex;flex-direction:column;gap:9px;min-width:0}
+.device-label{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+.phone{width:390px;max-width:100%}
+.desk{flex:1 1 460px;min-width:0}
+.shot{max-width:100%;display:block;border:1px solid var(--page-line);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.10),0 8px 24px rgba(0,0,0,.06)}
+.callout{background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:16px 18px}
+.callout p,.callout li{margin:0;font-size:14px;color:var(--page-muted)}
+.callout b,.callout code,td b{color:var(--page-ink);font-weight:600}
+.callout ul,.callout ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+table{border-collapse:collapse;font-size:14px;width:100%}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--page-line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page-muted)}
+.tablewrap{overflow-x:auto;background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:6px 8px}
+code{font-size:.92em}
+.small{font-size:13px;color:var(--page-muted)}
+.tag{display:inline-block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;padding:1px 8px;border-radius:999px;border:1px solid var(--page-line);color:var(--page-muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Forage &middot; mock &middot; feed-refresh <b>v1</b> &middot; Current forage@3345405 &middot; Proposed forage@04a9228 &middot; 2026-09-01</div>
+    <h1>A refresh button that tells you whether it is worth pressing</h1>
+    <p class="sub"><b>One proposal in four decisions</b>, from the owner 2026-09-01:
+      &ldquo;let's put a refresh indicator and button to refresh on the top of the post feed stack,
+      on the same horizontal line as the sort control bar, right aligned over the feed column.&rdquo;
+      It is Phase 5 of <code>plans/2026-09-01-plan-feed-position-and-updates.md</code> &mdash; the half of
+      &ldquo;come back to your place in the feed&rdquo; that answers <em>then how does the feed actually update</em>.
+      It is deliberately independent of that plan's Phases 0&ndash;4: the count needs only
+      &ldquo;is there anything newer than the post you are holding&rdquo;, not the restore machinery, so it
+      ships and is judged on its own.</p>
+    <p class="sub"><b>Every frame here is a capture of the engine</b> (MOCKS.md P1): Current is
+      <code>main</code> at <code>3345405</code>, Proposed is <code>claude/feed-position</code> at
+      <code>04a9228</code>, both by <code>scripts/mock-snaps.mjs</code>, in the default skin (rule 4),
+      at 390&times;844 and 1280&times;900. Captures live in <code>plans/mocks/snaps/feed-refresh/</code>.
+      The population is <code>e2e/harness/mock-refresh.mjs</code>: <code>mock-board</code>'s load &mdash; the
+      64-grapheme chosen name, four-digit counts, a video stage &mdash; plus the one thing that board
+      cannot express, the feed <b>changing</b> between two reads of the same URL. Three posts arrive,
+      not one and not a round ten.</p>
+    <div class="callout"><p><b>Two frames on this page are the reason it exists.</b> The first capture found two
+      defects that review had not, and both are fixed in the pixels below. At 390 the count state pushes the bar to
+      two rows and the control landed at the <b>left</b> of row two &mdash; the opposite of what was asked for;
+      the at-rest frame fits one row and could never have shown it. And the pill's brand green sat on the
+      fixture's green video frame and all but vanished. MOCKS.md P2: a frame is judged under the load the
+      surface carries.</p></div>
+  </header>
+
+  <section>
+    <div class="eyebrow">Decisions</div>
+    <h2>Decisions &mdash; built and captured, awaiting the owner</h2>
+    <p class="sub">&ldquo;Yes&rdquo; on a row is &ldquo;yes&rdquo; to the frame below it.</p>
+    <div class="tablewrap"><table>
+      <tr><th>#</th><th>Decision</th><th>What it does</th><th>Rejected</th><th>Held by</th></tr>
+
+      <tr><td>1</td><td><b>The control bar spans the feed column</b> (5a &mdash; the prerequisite nobody asked for)</td>
+        <td>The bar was a shrink-wrapping flex item: <b>295px inside a 680px column</b>, with its <code>.grow</code>
+          spacer measuring <b>0</b>. So nothing in it was right-aligned and there was nowhere to put a
+          right-aligned control. <code>flex: 1</code> is the whole fix. <b>It moves two controls you already
+          approved:</b> the density and card-size dials travel 385px to the column's right edge.</td>
+        <td>Absolute-positioning the refresh control over a bar that still shrink-wraps (the dials would
+          have stayed huddled left and the bar would have read as broken)</td>
+        <td><code>mock-refresh</code> R1 &mdash; the bar's right edge meets the feed card's, both frames</td></tr>
+
+      <tr><td>2</td><td><b>One control with three states</b>, not an indicator beside a button</td>
+        <td><code>&#8635;</code> at rest &middot; <code>&#8635; 3 new</code> when three arrived &middot; spinning while it fetches.
+          The count is also in a live region, so a reader who is not looking at the bar hears it.</td>
+        <td>A separate count and button: a count with nothing to press is a dead end, and a button that cannot
+          say whether pressing it will do anything makes you press it to find out</td>
+        <td><code>mock-refresh</code> R4 (rest carries no count), R5 (the count is the number that arrived),
+          R7 (announced in a live region)</td></tr>
+
+      <tr><td>3</td><td><b>Outboard of the display dials</b> &mdash; last in the bar, at the column's right edge</td>
+        <td>Refresh acts on <b>content</b> where density and card size act on <b>presentation</b>, and the
+          outermost slot is the one a thumb reaches. Right-aligned on whatever row it lands on, which at 390
+          with a count is the second row.</td>
+        <td>Inboard of the dials, keeping the display controls together as one family (proposed first, and
+          the weaker read: it puts a content control inside a presentation cluster)</td>
+        <td><code>mock-refresh</code> R2 (last, and after density), R3 (&ge;44px at 390),
+          R9 (right-aligned <em>with a count showing</em> &mdash; the defect the first capture found)</td></tr>
+
+      <tr><td>4</td><td><b>It never injects</b> &mdash; announcing is automatic, taking them is the press</td>
+        <td>The check counts what sits above the post you are holding and says so. The board does not move,
+          the row count does not change, and your scroll offset does not change. Pressing prepends the posts
+          and takes you to the top of them.</td>
+        <td>Prepending silently on a timer &mdash; the thing that makes you lose your place mid-sentence, and
+          the behaviour Twitter and Instagram both shipped and then withdrew after complaints</td>
+        <td><code>mock-refresh</code> R5 (rows and offset both hold still), R6 (the press prepends and goes to
+          top). Proved by mutation: making the check inject kills R5.</td></tr>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Open</div>
+    <h2>Open decisions &mdash; for the owner</h2>
+    <div class="callout"><ul>
+      <li><b>D14 &mdash; the pill is proposed, not settled.</b> The bar is <code>position: static</code> and its bottom
+        leaves the viewport at <b>scrollY 256 (desktop) / 274 (phone)</b> &mdash; under one screen. A reader restored to
+        4270px on a phone is fifteen screens past it, which is exactly the case this control exists for. &sect;&nbsp;C
+        proposes option <b>(b)</b>: the count follows the reader down as a pill, only while the bar is off-screen
+        <em>and</em> there is something to say, and stands down when the bar is back. The alternatives are
+        <b>(a)</b> a sticky bar &mdash; always visible, but 56px on top of the masthead's 61 is 14% of an 844px phone
+        given permanently to chrome that is idle almost always &mdash; and <b>(c)</b> accept the limit and let the
+        control be an arrival-only affordance.</li>
+      <li><b>How often does the check run?</b> Nothing runs it on a timer yet. On returning to a board is the
+        obvious moment (and is what Phase 2 of the plan makes cheap); a poll while you read is a separate
+        decision with a cost, and is not proposed here.</li>
+      <li><b>Does the count survive a sort change?</b> Changing Sort or From repaints the board from the same
+        loaded posts; pending arrivals are kept but the frame has not been drawn for it.</li>
+      <li><b>Nothing marks which posts are new</b> once you take them. bsky.app does not either. A rule
+        (a line, a tint that fades) has not been asked for.</li>
+    </ul></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">A</div>
+    <h2>A &mdash; The bar at rest (decisions 1, 3)</h2>
+    <p class="sub">Current is the bar as it ships today: Sort, then the two dials pressed up against it, then
+      385px of nothing to the right on desktop. Proposed spans the column, which puts the dials where they have
+      always looked like they belong and leaves the outermost slot for refresh. At rest the control is a quiet
+      <code>&#8635;</code> and carries no number &mdash; there is nothing to report and it says so by saying nothing.</p>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Current &middot; phone 390&times;844</div><img class="shot" src="snaps/feed-refresh/board-lens-refresh.phone.current.png" alt="The board on main at 390: Sort, Card and Size dials bunched at the left of the control bar, empty space to their right."></div>
+      <div class="device phone"><div class="device-label">Proposed &middot; phone 390&times;844</div><img class="shot" src="snaps/feed-refresh/board-lens-refresh.phone.proposed.png" alt="The same bar on the branch: Sort at the left, Card and Size pushed right, and a quiet refresh button at the column's right edge."></div>
+    </div>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Current &middot; desktop 1280&times;900</div><img class="shot" src="snaps/feed-refresh/board-lens-refresh.desktop.current.png" alt="The board on main at desktop width: the control bar occupies 295px of a 680px column, everything left-packed."></div>
+    </div>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Proposed &middot; desktop 1280&times;900</div><img class="shot" src="snaps/feed-refresh/board-lens-refresh.desktop.proposed.png" alt="The same board on the branch: the bar spans the full column, Card and Size at the right, the refresh button outboard of them."></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">B</div>
+    <h2>B &mdash; Three posts arrived (decisions 2, 4)</h2>
+    <p class="sub">The control is now <code>&#8635; 3 new</code> in brand ink. <b>Nothing else on the screen has
+      changed</b> &mdash; the same first post, the same row count, the same scroll offset. That is the decision, not
+      an accident of the capture: the board holds still until you ask it not to.
+      <span class="tag">the defect this frame found</span> At 390 the count pushes the bar to a second row, and in the
+      first capture the control came down at its <b>left</b>. The pixels below are the fix, and R9 now measures it.</p>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Proposed &middot; phone 390&times;844</div><img class="shot" src="snaps/feed-refresh/board-lens-refresh-news.phone.proposed.png" alt="At 390 the bar wraps: Sort, Card and Size on the first row, and the refresh button reading '3 new' at the right edge of the second row."></div>
+    </div>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Proposed &middot; desktop 1280&times;900</div><img class="shot" src="snaps/feed-refresh/board-lens-refresh-news.desktop.proposed.png" alt="At desktop width the bar stays one row and the refresh button reads '3 new' in brand green at the column's right edge."></div>
+    </div>
+    <p class="sub">There is no Current frame for this state, and that is the honest thing rather than a gap:
+      <code>main</code> has no control to put in one. The capture script checks for the seam and <b>skips</b> these two
+      routes on a tree that lacks it rather than faking a frame &mdash; MOCKS.md P1, a Proposed frame is the engine
+      or it is nothing.</p>
+  </section>
+
+  <section>
+    <div class="eyebrow">C</div>
+    <h2>C &mdash; The reader who is deep in the feed (D14, option b &mdash; proposed)</h2>
+    <p class="sub">Scrolled to 1200px, the bar is gone. The count follows as a pill above the board, and standing
+      on the fixture's video is the frame worth looking at: the first capture's pill was brand green on a green
+      clip and all but disappeared, so it now carries a ring in the page's own ground. Scroll back up to the bar
+      and the pill stands down &mdash; one voice at a time, and none at all when there is nothing to say.
+      It is an <code>IntersectionObserver</code> on the control rather than a scroll listener: it reports the state
+      we care about (is the control on screen) instead of a number we would have to convert into that state.</p>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Proposed &middot; phone 390&times;844</div><img class="shot" src="snaps/feed-refresh/board-lens-refresh-pill.phone.proposed.png" alt="Scrolled deep into the board on a phone: a green pill reading 'up arrow, 3 new posts' floats above the board over a video, outlined so it stays legible."></div>
+    </div>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Proposed &middot; desktop 1280&times;900</div><img class="shot" src="snaps/feed-refresh/board-lens-refresh-pill.desktop.proposed.png" alt="The same pill at desktop width, centred over the feed column near the bottom of the viewport."></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Code</div>
+    <h2>Where this lives, and what holds it</h2>
+    <div class="callout"><ul>
+      <li><code>js/ui/refresh-control.js</code> &mdash; the control, its three states, the live region and the pill.</li>
+      <li><code>js/ui/lens-views.js</code> &mdash; <code>boardToolbar</code> takes it as an outboard extra;
+        <code>feedBoardView</code> owns <code>checkForNew</code> and the pending list.</li>
+      <li><code>css/app.css</code> &mdash; <code>.sortbar { flex: 1 }</code> (decision 1),
+        <code>.pillbtn</code> / <code>.refresh</code> / <code>.newspill</code>.</li>
+      <li><code>e2e/harness/mock-refresh.mjs</code> &mdash; the population; <code>e2e/harness/shim.mjs</code> gained
+        sequenced fixtures, the only way to say a feed <b>changed</b> between two reads of one URL. They advance
+        on an explicit <code>__shimAdvance()</code> and not on a request count, which was the first design and was
+        wrong: the board mounts <b>three times</b> on arrival (the plan's Phase 0), so a count-based sequence had
+        run to its end before the test could say &ldquo;now the world changes&rdquo;.</li>
+      <li><code>e2e/mock-refresh.workflow.mjs</code> &mdash; nine claims (R1&ndash;R9), in the gate.
+        R1 was red first at the measured 545-vs-930. Three mutations of the shipped code, three reds:
+        injecting instead of announcing (R5), moving refresh inboard of the dials (R2), and dropping the
+        wrapped-row alignment (R9).</li>
+    </ul></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Revisions</div>
+    <h2>Revisions</h2>
+    <div class="tablewrap"><table>
+      <tr><th>v</th><th>When</th><th>Commit</th><th>What changed</th></tr>
+      <tr><td>1</td><td>2026-09-01</td><td><code>04a9228</code></td><td>First publication. Four decisions, eight captures.
+        The Proposed frames were re-captured once before publishing: the first set showed the control wrapping to the
+        left at 390 and the pill vanishing on a green video, both fixed in <code>04a9228</code> and now held by R9 and
+        a ring respectively.</td></tr>
+    </table></div>
+  </section>
+
+  <footer class="small">Frames captured 2026-09-01 by <code>scripts/mock-snaps.mjs</code>; manifest at
+    <code>plans/mocks/snaps/feed-refresh/manifest.json</code>. Nothing on this page is drawn.</footer>
+</div>
+</body>
+</html>
