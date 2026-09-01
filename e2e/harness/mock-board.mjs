@@ -58,8 +58,11 @@ const svg = (n, { width, height }) => {
 export const img = (n, aspectRatio) => ({ thumb: svg(n, aspectRatio), fullsize: svg(n, aspectRatio), alt: `picture ${n}`, aspectRatio });
 export const images = (...list) => ({ $type: 'app.bsky.embed.images#view', images: list });
 // v13 (H, I, J — the owner's screenshots, 2026-08-30): a YouTube link, a native
-// Bluesky video, and a link to a book. The video's playlist points at a fenced
-// host so nothing plays here; the frame proves the shape, the claims the wiring.
+// Bluesky video, and a link to a book. The video's playlist points off-origin so
+// nothing plays here; the frame proves the shape, the claims the wiring. (Until
+// 2026-09-01 that comment was aspirational — the shim fences window.fetch and a
+// <video> load does not go through it, so this really did hit DNS on every run.
+// scenario.mjs routes the network now; see e2e/harness-fence.workflow.mjs.)
 const external = ({ uri, title, description, n, aspect }) => ({ $type: 'app.bsky.embed.external#view',
   external: { uri, title, description, thumb: svg(n, aspect) } });
 const video = (n, aspectRatio) => ({ $type: 'app.bsky.embed.video#view', cid: `cid-video-${n}`,
