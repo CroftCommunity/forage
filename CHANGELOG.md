@@ -18,8 +18,13 @@ below are the landings of that month, and everything earlier is in `git log`.
   Two smaller honesties came with it: a quote whose original has been deleted, blocked or
   detached now says so in a line of plain words rather than drawing an empty card attributed
   to "[unknown]", and quoting a *feed* (not a post) no longer draws a blank post card at all.
+  The quoted author is named the way everyone else in the app is named, too: by the name they
+  chose, with their handle kept in the tooltip and read out by a screen reader beside it —
+  this card was the one place still printing a raw `handle.bsky.social` at people, and its
+  author link now goes to their board here rather than out to bsky.app.
   (owner, with a live example: "we are not representing the quoted content … until you enter
-  the post page, both in terms of showing what's being quoted and rendering the video")
+  the post page, both in terms of showing what's being quoted and rendering the video", and
+  "the name in the quote box … should be the human readable alias name")
 
 - 2026-09-01 **A post's own words, as its author wrote them.** A news post — the kind with a
   link card under it — used to render its whole text as a large bold serif headline with every

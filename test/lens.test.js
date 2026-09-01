@@ -279,6 +279,9 @@ test('3e: inbound quoted context — an embed record#view becomes post.quoted', 
   assert.deepEqual(p.quoted, {
     uri: 'at://did:plc:orig/app.bsky.feed.post/orig1',
     author: 'orig.test',
+    // explicitly null, never absent: the quoted author here chose no display
+    // name, and "no name" is a state the view reads, not a missing key
+    authorName: null,
     excerpt: 'the original words',
   });
 });
@@ -727,4 +730,27 @@ test('quote-embed: an embedded feed generator is not treated as a quoted post', 
   const p = shapeLensPost(quoting({ $type: 'app.bsky.feed.defs#generatorView',
     uri: 'at://x/app.bsky.feed.generator/g', displayName: 'Discover', creator: { handle: 'bsky.app' } }), QSRC);
   assert.equal(p.quoted, undefined);
+});
+
+// quote-embed (owner, 2026-09-01, on the v1 mock's § A frame): "the name in the
+// quote box … should be the human readable alias name". Every other byline in
+// the app names people by the name they chose and keeps the handle for the
+// tooltip and the accessible name (feed-row v2, js/ui/components.js whoNode);
+// the quote card was the one surface printing a raw handle at people. The null
+// is feed-row v2's rule too — a blank display name is NOT a name, so the view
+// falls back to the handle instead of printing nothing.
+test('quote-embed: the quoted author carries the name they chose, null when they have none', () => {
+  const named = shapeLensPost(quoting(viewRecord({
+    author: { did: 'did:plc:orig', handle: 'orig.test', displayName: 'The Frost Warning' } })), QSRC);
+  assert.equal(named.quoted.authorName, 'The Frost Warning');
+  assert.equal(named.quoted.author, 'orig.test', 'the handle stays: it is the identity, the name is the label');
+
+  for (const author of [
+    { did: 'did:plc:orig', handle: 'orig.test' },                  // never set one
+    { did: 'did:plc:orig', handle: 'orig.test', displayName: '' }, // set it to nothing
+    { did: 'did:plc:orig', handle: 'orig.test', displayName: '   ' }, // set it to whitespace
+  ]) {
+    const p = shapeLensPost(quoting(viewRecord({ author })), QSRC);
+    assert.equal(p.quoted.authorName, null, `${JSON.stringify(author.displayName)} is not a name`);
+  }
 });

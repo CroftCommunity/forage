@@ -261,6 +261,13 @@ function quotedOf(rec) {
   return {
     uri: rec.uri,
     author: rec.author?.handle || '[unknown]',
+    // feed-row v2's rule, for the quoted author too (owner, 2026-09-01, on the
+    // quote-embed v1 mock: "the name in the quote box … should be the human
+    // readable alias name"): the name they CHOSE, null when blank, so the view
+    // falls back to the handle rather than printing nothing. The handle stays
+    // beside it — it is the identity; the name is only the label, and a display
+    // name is not unique.
+    authorName: rec.author?.displayName?.trim() || null,
     excerpt: (rec.value?.text || '').slice(0, 200),
     ...(media ? { media } : {}),
   };

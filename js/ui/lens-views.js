@@ -1435,8 +1435,18 @@ function quotedContext(quoted) {
       el('div', { class: 'xs muted' }, '❝ ', QUOTE_GONE_WORDS[quoted.unavailable] || 'the quoted post is unavailable'));
   }
   return el('div', { class: 'card quoted', style: 'margin-top:6px', 'data-quoted': '1' },
+    // Named the way every OTHER byline in the app names people (owner,
+    // 2026-09-01, on the v1 mock: "the name in the quote box … should be the
+    // human readable alias name"): whoNode owns that rule — the chosen name,
+    // the handle in the tooltip and the accessible name, the handle itself when
+    // no name was chosen. Sending this card through the same function is what
+    // stops it drifting from the row's byline a second time.
+    //
+    // The link goes to the author's board HERE rather than to their bsky.app
+    // profile, which is where the post page's head byline already sends it. The
+    // old outbound link was this card's own invention.
     el('div', { class: 'xs muted' }, '❝ quoting ',
-      el('a', { href: `https://bsky.app/profile/${quoted.author}`, target: '_blank', rel: 'noopener noreferrer' }, quoted.author)),
+      whoNode(quoted.author, quoted.authorName, '', `/u/${encodeURIComponent(quoted.author)}`)),
     quoted.excerpt ? el('div', { class: 'small' }, quoted.excerpt) : null,
     quoted.media ? mediaNode({ media: quoted.media, author: quoted.author, id: quoted.uri }) : null,
     el('div', { class: 'xs' }, el('a', { href: `/p?uri=${encodeURIComponent(quoted.uri)}` }, 'open the original ↳')));

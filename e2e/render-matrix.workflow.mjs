@@ -51,10 +51,10 @@ const video = (n, aspectRatio = { width: 1280, height: 720 }, playlist = `https:
 const external = ({ uri, title, description = 'a description', thumb = 'https://cdn.test/e-t.jpg' }) =>
   ({ $type: 'app.bsky.embed.external#view', external: { uri, title, description, ...(thumb ? { thumb } : {}) } });
 // #viewRecord is the hydrated quoted POST: its own embeds ride along in `embeds`
-const viewRecord = (rkey, text, embeds = []) => ({
+const viewRecord = (rkey, text, embeds = [], displayName = 'Orig Poster') => ({
   $type: 'app.bsky.embed.record#viewRecord',
   uri: `at://did:plc:orig/app.bsky.feed.post/${rkey}`, cid: `cid-q-${rkey}`,
-  author: { did: 'did:plc:orig', handle: 'orig.test', displayName: 'Orig', avatar: AV },
+  author: { did: 'did:plc:orig', handle: 'orig.test', avatar: AV, ...(displayName ? { displayName } : {}) },
   value: { $type: 'app.bsky.feed.post', text, createdAt: T },
   labels: [], likeCount: 0, replyCount: 0, repostCount: 0, quoteCount: 0, indexedAt: T,
   ...(embeds.length ? { embeds } : {}),
@@ -67,7 +67,8 @@ const quoting = (record) => ({ $type: 'app.bsky.embed.record#view', record });
 // Both are declared for every shape; `expect()` below fails a shape that
 // leaves either side out, so "we forgot to think about the other surface"
 // is a red test rather than a silent gap.
-const NOTHING = { ownStage: 0, ownGrid: 0, ownExt: 0, carousel: 0, strip: 0, quoted: 0, quotedStage: 0, quotedExt: 0 };
+const NOTHING = { ownStage: 0, ownGrid: 0, ownExt: 0, carousel: 0, strip: 0, quoted: 0, quotedStage: 0, quotedExt: 0,
+  quotedWho: null, quotedHandle: null };
 const SHAPES = [
   { key: 'text', why: 'a plain text post draws no media anywhere',
     text: 'just words, no embed at all', embed: null,
@@ -102,31 +103,36 @@ const SHAPES = [
 
   { key: 'quotetext', why: 'quote-embed 2026-09-01: the FEED ROW shows what the post quotes — before this it showed nothing',
     text: 'look at this', embed: quoting(viewRecord('qt', 'the quoted words')),
-    row: { ...NOTHING, quoted: 1, words: true }, post: { ...NOTHING, quoted: 1, words: true } },
+    row: { ...NOTHING, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', words: true }, post: { ...NOTHING, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', words: true } },
 
   { key: 'quotevideo', why: 'the owner’s report: a quote of a VIDEO post — the quoted video renders on both surfaces',
     text: 'is it so bad to expect a decent command of the language?',
     embed: quoting(viewRecord('qv', 'the quoted words', [video('qv')])),
-    row: { ...NOTHING, quoted: 1, quotedStage: 1, words: true },
-    post: { ...NOTHING, quoted: 1, quotedStage: 1, words: true } },
+    row: { ...NOTHING, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', quotedStage: 1, words: true },
+    post: { ...NOTHING, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', quotedStage: 1, words: true } },
+
+  { key: 'quotenoname', why: 'a quoted author who chose no display name falls back to their handle — a blank name is not a name (feed-row v2), and printing nothing would be worse than printing the handle',
+    text: 'they have no name set', embed: quoting(viewRecord('qnn', 'the quoted words', [], null)),
+    row: { ...NOTHING, quoted: 1, quotedWho: 'orig.test', quotedHandle: 'orig.test', words: true },
+    post: { ...NOTHING, quoted: 1, quotedWho: 'orig.test', quotedHandle: 'orig.test', words: true } },
 
   { key: 'quotepic', why: 'a quoted picture comes through the same door as a quoted video',
     text: 'this picture', embed: quoting(viewRecord('qp', 'the quoted words', [images(img('q', { width: 1600, height: 1200 }))])),
-    row: { ...NOTHING, quoted: 1, quotedStage: 1, words: true },
-    post: { ...NOTHING, quoted: 1, quotedStage: 1, words: true } },
+    row: { ...NOTHING, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', quotedStage: 1, words: true },
+    post: { ...NOTHING, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', quotedStage: 1, words: true } },
 
   { key: 'quoteext', why: 'a quoted link post shows the quoted card, and the quoting post has none of its own',
     text: 'this article', embed: quoting(viewRecord('qe', 'read this', [external({ uri: 'https://example.test/c', title: 'C' })])),
-    row: { ...NOTHING, quoted: 1, quotedExt: 1, quotedStage: 1, words: true },
-    post: { ...NOTHING, quoted: 1, quotedExt: 1, quotedStage: 1, words: true } },
+    row: { ...NOTHING, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', quotedExt: 1, quotedStage: 1, words: true },
+    post: { ...NOTHING, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', quotedExt: 1, quotedStage: 1, words: true } },
 
   { key: 'rwm', why: 'recordWithMedia is BOTH: the post’s own picture and the post it quotes, neither swallowing the other',
     text: 'my picture, their post',
     embed: { $type: 'app.bsky.embed.recordWithMedia#view',
       media: images(img('rw', { width: 1600, height: 1200 })),
       record: { record: viewRecord('rw', 'the quoted words', [video('rwv')]) } },
-    row: { ...NOTHING, ownStage: 1, quoted: 1, quotedStage: 1, words: true },
-    post: { ...NOTHING, ownStage: 1, quoted: 1, quotedStage: 1, words: true } },
+    row: { ...NOTHING, ownStage: 1, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', quotedStage: 1, words: true },
+    post: { ...NOTHING, ownStage: 1, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', quotedStage: 1, words: true } },
 
   { key: 'quotegone', why: 'a deleted target is ONE honest line — never a card reading "[unknown]" over nothing',
     text: 'quoting something that went away',
@@ -204,6 +210,12 @@ async function observe(page, scope) {
       quotedExt: inQuote('.extcard'),
       gone: quotedCard?.getAttribute('data-quoted') !== '1' ? quotedCard?.getAttribute('data-quoted') ?? null : null,
       words: !!el.querySelector('.posttext')?.textContent.trim(),
+      // who the quote card SAYS it is quoting, and the handle that node carries.
+      // Two fields because they are two claims: people are named by the name
+      // they chose, and the handle stays reachable beside it (whoNode's
+      // contract, which every other byline in the app already keeps).
+      quotedWho: quotedCard?.querySelector('.who')?.textContent.trim() ?? null,
+      quotedHandle: quotedCard?.querySelector('.who')?.getAttribute('data-handle') ?? null,
     };
   }, scope);
 }
