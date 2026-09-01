@@ -203,6 +203,76 @@ function aspectOf(ar) {
   return { w, h };
 }
 
+// 3i: one embed VIEW -> the media shape every surface renders. Extracted from
+// shapeLensPost 2026-09-01 (quote-embed) because a QUOTED post's embed has to
+// come out the same door as the quoting post's — the owner's report was a quote
+// of a video that rendered as words alone, and a second copy of this ladder is
+// how the two would drift. recordWithMedia gives up its media half; the record
+// half is quotedOf's business.
+function mediaOf(embedView) {
+  const e = embedView?.$type === 'app.bsky.embed.recordWithMedia#view' ? embedView.media : embedView;
+  if (e?.$type === 'app.bsky.embed.images#view') {
+    return { kind: 'images', items: (e.images || []).map((i) => ({ thumb: i.thumb, full: i.fullsize, alt: i.alt || '', aspect: aspectOf(i.aspectRatio) })) };
+  }
+  // v13 decision 30: the playlist is what plays in place (HLS; Safari natively, elsewhere through vendored hls.js)
+  if (e?.$type === 'app.bsky.embed.video#view') {
+    return { kind: 'video', thumb: e.thumbnail || null, aspect: aspectOf(e.aspectRatio), playlist: e.playlist || null };
+  }
+  // 4i: `title` rides along because it is the external card's only human name,
+  // and the view needs one — an <a> around a decorative thumbnail is otherwise
+  // an unnamed link (SERIOUS, live 2026-08-26). Explicitly null when absent,
+  // never the uri: distinguishing "no title" from a title that looks like a url
+  // is what lets the view name the link honestly instead of inventing one.
+  // post-text (2026-09-01): `thumb` is explicitly null when the page had no
+  // og:image — the card renders its words without a stage. The guard here used
+  // to be `external?.thumb`, so such a post produced no media at all and its
+  // link went nowhere (press releases, statements).
+  if (e?.$type === 'app.bsky.embed.external#view' && e.external?.uri) {
+    return { kind: 'external', thumb: e.external.thumb || null, uri: e.external.uri,
+      title: e.external.title || null, description: e.external.description || '' }; // v13 decision 31: the card's words
+  }
+  return undefined;
+}
+
+// 3e inbound: what a quote post is quoting. quote-embed (owner, 2026-09-01):
+// the quoted record arrives HYDRATED — #viewRecord carries `embeds[]`, the same
+// #view unions mediaOf already reads — so the quoted post's picture, video or
+// link card is ours for free, and dropping it was why a quote of a video read
+// as words alone on both surfaces.
+//
+// The guard is the $type, not the uri. #viewNotFound, #viewBlocked and
+// #viewDetached all carry a uri and no words, and so do the non-post embeds (a
+// feed generator, a list, a starter pack, a labeler): keying on `uri` drew every
+// one of them as a post card reading "[unknown]" over an empty excerpt. A quote
+// whose target is gone is a real state and says so in a word; a quote of a feed
+// is not a quoted post at all and shapes to nothing.
+const QUOTE_GONE = {
+  'app.bsky.embed.record#viewNotFound': 'notFound',
+  'app.bsky.embed.record#viewBlocked': 'blocked',
+  'app.bsky.embed.record#viewDetached': 'detached',
+};
+function quotedOf(rec) {
+  const gone = QUOTE_GONE[rec?.$type];
+  if (gone) return { uri: rec.uri, unavailable: gone };
+  if (rec?.$type !== 'app.bsky.embed.record#viewRecord' || !rec.uri) return undefined;
+  // The first embed that yields media wins: `embeds` is a list because a record
+  // can carry recordWithMedia, and only one of them is ever the picture.
+  const media = (rec.embeds || []).reduce((found, e) => found || mediaOf(e), undefined);
+  return {
+    uri: rec.uri,
+    author: rec.author?.handle || '[unknown]',
+    // feed-row v2's rule, for the quoted author too (owner, 2026-09-01, on the
+    // quote-embed v1 mock: "the name in the quote box … should be the human
+    // readable alias name"): the name they CHOSE, null when blank, so the view
+    // falls back to the handle rather than printing nothing. The handle stays
+    // beside it — it is the identity; the name is only the label, and a display
+    // name is not unique.
+    authorName: rec.author?.displayName?.trim() || null,
+    excerpt: (rec.value?.text || '').slice(0, 200),
+    ...(media ? { media } : {}),
+  };
+}
+
 export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
   const record = post.record || {};
   const createdTs = Date.parse(record.createdAt || post.indexedAt);
@@ -268,32 +338,9 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
   // 3i: media embeds surface as post.media (card mode renders them; compact
   // and text-only surfaces skip them). recordWithMedia splits into both.
   const emb = post.embed;
-  const quoteRec = emb?.$type === 'app.bsky.embed.record#view' ? emb.record
-    : emb?.$type === 'app.bsky.embed.recordWithMedia#view' ? emb.record?.record : null;
-  const quoted = quoteRec?.uri
-    ? { uri: quoteRec.uri, author: quoteRec.author?.handle || '[unknown]',
-        excerpt: (quoteRec.value?.text || '').slice(0, 200) }
-    : undefined;
-  const mediaEmb = emb?.$type === 'app.bsky.embed.recordWithMedia#view' ? emb.media : emb;
-  const media = mediaEmb?.$type === 'app.bsky.embed.images#view'
-    ? { kind: 'images', items: (mediaEmb.images || []).map((i) => ({ thumb: i.thumb, full: i.fullsize, alt: i.alt || '', aspect: aspectOf(i.aspectRatio) })) }
-    : mediaEmb?.$type === 'app.bsky.embed.video#view'
-      // v13 decision 30: the playlist is what plays in place (HLS; Safari natively, elsewhere through vendored hls.js)
-      ? { kind: 'video', thumb: mediaEmb.thumbnail || null, aspect: aspectOf(mediaEmb.aspectRatio), playlist: mediaEmb.playlist || null }
-      : mediaEmb?.$type === 'app.bsky.embed.external#view' && mediaEmb.external?.uri
-        // 4i: `title` rides along because it is the external card's only human
-        // name, and the view needs one — an <a> around a decorative thumbnail
-        // is otherwise an unnamed link (SERIOUS, live 2026-08-26). Explicitly
-        // null when absent, never the uri: distinguishing "no title" from a
-        // title that looks like a url is what lets the view name the link
-        // honestly instead of inventing one.
-        // post-text (2026-09-01): `thumb` is explicitly null when the page had
-        // no og:image — the card renders its words without a stage. The guard
-        // above used to be `external?.thumb`, so such a post produced no media
-        // at all and its link went nowhere (press releases, statements).
-        ? { kind: 'external', thumb: mediaEmb.external.thumb || null, uri: mediaEmb.external.uri,
-            title: mediaEmb.external.title || null, description: mediaEmb.external.description || '' } // v13 decision 31: the card's words
-        : undefined;
+  const quoted = quotedOf(emb?.$type === 'app.bsky.embed.record#view' ? emb.record
+    : emb?.$type === 'app.bsky.embed.recordWithMedia#view' ? emb.record?.record : null);
+  const media = mediaOf(emb);
   // an image/video-only post titles from its alt text, never renders blank.
   // When even the alt is missing the title is a PLACEHOLDER — a name for
   // surfaces that cannot show the media (compact rows, the thread head) —

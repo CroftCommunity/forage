@@ -1,0 +1,77 @@
+{
+  "capturedAt": "2026-09-01",
+  "files": [
+    {
+      "file": "board-lens-quote.phone.current.png",
+      "route": "board-lens-quote",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@c4468e8",
+      "population": "lens:mock-board"
+    },
+    {
+      "file": "post-lens-quote.phone.current.png",
+      "route": "post-lens-quote",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@c4468e8",
+      "population": "lens:mock-board"
+    },
+    {
+      "file": "board-lens-quote.desktop.current.png",
+      "route": "board-lens-quote",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@c4468e8",
+      "population": "lens:mock-board"
+    },
+    {
+      "file": "post-lens-quote.desktop.current.png",
+      "route": "post-lens-quote",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@c4468e8",
+      "population": "lens:mock-board"
+    },
+    {
+      "file": "board-lens-quote.phone.proposed.png",
+      "route": "board-lens-quote",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@f303a71",
+      "population": "lens:mock-board"
+    },
+    {
+      "file": "post-lens-quote.phone.proposed.png",
+      "route": "post-lens-quote",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@f303a71",
+      "population": "lens:mock-board"
+    },
+    {
+      "file": "board-lens-quote.desktop.proposed.png",
+      "route": "board-lens-quote",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@f303a71",
+      "population": "lens:mock-board"
+    },
+    {
+      "file": "post-lens-quote.desktop.proposed.png",
+      "route": "post-lens-quote",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@f303a71",
+      "population": "lens:mock-board"
+    }
+  ]
+}

@@ -773,6 +773,28 @@ hr.rule { border: none; border-top: 1px solid var(--border); margin: var(--s4) 0
 .profile-banner { width: 100%; max-height: 140px; object-fit: cover; border-radius: var(--radius-card); margin-bottom: 8px; }
 .profile-avatar { width: 72px; height: 72px; border-radius: var(--radius-chip); border: 2px solid var(--card); flex: none; }
 
+/* ---- The quoted post (quote-embed, 2026-09-01) --------------------------
+   A quote post shows what it quotes, on the FEED ROW as well as the post page.
+   Before this the card rendered on the post page only, and the row was the
+   quoter's sentence over nothing — the owner's report was a quote of a video
+   where neither surface showed the video and the row showed no quote at all.
+
+   The card is INSET, not another row: it sits inside the post's own card, so it
+   takes a quieter ground and a tighter pad than `.card` gives, and its picture
+   is capped shorter than a first-class one — a quoted stage at the full
+   --stage-cap makes the quote taller than the post quoting it. */
+.rowbody { display: flex; flex-direction: column; gap: var(--s2); min-width: 0; }
+.card.quoted {
+  background: var(--row-head, var(--card)); padding: var(--s3);
+  box-shadow: none; overflow: hidden;
+}
+.card.quoted > * + * { margin-top: 6px; }
+.card.quoted .stage, .card.quoted .stage-grid { --stage-cap: 320px; }
+.card.quoted .small { overflow-wrap: anywhere; }
+/* a quote whose target is gone is one honest line, not an empty card */
+.card.quoted[data-quoted="notFound"], .card.quoted[data-quoted="blocked"],
+.card.quoted[data-quoted="detached"] { padding: var(--s2) var(--s3); }
+
 /* ---- The host sheet (plan 2026-08-26-3, Phase C) ------------------------
    A bottom sheet on a phone and a centred dialog on a desktop, which is the
    shape people already know from mobile sign-in flows and the shape the owner

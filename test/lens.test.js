@@ -279,6 +279,9 @@ test('3e: inbound quoted context — an embed record#view becomes post.quoted', 
   assert.deepEqual(p.quoted, {
     uri: 'at://did:plc:orig/app.bsky.feed.post/orig1',
     author: 'orig.test',
+    // explicitly null, never absent: the quoted author here chose no display
+    // name, and "no name" is a state the view reads, not a missing key
+    authorName: null,
     excerpt: 'the original words',
   });
 });
@@ -640,4 +643,114 @@ test('13: the root fetch failing names the root uri, never a blank page', async 
     [`getPostThread?${REPLY}`]: { thread: { post: rootThread.thread.replies[0].post, replies: [] } },
   });
   await assert.rejects(() => createLens({ transport }).thread(REPLY, SRC), (e) => e.message.includes('root') && e.message.includes('404'));
+});
+
+// quote-embed (owner, 2026-09-01, against
+// at://did:plc:wwdyx35lrdd23ruchgfsyl25/app.bsky.feed.post/3muhq4vkfes2r): a
+// quote of a VIDEO post rendered as words alone — the feed row showed nothing
+// of the quoted post and the post page showed its text with no video. The
+// AppView hands the whole thing over: #viewRecord carries `embeds[]`, already
+// hydrated (`app.bsky.embed.video#view` with playlist, thumbnail and
+// aspectRatio), and the lens was dropping it on the floor.
+const quoting = (record) => qPost('quoter', 'did:plc:aa', '2026-09-01T15:25:00Z', {
+  embed: { $type: 'app.bsky.embed.record#view', record },
+});
+const viewRecord = (extra = {}) => ({
+  $type: 'app.bsky.embed.record#viewRecord',
+  uri: 'at://did:plc:orig/app.bsky.feed.post/orig1', cid: 'oc',
+  author: { did: 'did:plc:orig', handle: 'orig.test' },
+  value: { text: 'the original words', createdAt: '2026-09-01T14:50:00Z' },
+  ...extra,
+});
+
+test('quote-embed: the quoted post’s video comes through as quoted.media', () => {
+  const p = shapeLensPost(quoting(viewRecord({ embeds: [
+    { $type: 'app.bsky.embed.video#view', cid: 'vc', playlist: 'https://video/pl.m3u8',
+      thumbnail: 'https://video/t.jpg', aspectRatio: { width: 1280, height: 720 } },
+  ] })), QSRC);
+  assert.deepEqual(p.quoted.media, {
+    kind: 'video', thumb: 'https://video/t.jpg', playlist: 'https://video/pl.m3u8',
+    aspect: { w: 1280, h: 720 },
+  });
+});
+
+test('quote-embed: pictures and link cards come through the same door', () => {
+  const pics = shapeLensPost(quoting(viewRecord({ embeds: [
+    { $type: 'app.bsky.embed.images#view', images: [{ thumb: 't', fullsize: 'f', alt: 'a bog' }] },
+  ] })), QSRC);
+  assert.equal(pics.quoted.media.kind, 'images');
+  assert.equal(pics.quoted.media.items[0].alt, 'a bog');
+
+  const ext = shapeLensPost(quoting(viewRecord({ embeds: [
+    { $type: 'app.bsky.embed.external#view', external: { uri: 'https://x.test/a', title: 'X', thumb: 'https://cdn/e.jpg' } },
+  ] })), QSRC);
+  assert.equal(ext.quoted.media.kind, 'external');
+  assert.equal(ext.quoted.media.uri, 'https://x.test/a');
+});
+
+test('quote-embed: a quoted post that itself quotes-with-media gives up its media half', () => {
+  const p = shapeLensPost(quoting(viewRecord({ embeds: [
+    { $type: 'app.bsky.embed.recordWithMedia#view',
+      media: { $type: 'app.bsky.embed.images#view', images: [{ thumb: 't', fullsize: 'f', alt: 'inner' }] },
+      record: { record: viewRecord() } },
+  ] })), QSRC);
+  assert.equal(p.quoted.media.kind, 'images');
+  assert.equal(p.quoted.media.items[0].alt, 'inner');
+});
+
+test('quote-embed: a quoted post with no embed carries no media key at all', () => {
+  const p = shapeLensPost(quoting(viewRecord()), QSRC);
+  assert.equal('media' in p.quoted, false);
+  assert.equal(p.quoted.excerpt, 'the original words');
+});
+
+// A quote whose target is gone is a REAL state the feed now renders, so it has
+// to say so in words. Before this the shaper keyed only on `uri` — which
+// #viewNotFound, #viewBlocked and #viewDetached all carry — and produced a card
+// reading "[unknown]" over an empty excerpt. On the post page that was one bad
+// card; in the feed row it is one on every such post.
+test('quote-embed: notFound, blocked and detached are named, not drawn as an empty card', () => {
+  const cases = [
+    [{ $type: 'app.bsky.embed.record#viewNotFound', uri: 'at://x/y/z', notFound: true }, 'notFound'],
+    [{ $type: 'app.bsky.embed.record#viewBlocked', uri: 'at://x/y/z', blocked: true, author: { did: 'did:plc:b' } }, 'blocked'],
+    [{ $type: 'app.bsky.embed.record#viewDetached', uri: 'at://x/y/z', detached: true }, 'detached'],
+  ];
+  for (const [record, why] of cases) {
+    const p = shapeLensPost(quoting(record), QSRC);
+    assert.equal(p.quoted.unavailable, why, `${why} should say so`);
+    assert.equal(p.quoted.uri, 'at://x/y/z');
+    assert.equal('excerpt' in p.quoted, false, `${why} has no words to excerpt`);
+  }
+});
+
+// A quote of a FEED, a LIST or a starter pack is not a quote of a post: those
+// views carry a uri and no `value`, and the old check let them through as a
+// post card with an empty excerpt.
+test('quote-embed: an embedded feed generator is not treated as a quoted post', () => {
+  const p = shapeLensPost(quoting({ $type: 'app.bsky.feed.defs#generatorView',
+    uri: 'at://x/app.bsky.feed.generator/g', displayName: 'Discover', creator: { handle: 'bsky.app' } }), QSRC);
+  assert.equal(p.quoted, undefined);
+});
+
+// quote-embed (owner, 2026-09-01, on the v1 mock's § A frame): "the name in the
+// quote box … should be the human readable alias name". Every other byline in
+// the app names people by the name they chose and keeps the handle for the
+// tooltip and the accessible name (feed-row v2, js/ui/components.js whoNode);
+// the quote card was the one surface printing a raw handle at people. The null
+// is feed-row v2's rule too — a blank display name is NOT a name, so the view
+// falls back to the handle instead of printing nothing.
+test('quote-embed: the quoted author carries the name they chose, null when they have none', () => {
+  const named = shapeLensPost(quoting(viewRecord({
+    author: { did: 'did:plc:orig', handle: 'orig.test', displayName: 'The Frost Warning' } })), QSRC);
+  assert.equal(named.quoted.authorName, 'The Frost Warning');
+  assert.equal(named.quoted.author, 'orig.test', 'the handle stays: it is the identity, the name is the label');
+
+  for (const author of [
+    { did: 'did:plc:orig', handle: 'orig.test' },                  // never set one
+    { did: 'did:plc:orig', handle: 'orig.test', displayName: '' }, // set it to nothing
+    { did: 'did:plc:orig', handle: 'orig.test', displayName: '   ' }, // set it to whitespace
+  ]) {
+    const p = shapeLensPost(quoting(viewRecord({ author })), QSRC);
+    assert.equal(p.quoted.authorName, null, `${JSON.stringify(author.displayName)} is not a name`);
+  }
 });

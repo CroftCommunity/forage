@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forage Quote Posts v2</title>
+<meta name="mock-version" content="2">
+<meta name="mock-baseline" content="forage@c4468e8">
+<meta name="mock-proposal" content="forage@f303a71">
+<style>
+:root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
+  --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page-bg:#1C1813;--page-card:#262019;--page-ink:#EFE7D9;--page-muted:#B5A88F;--page-line:#3D3527;--page-accent:#A5CD98}}
+:root[data-theme="dark"]{--page-bg:#1C1813;--page-card:#262019;--page-ink:#EFE7D9;--page-muted:#B5A88F;--page-line:#3D3527;--page-accent:#A5CD98}
+*{box-sizing:border-box}
+body{background:var(--page-bg);color:var(--page-ink);font-family:var(--f-body);line-height:1.55;margin:0;padding:32px 20px 72px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:30px}
+h1{font-family:var(--f-display);font-size:30px;font-weight:600;margin:0;letter-spacing:-.01em}
+h2{font-family:var(--f-display);font-size:22px;font-weight:600;margin:0}
+h3{font-family:var(--f-display);font-size:17px;margin:0 0 7px;font-weight:600}
+.sub{color:var(--page-muted);font-size:15px;max-width:78ch;margin:0}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+section{display:flex;flex-direction:column;gap:14px}
+.stage{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap}
+.device{display:flex;flex-direction:column;gap:9px;min-width:0}
+.device-label{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+.phone{width:390px;max-width:100%}
+.desk{flex:1 1 460px;min-width:0}
+.shot{max-width:100%;display:block;border:1px solid var(--page-line);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.10),0 8px 24px rgba(0,0,0,.06)}
+.callout{background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:16px 18px}
+.callout p,.callout li{margin:0;font-size:14px;color:var(--page-muted)}
+.callout b,.callout code,td b{color:var(--page-ink);font-weight:600}
+.callout ul,.callout ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+table{border-collapse:collapse;font-size:14px;width:100%}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--page-line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page-muted)}
+.tablewrap{overflow-x:auto;background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:6px 8px}
+code{font-size:.92em}
+.small{font-size:13px;color:var(--page-muted)}
+.tag{display:inline-block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;padding:1px 8px;border-radius:999px;border:1px solid var(--page-line);color:var(--page-muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Forage &middot; mock &middot; quote-embed <b>v2</b> &middot; Current forage@c4468e8 &middot; Proposed forage@f303a71 &middot; 2026-09-01</div>
+    <h1>A quote post shows what it quotes</h1>
+    <p class="sub"><b>One proposal in five decisions</b> (1&ndash;4 proposed as v1; 5 added in v2 from the owner&rsquo;s reading of &sect; A), from the owner's report on a live post
+      (<code>jwwhiley.bsky.social/post/3muhq4vkfes2r</code>, a quote of an Aaron Rupar video):
+      &ldquo;we are not represnting hte quoted content &hellip; until you enter the post page &hellip;
+      both in terms of showing what's being quoted and rendering the video.&rdquo;
+      Two holes, one cause. The <b>feed row</b> drew the quoter's sentence over nothing at all.
+      The <b>post page</b> drew the quoted words and dropped the video the post exists to point at.</p>
+    <p class="sub"><b>Every frame here is a capture of the engine</b> (MOCKS.md P1): Current is
+      <code>main</code> at <code>c4468e8</code>, Proposed is <code>claude/quote-embed</code> at
+      <code>f303a71</code>, both by <code>scripts/mock-snaps.mjs</code> against
+      <code>e2e/harness/mock-board.mjs</code>, in the default skin (rule 4), at 390&times;844 and
+      1280&times;900. Captures live in <code>plans/mocks/snaps/quote-embed/</code> (rule 3: a mock's
+      pixels are its own).
+      The population carries the load the report carried (P2): the quoted post's words run three
+      lines on a phone, the quoter's four, the counts are the live ones from that post
+      (82 replies &middot; 113 &middot; 931), and the quoted video's aspect is the 16:9 the record declares
+      &mdash; so the row has to hold two paragraphs and a stage without the quote growing taller
+      than the post quoting it.</p>
+  </header>
+
+  <section>
+    <div class="eyebrow">Decisions</div>
+    <h2>Decisions &mdash; proposed 2026-09-01, on the branch, awaiting the owner</h2>
+    <p class="sub">Each is built and captured; &ldquo;yes&rdquo; on a row is &ldquo;yes&rdquo; to the frame below it.</p>
+    <div class="tablewrap"><table>
+      <tr><th>#</th><th>Decision</th><th>What it does</th><th>Rejected</th><th>Held by</th></tr>
+      <tr><td>1</td><td><b>The quoted post rides in the feed row</b> (owner: &ldquo;we are not represnting hte quoted content&rdquo;)</td>
+        <td>A quote post's row shows the card it quotes &mdash; author, words, and the quoted post's own media &mdash; under the quoter's text and above the action row. In <b>both densities</b>: feed-row v1's rule is that compact tightens a row without taking the post's content out of it, and a quote's content is the quote.</td>
+        <td>A &ldquo;quoting @someone&rdquo; line with no words (names the author, still hides the subject); showing it in card density only (the owner's phone runs compact)</td>
+        <td><code>render-matrix</code> shape <code>quotetext</code>, on the row surface and again at compact</td></tr>
+      <tr><td>2</td><td><b>The quoted post brings its own media</b> (owner: &ldquo;and rendering the video&rdquo;)</td>
+        <td>The quoted post's picture, video or link card renders inside the quote card, through the same <code>mediaNode</code> every other surface uses &mdash; so a quoted video plays in place exactly as a first-class one does (v13 decision 30). Its stage is capped at <b>320px</b> rather than the board's 520, so the quote never stands taller than the post quoting it.</td>
+        <td>A &ldquo;&#9654; video&rdquo; chip linking out to bsky.app (v13 decision 30 already rejected that for the post's own video, and a quoted one is not a lesser video); the full 520px cap</td>
+        <td><code>render-matrix</code> shapes <code>quotevideo</code>, <code>quotepic</code>, <code>quoteext</code>, <code>rwm</code> &mdash; on both surfaces</td></tr>
+      <tr><td>3</td><td><b>A quote whose original is gone says which way it is gone</b></td>
+        <td>Deleted, blocked, or detached by its author each render as one line of plain words. The old guard keyed on the record's <code>uri</code> &mdash; which all three carry &mdash; so they drew a card reading &ldquo;&#10077; quoting [unknown]&rdquo; over an empty excerpt. That was one bad card on the post page; with decision 1 it would have been one on every such row in the feed.</td>
+        <td>Rendering them the same as a live quote (what shipped); hiding them entirely (the post's words refer to something, and silence is not honest about what)</td>
+        <td><code>render-matrix</code> shape <code>quotegone</code> (asserts the <code>data-quoted</code> reason, not just the count)</td></tr>
+      <tr><td>5</td><td><b>The quoted author is named, not handled</b> (v2, owner on the v1 &sect; A frame: &ldquo;the name in the quote box &hellip; that should be the human readable alias name&rdquo;)</td>
+        <td>The card names the quoted author by the name they chose, through the same <code>whoNode</code> the feed row and the thread head already use &mdash; so the handle stays in the tooltip and in what a screen reader reads, and an author who chose no name still shows their handle rather than nothing (feed-row v2: a blank display name is not a name). <b>Its link changed with it:</b> the author now links to their board here, which is where the post page&rsquo;s head byline already sends it; the outbound bsky.app link was this card&rsquo;s own invention.</td>
+        <td>Keeping the raw handle (what v1 captured); name-plus-handle on one line (the row&rsquo;s byline does not, and at 390 the quoted card is already the narrowest text on the screen); keeping the bsky.app link while changing the name (two naming rules in one card is how it drifted the first time)</td>
+        <td><code>render-matrix</code>: <code>quotedWho</code> and <code>quotedHandle</code> are separate claims on every live-quote shape, plus a <code>quotenoname</code> shape for the fallback</td></tr>
+      <tr><td>4</td><td><b>Quoting a feed is not quoting a post</b></td>
+        <td>A post that embeds a feed generator, a list or a starter pack shapes to no quoted post at all, rather than to a post card with an empty excerpt. Drawing the feed's own card is a separate decision and is not proposed here.</td>
+        <td>Drawing it as a post card (what shipped); inventing a feed card in this change (unasked, and a different surface)</td>
+        <td><code>render-matrix</code> shape <code>quotefeed</code></td></tr>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Open</div>
+    <h2>Open decisions &mdash; for the owner</h2>
+    <div class="callout"><ul>
+      <li><b>Settled in v2 &mdash; decision 5.</b> v1 left the quoted byline as a bare handle and filed it here; the owner read the &sect; A frame and decided it. What is still open is the rest of the byline: bsky.app also shows the quoted author's <b>avatar</b> and the quoted post's <b>age</b>. Neither is drawn here, and neither has been asked for.</li>
+      <li><b>The excerpt is capped at 200 characters</b> and cut without an ellipsis. Live, that bites a long quoted post. Raising the cap, or marking the cut, is unresolved.</li>
+      <li><b>A quote of a quote renders one level.</b> The quoted post's own quote is not drawn. That matches the thread cascade's depth rule (3r) but has never been decided for this surface.</li>
+    </ul></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">A</div>
+    <h2>A &mdash; The feed row (decisions 1, 2)</h2>
+    <p class="sub"><span class="tag">v2</span> The Proposed frames were re-captured for decision 5 &mdash; the quoted byline
+      reads <b>&ldquo;quoting Frost Warning&rdquo;</b> here, where v1's captured &ldquo;quoting thefrostwarning.bsky.social&rdquo;.
+      MOCKS.md P3: a decision that changes in code goes back into the mock in the same landing, so the pixels below are
+      the ones the branch draws now.</p>
+    <p class="sub">Current is the report: the quoter's sentence, then the counts, then the next post. Nothing says
+      what is being talked about, and the video is not on this screen at all. Proposed puts the quoted post under the
+      words, with its video on a stage that plays where it sits.
+      <span class="tag">Current did not scroll</span> &mdash; the capture script scrolls to the quote card, and on <code>main</code>
+      there is none to scroll to, so Current shows the top of the same board. The quote row is the first one under the header.</p>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Current &middot; phone 390&times;844</div><img class="shot" src="snaps/quote-embed/board-lens-quote.phone.current.png" alt="The board on main: the quote post's row shows its text and its counts, with no sign of the post it quotes."></div>
+      <div class="device phone"><div class="device-label">Proposed &middot; phone 390&times;844</div><img class="shot" src="snaps/quote-embed/board-lens-quote.phone.proposed.png" alt="The same row on the branch: under the quoter's words, a bordered card reading 'quoting Frost Warning', the quoted words, and the quoted video on a stage."></div>
+    </div>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Current &middot; desktop 1280&times;900</div><img class="shot" src="snaps/quote-embed/board-lens-quote.desktop.current.png" alt="The board on main at desktop width, the quote row carrying no quoted content."></div>
+    </div>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Proposed &middot; desktop 1280&times;900</div><img class="shot" src="snaps/quote-embed/board-lens-quote.desktop.proposed.png" alt="The same board on the branch at desktop width, the quoted card and its video stage inside the row."></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">B</div>
+    <h2>B &mdash; The post page (decision 2)</h2>
+    <p class="sub">This is the surface that already showed <em>something</em> &mdash; the quoted author and the quoted words &mdash;
+      and that is what made the gap hard to see: the page looked complete while the video, the whole reason the post exists,
+      was missing. Proposed renders it, at the quote's shorter cap.</p>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Current &middot; phone 390&times;844</div><img class="shot" src="snaps/quote-embed/post-lens-quote.phone.current.png" alt="The post page on main: the quoted author and quoted words in a card, and no video."></div>
+      <div class="device phone"><div class="device-label">Proposed &middot; phone 390&times;844</div><img class="shot" src="snaps/quote-embed/post-lens-quote.phone.proposed.png" alt="The post page on the branch: the same card, now with the quoted post's video on a stage under its words."></div>
+    </div>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Current &middot; desktop 1280&times;900</div><img class="shot" src="snaps/quote-embed/post-lens-quote.desktop.current.png" alt="The post page on main at desktop width, no video under the quoted words."></div>
+    </div>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Proposed &middot; desktop 1280&times;900</div><img class="shot" src="snaps/quote-embed/post-lens-quote.desktop.proposed.png" alt="The post page on the branch at desktop width, the quoted video rendered under the quoted words."></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">C</div>
+    <h2>C &mdash; What holds these frames (MOCKS.md P5)</h2>
+    <p class="sub">The owner asked for this directly, mid-change: &ldquo;we should build in tests for rendering expectations
+      bc we keep fixing them bit by bit and I'm worried one is breaking or can break another.&rdquo; That is the honest history
+      of this surface &mdash; five separate repairs, each with its own narrow check, none able to see the others:</p>
+    <div class="tablewrap"><table>
+      <tr><th>When</th><th>The repair</th></tr>
+      <tr><td>2026-08-28</td><td>an image post's thread page rendered no image at all</td></tr>
+      <tr><td>2026-08-30</td><td>the picture the thread page rendered was missing from the feed</td></tr>
+      <tr><td>2026-08-30</td><td>a native video opened on bsky.app instead of playing in place (v13 decision 30)</td></tr>
+      <tr><td>2026-09-01</td><td>a link card with no <code>og:image</code> produced no media and a dead link (post-text)</td></tr>
+      <tr><td>2026-09-01</td><td>a quote post showed neither what it quoted nor the quoted post's video (this mock)</td></tr>
+    </table></div>
+    <div class="callout">
+      <p>Every one of those is the same question asked about a different shape: <b>given this embed, what does each surface
+        draw?</b> So it is now asked once, as a table &mdash; <code>e2e/render-matrix.workflow.mjs</code>, in the gate:</p>
+      <ul>
+        <li><b>16 post shapes &times; 2 surfaces</b> (the feed row and the post page), each declaring what it draws, and a
+          shape that leaves either surface out fails rather than shipping quietly.</li>
+        <li>The row is swept again at <b>compact density</b> and at the <b>&ldquo;pictures shown at once&rdquo;</b> notch &mdash;
+          the two reader settings that change which element a shape draws.</li>
+        <li><b>Own media and quoted media are counted separately.</b> A check that counted <code>.stage</code> would have
+          passed through this whole bug; a quoted video is not the quoting post's video.</li>
+        <li>Proved against the bugs it exists to catch. Five mutations of shipped code, five reds:
+          dropping the quoted media, dropping the quote from the row, reverting the no-<code>og:image</code> card,
+          reverting video-in-place, and dropping the post page's own media.</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer class="small">Frames captured 2026-09-01 by <code>scripts/mock-snaps.mjs</code> (Proposed re-captured for v2 decision 5); manifest at
+    <code>plans/mocks/snaps/quote-embed/manifest.json</code>. Nothing on this page is drawn.</footer>
+</div>
+</body>
+</html>
