@@ -512,6 +512,20 @@ export function commentNode(node, ctx) {
     : ctx.textNode ? el('div', { class: 'comment-text posttext' }, ...ctx.textNode(node))
     : el('div', { class: 'comment-text', html: mdLite(node.body) });
 
+  // reply-embeds (2026-09-01): a reply's pictures, video, link card and the
+  // post it quotes. The same seam `textNode` already is — the component asks,
+  // the population answers — because these are drawn by mediaNode and
+  // quotedContext, which live with the lens and know its stage, carousel and
+  // quote-card rules. The memory tier passes no embedNodes and its threads are
+  // untouched. Order is the head post's: what the reply shows, then what it
+  // quotes.
+  const embedList = node.maskedRemoved || node.deleted ? [] : (ctx.embedNodes?.(node) || []);
+  // One wrapper, not loose children: `.comment` is a two-column grid and
+  // `.comment-body` is display:contents, so every body child is placed in that
+  // grid by hand. A bare `.stage` would land in the 32px AVATAR column. The
+  // wrapper is also the single thing the collapse rule has to hide.
+  const embeds = embedList.length ? el('div', { class: 'comment-embed' }, ...embedList) : null;
+
   const actionsRow = el('div', { class: 'comment-actions' });
   const replyHost = el('div', { class: 'reply-host' }); // where a lens composer lands, under this node
   // feed-row v9 (owner): the like is a pill on the action row, before share —
@@ -541,7 +555,7 @@ export function commentNode(node, ctx) {
 
   // .comment-body is display:contents — its children sit in the comment's
   // grid, and every suite's `> .comment-body > .byline` keeps working
-  const bodyWrap = el('div', { class: 'comment-body' }, meta, text, actionsRow, replyHost);
+  const bodyWrap = el('div', { class: 'comment-body' }, ...[meta, text, embeds, actionsRow, replyHost].filter(Boolean));
   const childrenWrap = el('div', { class: 'kids' });
 
   wrap.append(...[avcol, bodyWrap, childrenWrap].filter(Boolean)); // a null child would print as the word "null"

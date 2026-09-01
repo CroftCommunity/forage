@@ -2793,6 +2793,15 @@ export function lensThreadView(params, query) {
       // post-text: a reply's words, faceted — its links, #tags and @mentions are
       // as live as the head's. The node shape carries `facets` as of this change.
       textNode: (n) => facetNodes(n.body || '', n.facets),
+      // reply-embeds (owner, 2026-09-01): a reply draws what it shows and what
+      // it quotes, through the SAME mediaNode and quotedContext the feed row
+      // and the post head use. A reply-only renderer is how the surfaces drift
+      // apart again — the rendering matrix asks all three the same question of
+      // every shape for exactly that reason.
+      embedNodes: (n) => [
+        n.media && !n.maskedRemoved ? mediaNode(n) : null,
+        n.quoted ? quotedContext(n.quoted) : null,
+      ].filter(Boolean),
       // save/mod still gate; replying does not —
       // Reply sits on every node (mock v18 claim C; on forage.fyi 2026-08-30 only
       // the head offered it), the composer mounting under the node you answered

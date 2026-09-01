@@ -12,6 +12,10 @@
 //   - a quote node (its rail in the brand ink) with a reply under it
 //   - a chain four deep, so the elbows and the phone's 14px indent are seen
 //   - a zero-like leaf beside an eleven-like parent (the stack's two widths)
+//   - a reply with a picture of its own, and a WORDLESS reply whose whole body
+//     is a quote of a picture post (owner, 2026-09-01: that shape drew a byline
+//     over an empty row — the population had no replies with embeds at all, so
+//     neither the gate nor any mock frame could have shown it)
 //   - a signed-in session, so the vote stack is a button and Reply is offered
 //
 // Shared by the mock-thread workflow (the claims) and scripts/mock-snaps.mjs
@@ -39,7 +43,7 @@ export const ROOT = 'at://did:plc:root/app.bsky.feed.post/root';
 
 const root = post('root', 'did:plc:root', 'quietcartographer.bsky.social', '2026-08-30T08:00:00Z',
   'If we invent the Pneumatic Pie Tube Network today it will still be 49 years too late to follow up on the good work of the original proposal. Might as well just use it for quiche at that point, I guess.',
-  { likes: 11, replies: 4, reposts: 1, quotes: 1, view: images(img('root', { width: 1600, height: 1000 })) });
+  { likes: 11, replies: 6, reposts: 1, quotes: 1, view: images(img('root', { width: 1600, height: 1000 })) });
 
 // four deep: the elbows, the indent, and the phone's 14px step all show
 const d4 = { post: post('d4', 'did:plc:d4', 'moss.bsky.social', '2026-08-30T08:41:00Z',
@@ -53,6 +57,27 @@ const d1 = { post: post('d1', 'did:plc:d1', 'averyveryverylonghandle.bsky.social
 // a zero-like leaf, direct under the post: no rail, no fold, the narrow stack
 const leaf = { post: post('leaf', 'did:plc:leaf', 'joshandtheargonauts.bsky.social', '2026-08-30T09:12:00Z',
   "Don't stand in the way of progress!", { likes: 0 }), replies: [] };
+
+// reply-embeds (owner, 2026-09-01): a reply's embed is its content. One reply
+// with a picture and words, one with a picture and NO words — the second is the
+// exact shape the owner reported, where the whole reply is a quote of somebody
+// else's picture post and forage drew nothing at all.
+const picReply = { post: post('rpic', 'did:plc:rpic', 'kettleandcrow.bsky.social', '2026-08-30T09:20:00Z',
+  'Filed under: things the 1970s promised us', { likes: 4, view: images(img('rpic', { width: 1400, height: 1050 })) }),
+  replies: [] };
+const quotedPost = {
+  $type: 'app.bsky.embed.record#viewRecord',
+  uri: 'at://did:plc:tube/app.bsky.feed.post/tube', cid: 'cid-tube',
+  author: { did: 'did:plc:tube', handle: 'pneumaticpost.bsky.social', displayName: 'The Pneumatic Post', avatar: AV },
+  value: { $type: 'app.bsky.feed.post', text: '', createdAt: '2026-08-30T07:10:00Z' },
+  labels: [], likeCount: 1050, replyCount: 46, repostCount: 334, quoteCount: 13, indexedAt: '2026-08-30T07:10:00Z',
+  embeds: [images(img('tube', { width: 1080, height: 1097 }))],
+};
+const quoteOnlyReply = { post: post('rquo', 'did:plc:rquo', 'hollowaywire.bsky.social', '2026-08-30T09:24:00Z', '',
+  { likes: 9,
+    embed: { $type: 'app.bsky.embed.record', record: { uri: quotedPost.uri, cid: quotedPost.cid } },
+    view: { $type: 'app.bsky.embed.record#view', record: quotedPost } }),
+  replies: [] };
 
 // a quote-response: it arrives through getQuotes, marked by its own rail, with a reply of its own
 const quote = post('q1', 'did:plc:q1', 'misterhooperspecial.bsky.social', '2026-08-30T08:50:00Z',
@@ -68,7 +93,7 @@ export const RESPONSES = {
     likeCount: 39382, creator: { handle: 'bsky.app' } }, isOnline: true, isValid: true },
   'getFeed?': { feed: [{ post: root }] },
   [`getPostThread?uri=${encodeURIComponent(quote.uri)}`]: { thread: { post: quote, replies: [quoteReply] } },
-  'getPostThread': { thread: { post: root, replies: [d1, leaf] } },
+  'getPostThread': { thread: { post: root, replies: [d1, leaf, picReply, quoteOnlyReply] } },
   [`getQuotes?uri=${encodeURIComponent(quote.uri)}`]: { posts: [] },
   'getQuotes': { posts: [quote] },
   'describeRepo': { handle: 'me.test' },
@@ -102,4 +127,6 @@ export const THREAD_PATH = `/p?uri=${encodeURIComponent(ROOT)}`;
 
 // Every comment the fixture renders, by id — the workflow counts against this,
 // never against ">= 1", so a node that silently drops is a failure.
-export const NODE_IDS = [d1, d2, d3, d4, leaf, { post: quote }, quoteReply].map((n) => n.post.uri);
+// New nodes APPEND: the workflow addresses several of these by index
+// (NODE_IDS[2] is d3, [4] the leaf, [5] the quote), so the order is load-bearing.
+export const NODE_IDS = [d1, d2, d3, d4, leaf, { post: quote }, quoteReply, picReply, quoteOnlyReply].map((n) => n.post.uri);

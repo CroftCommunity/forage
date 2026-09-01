@@ -1,9 +1,13 @@
-# quote-embed — the quoted post shows what it quotes, media included
+# reply-embeds
 
-**Scope:** forage. The lens drops the quoted record's own embed, and the feed row
-never renders `p.quoted` at all. Reported by the owner 2026-09-01 against
-`at://did:plc:wwdyx35lrdd23ruchgfsyl25/app.bsky.feed.post/3muhq4vkfes2r` — a quote
-of a video post: the feed row showed the quoter's words alone, and the post page
-showed the quoted words with no video.
+A reply's embeds — its pictures, its video, its link card, the post it quotes —
+never rendered in a forage thread. The thread's shaping seam copied a reply's
+words and dropped everything else, so a reply whose whole content is an embed
+drew a byline over an empty row.
 
-**Branch:** `claude/quote-embed`
+Owner report, 2026-09-01: hookcity's reply to mollyjongfast's "Anybody know what
+happened to mitch McConnell?" is a wordless quote of an image post. bsky.app
+draws the quoted picture; forage.fyi drew nothing at all.
+
+Scope: the third surface on the rendering matrix (the REPLY NODE), plus the
+shaping and rendering that makes it pass.

@@ -16,6 +16,13 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
   carries the composer's picker (`imagePicker` in `js/ui/lens-views.js`); the quick box
   stays text.
 
+- **The post you are answering, on `/reply` (reply-embeds decision 2).** The reply-target card
+  (`lensReplyView` in `js/ui/lens-views.js`) draws the post's own picture but has never drawn the
+  post it QUOTES, and it clamps the words to four lines — so it is built as a summary, not as a
+  full rendering. Found 2026-09-01 while fixing the same drop on reply nodes; deliberately not
+  changed there, because whether that card is a summary or a rendering is a decision, not a bug.
+  Mock: `plans/mocks/reply-embeds.html` decision 2. One line either way.
+
 - **Providers without a web app (feed-row 28).** "Open on …" names the signed-in provider's app
   only where `js/auth/hosts.js` records one; blacksky.app, eurosky.social and northsky.social were
   probed 2026-08-30 and answer 404 at `/profile/…` (PDS hosts, not apps). If one of them ships a

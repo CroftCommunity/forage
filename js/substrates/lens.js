@@ -419,6 +419,16 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
     // inert text — the row had been faceted since feed-row v13 and the thread
     // under it had not. The memory tier passes none and renders as it did.
     facets: p.facets || [],
+    // reply-embeds (owner, 2026-09-01, on a wordless reply that quoted a
+    // picture post): a reply's EMBED is its content. This shape carried the
+    // reply's words alone, so every picture, video, link card and quoted post
+    // in every thread was dropped here — before any view could decline to draw
+    // it. A reply with words lost its picture; a reply with no words but an
+    // embed rendered as a byline over an empty row, which is what the owner
+    // saw. Same door as every other surface: mediaOf/quotedOf already ran in
+    // shapeLensPost, and this simply stops throwing the answer away.
+    ...(p.media ? { media: p.media } : {}),
+    ...(p.quoted ? { quoted: p.quoted } : {}),
     ...(p.maskedRemoved ? { maskedRemoved: true, title: p.title } : { removedReason: '' }),
     depth,
     children: [], deferred: 0,
@@ -482,7 +492,14 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
       ...(expandable ? own.map((q) => buildQuote(q, depth + 1)).filter(Boolean) : []),
     ].sort(order);
     return {
-      ...node(p, depth, { kind: 'quote', quoteUri: p.id, quoted: p.quoted }),
+      // A quote node's target is ALWAYS the node directly above it — the head
+      // post at depth 0, the quote it answers deeper in the cascade — so it
+      // carries no quoted card of its own: drawing one would repeat the post
+      // the reader is already looking at. Its own media still travels (a quote
+      // with a picture of its own is a real shape). `quoted: undefined` is
+      // deliberate and not a leftover: node() now sets it for replies, and
+      // this is where a quote opts out.
+      ...node(p, depth, { kind: 'quote', quoteUri: p.id, quoted: undefined }),
       children: kids,
       deferred: expandable ? 0 : own.length,
     };

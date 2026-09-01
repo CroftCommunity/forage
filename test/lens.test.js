@@ -199,6 +199,58 @@ test('3r: a quote carries its own replies AND its own quotes, interleaved by the
   assert.equal(t.total, 5, 'every rendered node is counted: r1, q1, q1r1, q1q1, q1q1q1');
 });
 
+// ---- reply-embeds: a reply's embed is its CONTENT --------------------------
+// Owner report, 2026-09-01: a wordless reply whose whole body was a quote of a
+// picture post drew a byline over an empty row on forage.fyi. The thread's node
+// shape copied a reply's words and dropped its media and its quoted post — the
+// views never had them to decline. Pinned at the seam because both surfaces
+// that draw a reply read this shape.
+const RPIC = (alt) => ({ $type: 'app.bsky.embed.images#view',
+  images: [{ thumb: 't.jpg', fullsize: 'f.jpg', alt, aspectRatio: { width: 4, height: 3 } }] });
+const RQUOTING = (embeds) => ({ $type: 'app.bsky.embed.record#view',
+  record: { $type: 'app.bsky.embed.record#viewRecord', uri: 'at://did:plc:zz/app.bsky.feed.post/orig', cid: 'cid-orig',
+    author: { did: 'did:plc:zz', handle: 'zz.test', displayName: 'Zed' },
+    value: { text: 'the quoted words' }, ...(embeds ? { embeds } : {}) } });
+
+test('reply-embeds: a reply node carries its own media AND the post it quotes, hydrated', () => {
+  const t = shapeLensThread({ thread: {
+    post: qPost('root', 'did:plc:op', '2026-08-25T08:00:00Z'),
+    replies: [
+      { post: qPost('pic', 'did:plc:aa', '2026-08-25T09:00:00Z', { embed: RPIC('a bog') }), replies: [] },
+      { post: qPost('quo', 'did:plc:bb', '2026-08-25T10:00:00Z', { embed: RQUOTING([RPIC('inner')]) }), replies: [] },
+      { post: qPost('bare', 'did:plc:cc', '2026-08-25T11:00:00Z'), replies: [] },
+    ],
+  } }, QSRC);
+  const by = (k) => t.comments.find((c) => c.id.endsWith('/' + k));
+  assert.equal(by('pic').media.kind, 'images');
+  assert.equal(by('pic').media.items[0].alt, 'a bog');
+  assert.equal(by('quo').quoted.uri, 'at://did:plc:zz/app.bsky.feed.post/orig');
+  assert.equal(by('quo').quoted.media.kind, 'images',
+    'the quoted post travels hydrated, media and all — the owner\'s report was exactly this shape');
+  assert.equal('media' in by('bare'), false, 'a reply with no embed carries no media key');
+  assert.equal('quoted' in by('bare'), false, 'and quotes nothing');
+});
+
+test('reply-embeds: a QUOTE node keeps its own media and drops the quoted card', () => {
+  const t = shapeLensThread({ thread: {
+    post: qPost('root', 'did:plc:op', '2026-08-25T08:00:00Z'), replies: [],
+  } }, QSRC, { quotes: [
+    { post: qPost('q1', 'did:plc:bb', '2026-08-25T10:00:00Z', { embed: RQUOTING() }) },
+  ] });
+  const q = t.comments.find((c) => c.kind === 'quote');
+  assert.equal(q.quoted, undefined,
+    'a quote node\'s target is the node directly above it — drawing a card of it would repeat the post the reader is on');
+  const withPic = shapeLensThread({ thread: {
+    post: qPost('root', 'did:plc:op', '2026-08-25T08:00:00Z'), replies: [],
+  } }, QSRC, { quotes: [
+    { post: qPost('q2', 'did:plc:bb', '2026-08-25T10:00:00Z', { embed: { $type: 'app.bsky.embed.recordWithMedia#view',
+      media: RPIC('the quoter\'s own picture'), record: { record: RQUOTING().record } } }) },
+  ] }).comments.find((c) => c.kind === 'quote');
+  assert.equal(withPic.media.items[0].alt, 'the quoter\'s own picture',
+    'a quote with a picture OF ITS OWN still shows it — only the card for what it quotes is suppressed');
+  assert.equal(withPic.quoted, undefined);
+});
+
 test('3r: the cascade is BOUNDED — past the cap a quote says how many it is not showing', async () => {
   const { QUOTE_CASCADE_DEPTH } = await import('../js/substrates/lens.js');
   assert.ok(QUOTE_CASCADE_DEPTH >= 1, 'there is a published cap, not an accidental one');

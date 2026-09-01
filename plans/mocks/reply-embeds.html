@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forage Reply Embeds v1</title>
+<meta name="mock-version" content="1">
+<meta name="mock-baseline" content="forage@3345405">
+<meta name="mock-proposal" content="forage@3b2244d">
+<style>
+:root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
+  --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page-bg:#1C1813;--page-card:#262019;--page-ink:#EFE7D9;--page-muted:#B5A88F;--page-line:#3D3527;--page-accent:#A5CD98}}
+:root[data-theme="dark"]{--page-bg:#1C1813;--page-card:#262019;--page-ink:#EFE7D9;--page-muted:#B5A88F;--page-line:#3D3527;--page-accent:#A5CD98}
+*{box-sizing:border-box}
+body{background:var(--page-bg);color:var(--page-ink);font-family:var(--f-body);line-height:1.55;margin:0;padding:32px 20px 72px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:30px}
+h1{font-family:var(--f-display);font-size:30px;font-weight:600;margin:0;letter-spacing:-.01em}
+h2{font-family:var(--f-display);font-size:22px;font-weight:600;margin:0}
+h3{font-family:var(--f-display);font-size:17px;margin:0 0 7px;font-weight:600}
+.sub{color:var(--page-muted);font-size:15px;max-width:78ch;margin:0}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+section{display:flex;flex-direction:column;gap:14px}
+.stage{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap}
+.device{display:flex;flex-direction:column;gap:9px;min-width:0}
+.device-label{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+.phone{width:390px;max-width:100%}
+.desk{flex:1 1 460px;min-width:0}
+.shot{max-width:100%;display:block;border:1px solid var(--page-line);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.10),0 8px 24px rgba(0,0,0,.06)}
+.callout{background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:16px 18px}
+.callout p,.callout li{margin:0;font-size:14px;color:var(--page-muted)}
+.callout b,.callout code,td b{color:var(--page-ink);font-weight:600}
+.callout ul,.callout ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+table{border-collapse:collapse;font-size:14px;width:100%}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--page-line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page-muted)}
+.tablewrap{overflow-x:auto;background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:6px 8px}
+code{font-size:.92em}
+.small{font-size:13px;color:var(--page-muted)}
+.tag{display:inline-block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;padding:1px 8px;border-radius:999px;border:1px solid var(--page-line);color:var(--page-muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Forage &middot; mock &middot; reply-embeds <b>v1</b> &middot; Current forage@3345405 &middot; Proposed forage@3b2244d &middot; 2026-09-01</div>
+    <h1>A reply shows what it is showing you</h1>
+    <p class="sub"><b>One repair and two open decisions</b>, from the owner&rsquo;s report on a live thread
+      (<code>mollyjongfast.bsky.social/post/3mui3vstp3s2e</code>, and hookcity&rsquo;s reply under it):
+      &ldquo;reply with an image that doesn&rsquo;t load.&rdquo;
+      The reply is <b>wordless</b> &mdash; its whole content is a quote of somebody else&rsquo;s picture post.
+      bsky.app draws the picture. forage.fyi drew a name, a timestamp and an action row over nothing.</p>
+    <p class="sub">The cause was not the picture and not the quote card: <b>the thread&rsquo;s shaping seam
+      copied a reply&rsquo;s words and dropped everything else</b>, so no renderer ever had the media or the
+      quoted post to decline. It applied to every embed on every reply in every thread &mdash; pictures,
+      video, link cards and quotes alike. With words above it the loss read as a missing picture; with
+      none, as an empty row.</p>
+    <p class="sub"><b>Every frame here is a capture of the engine</b> (MOCKS.md P1): Current is
+      <code>main</code> at <code>3345405</code>, Proposed is <code>claude/reply-embeds</code> at
+      <code>3b2244d</code>, both by <code>scripts/mock-snaps.mjs</code> against
+      <code>e2e/harness/mock-thread.mjs</code>, in the default skin (rule 4), at 390&times;844 and
+      1280&times;900. Captures live in <code>plans/mocks/snaps/reply-embeds/</code> (rule 3).
+      The population grew the load it was missing (P2): it had <b>no replies with embeds at all</b>,
+      which is why neither the gate nor any earlier mock frame could have shown this. It now carries a
+      reply with a picture and words above it, and a wordless reply whose whole body is a quote of a
+      picture post &mdash; the reported shape, at the counts a busy thread carries (1,050 likes on the
+      quoted post, 46 replies, 334 reposts).</p>
+  </header>
+
+  <section>
+    <div class="eyebrow">The repair</div>
+    <h2>What changed, and what did not</h2>
+    <div class="callout">
+      <ul>
+        <li><b>A reply draws its own media and the post it quotes</b>, through the same stage, carousel,
+          link card and quote card the feed row and the post page already use. No reply-only renderer:
+          a second door for the same question is how the surfaces drifted apart in the first place.</li>
+        <li><b>A quote-response still draws no quote card.</b> Its target is always the node directly
+          above it &mdash; the post you are on at the top level, the quote it answers deeper in a
+          cascade &mdash; so a card would repeat what the reader is already looking at. Its own picture
+          still shows.</li>
+        <li><b>The reader&rsquo;s settings apply unchanged.</b> Picture size and &ldquo;pictures shown at
+          once&rdquo; govern a reply&rsquo;s media exactly as they govern a post&rsquo;s.</li>
+        <li><b>The rendering matrix grew its third surface.</b> It asked what the feed row and the post
+          page draw for all 17 shapes and never what a <b>reply</b> draws for any of them &mdash; so a
+          surface drawing nothing for eleven of the seventeen was green. All three are declared per
+          shape now, and a shape that leaves one out is a red test.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Open decisions</div>
+    <h2>Two things the frames cannot settle</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th style="width:3ch">#</th><th>Decision</th><th>What is built</th><th>The alternative</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><b>1</b></td>
+            <td><b>How tall a reply&rsquo;s picture is.</b></td>
+            <td>The same cap the head post gets (<code>--stage-cap</code>, 520px on desktop, 420px on a
+              phone). A reply is worth the same as a post; a nested reply&rsquo;s picture is as large as
+              the original&rsquo;s. Visible in the Proposed frames below &mdash; the picture is the tallest
+              thing on the desktop screen.</td>
+            <td>A shorter cap for replies, so a thread of picture replies stays scannable. This trades
+              &ldquo;a reply is worth the same as a post&rdquo; for &ldquo;a thread is a conversation, not
+              a gallery.&rdquo; Say which and it is a one-line change.</td>
+          </tr>
+          <tr>
+            <td><b>2</b></td>
+            <td><b>The post you are answering, on the <code>/reply</code> page.</b></td>
+            <td>Nothing &mdash; deliberately left alone. That card already shows the post&rsquo;s picture
+              but has never shown what the post <em>quotes</em>. It also clamps the words to four lines,
+              so it is built as a summary, not as a full rendering.</td>
+            <td>Show the quote card there too, and treat the card as a rendering rather than a summary.
+              A different question from this repair, which is why it is a decision and not a fix:
+              it is filed in <code>TODO.md</code> either way.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">The frames &middot; phone &middot; 390&times;844</div>
+    <h2>Current beside Proposed &mdash; the wordless reply anchors both</h2>
+    <p class="sub">Both frames are scrolled to <code>hollowaywire.bsky.social</code>, the reply whose
+      entire content is a quote of a picture post. In Current it is a byline, an action row, and a gap
+      where the picture belongs. Below it, <code>kettleandcrow.bsky.social</code> has words and a picture:
+      Current shows the words alone.</p>
+    <div class="stage">
+      <div class="device phone">
+        <div class="device-label">Current <span class="tag">forage@3345405</span></div>
+        <img class="shot" src="snaps/reply-embeds/thread-lens-embed.phone.current.png" alt="Phone, main: hollowaywire's reply is a byline and an action row with nothing between them; kettleandcrow's reply shows its sentence and no picture.">
+      </div>
+      <div class="device phone">
+        <div class="device-label">Proposed <span class="tag">forage@3b2244d</span></div>
+        <img class="shot" src="snaps/reply-embeds/thread-lens-embed.phone.proposed.png" alt="Phone, branch: hollowaywire's reply draws the quote card, naming The Pneumatic Post and showing its picture, with open the original beneath it.">
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">The frames &middot; desktop &middot; 1280&times;900</div>
+    <h2>The same two replies, at desk width</h2>
+    <div class="stage">
+      <div class="device desk">
+        <div class="device-label">Current <span class="tag">forage@3345405</span></div>
+        <img class="shot" src="snaps/reply-embeds/thread-lens-embed.desktop.current.png" alt="Desktop, main: the wordless reply is an empty row between two ordinary replies.">
+      </div>
+      <div class="device desk">
+        <div class="device-label">Proposed <span class="tag">forage@3b2244d</span></div>
+        <img class="shot" src="snaps/reply-embeds/thread-lens-embed.desktop.proposed.png" alt="Desktop, branch: the wordless reply draws the quoted post and its picture; the picture reply below draws its own.">
+      </div>
+    </div>
+    <div class="callout">
+      <p><b>Read decision 1 here.</b> The picture is the tallest element in the Proposed desktop frame.
+        That is the head post&rsquo;s cap applied to a reply, on purpose &mdash; and it is the thing to
+        say &ldquo;smaller&rdquo; to if a thread of picture replies should stay scannable.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Evidence</div>
+    <h2>What is gated, and what is not</h2>
+    <div class="callout">
+      <ul>
+        <li><code>e2e/render-matrix.workflow.mjs</code> &mdash; 17 shapes &times; <b>3</b> surfaces, the
+          reply node new. Ran red on eleven shapes before the repair.</li>
+        <li><code>test/lens.test.js</code> &mdash; the shaping seam: a reply node carries its media and
+          its hydrated quoted post; a quote node keeps its media and drops the card. Both proved red
+          against the pre-repair seam.</li>
+        <li><code>e2e/mock-thread.workflow.mjs</code> &mdash; the population these frames come from is
+          the population the gate runs, replies with embeds included.</li>
+        <li>Gates on the branch: <code>node --test</code> 45/45, <code>npm run conformance</code>,
+          <code>npm run workflows</code> 33 found / 0 failed.</li>
+        <li><b>Not gated:</b> decision 1 is a judgement about size, and decision 2 is a surface this
+          change deliberately did not touch.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+</body>
+</html>

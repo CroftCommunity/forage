@@ -12,6 +12,8 @@
 //   2026-09-01  a link card with no og:image produced no media and a dead link
 //   2026-09-01  a quote post showed neither what it quoted (in the feed) nor
 //               the quoted post's video (anywhere)
+//   2026-09-01  a REPLY drew its words and nothing else: no picture, no video,
+//               no link card, and not the post it quoted
 //
 // Every one of those is the SAME question asked about a different shape: given
 // this embed, what does each surface draw? So it is asked once, as a table.
@@ -19,9 +21,21 @@
 // declares nothing about a surface is a row that has not been thought about —
 // both fail here rather than shipping quietly.
 //
-// The two surfaces are the two the owner reads: the FEED ROW (/f/<feed>) and
-// the POST PAGE (/p?uri=). They are separate renderers over the same shape,
-// which is exactly why they drift, so every shape is asserted on both.
+// The THREE surfaces are the three the owner reads: the FEED ROW (/f/<feed>),
+// the POST PAGE head (/p?uri=), and the REPLY NODE in the thread under it.
+// They are separate renderers over the same shape, which is exactly why they
+// drift, so every shape is asserted on all three.
+//
+// The reply node joined on 2026-09-01, the day this file's own two-surface
+// version shipped — and it joined because of a bug the two-surface version
+// could not have caught. The owner's report: hookcity's wordless reply, whose
+// whole content is a quote of a picture post, drew a byline over an empty row
+// on forage.fyi while bsky.app drew the picture. The matrix had asked "what
+// does the feed row draw?" and "what does the post page draw?" of every shape,
+// and never "what does a reply draw?" of any of them — so a surface that drew
+// NOTHING for eleven of the seventeen shapes was green. A surface left off the
+// table is not covered by the table; that is the whole lesson, and it is why
+// `expect` fails a shape that leaves any of the three undeclared.
 //
 // Reading a row: the counts are of ELEMENTS scoped to that post's own subtree.
 // `own*` is the post's own media; `quoted*` is media belonging to the post it
@@ -64,67 +78,80 @@ const quoting = (record) => ({ $type: 'app.bsky.embed.record#view', record });
 // ---- the matrix ----------------------------------------------------------
 // row  — what the FEED ROW must draw
 // post — what the POST PAGE must draw
-// Both are declared for every shape; `expect()` below fails a shape that
-// leaves either side out, so "we forgot to think about the other surface"
+// reply — what the REPLY NODE in a thread must draw
+// All three are declared for every shape; `expect()` below fails a shape that
+// leaves any of them out, so "we forgot to think about the other surface"
 // is a red test rather than a silent gap.
 const NOTHING = { ownStage: 0, ownGrid: 0, ownExt: 0, carousel: 0, strip: 0, quoted: 0, quotedStage: 0, quotedExt: 0,
   quotedWho: null, quotedHandle: null };
 const SHAPES = [
   { key: 'text', why: 'a plain text post draws no media anywhere',
     text: 'just words, no embed at all', embed: null,
-    row: { ...NOTHING, words: true }, post: { ...NOTHING, words: true } },
+    row: { ...NOTHING, words: true }, post: { ...NOTHING, words: true },
+    reply: { ...NOTHING, words: true } },
 
-  { key: 'onepic', why: 'one picture is one stage — on BOTH surfaces (the 2026-08-28 and 2026-08-30 repairs, together)',
+  { key: 'onepic', why: 'one picture is one stage — on EVERY surface (the 2026-08-28 and 2026-08-30 repairs, together)',
     text: 'one picture', embed: images(img('a', { width: 1600, height: 1200 })),
-    row: { ...NOTHING, ownStage: 1, words: true }, post: { ...NOTHING, ownStage: 1, words: true } },
+    row: { ...NOTHING, ownStage: 1, words: true }, post: { ...NOTHING, ownStage: 1, words: true },
+    reply: { ...NOTHING, ownStage: 1, words: true } },
 
   { key: 'fourpic', why: 'more pictures than the reader asked to see at once fold into ONE carousel, never four stages (js/pictures.js owns the rule; the default is 1)',
     text: 'four pictures',
     embed: images(img('4a', { width: 1600, height: 1200 }), img('4b', { width: 1080, height: 1920 }),
       img('4c', { width: 1920, height: 1080 }), img('4d', { width: 1200, height: 1200 })),
     row: { ...NOTHING, ownStage: 1, carousel: 1, words: true },
-    post: { ...NOTHING, ownStage: 1, carousel: 1, words: true } },
+    post: { ...NOTHING, ownStage: 1, carousel: 1, words: true },
+    reply: { ...NOTHING, ownStage: 1, carousel: 1, words: true } },
 
   { key: 'videoplays', why: 'v13 decision 30: a native video PLAYS IN PLACE, so it is a stage, never the link-out strip',
     text: 'a clip', embed: video('v'),
-    row: { ...NOTHING, ownStage: 1, words: true }, post: { ...NOTHING, ownStage: 1, words: true } },
+    row: { ...NOTHING, ownStage: 1, words: true }, post: { ...NOTHING, ownStage: 1, words: true },
+    reply: { ...NOTHING, ownStage: 1, words: true } },
 
   { key: 'videonoplaylist', why: 'a video with no playlist has nothing to play: the honest fallback is the strip that links out',
     text: 'a clip we cannot play', embed: video('vn', { width: 1280, height: 720 }, null),
-    row: { ...NOTHING, strip: 1, words: true }, post: { ...NOTHING, strip: 1, words: true } },
+    row: { ...NOTHING, strip: 1, words: true }, post: { ...NOTHING, strip: 1, words: true },
+    reply: { ...NOTHING, strip: 1, words: true } },
 
   { key: 'extcard', why: 'a link card is a card with a stage for its og:image',
     text: 'a link', embed: external({ uri: 'https://example.test/a', title: 'A page' }),
-    row: { ...NOTHING, ownExt: 1, ownStage: 1, words: true }, post: { ...NOTHING, ownExt: 1, ownStage: 1, words: true } },
+    row: { ...NOTHING, ownExt: 1, ownStage: 1, words: true }, post: { ...NOTHING, ownExt: 1, ownStage: 1, words: true },
+    reply: { ...NOTHING, ownExt: 1, ownStage: 1, words: true } },
 
   { key: 'linknothumb', why: 'post-text 2026-09-01: no og:image is a card of WORDS, not no card — the link used to go nowhere',
     text: 'a statement with no picture', embed: external({ uri: 'https://example.test/b', title: 'A statement', thumb: null }),
-    row: { ...NOTHING, ownExt: 1, words: true }, post: { ...NOTHING, ownExt: 1, words: true } },
+    row: { ...NOTHING, ownExt: 1, words: true }, post: { ...NOTHING, ownExt: 1, words: true },
+    reply: { ...NOTHING, ownExt: 1, words: true } },
 
   { key: 'quotetext', why: 'quote-embed 2026-09-01: the FEED ROW shows what the post quotes — before this it showed nothing',
     text: 'look at this', embed: quoting(viewRecord('qt', 'the quoted words')),
-    row: { ...NOTHING, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', words: true }, post: { ...NOTHING, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', words: true } },
+    row: { ...NOTHING, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', words: true }, post: { ...NOTHING, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', words: true },
+    reply: { ...NOTHING, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', words: true } },
 
   { key: 'quotevideo', why: 'the owner’s report: a quote of a VIDEO post — the quoted video renders on both surfaces',
     text: 'is it so bad to expect a decent command of the language?',
     embed: quoting(viewRecord('qv', 'the quoted words', [video('qv')])),
     row: { ...NOTHING, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', quotedStage: 1, words: true },
-    post: { ...NOTHING, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', quotedStage: 1, words: true } },
+    post: { ...NOTHING, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', quotedStage: 1, words: true },
+    reply: { ...NOTHING, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', quotedStage: 1, words: true } },
 
   { key: 'quotenoname', why: 'a quoted author who chose no display name falls back to their handle — a blank name is not a name (feed-row v2), and printing nothing would be worse than printing the handle',
     text: 'they have no name set', embed: quoting(viewRecord('qnn', 'the quoted words', [], null)),
     row: { ...NOTHING, quoted: 1, quotedWho: 'orig.test', quotedHandle: 'orig.test', words: true },
-    post: { ...NOTHING, quoted: 1, quotedWho: 'orig.test', quotedHandle: 'orig.test', words: true } },
+    post: { ...NOTHING, quoted: 1, quotedWho: 'orig.test', quotedHandle: 'orig.test', words: true },
+    reply: { ...NOTHING, quoted: 1, quotedWho: 'orig.test', quotedHandle: 'orig.test', words: true } },
 
   { key: 'quotepic', why: 'a quoted picture comes through the same door as a quoted video',
     text: 'this picture', embed: quoting(viewRecord('qp', 'the quoted words', [images(img('q', { width: 1600, height: 1200 }))])),
     row: { ...NOTHING, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', quotedStage: 1, words: true },
-    post: { ...NOTHING, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', quotedStage: 1, words: true } },
+    post: { ...NOTHING, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', quotedStage: 1, words: true },
+    reply: { ...NOTHING, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', quotedStage: 1, words: true } },
 
   { key: 'quoteext', why: 'a quoted link post shows the quoted card, and the quoting post has none of its own',
     text: 'this article', embed: quoting(viewRecord('qe', 'read this', [external({ uri: 'https://example.test/c', title: 'C' })])),
     row: { ...NOTHING, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', quotedExt: 1, quotedStage: 1, words: true },
-    post: { ...NOTHING, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', quotedExt: 1, quotedStage: 1, words: true } },
+    post: { ...NOTHING, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', quotedExt: 1, quotedStage: 1, words: true },
+    reply: { ...NOTHING, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', quotedExt: 1, quotedStage: 1, words: true } },
 
   { key: 'rwm', why: 'recordWithMedia is BOTH: the post’s own picture and the post it quotes, neither swallowing the other',
     text: 'my picture, their post',
@@ -132,27 +159,34 @@ const SHAPES = [
       media: images(img('rw', { width: 1600, height: 1200 })),
       record: { record: viewRecord('rw', 'the quoted words', [video('rwv')]) } },
     row: { ...NOTHING, ownStage: 1, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', quotedStage: 1, words: true },
-    post: { ...NOTHING, ownStage: 1, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', quotedStage: 1, words: true } },
+    post: { ...NOTHING, ownStage: 1, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', quotedStage: 1, words: true },
+    reply: { ...NOTHING, ownStage: 1, quoted: 1, quotedWho: 'Orig Poster', quotedHandle: 'orig.test', quotedStage: 1, words: true } },
 
   { key: 'quotegone', why: 'a deleted target is ONE honest line — never a card reading "[unknown]" over nothing',
     text: 'quoting something that went away',
     embed: quoting({ $type: 'app.bsky.embed.record#viewNotFound', uri: 'at://did:plc:orig/app.bsky.feed.post/gone', notFound: true }),
     row: { ...NOTHING, quoted: 1, gone: 'notFound', words: true },
-    post: { ...NOTHING, quoted: 1, gone: 'notFound', words: true } },
+    post: { ...NOTHING, quoted: 1, gone: 'notFound', words: true },
+    reply: { ...NOTHING, quoted: 1, gone: 'notFound', words: true } },
 
   { key: 'quotefeed', why: 'a quoted FEED is not a quoted post: it carries a uri and no words, and used to draw an empty post card',
     text: 'this feed is good',
     embed: quoting({ $type: 'app.bsky.feed.defs#generatorView', uri: 'at://did:plc:orig/app.bsky.feed.generator/g',
       cid: 'cid-g', displayName: 'Discover', creator: { did: 'did:plc:orig', handle: 'orig.test' }, indexedAt: T }),
-    row: { ...NOTHING, words: true }, post: { ...NOTHING, words: true } },
+    row: { ...NOTHING, words: true }, post: { ...NOTHING, words: true },
+    reply: { ...NOTHING, words: true } },
 
   { key: 'altonly', why: 'a wordless picture WITH alt text titles from the alt — the surface has words to show, so it shows them',
     text: '', embed: images(img('alt', { width: 1600, height: 1200 })),
-    row: { ...NOTHING, ownStage: 1, words: true }, post: { ...NOTHING, ownStage: 1, words: true } },
+    row: { ...NOTHING, ownStage: 1, words: true }, post: { ...NOTHING, ownStage: 1, words: true },
+    // a reply has no heading to fall back into: the alt text names the picture
+    // to a screen reader (it is the img's alt) and is not a caption the author wrote
+    reply: { ...NOTHING, ownStage: 1, words: false } },
 
   { key: 'noalt', why: 'no words and no alt: the title is a PLACEHOLDER ("[image]") and drops where the picture itself shows — "[image]" above the actual image names nothing (live 2026-08-28)',
     text: '', embed: images({ thumb: 'https://cdn.test/na-t.jpg', fullsize: 'https://cdn.test/na.jpg', alt: '', aspectRatio: { width: 1600, height: 1200 } }),
-    row: { ...NOTHING, ownStage: 1, words: false }, post: { ...NOTHING, ownStage: 1, words: false } },
+    row: { ...NOTHING, ownStage: 1, words: false }, post: { ...NOTHING, ownStage: 1, words: false },
+    reply: { ...NOTHING, ownStage: 1, words: false } },
 ];
 
 // Both the row selector and the shim's fixture routing address a shape by its
@@ -169,6 +203,27 @@ for (const a of SHAPES) {
 
 const FEED = { feed: SHAPES.map((s) => ({ post: postView(s.key, s.text, s.embed) })) };
 
+// ---- surface 3's fixture: one thread, every shape as a reply -------------
+// A reply is by SOMEONE ELSE, deliberately. shapeLensThread HOISTS an unbroken
+// same-author reply chain out of the comments and into the post's body (the
+// 1/3-2/3-3/3 self-thread), so replies authored by the root's author would
+// have swallowed the first shape into the head and re-rooted the rest. The
+// bug under test is about replies; the fixture has to actually produce them.
+const REPLIER = 'did:plc:bb';
+const replyUri = (rkey) => `at://${REPLIER}/app.bsky.feed.post/${rkey}`;
+const replyView = (rkey, text, embed) => ({
+  uri: replyUri(rkey), cid: `cid-r-${rkey}`,
+  author: { did: REPLIER, handle: 'bb.test', displayName: 'B B', avatar: AV },
+  record: { $type: 'app.bsky.feed.post', text, createdAt: T }, indexedAt: T,
+  replyCount: 0, repostCount: 0, likeCount: 1, quoteCount: 0,
+  ...(embed ? { embed } : {}),
+});
+const ROOT = 'threadroot';
+const THREAD = { thread: { $type: 'app.bsky.feed.defs#threadViewPost',
+  post: postView(ROOT, 'a thread whose replies are every shape', null),
+  replies: SHAPES.map((s) => ({ $type: 'app.bsky.feed.defs#threadViewPost',
+    post: replyView(s.key, s.text, s.embed), replies: [] })) } };
+
 const RESPONSES = {
   'getTrendingTopics': { topics: [] },
   'getFeedGenerator?': { view: { uri: 'at://x/app.bsky.feed.generator/whats-hot', displayName: 'Discover',
@@ -179,6 +234,7 @@ const RESPONSES = {
     `getPostThread?uri=${encodeURIComponent(uriOf(s.key))}`,
     { thread: { $type: 'app.bsky.feed.defs#threadViewPost', post: postView(s.key, s.text, s.embed), replies: [] } },
   ])),
+  [`getPostThread?uri=${encodeURIComponent(uriOf(ROOT))}`]: THREAD,
   'getFeed?': FEED, 'getFeed': FEED,
   'getPostThread': { thread: { post: postView('text', 'fallback', null), replies: [] } },
   'getQuotes': { posts: [] },
@@ -222,7 +278,7 @@ async function observe(page, scope) {
 
 function expect(shape, surface, seen) {
   const want = shape[surface];
-  assert.ok(want, `shape "${shape.key}" declares nothing for the ${surface} surface — every shape must say what BOTH surfaces draw`);
+  assert.ok(want, `shape "${shape.key}" declares nothing for the ${surface} surface — every shape must say what ALL THREE surfaces draw`);
   assert.ok(seen, `shape "${shape.key}" did not render on the ${surface} surface at all`);
   for (const [k, v] of Object.entries(want)) {
     assert.equal(seen[k] ?? null, v ?? null,
@@ -235,6 +291,10 @@ function expect(shape, surface, seen) {
 // and the matrix graded the wrong post (caught on its first run).
 const rowOf = (key) => `.postrow:has(a[href$="%2F${key}"])`;
 const HEAD = '.card:has(.head-byline)';
+// A reply node by its at-uri. The leading slash is what makes ends-with exact:
+// without it `text` would also match `quotetext`, the same hazard the key
+// prefix guard above exists for, arriving from the other end of the string.
+const replyOf = (key) => `.comment[data-node-id$="/${key}"]`;
 
 export async function run() {
   const s = await scenario('first-visit', { mode: 'bluesky', responses: RESPONSES });
@@ -283,6 +343,17 @@ export async function run() {
       await page.goto(`${s.origin}/p?uri=${encodeURIComponent(uriOf(shape.key))}`);
       await page.waitForSelector(HEAD);
       expect(shape, 'post', await observe(page, HEAD));
+    }
+
+    // ---- surface 3: the reply node ---------------------------------------
+    // One thread, every shape as a reply under it. A reply's embed is its
+    // CONTENT — a wordless reply whose whole body is a quote of a picture is a
+    // real and common shape, and it drew an empty row here until 2026-09-01.
+    await page.goto(`${s.origin}/p?uri=${encodeURIComponent(uriOf(ROOT))}`);
+    await page.waitForSelector('.comment');
+    for (const shape of SHAPES) {
+      assert.equal(await page.locator(replyOf(shape.key)).count(), 1, `one reply node for "${shape.key}"`);
+      expect(shape, 'reply', await observe(page, replyOf(shape.key)));
     }
 
     assert.deepEqual(await s.shimMisses(), [], 'the matrix is hermetic: every request had a fixture');
