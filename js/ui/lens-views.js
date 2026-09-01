@@ -744,6 +744,14 @@ const lensRow = (p, view = 'card') => {
   // beside a thread page with them; the 40px title-thumb that stood in for a
   // placeholder-titled compact row went with the rule.
   const showsMedia = !!p.media && !p.maskedRemoved;
+  // quote-embed (owner, 2026-09-01, on a quote of a video): the row shows what
+  // the post QUOTES. Until now p.quoted rendered on the post page alone, so a
+  // quote-post's row was the quoter's sentence over nothing — the reader had to
+  // open the thread to find out what was being talked about, and the video the
+  // post is entirely about never appeared at all. Same rule as feed-row v1's
+  // picture: it shows in BOTH densities, because compact tightens a row without
+  // taking the post's content out of it, and a quote's content is the quote.
+  const showsQuote = !!p.quoted && !p.maskedRemoved;
   const threadPath = `/p?uri=${encodeURIComponent(p.id)}`;
   // v13 (E, H): a post's words are TEXT — faceted, so its #tags, links and
   // mentions are live in place (owner: "I don't love how we extract every
@@ -768,7 +776,11 @@ const lensRow = (p, view = 'card') => {
     aboveNode: kindContext(p),
     // 3i: never duplicate the text. Card mode carries the media or the link card;
     // compact is dense (the picture stays — feed-row v1). No chip row (v13).
-    bodyNode: showsMedia ? mediaNode(p) : null,
+    bodyNode: showsMedia || showsQuote
+      ? el('div', { class: 'rowbody' },
+        showsMedia ? mediaNode(p) : null,
+        showsQuote ? quotedContext(p.quoted) : null)
+      : null,
     ...(titleNode !== undefined ? { titleNode } : {}),
     // a Bluesky post's text is body text, a link post's included (v13)
     textPost: true,
@@ -1401,11 +1413,32 @@ function lensNode(node, ctx) {
 }
 
 // 3e inbound: any post that IS a quote shows what it quotes, linked home.
+//
+// quote-embed (owner, 2026-09-01): the quoted post's MEDIA renders here too,
+// through the same mediaNode every other surface uses — the report was a quote
+// of a video whose card showed the words and no video, and a second renderer
+// for quoted media is how the two would drift apart again. mediaNode reads
+// exactly three things off a post, so the quoted card lends it three: its own
+// media, and the author and uri its video fallback link is built from.
+//
+// A quote whose target is gone says so in words. It used to draw a card reading
+// "❝ [unknown]" over nothing at all — on the post page one bad card, and
+// in the feed row one on every such post.
+const QUOTE_GONE_WORDS = {
+  notFound: 'the quoted post has been deleted',
+  blocked: 'the quoted post is from someone you have blocked, or who has blocked you',
+  detached: 'its author detached the quoted post from this quote',
+};
 function quotedContext(quoted) {
-  return el('div', { class: 'card', style: 'margin-top:6px', 'data-quoted': '1' },
+  if (quoted.unavailable) {
+    return el('div', { class: 'card quoted', style: 'margin-top:6px', 'data-quoted': quoted.unavailable },
+      el('div', { class: 'xs muted' }, '❝ ', QUOTE_GONE_WORDS[quoted.unavailable] || 'the quoted post is unavailable'));
+  }
+  return el('div', { class: 'card quoted', style: 'margin-top:6px', 'data-quoted': '1' },
     el('div', { class: 'xs muted' }, '❝ quoting ',
       el('a', { href: `https://bsky.app/profile/${quoted.author}`, target: '_blank', rel: 'noopener noreferrer' }, quoted.author)),
-    el('div', { class: 'small' }, quoted.excerpt),
+    quoted.excerpt ? el('div', { class: 'small' }, quoted.excerpt) : null,
+    quoted.media ? mediaNode({ media: quoted.media, author: quoted.author, id: quoted.uri }) : null,
     el('div', { class: 'xs' }, el('a', { href: `/p?uri=${encodeURIComponent(quoted.uri)}` }, 'open the original ↳')));
 }
 

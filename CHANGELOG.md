@@ -8,6 +8,19 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-01 **A quote post shows what it quotes — the video included.** When someone posts a
+  comment on top of somebody else's post, the feed used to show only the comment: a sentence
+  like "is it so bad to expect our leaders to have a decent command of the English language?"
+  standing over nothing, with no way to tell what it was about without opening the thread. Now
+  the quoted post travels with it, in the feed and on the post page alike, and it brings its
+  own picture, video or link card with it — the clip a quote post exists to point at plays
+  right there, in place, instead of being invisible on one screen and absent on the other.
+  Two smaller honesties came with it: a quote whose original has been deleted, blocked or
+  detached now says so in a line of plain words rather than drawing an empty card attributed
+  to "[unknown]", and quoting a *feed* (not a post) no longer draws a blank post card at all.
+  (owner, with a live example: "we are not representing the quoted content … until you enter
+  the post page, both in terms of showing what's being quoted and rendering the video")
+
 - 2026-09-01 **A post's own words, as its author wrote them.** A news post — the kind with a
   link card under it — used to render its whole text as a large bold serif headline with every
   blank line squeezed out of it and the article's own address printed, unlinked, in the middle.
