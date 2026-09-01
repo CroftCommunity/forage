@@ -12,6 +12,39 @@ import { scenario } from './harness/scenario.mjs';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const fixture = (n) => JSON.parse(readFileSync(join(root, 'test/fixtures/atproto', `${n}.json`), 'utf8'));
 
+// A captured fixture carries the dates it was captured on, and two things here
+// read a post's age against the clock: the liveness probe (4d — newest inside a
+// week is `live`, older is `stale`) and the /f/ board's backward walk (4f —
+// covered once the OLDEST post it has reaches past the window). Left as
+// captured, the file passes both for about a week and then quietly fails one:
+// on 2026-09-01 wide-getFeed's newest post turned eight days old, every feed
+// served by the catch-all probed `stale`, Hide inactive (decision 26, on by
+// default) hid them, and the guest list came back holding one feed. The dates
+// are re-anchored to the run instead — the spread between the posts is kept, so
+// the fixture still describes one feed's page, and the newest lands 24.5h back:
+// inside the week the probe wants, past the 24h the walk wants.
+//
+// The same pass points the captured pictures at a 1x1 of our own. The shim
+// fences `fetch`, and an <img> does not go through fetch — so a captured
+// cdn.bsky.app avatar or thumbnail is a REAL request to a real CDN from a
+// journey that calls itself hermetic. It passes wherever the runner has the
+// open internet and fails wherever it does not, which is not a distinction
+// this suite should be making.
+const NEWEST_AGE_MS = 24.5 * 3600_000;
+const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==';
+const unhosted = (v) => (typeof v === 'string' ? (v.startsWith('https://cdn.bsky.app/') ? PIXEL : v)
+  : Array.isArray(v) ? v.map(unhosted)
+  : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, unhosted(x)]))
+  : v);
+const redated = (page) => {
+  const stamps = page.feed.map((i) => Date.parse(i.post.indexedAt)).filter(Number.isFinite);
+  const shift = (Date.now() - NEWEST_AGE_MS) - Math.max(...stamps);
+  const move = (iso) => new Date(Date.parse(iso) + shift).toISOString();
+  return { ...page, feed: page.feed.map((i) => unhosted({ ...i,
+    post: { ...i.post, indexedAt: move(i.post.indexedAt),
+      record: { ...i.post.record, createdAt: move(i.post.record.createdAt) } } })) };
+};
+
 const WHATS_HOT = 'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot';
 const AFTER_DARK = 'at://did:plc:x/app.bsky.feed.generator/afterdark';
 const GARDEN = 'at://did:plc:g/app.bsky.feed.generator/gardentalk';
@@ -146,10 +179,12 @@ export async function run() {
       'getListBlocks': { lists: [] },
 
       // 4f: the /f/ board widens by paging backwards. This feed answers with a
-      // cursor, so the walk continues; the fixture's posts are old enough that
-      // one more page reaches past 24h and the walk ends COVERED.
-      [`getFeed?feed=${enc(WHATS_HOT)}&limit=30&cursor=`]: fixture('wide-getFeed'),
-      'getFeed': { ...fixture('wide-getFeed'), cursor: 'page2' },
+      // cursor, so the walk continues; the posts are old enough that one more
+      // page reaches past 24h and the walk ends COVERED — and re-anchored to
+      // this run, so "old enough" stays true and the feeds this catch-all also
+      // answers for still probe live (see `redated`).
+      [`getFeed?feed=${enc(WHATS_HOT)}&limit=30&cursor=`]: redated(fixture('wide-getFeed')),
+      'getFeed': { ...redated(fixture('wide-getFeed')), cursor: 'page2' },
     },
   });
   const { page } = s;
