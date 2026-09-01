@@ -25,7 +25,7 @@ import { stage, carousel, grid } from './stage.js';
 import * as pictures from '../pictures.js';
 import * as lang from '../lang.js';
 import { density, densityDial } from '../board-density.js';
-import { sortBar } from './sortbar.js';
+import { sortBar, TIMEFRAMES, WALK_TIMEFRAMES, nearestTimeframe } from './sortbar.js';
 import { sortItems } from '../engines/rank.js';
 import { POST_LIMITS, IMAGE_LIMITS, graphemes, withTag } from '../compose.js';
 import { cardSizeDial } from '../card-size.js';
@@ -656,7 +656,12 @@ const THREAD_WINDOW_MS = { day: 86400e3, week: 6048e5, month: 2592e6, year: 3153
 // HONEST about scope — it re-orders the loaded window only (the generator
 // owns the true ranking, DL-010; whole-feed live sorts are the Jetstream v2
 // frontier, E139).
-function boardToolbar(onChange) {
+// `timeframes` says what THIS board's window can answer (sortbar.js). A board
+// that widens by walking offers the rungs its walk can be told apart by; one
+// with a real server window offers all five. The carried choice is clamped
+// here, once, so the select can never show a value it does not have.
+function boardToolbar(onChange, { timeframes = TIMEFRAMES } = {}) {
+  boardTimeframe = nearestTimeframe(boardTimeframe, timeframes);
   // Phase 11c: the same bar the memory board has. Sorts the LOADED posts —
   // the feed itself is ranked by its generator (DL-010); Hot is engagement
   // over that window (decision 9), From applies to Hot and Top.
@@ -667,7 +672,7 @@ function boardToolbar(onChange) {
   const barHost = el('div', { style: 'display:contents' });
   const drawBar = () => barHost.replaceChildren(sortBar({
     sorts: [['feed', 'Default'], ['hot', 'Hot'], ['new', 'New'], ['top', 'Top']],
-    sort: boardSort, from: boardTimeframe,
+    sort: boardSort, from: boardTimeframe, timeframes,
     onChange: ({ sort, from }) => { boardSort = sort; boardTimeframe = from; drawBar(); onChange(); },
     // decision 7: the card size dial (1–4) stands where the 3t slider stood —
     // a notch is a choice a thumb can make; the slider moved in visible jumps
@@ -1134,11 +1139,25 @@ function feedBoardView(entry, preInfo) {
   // ended. The note is part of the answer, not decoration.
   const deepNote = el('div', { class: 'xs muted', style: 'padding:6px', 'data-deepen': '1' });
   let deepening = false;
+  // v11 (owner, 2026-09-01), two changes to WHEN this runs:
+  //
+  // - "All time" walks. It used to be the one window that returned here without
+  //   widening, so it ranked whatever the previous choice happened to have
+  //   loaded — measured: 210 posts where "this year" ranked 240. A rung that
+  //   promises the most and delivers the least inverts the whole ladder, which
+  //   is the incoherence the owner was looking at. Infinity as the target means
+  //   the walk never "covers"; it ends on the budget or on the feed running out,
+  //   and says which.
+  // - Hot walks too. From applies to Hot and Top alike (decision 9) and means
+  //   the same window in both, so widening one and not the other made
+  //   "Hot · today" and "Top · today" two different promises under one control.
+  const WINDOWED = ['hot', 'top'];
   const deepen = () => {
-    if (deepening || boardSort !== 'top' || boardTimeframe === 'all') { deepNote.replaceChildren(''); return; }
-    const hours = { day: 24, week: 168, month: 720, year: 8760 }[boardTimeframe];
+    if (deepening || !WINDOWED.includes(boardSort)) { deepNote.replaceChildren(''); return; }
+    const hours = { day: 24, week: 168, month: 720, year: 8760, all: Infinity }[boardTimeframe];
+    const span = boardTimeframe === 'all' ? 'as far back as it goes' : `the last ${boardTimeframe}`;
     deepening = true;
-    deepNote.replaceChildren(`Widening to the last ${boardTimeframe}…`);
+    deepNote.replaceChildren(`Widening to ${span}…`);
     lens.deepen(entry.source, { toHours: hours, nowMs: Date.now() })
       .then((out) => {
         allPosts.length = 0;
@@ -1150,7 +1169,9 @@ function feedBoardView(entry, preInfo) {
             ? `Ranked every post this feed served in the last ${boardTimeframe} (${out.pages} page${out.pages === 1 ? '' : 's'}).`
             : out.outcome === 'exhausted'
               ? `This feed only goes back ${out.reachedHours}h — that is everything it has, ranked.`
-              : `This feed posts faster than we can page: ranked the last ${out.reachedHours}h of it, not the whole ${boardTimeframe}.`);
+              : boardTimeframe === 'all'
+                ? `Ranked the last ${out.reachedHours}h — as far back as this feed lets us page.`
+                : `This feed posts faster than we can page: ranked the last ${out.reachedHours}h of it, not the whole ${boardTimeframe}.`);
       })
       .catch((e) => deepNote.replaceChildren(`Could not widen the window: ${e.message}`))
       .finally(() => { deepening = false; });
@@ -1182,7 +1203,8 @@ function feedBoardView(entry, preInfo) {
         // reaching past it for the registry string is how a retired name shipped.
         el('h1', {}, info?.title || entry.title)), // the DL chips are gone (feed-row v4)
       headerHost,
-      boardToolbar(() => { repaint(); deepen(); }),
+      // this board widens by walking, so it offers what a walk can tell apart
+      boardToolbar(() => { repaint(); deepen(); }, { timeframes: WALK_TIMEFRAMES }),
       f.posts.length ? card : emptyState('Nothing here', 'This source returned no posts.'),
       deepNote,
       moreHost);
@@ -1873,6 +1895,11 @@ export function lensUserView(params) {
     .then(([p, board]) => {
       const card = el('div', { class: 'card' });
       const repaint = () => renderBoard(card, board.posts);
+      // A profile board is ONE page and has no More: its window is neither a
+      // server query nor a walk, it is the loaded posts. All five rungs stay,
+      // because on a quiet account one page of 30 spans years and each of them
+      // filters it differently — the case that is degenerate on a fast feed is
+      // the live one here. What it cannot do is widen, and the board says so.
       main.replaceChildren(profileHeader(p, followButton(p)), boardToolbar(repaint),
         board.posts.length ? card : emptyState('No posts', 'Nothing here yet.'));
       repaint();
@@ -2485,7 +2512,10 @@ export function lensHashtagView(params) {
         if (first) {
           main.replaceChildren(heading(),
             affordanceStrip({ kind: 'hashtag', key: tag }),
-            boardToolbar(() => load(false)),
+            // the one board with a REAL window: searchPosts takes since/until
+            // server-side, so all five rungs are five different queries over
+            // the whole corpus rather than five names for one page (4e)
+            boardToolbar(() => load(false), { timeframes: TIMEFRAMES }),
             board.posts.length ? card : emptyState('A quiet tag', `No recent posts carry #${tag}.`),
             note);
         }

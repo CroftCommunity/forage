@@ -46,6 +46,23 @@ below are the landings of that month, and everything earlier is in `git log`.
   under Discovery … and put 'Trending' in its place", "remove this duplicate box on the
   right", "can we make the center column scroll independently like reddit.com?")
 
+- 2026-09-01 **Top's timeframe now offers only what the board can actually answer.** The
+  owner asked whether "this month", "this year" and "all time" did anything. Measured: on a
+  feed board they mostly did not. A feed generator publishes no way to ask for a date range,
+  so Forage widens the board by paging backwards on a budget — eight pages — and against the
+  live Discover feed that reaches about **29 hours**. "This week", "this month" and "this
+  year" therefore ranked the same 240 posts in the same order: three names for one answer.
+  "All time" was worse: it was the one choice that skipped the widening altogether, so it
+  ranked *fewer* posts than "this year" did. A feed board now offers **Today · This week ·
+  All time**, and All time is the widest walk rather than the absent one, so asking for more
+  can no longer give you less. Hot widens the same way Top does — the window means the same
+  thing under both, and only one of them was honouring it. Hashtag boards are untouched and
+  keep all five: there the window is a real search query over every post that matched, which
+  is the one place the limitation genuinely lifts. Carrying "this month" from a hashtag board
+  to a feed board now widens to All time and says so, instead of leaving a control reading
+  "Today" over a board answering something else.
+  (owner: "tell me does 'top' month, year and all time really do anything?")
+
 - 2026-09-01 **A quote post shows what it quotes — the video included.** When someone posts a
   comment on top of somebody else's post, the feed used to show only the comment: a sentence
   like "is it so bad to expect our leaders to have a decent command of the English language?"

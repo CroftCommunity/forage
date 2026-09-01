@@ -500,6 +500,31 @@ export async function run() {
     'the /f/ caveat must not follow a server-ranked board');
   await page.waitForSelector('text=weighs engagement, not likes alone');
 
+  // v11: this is the board whose window is REAL, so it keeps all five rungs —
+  // the /f/ board's shorter list is about what a backward walk can be told
+  // apart by, and none of that applies to a server query (owner, 2026-09-01).
+  const hashtagWindows = await page.$$eval('[data-board-toolbar] select[data-from] option', (os) => os.map((o) => o.value));
+  assert.deepEqual(hashtagWindows, ['day', 'week', 'month', 'year', 'all'],
+    `a server-windowed board keeps all five (${JSON.stringify(hashtagWindows)})`);
+
+  // …and a choice only this board offers must not survive onto one that does
+  // not. Carried unclamped, the /f/ select would have rendered with no option
+  // matching its value — which browsers resolve by showing the FIRST option,
+  // so the control would have read "Today" over a board answering "this month".
+  // CLICKED through the trending rail, not loaded: the choice is per-page-load
+  // view state, so a `goto` would reset it and test nothing.
+  await page.locator('[data-board-toolbar] select[data-from]').selectOption('month');
+  await page.waitForTimeout(200);
+  await page.locator('[data-trending] a:has-text("Meadow Fest")').click();
+  await page.waitForSelector('[data-affordance="curated"]');
+  const carried = await page.$eval('[data-board-toolbar] select[data-from]', (sel) => ({
+    value: sel.value, shown: sel.options[sel.selectedIndex]?.text,
+  }));
+  assert.equal(carried.value, 'all', 'a month carried onto a walking board widens to All time');
+  assert.equal(carried.shown, 'All time', 'and the control says so rather than reading "Today"');
+
+  await page.goBack();
+  await page.waitForSelector('h1:has-text("#camp")');
   await page.locator('[data-board-toolbar] select').first().selectOption('feed');
   await page.waitForSelector('text=post tagged1');
 

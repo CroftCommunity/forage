@@ -437,6 +437,40 @@ export async function run() {
   const board = await page.locator('#main, main, body').first().innerText();
   assert.ok(/Sorted within the loaded posts|Nothing in the loaded posts/.test(board),
     'it says which posts it ranked, one way or the other');
+
+  // v11 (owner, 2026-09-01: "does 'top' month, year and all time really do
+  // anything?"). On this board the window is a WALK, so the menu offers what a
+  // walk can be told apart by — and the two rungs that could not be are gone.
+  const offered = await page.$$eval('[data-board-toolbar] select[data-from] option', (os) => os.map((o) => o.value));
+  assert.deepEqual(offered, ['day', 'week', 'all'],
+    `a walking board offers three windows, not five (${JSON.stringify(offered)})`);
+
+  // and "All time" WALKS. It was the one rung that returned without widening,
+  // so it ranked whatever the previous choice had loaded — fewer posts than
+  // "this year", which inverts the ladder. The claim is not "deepen was
+  // called": it is that the widest window ranks at least as much as a narrower
+  // one, which is the property that was false.
+  const settled = async () => {
+    await page.waitForFunction(() => {
+      const t = document.querySelector('[data-deepen]')?.textContent || '';
+      return t && !t.includes('Widening');
+    });
+    return { rows: await page.locator('.postrow').count(), note: (await page.locator('[data-deepen]').innerText()).trim() };
+  };
+  await page.locator('[data-board-toolbar] select[data-from]').selectOption('day');
+  const day = await settled();
+  await page.locator('[data-board-toolbar] select[data-from]').selectOption('all');
+  const everything = await settled();
+  assert.ok(everything.rows >= day.rows,
+    `All time ranks at least as much as Today (${everything.rows} vs ${day.rows})`);
+  assert.ok(everything.note, `All time says how far back it got, got: ${JSON.stringify(everything.note)}`);
+  assert.doesNotMatch(everything.note, /the whole all/i, 'and says it in words that read — not "not the whole all time"');
+
+  // Hot carries the SAME window and therefore the same walk (decision 9):
+  // widening one and not the other made one control mean two things.
+  await page.locator('[data-board-toolbar] select[data-sort]').selectOption('hot');
+  const hot = await settled();
+  assert.ok(hot.note, `Hot widens and reports like Top does, got: ${JSON.stringify(hot.note)}`);
   await page.locator('[data-board-toolbar] select').first().selectOption('feed');
 
   // 3s: Favorite is its own control — pinning is the top row of the official
