@@ -336,3 +336,16 @@ tier's wire shape, and it persists to `forage.state` in localStorage.
 - **`fyi.forage.roster` is adoptable with reshaping and no blocker was found.** `list` +
   `listitem` could hold it; the cost is one record per member instead of a `literal:self`
   singleton. Recorded as convenience rather than justification, because that is what it is.
+
+- **`e2e/mock-board.workflow.mjs` flakes ~1 in 5 on a DNS lookup that escapes the shim's
+  fence.** Found 2026-09-01 while gating the post-text branch. The failure is
+  `scenario closed with 1 collected error(s): Failed to load resource:
+  net::ERR_NAME_NOT_RESOLVED` — a hostname the fixture reaches for that
+  `e2e/harness/shim.mjs` does not fence, so it goes to real DNS and fails only when the
+  resolver is slow or offline. **Measured as pre-existing, not branch-introduced:** five runs
+  of the whole corpus on `origin/main` (`8081fc9`) failed the same workflow twice, and five
+  runs on the branch failed it twice — the same rate on a tree that had not touched it. A
+  hermetic fixture that sometimes reaches the network is not hermetic, and worse, its green is
+  a coin flip rather than a result. The fix is to name the host in the shim's fence list (or
+  stop the fixture asking for it); the diagnosis is to log the failing URL, which the
+  collected error does not currently carry.
