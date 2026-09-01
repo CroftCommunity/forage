@@ -8,7 +8,9 @@
 //   node scripts/mock-snaps.mjs --as proposed         # files get a .proposed suffix
 //   node scripts/mock-snaps.mjs --only board-lens,menu-lens   # a subset of the routes below
 //       (routes: board thread board-lens board-lens-media board-lens-compact board-lens-in
-//        board-lens-cards board-lens-quote board-lens-hover post-lens-quote thread-lens thread-lens-quote thread-lens-sheet thread-lens-embed menu-lens focus-lens reply-lens thread-lens-reply
+//        board-lens-cards board-lens-quote board-lens-hover board-lens-refresh
+//        board-lens-refresh-news board-lens-refresh-pill post-lens-quote thread-lens
+//        thread-lens-quote thread-lens-sheet thread-lens-embed menu-lens focus-lens reply-lens thread-lens-reply
 //        news-lens news-lens-replies news-board news-board-nothumb)
 //   node scripts/mock-snaps.mjs --as current --serve ../../forage
 //       # the same script and fixtures, rendering ANOTHER checkout (main): the
@@ -38,6 +40,7 @@ import { scenario } from '../e2e/harness/scenario.mjs';
 import { RESPONSES, FAKE_SIGNED_IN, THREAD_PATH, NODE_IDS, ROOT as THREAD_ROOT } from '../e2e/harness/mock-thread.mjs';
 import { RESPONSES as BOARD, BOARD_PATH, QUOTE_PATH } from '../e2e/harness/mock-board.mjs';
 import { RESPONSES as NEWS, BOARD_PATH as NEWS_BOARD, THREAD_PATH as NEWS_THREAD, NODE_IDS as NEWS_NODES } from '../e2e/harness/mock-newspost.mjs';
+import { RESPONSES as REFRESH } from '../e2e/harness/mock-refresh.mjs';
 import { mergeManifest } from './lib/snaps-manifest.mjs';
 import { SKINS } from '../js/skins.js';
 import { execFileSync } from 'node:child_process';
@@ -270,6 +273,46 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
   // phone has no pointer and the rule is fenced by (hover: hover). The second
   // row scrolled to the top of the frame and its text hovered: on main the text
   // underlines and the row stays as it is; on the branch the row lights.
+  // ---- lens:mock-refresh — the control bar's right end, and the feed CHANGING.
+  // A separate scenario because its fixture declares getFeed? as a sequence:
+  // page one, then page one with three arrivals on top. The at-rest frame is
+  // captured on BOTH trees (it is the bar's layout that changed); the news and
+  // pill frames need the seam this branch introduces, so on a tree without it
+  // they are skipped rather than faked — a mock shows the engine or nothing.
+  if (wanted('board-lens-refresh') || wanted('board-lens-refresh-news') || wanted('board-lens-refresh-pill')) {
+    const rf = await scenario('first-visit', { root: SERVE, mode: 'bluesky',
+      initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: REFRESH });
+    await rf.page.setViewportSize({ width: vp.width, height: vp.height });
+    await rf.page.goto(`${rf.origin}${BOARD_PATH}`);
+    await rf.page.waitForSelector('.postrow', { timeout: 15000 });
+    await rf.page.evaluate(() => document.fonts?.ready);
+    await shoot(rf.page, 'board-lens-refresh', 'lens:mock-refresh', name, vp);
+    const hasSeam = await rf.page.evaluate(() => typeof window.__forageCheckForNew === 'function');
+    if (hasSeam) {
+      if (wanted('board-lens-refresh-news')) {
+        await rf.page.evaluate(() => { window.__shimAdvance(); return window.__forageCheckForNew(); });
+        await rf.page.waitForSelector('[data-refresh][data-state="news"]', { timeout: 10000 });
+        await rf.page.waitForTimeout(150);
+        await shoot(rf.page, 'board-lens-refresh-news', 'lens:mock-refresh', name, vp);
+      }
+      // D14: the same pending count, seen from where the bar no longer is
+      if (wanted('board-lens-refresh-pill')) {
+        if (!wanted('board-lens-refresh-news')) {
+          await rf.page.evaluate(() => { window.__shimAdvance(); return window.__forageCheckForNew(); });
+          await rf.page.waitForSelector('[data-refresh][data-state="news"]', { timeout: 10000 });
+        }
+        await rf.page.evaluate(() => window.scrollTo(0, 1200));
+        await rf.page.waitForSelector('[data-newspill]', { timeout: 10000 });
+        await rf.page.waitForTimeout(200);
+        await shoot(rf.page, 'board-lens-refresh-pill', 'lens:mock-refresh', name, vp);
+      }
+    } else {
+      console.log(`  (skipped board-lens-refresh-news/pill at ${name}: ${SERVE} has no refresh control)`);
+    }
+    rf.page.on('console', () => {});
+    await rf.close().catch(() => {});
+  }
+
   if (wanted('board-lens-hover') && name === 'desktop') {
     const hov = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: SKIN_INIT, responses: BOARD });
     await hov.page.setViewportSize({ width: vp.width, height: vp.height });
