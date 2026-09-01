@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forage Quote Posts v1</title>
-<meta name="mock-version" content="1">
+<title>Forage Quote Posts v2</title>
+<meta name="mock-version" content="2">
 <meta name="mock-baseline" content="forage@c4468e8">
-<meta name="mock-proposal" content="forage@d27ac4a">
+<meta name="mock-proposal" content="forage@f303a71">
 <style>
 :root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
   --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
@@ -43,9 +43,9 @@ code{font-size:.92em}
 <body>
 <div class="wrap">
   <header>
-    <div class="eyebrow">Forage &middot; mock &middot; quote-embed <b>v1</b> &middot; Current forage@c4468e8 &middot; Proposed forage@d27ac4a &middot; 2026-09-01</div>
+    <div class="eyebrow">Forage &middot; mock &middot; quote-embed <b>v2</b> &middot; Current forage@c4468e8 &middot; Proposed forage@f303a71 &middot; 2026-09-01</div>
     <h1>A quote post shows what it quotes</h1>
-    <p class="sub"><b>One proposal in four decisions</b>, from the owner's report on a live post
+    <p class="sub"><b>One proposal in five decisions</b> (1&ndash;4 proposed as v1; 5 added in v2 from the owner&rsquo;s reading of &sect; A), from the owner's report on a live post
       (<code>jwwhiley.bsky.social/post/3muhq4vkfes2r</code>, a quote of an Aaron Rupar video):
       &ldquo;we are not represnting hte quoted content &hellip; until you enter the post page &hellip;
       both in terms of showing what's being quoted and rendering the video.&rdquo;
@@ -53,7 +53,7 @@ code{font-size:.92em}
       The <b>post page</b> drew the quoted words and dropped the video the post exists to point at.</p>
     <p class="sub"><b>Every frame here is a capture of the engine</b> (MOCKS.md P1): Current is
       <code>main</code> at <code>c4468e8</code>, Proposed is <code>claude/quote-embed</code> at
-      <code>d27ac4a</code>, both by <code>scripts/mock-snaps.mjs</code> against
+      <code>f303a71</code>, both by <code>scripts/mock-snaps.mjs</code> against
       <code>e2e/harness/mock-board.mjs</code>, in the default skin (rule 4), at 390&times;844 and
       1280&times;900. Captures live in <code>plans/mocks/snaps/quote-embed/</code> (rule 3: a mock's
       pixels are its own).
@@ -82,6 +82,10 @@ code{font-size:.92em}
         <td>Deleted, blocked, or detached by its author each render as one line of plain words. The old guard keyed on the record's <code>uri</code> &mdash; which all three carry &mdash; so they drew a card reading &ldquo;&#10077; quoting [unknown]&rdquo; over an empty excerpt. That was one bad card on the post page; with decision 1 it would have been one on every such row in the feed.</td>
         <td>Rendering them the same as a live quote (what shipped); hiding them entirely (the post's words refer to something, and silence is not honest about what)</td>
         <td><code>render-matrix</code> shape <code>quotegone</code> (asserts the <code>data-quoted</code> reason, not just the count)</td></tr>
+      <tr><td>5</td><td><b>The quoted author is named, not handled</b> (v2, owner on the v1 &sect; A frame: &ldquo;the name in the quote box &hellip; that should be the human readable alias name&rdquo;)</td>
+        <td>The card names the quoted author by the name they chose, through the same <code>whoNode</code> the feed row and the thread head already use &mdash; so the handle stays in the tooltip and in what a screen reader reads, and an author who chose no name still shows their handle rather than nothing (feed-row v2: a blank display name is not a name). <b>Its link changed with it:</b> the author now links to their board here, which is where the post page&rsquo;s head byline already sends it; the outbound bsky.app link was this card&rsquo;s own invention.</td>
+        <td>Keeping the raw handle (what v1 captured); name-plus-handle on one line (the row&rsquo;s byline does not, and at 390 the quoted card is already the narrowest text on the screen); keeping the bsky.app link while changing the name (two naming rules in one card is how it drifted the first time)</td>
+        <td><code>render-matrix</code>: <code>quotedWho</code> and <code>quotedHandle</code> are separate claims on every live-quote shape, plus a <code>quotenoname</code> shape for the fallback</td></tr>
       <tr><td>4</td><td><b>Quoting a feed is not quoting a post</b></td>
         <td>A post that embeds a feed generator, a list or a starter pack shapes to no quoted post at all, rather than to a post card with an empty excerpt. Drawing the feed's own card is a separate decision and is not proposed here.</td>
         <td>Drawing it as a post card (what shipped); inventing a feed card in this change (unasked, and a different surface)</td>
@@ -93,7 +97,7 @@ code{font-size:.92em}
     <div class="eyebrow">Open</div>
     <h2>Open decisions &mdash; for the owner</h2>
     <div class="callout"><ul>
-      <li><b>The quoted byline is a handle, not a name.</b> bsky.app shows the quoted author's avatar, chosen name, handle and the post's age. Ours shows the handle alone, which is what shipped before this change and what this change kept. Making it a full byline is a real improvement and a decision of its own &mdash; not made here, because the report was about the content being absent, not about how its author is named.</li>
+      <li><b>Settled in v2 &mdash; decision 5.</b> v1 left the quoted byline as a bare handle and filed it here; the owner read the &sect; A frame and decided it. What is still open is the rest of the byline: bsky.app also shows the quoted author's <b>avatar</b> and the quoted post's <b>age</b>. Neither is drawn here, and neither has been asked for.</li>
       <li><b>The excerpt is capped at 200 characters</b> and cut without an ellipsis. Live, that bites a long quoted post. Raising the cap, or marking the cut, is unresolved.</li>
       <li><b>A quote of a quote renders one level.</b> The quoted post's own quote is not drawn. That matches the thread cascade's depth rule (3r) but has never been decided for this surface.</li>
     </ul></div>
@@ -102,6 +106,10 @@ code{font-size:.92em}
   <section>
     <div class="eyebrow">A</div>
     <h2>A &mdash; The feed row (decisions 1, 2)</h2>
+    <p class="sub"><span class="tag">v2</span> The Proposed frames were re-captured for decision 5 &mdash; the quoted byline
+      reads <b>&ldquo;quoting Frost Warning&rdquo;</b> here, where v1's captured &ldquo;quoting thefrostwarning.bsky.social&rdquo;.
+      MOCKS.md P3: a decision that changes in code goes back into the mock in the same landing, so the pixels below are
+      the ones the branch draws now.</p>
     <p class="sub">Current is the report: the quoter's sentence, then the counts, then the next post. Nothing says
       what is being talked about, and the video is not on this screen at all. Proposed puts the quoted post under the
       words, with its video on a stage that plays where it sits.
@@ -109,7 +117,7 @@ code{font-size:.92em}
       there is none to scroll to, so Current shows the top of the same board. The quote row is the first one under the header.</p>
     <div class="stage">
       <div class="device phone"><div class="device-label">Current &middot; phone 390&times;844</div><img class="shot" src="snaps/quote-embed/board-lens-quote.phone.current.png" alt="The board on main: the quote post's row shows its text and its counts, with no sign of the post it quotes."></div>
-      <div class="device phone"><div class="device-label">Proposed &middot; phone 390&times;844</div><img class="shot" src="snaps/quote-embed/board-lens-quote.phone.proposed.png" alt="The same row on the branch: under the quoter's words, a bordered card carrying the quoted author, the quoted words and the quoted video on a stage."></div>
+      <div class="device phone"><div class="device-label">Proposed &middot; phone 390&times;844</div><img class="shot" src="snaps/quote-embed/board-lens-quote.phone.proposed.png" alt="The same row on the branch: under the quoter's words, a bordered card reading 'quoting Frost Warning', the quoted words, and the quoted video on a stage."></div>
     </div>
     <div class="stage">
       <div class="device desk"><div class="device-label">Current &middot; desktop 1280&times;900</div><img class="shot" src="snaps/quote-embed/board-lens-quote.desktop.current.png" alt="The board on main at desktop width, the quote row carrying no quoted content."></div>
@@ -168,7 +176,7 @@ code{font-size:.92em}
     </div>
   </section>
 
-  <footer class="small">Frames captured 2026-09-01 by <code>scripts/mock-snaps.mjs</code>; manifest at
+  <footer class="small">Frames captured 2026-09-01 by <code>scripts/mock-snaps.mjs</code> (Proposed re-captured for v2 decision 5); manifest at
     <code>plans/mocks/snaps/quote-embed/manifest.json</code>. Nothing on this page is drawn.</footer>
 </div>
 </body>

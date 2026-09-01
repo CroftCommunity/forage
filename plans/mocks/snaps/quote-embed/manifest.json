@@ -43,7 +43,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@d27ac4a",
+      "baseline": "forage@f303a71",
       "population": "lens:mock-board"
     },
     {
@@ -52,7 +52,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@d27ac4a",
+      "baseline": "forage@f303a71",
       "population": "lens:mock-board"
     },
     {
@@ -61,7 +61,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@d27ac4a",
+      "baseline": "forage@f303a71",
       "population": "lens:mock-board"
     },
     {
@@ -70,7 +70,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@d27ac4a",
+      "baseline": "forage@f303a71",
       "population": "lens:mock-board"
     }
   ]
