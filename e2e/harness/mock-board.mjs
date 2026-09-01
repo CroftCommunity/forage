@@ -90,7 +90,29 @@ const clip = post('clip', 'did:plc:tiredactor', 'tiredactor.bsky.social', T(2), 
 const book = post('book', 'did:plc:reader', 'briarpatchradio.bsky.social', T(1), 'the one book about bogs everyone should read this autumn',
   { likes: 4, replies: 0, embed: external({ uri: 'https://example.org/books/the-bog-book', title: 'The Bog Book', description: 'A field guide to peatlands.', n: 'book', aspect: { width: 600, height: 900 } }) });
 
+// quote-embed (owner's report, 2026-09-01, on a live quote of a video post):
+// a QUOTE post — the quoter's sentence over somebody else's post, and that post
+// carries the video the whole thing is about. The hydrated quoted record is
+// #viewRecord, whose `embeds` carry the quoted post's own #view embeds; the
+// video's playlist points at the fenced host, so the frame proves the shape and
+// the claims prove the wiring. Under the load that matters (P2): the quoted
+// post's words are the longest thing on the row, and the quoter's are longer
+// still, so the row has to hold two paragraphs and a stage.
+const quotedVideo = {
+  $type: 'app.bsky.embed.record#viewRecord',
+  uri: 'at://did:plc:reporter/app.bsky.feed.post/quoted', cid: 'cid-quoted',
+  author: { did: 'did:plc:reporter', handle: 'thefrostwarning.bsky.social', avatar: AV, displayName: NAMES['thefrostwarning.bsky.social'] },
+  value: { $type: 'app.bsky.feed.post', createdAt: T(2),
+    text: 'Council leader, at this morning\u2019s flood briefing: \u201cThe drainage board throw out all these fearmongels to try to make the peatland restoration look as worse as possible\u201d \uD83E\uDD28' },
+  labels: [], likeCount: 812, replyCount: 96, repostCount: 240, quoteCount: 31, indexedAt: T(2),
+  embeds: [video('quoted', { width: 1280, height: 720 })],
+};
+const quote = post('quote', 'did:plc:quoter', 'quietcartographer.bsky.social', T(2),
+  'I try not to sound like an intellectual elitist, but is it so bad to expect our leaders who speak publicly to at least have a decent command of the English language?',
+  { likes: 931, replies: 82, reposts: 113, embed: { $type: 'app.bsky.embed.record#view', record: quotedVideo } });
+
 export const FEED = { feed: [
+  { post: quote },
   { post: youtube },
   { post: clip },
   { post: book },
@@ -102,12 +124,15 @@ export const FEED = { feed: [
 ] };
 
 export const BOARD_PATH = '/f/whats-hot';
+// the QUOTING post's own page — the second surface quotedContext renders on
+export const QUOTE_PATH = `/p?uri=${encodeURIComponent('at://did:plc:quoter/app.bsky.feed.post/quote')}`;
 
 export const RESPONSES = {
   'getTrendingTopics': { topics: [] },
   'getFeedGenerator?': { view: { uri: WH, displayName: 'Discover', description: 'trending',
     likeCount: 39382, creator: { handle: 'bsky.app' } }, isOnline: true, isValid: true },
   'getFeed?': FEED, 'getFeed': FEED,
+  [`getPostThread?uri=${encodeURIComponent(quote.uri)}`]: { thread: { post: quote, replies: [] } },
   'getPostThread': { thread: { post: plain, replies: [] } },
   'getQuotes': { posts: [] },
   'constellation.microcosm.blue/links?target=': { total: 0, linking_records: [] }, // the feed card's quote / starter-pack counts

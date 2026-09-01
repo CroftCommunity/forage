@@ -8,7 +8,7 @@
 //   node scripts/mock-snaps.mjs --as proposed         # files get a .proposed suffix
 //   node scripts/mock-snaps.mjs --only board-lens,menu-lens   # a subset of the routes below
 //       (routes: board thread board-lens board-lens-media board-lens-compact board-lens-in
-//        board-lens-cards board-lens-hover thread-lens thread-lens-quote thread-lens-sheet menu-lens focus-lens reply-lens thread-lens-reply
+//        board-lens-cards board-lens-quote board-lens-hover post-lens-quote thread-lens thread-lens-quote thread-lens-sheet menu-lens focus-lens reply-lens thread-lens-reply
 //        news-lens news-lens-replies news-board news-board-nothumb)
 //   node scripts/mock-snaps.mjs --as current --serve ../../forage
 //       # the same script and fixtures, rendering ANOTHER checkout (main): the
@@ -36,7 +36,7 @@
 // would otherwise name a tree the pixels are not from.
 import { scenario } from '../e2e/harness/scenario.mjs';
 import { RESPONSES, FAKE_SIGNED_IN, THREAD_PATH, NODE_IDS, ROOT as THREAD_ROOT } from '../e2e/harness/mock-thread.mjs';
-import { RESPONSES as BOARD, BOARD_PATH } from '../e2e/harness/mock-board.mjs';
+import { RESPONSES as BOARD, BOARD_PATH, QUOTE_PATH } from '../e2e/harness/mock-board.mjs';
 import { RESPONSES as NEWS, BOARD_PATH as NEWS_BOARD, THREAD_PATH as NEWS_THREAD, NODE_IDS as NEWS_NODES } from '../e2e/harness/mock-newspost.mjs';
 import { mergeManifest } from './lib/snaps-manifest.mjs';
 import { SKINS } from '../js/skins.js';
@@ -181,7 +181,7 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
   }
 
   // ---- lens:mock-board — the board, signed out (board-cards A–F, post-and-thread A/E) and signed in ----
-  if (wanted('board-lens') || wanted('board-lens-media') || wanted('board-lens-cards')) {
+  if (wanted('board-lens') || wanted('board-lens-media') || wanted('board-lens-cards') || wanted('board-lens-quote')) {
     const out = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: SKIN_INIT, responses: BOARD });
     await out.page.setViewportSize({ width: vp.width, height: vp.height });
     await out.page.goto(`${out.origin}${BOARD_PATH}`);
@@ -195,6 +195,15 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
       await out.page.waitForTimeout(200);
       await shoot(out.page, 'board-lens-cards', 'lens:mock-board', name, vp);
     }
+    // feed-row v16: the QUOTE row — the quoted post and its video, in the feed.
+    // Scrolled to the top of the frame, because the row is what the report was
+    // about: before this it was the quoter's sentence over nothing.
+    if (wanted('board-lens-quote')) {
+      await out.page.evaluate(() => document.querySelector('.postrow .card.quoted, .postrow [data-quoted]')?.closest('.postrow')?.scrollIntoView({ block: 'start' }));
+      await out.page.evaluate(() => window.scrollBy(0, -72));
+      await out.page.waitForTimeout(200);
+      await shoot(out.page, 'board-lens-quote', 'lens:mock-board', name, vp);
+    }
     // board-cards § D: the media stage — the portrait post scrolled to the top of the frame
     if (wanted('board-lens-media')) {
       await out.page.evaluate(() => document.querySelector('.postrow .media-stage, .postrow .stage, .postrow img')?.closest('.postrow')?.scrollIntoView({ block: 'start' }));
@@ -206,6 +215,19 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
     // errors the browser logs for them; this is a capture, not a gate
     out.consoleErrors(); out.errors();
     await out.close();
+  }
+  // feed-row v16: the same quote on its POST PAGE — the second surface
+  // quotedContext renders on, and the one that showed the quoted words with no
+  // video. Two surfaces, one shape: the pair is the frame worth comparing.
+  if (wanted('post-lens-quote')) {
+    const q = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: SKIN_INIT, responses: BOARD });
+    await q.page.setViewportSize({ width: vp.width, height: vp.height });
+    await q.page.goto(`${q.origin}${QUOTE_PATH}`);
+    await q.page.waitForSelector('.head-byline', { timeout: 15000 });
+    await q.page.evaluate(() => document.fonts?.ready);
+    await shoot(q.page, 'post-lens-quote', 'lens:mock-board', name, vp);
+    q.consoleErrors(); q.errors();
+    await q.close();
   }
   // feed-row v1: the board at COMPACT density — the phpBB skin's preference and
   // the owner's phone (2026-08-30). Same skin as every other frame (MOCKS.md
