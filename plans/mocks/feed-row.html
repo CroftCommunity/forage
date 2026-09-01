@@ -6,7 +6,7 @@
 <title>Forage Feed Row Proposals v14</title>
 <meta name="mock-version" content="14">
 <meta name="mock-baseline" content="forage@fc50517">
-<meta name="mock-proposal" content="forage@f7372fb">
+<meta name="mock-proposal" content="forage@20e9a0e">
 <style>
 :root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
   --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
@@ -340,6 +340,23 @@ code{font-size:.92em}
       <div class="device desk"><div class="device-label">Desktop · board-lens · Bluesky (dim)</div><img class="shot" src="snaps/feed-row/board-lens.desktop.bluesky-dark.proposed.png" alt="The board at 1280 in the Bluesky dim skin"></div>
       <div class="device desk"><div class="device-label">Desktop · board-lens · Bluesky (light)</div><img class="shot" src="snaps/feed-row/board-lens.desktop.bluesky.proposed.png" alt="The board at 1280 in the Bluesky light skin"></div>
     </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Proposal N</div>
+    <h2>N. The repost's own rail carries the highlight — one line, not two (v14)</h2>
+    <p class="sub">Scrolled to the quote-response, the same fixture as J. <b>Current</b> (main <code>fc50517</code>): the coloured wall at the far left, the grey rail under the avatar beside it, and the 13px indent the wall needs — so the node stands right of the reply above it and right of the reply below it, with three lines running down a two-line node. <b>Proposed</b>: one rail, under the avatar where every other comment's is, painted in the brand ink and a shade wider; the quote sits on the same left edge as its neighbours and the rail meets the elbow of the reply threaded under it. Decision 24 still holds — that elbow, and everything below it, stays grey.</p>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · thread-lens-quote · CURRENT (forage@fc50517)</div>
+        <img class="shot" src="snaps/feed-row-v14/thread-lens-quote.phone.current.png" alt="The quote-response today: a coloured bar at its outer edge, a grey rail under its avatar, and the whole node indented past its neighbours" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · thread-lens-quote · PROPOSED (forage@20e9a0e)</div>
+        <img class="shot" src="snaps/feed-row-v14/thread-lens-quote.phone.proposed.png" alt="The quote-response on the branch: one coloured rail under its avatar, aligned with every other comment, running into the reply's elbow" width="390"></div>
+    </div>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Desktop · thread-lens-quote · CURRENT (forage@fc50517)</div><img class="shot" src="snaps/feed-row-v14/thread-lens-quote.desktop.current.png" alt="The quote-response at 1280 today"></div>
+      <div class="device desk"><div class="device-label">Desktop · thread-lens-quote · PROPOSED (forage@20e9a0e)</div><img class="shot" src="snaps/feed-row-v14/thread-lens-quote.desktop.proposed.png" alt="The quote-response at 1280 on the branch"></div>
+    </div>
+    <div class="callout"><p><b>What the frames also show:</b> the indent was costing the byline its words — Current cuts the handle to <code>misterhoopers…</code> and the tell to <code>quot…</code> at 390; without it the same line reads <code>misterhoopersp… · 1d · ⟳ quote</code>. And the rail is now unconditional on a quote, so a repost nobody has answered still says what it is; before, the tell would have appeared only once a reply arrived.</p></div>
   </section>
 
   <section>
