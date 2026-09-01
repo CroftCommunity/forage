@@ -9,7 +9,7 @@
 //   node scripts/mock-snaps.mjs --only board-lens,menu-lens   # a subset of the routes below
 //       (routes: board thread board-lens board-lens-media board-lens-compact board-lens-in
 //        board-lens-cards board-lens-hover thread-lens thread-lens-quote thread-lens-sheet menu-lens focus-lens reply-lens thread-lens-reply
-//        news-lens news-lens-replies news-board)
+//        news-lens news-lens-replies news-board news-board-nothumb)
 //   node scripts/mock-snaps.mjs --as current --serve ../../forage
 //       # the same script and fixtures, rendering ANOTHER checkout (main): the
 //       # Current frames come from the tree the owner is running, captured by
@@ -273,6 +273,12 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
     await nb.page.waitForSelector('.postrow', { timeout: 15000 });
     await nb.page.evaluate(() => document.fonts?.ready);
     await shoot(nb.page, 'news-board', 'lens:mock-newspost', name, vp);
+    // the link whose page has no og:image, scrolled to the top of the frame: on
+    // main the lens builds no media for it at all and the link goes nowhere
+    await nb.page.evaluate(() => { [...document.querySelectorAll('.postrow')]
+      .find((r) => r.textContent.includes('press.example.org'))?.scrollIntoView({ block: 'start' }); window.scrollBy(0, -72); });
+    await nb.page.waitForTimeout(200);
+    await shoot(nb.page, 'news-board-nothumb', 'lens:mock-newspost', name, vp);
     nb.consoleErrors(); nb.errors();
     await nb.close();
   }
