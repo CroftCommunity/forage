@@ -178,7 +178,9 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
     await em.page.goto(`${em.origin}${THREAD_PATH}`);
     await em.page.waitForSelector('.comment[data-kind="quote"]', { timeout: 15000 });
     await em.page.evaluate(() => document.fonts?.ready);
-    await em.page.evaluate((id) => { document.querySelector(`.comment[data-node-id="${id}"]`)?.scrollIntoView({ block: 'start' }); window.scrollBy(0, -72); }, NODE_IDS[7]);
+    // the WORDLESS one anchors the frame: it is the reported shape, and it is the
+    // node whose Current and Proposed differ most (an empty row vs a quote card)
+    await em.page.evaluate((id) => { document.querySelector(`.comment[data-node-id="${id}"]`)?.scrollIntoView({ block: 'start' }); window.scrollBy(0, -72); }, NODE_IDS[8]);
     await em.page.waitForTimeout(200);
     await shoot(em.page, 'thread-lens-embed', 'lens:mock-thread', name, vp);
     await em.close();
