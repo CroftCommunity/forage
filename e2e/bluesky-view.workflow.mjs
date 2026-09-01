@@ -283,39 +283,49 @@ export async function run() {
   assert.match(await repostBtn.getAttribute('aria-label'), /^Repost$/, 'named for a screen reader');
   assert.equal(await qnode.locator(':scope > .avcol > .av').count(), 1, 'the avatar heads its column like any comment');
 
-  // 3q: the quote is WALLED — a left rule — so it reads as a top-level thread
-  // on the post instead of blending into the replies beneath it.
+  // 3q: the quote is MARKED — so it reads as a top-level thread on the post
+  // instead of blending into the replies beneath it. feed-row v14 decision 34:
+  // the mark is the quote's own rail in the brand ink, not a second bar outside
+  // the avatar column ("so many lines"), so a quote draws a rail whether or not
+  // it has replies of its own.
   //
   // Phase 8 (plan 2026-08-29 post-and-thread, decision 2): the collapse
   // GUTTER is retired. The grammar now: a comment WITH replies carries one ⊖
   // (button[data-fold]) on its action row and a rail (.avcol > .line) under
-  // its avatar; a reply without children carries neither; a walled quote
-  // carries neither. Each child draws its own elbow (a ::before). Folding
-  // hides .kids and the button says how many it hid.
+  // its avatar; a reply without children carries neither. Each child draws its
+  // own elbow (a ::before). Folding hides .kids and the button says how many
+  // it hid.
   const chrome = (n) => ({
-    wall: n.querySelector(':scope > .wall')?.getBoundingClientRect().width ?? 0, // v11 decision 24: an element on the quote's own rows, not a border
+    wall: n.querySelectorAll(':scope > .wall').length, // v14 decision 34: retired — the rail is the mark
     folds: n.querySelectorAll(':scope > .comment-body > .comment-actions > [data-fold]').length,
     rails: n.querySelectorAll(':scope > .avcol > .line').length,
+    railWidth: n.querySelector(':scope > .avcol > .line')?.getBoundingClientRect().width ?? 0,
+    railInk: (() => { const l = n.querySelector(':scope > .avcol > .line'); return l ? getComputedStyle(l).backgroundColor : null; })(),
+    indent: parseFloat(getComputedStyle(n).paddingLeft),
     elbow: getComputedStyle(n, '::before').content !== 'none',
     gutters: n.querySelectorAll('.gutter').length,
     kids: n.querySelectorAll(':scope > .kids > *').length,
   });
   const qbox = await qnode.evaluate(chrome);
-  assert.ok(qbox.wall >= 2, `the quote carries a left wall (got ${qbox.wall}px)`);
+  assert.equal(qbox.wall, 0, 'the second bar outside the avatar column is gone (v14 decision 34)');
+  assert.equal(qbox.rails, 1, 'the quote carries a rail — with or without replies, that rail is the tell');
+  assert.ok(qbox.railWidth >= 2, `and it is pronounced (got ${qbox.railWidth}px)`);
   // Phase 9 made the quote a comment, so decision 2 applies to it too: a fold
-  // and a rail iff it has replies of its own, never a gutter
+  // iff it has replies of its own, never a gutter
   assert.equal(qbox.folds, qbox.kids ? 1 : 0, `a quote folds iff it has children (${qbox.kids})`);
-  assert.equal(qbox.rails, qbox.folds, 'and the rail comes with the fold');
   assert.equal(qbox.gutters, 0, 'the gutter is gone everywhere');
   const leaf = await page.locator('.comment[data-node-id$="/myreply"]').evaluate(chrome);
-  assert.equal(leaf.wall, 0, 'a reply is NOT walled');
+  assert.equal(leaf.wall, 0, 'a reply is NOT marked as a quote');
   assert.equal(leaf.folds, 0, 'a reply with no children has no fold');
   assert.equal(leaf.rails, 0, 'and no rail');
   assert.equal(leaf.elbow, false, 'a depth-0 reply has no elbow');
+  assert.equal(qbox.indent, leaf.indent, `a quote sits on the same left edge as any comment (${qbox.indent}px vs ${leaf.indent}px)`);
   const parent = page.locator('.comment[data-node-id$="/reply1"]');
   const parentChrome = await parent.evaluate(chrome);
   assert.equal(parentChrome.folds, 1, 'a reply with children has exactly one fold');
   assert.equal(parentChrome.rails, 1, 'and a rail under its avatar');
+  assert.ok(parentChrome.railInk && parentChrome.railInk !== qbox.railInk,
+    `the quote's rail is highlighted and an ordinary reply's is not (both ${qbox.railInk})`);
   const child = await page.locator('.comment[data-node-id$="/reply1a"]').evaluate(chrome);
   assert.equal(child.elbow, true, 'a nested reply draws its elbow off the rail');
   assert.equal(await parent.locator(':scope > .avcol > .line').evaluate((n) => getComputedStyle(n).pointerEvents), 'none',
@@ -352,8 +362,8 @@ export async function run() {
   assert.equal(cascade.nestedQuotes, 1, 'the quote-of-the-quote nests INSIDE the quote it answers');
   assert.equal(cascade.nestedReplies, 1, 'and so does the reply to the quote');
   const nested = page.locator('[data-kind="quote"][data-depth="1"]');
-  assert.ok(await nested.evaluate((n) => (n.querySelector(':scope > .wall')?.getBoundingClientRect().width ?? 0) >= 2), // v11 decision 24: the wall is an element
-    'a wall nests inside a wall — the grammar holds at every depth');
+  assert.ok(await nested.evaluate((n) => (n.querySelector(':scope > .avcol > .line')?.getBoundingClientRect().width ?? 0) >= 2), // v14 decision 34: the rail is the mark
+    'a marked quote nests inside a marked quote — the grammar holds at every depth');
 
   // 3w: a thread takes replies. The reply threads onto the post it answers —
   // parent is what you clicked, root is the top of the thread — and both refs

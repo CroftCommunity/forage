@@ -65,6 +65,7 @@ before it is built (RED first), the frames captured from the engine (MOCKS.md P1
 | J | 31 | The **external link card** (a link to a book, owner's screenshot): the preview picture sits centred and contained in its frame rather than pinned to an edge, with the title, description and domain under it — bsky.app's card. Measured on the owner's example before drawing | `bluesky-view` — the external card's picture is centred in its frame; the title and domain are under it |
 | K | 32 | The row's **byline is a step larger** (owner: "bump the size up on the top left author attribution too"): the chosen name at the body size and weight 600, the mark and time beside it — bsky.app's byline is 15px bold on a 15px post. Today it is `--t-xs` (13px). Measured under the v2 load (the 64-grapheme name, the 30-character handle) so the line still holds at 390 and 320 | mock-board — the byline's computed size ≥ the post text's; the one-line claims already there |
 | E | O12 → 33 | Option 1, on the owner's "let's do it": no chip row; the row's TEXT is faceted (tags → `/h/`, links live, mentions out) — which meant the text could no longer be the thread link, so **the row's own ground opens the thread** (bsky.app's card) through the replies link's press; a link post's words are text too, the card under them is the link | mock-board — "no hashtag chips under a row" / "a #tag in the row’s text is a link" / "a press on the row’s own ground opens its thread" / "a press on a tag opens the tag’s board"; open-at-top |
+| L | 34 | The quote's mark is its OWN rail, painted in the brand ink and drawn whether or not it has replies; `span.wall`, the 13px indent and the elbow offset it needed all go. Decision 24's rule holds — the elbows below stay grey | mock-thread — "the second bar outside the avatar column is gone" / "no extra indent" / "the quote's rail is highlighted" / "the rail runs down the quote's replies"; `bluesky-view` — the same at depth 0 and, RED on main, a rail on the depth-1 leaf quote |
 
 Captures: `scripts/mock-snaps.mjs` — `board-lens-hover` (desktop only, A) and `thread-lens`
 (both viewports, both columns — the fixture's root gained a picture for C, which is a new
@@ -78,6 +79,14 @@ population for Current too).
   invisible or a selection-strength value.
 - **Reply alone moves; the like row stays.** Considered moving the whole row (bsky.app's
   shape); the owner chose Reply alone, like at the top right. Recorded as decided.
+- **One line, not two (v14).** The wall was correct about *extent* (decision 24) and wrong about
+  *count*: on the owner's phone a quote showed a coloured bar, a grey rail and an indent that put
+  it right of everything around it — three marks for one fact. The rail was already drawn under
+  every comment with replies, already the line the elbows hang off, and already in the right
+  column; painting it and drawing it unconditionally says "this is a repost with its own thread"
+  with nothing added. Considered keeping the wall and dropping the rail: the tell would then
+  disappear the moment a reply arrived and the rail came back beside it.
+
 - **The wall as an element, not a border.** A border on the node is the cheapest wall and is
   wrong by construction once the node has children. A grid item spanning the node's own rows
   has exactly the extent the owner drew.

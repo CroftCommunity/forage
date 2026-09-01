@@ -431,7 +431,9 @@ export function focusComment(container, id, { threadHref }) {
 // rail (.line) down from its avatar and carries ONE fold (⊖) on its action row;
 // each child draws its own elbow off the rail in CSS. A comment without
 // replies has neither — forty direct replies to a post no longer look nested
-// under nothing. The old full-height collapse gutter was never discoverable
+// under nothing. A QUOTE is the one exception (v14 decision 34): it always
+// draws the rail, painted in the brand ink, because that rail IS the tell that
+// this node is a repost with its own thread. The old full-height collapse gutter was never discoverable
 // on a phone and cost mis-taps; it is retired, deliberately, and a later
 // session that "restores" it is undoing a decision.
 //
@@ -441,19 +443,22 @@ const CHILD_PAGE = 20; // "load N more replies" threshold
 
 export function commentNode(node, ctx) {
   const hasKids = (node.children || []).length > 0 || (node.deferred || 0) > 0;
-  // Phase 9 (decision 5): a quote-response is a comment with a WALL — the
-  // brand rule on the node's own outer edge, outside the avatar; the lens
-  // says which nodes are quotes (node.kind) and hands the extra byline words
-  // and controls through ctx.
+  // Phase 9 (decision 5): a quote-response is a comment marked as quoted
+  // material; the lens says which nodes are quotes (node.kind) and hands the
+  // extra byline words and controls through ctx.
+  // feed-row v14 decision 34 (owner: "why don't we just make that line the one
+  // that has the highlight and do away with sort of the secondary indent
+  // one?"): the mark is the node's OWN rail — the line under its avatar,
+  // painted in the brand ink — not a second bar outside the avatar column. A
+  // quote therefore draws a rail whether or not it has replies: with replies
+  // the rail runs into the elbow of the first one, without them it stops at
+  // the bottom of the quote's action row.
   const isQuote = node.kind === 'quote';
   const wrap = el('div', { class: 'comment' + (hasKids ? '' : ' leaf') + (isQuote ? ' quote' : ''), 'data-node-id': node.id,
     ...(node.kind ? { 'data-kind': node.kind } : {}), ...(node.depth != null ? { 'data-depth': String(node.depth) } : {}) });
 
-  // feed-row v11 decision 24: the wall is an element on the quote's OWN rows —
-  // a border on the node ran down its replies, which thread like any reply
-  const wall = isQuote ? el('span', { class: 'wall', 'aria-hidden': 'true' }) : null;
   const avcol = el('div', { class: 'avcol' }, avatarSlot(node.author, node.avatar || null),
-    hasKids ? el('span', { class: 'line', 'aria-hidden': 'true' }) : null);
+    hasKids || isQuote ? el('span', { class: 'line', 'aria-hidden': 'true' }) : null);
 
   let fold = null;
   if (hasKids) {
@@ -530,7 +535,7 @@ export function commentNode(node, ctx) {
   const bodyWrap = el('div', { class: 'comment-body' }, meta, text, actionsRow, replyHost);
   const childrenWrap = el('div', { class: 'kids' });
 
-  wrap.append(...[wall, avcol, bodyWrap, childrenWrap].filter(Boolean)); // a null child would print as the word "null"
+  wrap.append(...[avcol, bodyWrap, childrenWrap].filter(Boolean)); // a null child would print as the word "null"
 
   // render children with paging + continuation stubs
   renderChildren(childrenWrap, node, ctx);

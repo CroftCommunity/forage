@@ -456,7 +456,7 @@ dialog.menu::backdrop { background: transparent; }
 .comment-body { display: contents; }
 .comment > .avcol { grid-column: 1; grid-row: 1 / span 3; display: flex; flex-direction: column; align-items: center; }
 .comment > .avcol .line { flex: 1; width: 2px; margin-top: 4px; background: var(--border); pointer-events: none; }
-.comment.leaf > .avcol .line, .comment.collapsed > .avcol .line { display: none; }
+.comment.leaf:not(.quote) > .avcol .line, .comment.collapsed:not(.quote) > .avcol .line { display: none; }
 .comment > .comment-body > .byline { grid-column: 2; }
 .comment > .comment-body > .comment-text { grid-column: 2; }
 /* the vote stack sits in the avatar column at the vertical MIDDLE of the comment's body — text
@@ -508,11 +508,11 @@ dialog.menu::backdrop { background: transparent; }
 .btn.star { padding: 4px 8px; line-height: 1; font-size: 16px; }
 .btn.star[aria-pressed="true"] { color: var(--brand); border-color: var(--brand); }
 
-/* 3q: a quote-response at the top of a thread. The WALL is the grammar for
-   quoted material (see .feed-blurb); the grey rail next door means
-   "collapsible reply", so these must not look alike — the wall is static and
-   sits inside its own tinted block. .cmeta/.cbody had no rules at all before
-   this, which is why the node rendered as unstyled body text (2026-08-26). */
+/* 3q: a quote-response at the top of a thread. It is drawn by the comment rules
+   above — .cmeta/.cbody had no rules at all before 3q, which is why the node
+   rendered as unstyled body text (2026-08-26). What marks it as quoted material
+   lives under "a quote is a COMMENT marked as quoted material" below: since v14
+   decision 34 that is the node's own rail in the brand ink, not a second bar. */
 /* deep links (decision 10): the addressed comment, its bar, and the quiet share glyph */
 .cbtn.share { margin-left: auto; opacity: .7; }
 .cbtn.share .glyph { display: inline-flex; width: 1.15em; height: 1.15em; }
@@ -527,17 +527,20 @@ dialog.menu::backdrop { background: transparent; }
 }
 .focus-bar { background: var(--tint); color: var(--text); font-size: var(--t-sm); padding: 8px 12px; border-radius: var(--radius-card); margin-bottom: var(--s3); }
 @media (max-width: 480px) { .cbtn { min-height: 44px; } }
-/* Phase 9 (decision 5): a quote is a walled COMMENT — the brand rule on the node's own
-   outer edge, outside the avatar; no tint, no box */
-/* feed-row v11 decision 24 (owner: "I only want the pronounced left side quote bar
-   on the actual repost, not on all of its comments"): the wall is a grid item over
-   the quote's own three rows — byline, text, action row — at the node's left
-   edge; it was a border on the node, which ran down the replies threaded under
-   it. The replies keep the indent (the node's padding) and thread like any reply. */
-.comment.quote { padding-left: 13px; margin: 4px 0; }
-.comment.quote > .wall { grid-column: 1; grid-row: 1 / span 3; justify-self: start; width: 3px; margin-left: -13px;
-  background: var(--brand-ink); border-radius: var(--radius-sm); pointer-events: none; }
-.kids > .comment.quote::before, .kids > .comment.quote::after { left: -10px; }
+/* Phase 9 (decision 5): a quote is a COMMENT marked as quoted material — no tint,
+   no box. feed-row v11 decision 24 kept that mark off the quote's replies (a wall
+   spanning its own three rows, outside the avatar column).
+   feed-row v14 decision 34 (owner: "make that line the one that has the highlight
+   and do away with sort of the secondary indent one … so many lines"): the mark is
+   the node's OWN rail, painted in the brand ink and a shade wider. The second bar
+   and the 13px indent it needed are gone, so a quote sits on the same left edge as
+   every other comment and the thread is one column of lines, not two. The rail
+   runs the quote's three rows and meets the elbow of its first reply; with no
+   replies it simply stops at the bottom of the action row. The elbows below stay
+   grey — decision 24's rule still holds: the pronounced bar is on the repost, not
+   on its comments. */
+.comment.quote { margin: 4px 0; }
+.comment.quote > .avcol .line { width: 3px; background: var(--brand-ink); border-radius: var(--radius-sm); }
 .kind { display: inline-flex; align-items: center; gap: 2px; color: var(--muted); }
 .cbtn { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 0 8px; border-radius: var(--radius-chip); border: 0;
   background: none; color: var(--muted); font: inherit; font-size: var(--t-xs); cursor: default; }

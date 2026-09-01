@@ -9,7 +9,7 @@
 // cannot fail under a load it never carries. This fixture carries it:
 //
 //   - handles at the lengths Bluesky actually hands us (up to 30 chars)
-//   - a quote node (walled) with a reply under it
+//   - a quote node (its rail in the brand ink) with a reply under it
 //   - a chain four deep, so the elbows and the phone's 14px indent are seen
 //   - a zero-like leaf beside an eleven-like parent (the stack's two widths)
 //   - a signed-in session, so the vote stack is a button and Reply is offered
@@ -54,7 +54,7 @@ const d1 = { post: post('d1', 'did:plc:d1', 'averyveryverylonghandle.bsky.social
 const leaf = { post: post('leaf', 'did:plc:leaf', 'joshandtheargonauts.bsky.social', '2026-08-30T09:12:00Z',
   "Don't stand in the way of progress!", { likes: 0 }), replies: [] };
 
-// a quote-response: it arrives through getQuotes, walled, with a reply of its own
+// a quote-response: it arrives through getQuotes, marked by its own rail, with a reply of its own
 const quote = post('q1', 'did:plc:q1', 'misterhooperspecial.bsky.social', '2026-08-30T08:50:00Z',
   "I'm sorry, but the cheeseburger is the optimal treat unit for this delivery method.",
   // v12 decision 25: two reposts and a quote, so the ⟳ figure (reposts + quotes) reads 3
