@@ -45,24 +45,37 @@ export async function run() {
     const strays = await page.evaluate(() => { const w = document.createTreeWalker(document.querySelector('#main'), NodeFilter.SHOW_TEXT); const out = []; let n;
       while ((n = w.nextNode())) { const t = n.textContent.trim(); if ((t === 'null' || t === 'undefined') && n.parentElement.closest('.comment')) out.push(n.parentElement.className); } return out; });
     assert.deepEqual(strays, [], `a comment prints a stringified null or undefined (in ${strays.join(', ')})`);
-    // feed-row v11 decision 24 (owner, 2026-08-30: "I only want the pronounced left
-    // side quote bar on the actual repost, not on all of its comments — they can
-    // thread just like a normal comment"): the wall covers the quote's own rows
-    // — byline, text, action row — and stops before its replies, which thread
-    // beneath it like any reply
-    const wallGeo = await page.locator('.comment[data-kind="quote"][data-depth="0"]').first().evaluate((q) => { // the plain thread page — on the deep-link page this node is folded and its rows are 0px // the plain thread page: on the deep-link page this node is folded and its rows are 0px
-      const wall = q.querySelector(':scope > .wall'); const kid = q.querySelector(':scope > .kids > .comment');
+    // feed-row v14 decision 34 (owner, 2026-09-01: "why don't we just make that line
+    // the one that has the highlight and do away with sort of the secondary indent
+    // one? … so many lines"). The quote's mark is its OWN rail — the line under its
+    // avatar, in the brand ink — and there is no second bar outside the avatar
+    // column: decision 24's rule (the pronounced bar is on the repost, not on its
+    // comments) now holds because the rail stops where the node's rows stop.
+    const railGeo = await page.locator('.comment[data-kind="quote"][data-depth="0"]').first().evaluate((q) => { // the plain thread page: on the deep-link page this node is folded and its rows are 0px
+      const rail = q.querySelector(':scope > .avcol > .line'); const kid = q.querySelector(':scope > .kids > .comment');
       const text = q.querySelector(':scope > .comment-body > .comment-text');
-      if (!wall) return { wall: false, border: parseFloat(getComputedStyle(q).borderLeftWidth) };
-      const w = wall.getBoundingClientRect(), t = text?.getBoundingClientRect();
-      return { wall: true, width: w.width, coversText: t ? w.top <= t.top && w.bottom >= t.bottom : null,
-        stopsBeforeKids: kid ? w.bottom <= kid.getBoundingClientRect().top + 1 : null, hasKid: !!kid };
+      const plain = document.querySelector('.comment:not([data-kind="quote"]) > .avcol > .line');
+      if (!rail) return { rail: false };
+      const r = rail.getBoundingClientRect(), t = text?.getBoundingClientRect();
+      return { rail: true, width: r.width, ink: getComputedStyle(rail).backgroundColor,
+        plainInk: plain ? getComputedStyle(plain).backgroundColor : null,
+        plainWidth: plain ? plain.getBoundingClientRect().width : null,
+        walls: q.querySelectorAll(':scope > .wall').length,
+        border: parseFloat(getComputedStyle(q).borderLeftWidth),
+        padLeft: parseFloat(getComputedStyle(q).paddingLeft),
+        reachesText: t ? r.bottom >= t.bottom : null,
+        stopsBeforeKids: kid ? r.bottom <= kid.getBoundingClientRect().top + 1 : null, hasKid: !!kid };
     });
-    assert.ok(wallGeo.wall, `the quote draws its wall as its own element (a ${wallGeo.border}px border on the node runs down its replies)`);
-    assert.ok(wallGeo.width >= 2, `the wall is pronounced (${wallGeo.width}px)`);
-    assert.ok(wallGeo.coversText, `the wall covers the quote’s own text ${JSON.stringify(wallGeo)}`);
-    assert.ok(wallGeo.hasKid, 'the fixture quote has a reply, so the claim has something to fail under');
-    assert.ok(wallGeo.stopsBeforeKids, 'the wall runs down the quote’s replies');
+    assert.ok(railGeo.rail, 'the quote draws a rail under its avatar — that rail IS the tell');
+    assert.equal(railGeo.walls, 0, 'and nothing else: the second bar outside the avatar column is gone (decision 34)');
+    assert.equal(railGeo.border, 0, `no border on the node either (${railGeo.border}px would run down its replies)`);
+    assert.equal(railGeo.padLeft, 0, `and no extra indent (${railGeo.padLeft}px) — a quote sits on the same left edge as any comment`);
+    assert.ok(railGeo.width >= 2, `the rail is pronounced (${railGeo.width}px)`);
+    assert.ok(railGeo.plainInk && railGeo.ink !== railGeo.plainInk,
+      `the quote's rail is highlighted, an ordinary reply's is not (both ${railGeo.ink})`);
+    assert.ok(railGeo.reachesText, `the rail runs the quote’s own rows ${JSON.stringify(railGeo)}`);
+    assert.ok(railGeo.hasKid, 'the fixture quote has a reply, so the claim has something to fail under');
+    assert.ok(railGeo.stopsBeforeKids, 'the rail runs down the quote’s replies');
 
     // feed-row v1 claim 6: the post's text at the head is text — one step up
     // from the body (20px), body weight — not a 26px serif heading. The

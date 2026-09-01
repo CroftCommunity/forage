@@ -1,0 +1,41 @@
+{
+  "capturedAt": "2026-09-01",
+  "files": [
+    {
+      "file": "thread-lens-quote.phone.current.png",
+      "route": "thread-lens-quote",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@fc50517",
+      "population": "lens:mock-thread"
+    },
+    {
+      "file": "thread-lens-quote.desktop.current.png",
+      "route": "thread-lens-quote",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@fc50517",
+      "population": "lens:mock-thread"
+    },
+    {
+      "file": "thread-lens-quote.phone.proposed.png",
+      "route": "thread-lens-quote",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@20e9a0e",
+      "population": "lens:mock-thread"
+    },
+    {
+      "file": "thread-lens-quote.desktop.proposed.png",
+      "route": "thread-lens-quote",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@20e9a0e",
+      "population": "lens:mock-thread"
+    }
+  ]
+}

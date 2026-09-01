@@ -6,6 +6,17 @@ by its landing. Per `CroftC/.claude/CHANGELOGS.md`, the branch that changes some
 reader runs adds its entry here before it lands. Started 2026-08-29; the August entries
 below are the landings of that month, and everything earlier is in `git log`.
 
+## 2026-09
+
+- 2026-09-01 **One line down a repost, not two.** A post that quoted the thread's post used to
+  carry two vertical lines: a coloured bar on its outer edge, plus the grey rail every comment
+  with replies draws under its avatar — with the bar's indent pushing the whole node right of
+  everything around it. Now the repost's own rail *is* the mark: the line under its avatar is
+  drawn in the accent colour, and it is there whether or not anyone answered — running into the
+  first reply's elbow when there is one, and stopping at the bottom of the repost otherwise. The
+  outer bar and its indent are gone, so a thread reads as one column of lines and a repost still
+  says plainly that it is one. (owner: "so many lines"; mock feed-row v14, decision 34)
+
 ## 2026-08
 
 - 2026-08-31 **Bluesky videos play on Chrome again.** A clip on Chrome — on Android especially —

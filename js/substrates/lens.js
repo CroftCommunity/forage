@@ -288,14 +288,16 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
 }
 
 // 3q: how a thread node is drawn. A quote-response is a top-level thread ON
-// the post (the OG post stays the container), so it gets a left WALL — the
-// same grammar the feed blurb uses: a wall means quoted material. A reply gets
-// the collapse gutter instead. Never both: with a bare quote node above them,
-// the walled replies below read as if they hung off the quote (2026-08-26).
+// the post (the OG post stays the container), so it is MARKED as quoted
+// material; a reply is not. `walled` keeps its name from 3q, when the mark was
+// a left wall outside the avatar column; since feed-row v14 decision 34 the
+// mark is the node's own rail painted in the brand ink (css/app.css,
+// `.comment.quote > .avcol .line`). The flag still answers one question: is
+// this node quoted material?
 export function threadNodeStyle(node) {
-  // 3r: walled at ANY depth. A quote can itself be quoted, so the wall marks
-  // the KIND of material, never its position — a cascade of quotes nests walls
-  // the way a cascade of replies nests gutters.
+  // 3r: marked at ANY depth. A quote can itself be quoted, so the mark says the
+  // KIND of material, never its position — a cascade of quotes nests marks the
+  // way a cascade of replies nests elbows.
   const isQuote = node.kind === 'quote';
   return { kind: isQuote ? 'quote' : 'reply', walled: isQuote };
 }
