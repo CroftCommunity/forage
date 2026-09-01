@@ -469,22 +469,29 @@ dialog.menu::backdrop { background: transparent; }
 /* ---- Comments: the rail and the fold (plan 2026-08-29 post-and-thread, decision 2) ---- */
 .comment { position: relative; display: grid; grid-template-columns: 32px minmax(0, 1fr); column-gap: 10px; padding: 8px 0 2px; }
 .comment-body { display: contents; }
-.comment > .avcol { grid-column: 1; grid-row: 1 / span 3; display: flex; flex-direction: column; align-items: center; }
+.comment > .avcol { grid-column: 1; grid-row: 1 / span 4; display: flex; flex-direction: column; align-items: center; }
 .comment > .avcol .line { flex: 1; width: 2px; margin-top: 4px; background: var(--border); pointer-events: none; }
 .comment.leaf:not(.quote) > .avcol .line, .comment.collapsed:not(.quote) > .avcol .line { display: none; }
 .comment > .comment-body > .byline { grid-column: 2; }
 .comment > .comment-body > .comment-text { grid-column: 2; }
+/* reply-embeds (owner, 2026-09-01): a reply's pictures, video, link card and
+   quote card sit in the body column, between its words and its action row.
+   The avatar column spans one row more than a wordy reply needs; a comment
+   with no embed grows no taller for it, because the grid sets column-gap only
+   and an unused implicit row is 0px. */
+.comment > .comment-body > .comment-embed { grid-column: 2; margin: 6px 0 2px; display: grid; gap: 6px; }
 /* the vote stack sits in the avatar column at the vertical MIDDLE of the comment's body — text
    through action row, below the avatar — the rail passing behind it (owner, 2026-08-29; it was
    parked on the action row's line before) */
-.comment > .comment-body > .comment-actions { grid-column: 2; grid-row: 3; }
+.comment > .comment-body > .comment-actions { grid-column: 2; }
 .comment > .kids { grid-column: 1 / span 2; padding-left: 22px; }
 /* each child draws its own elbow: from the rail into its avatar's left edge, turning at the avatar's centre;
    a child that is not the last continues the rail below its elbow */
 .kids > .comment::before { content: ""; position: absolute; left: -7px; top: 0; width: 7px; height: 25px;
   border-left: 2px solid var(--border); border-bottom: 2px solid var(--border); border-radius: 0 0 0 10px; pointer-events: none; }
 .kids > .comment:not(:last-child)::after { content: ""; position: absolute; left: -7px; top: 25px; bottom: 0; width: 2px; background: var(--border); pointer-events: none; }
-.comment.collapsed > .kids, .comment.collapsed > .comment-body > .comment-text { display: none; }
+.comment.collapsed > .kids, .comment.collapsed > .comment-body > .comment-text,
+.comment.collapsed > .comment-body > .comment-embed { display: none; }
 .fold { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 0 8px; border-radius: var(--radius-chip); border: 0;
   background: none; color: var(--muted); font: inherit; font-size: var(--t-xs); cursor: pointer; white-space: nowrap; }
 .fold .glyph { font-size: 16px; line-height: 1; }

@@ -8,6 +8,18 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-01 **A reply shows what it is showing you.** A reply's picture, its video, its
+  link card and the post it quotes never rendered in a thread here: the reply's words came
+  through and everything else was dropped before any of it reached the screen. With words
+  above it the loss was quiet — a sentence where bsky.app showed a sentence and a photograph.
+  With no words it was total: a reply whose entire content is a picture, or a quote of
+  somebody else's picture, drew a name, a timestamp and an empty row. All of it renders now,
+  through the same stage, carousel, link card and quote card the feed and the post page
+  already used, so a reply is worth the same as a post — the reader's picture-size and
+  "pictures at once" settings included. A quote-response still shows no card for the post it
+  quotes, because that post is the one directly above it.
+  (owner, with a live example: "reply with an image that doesn't load")
+
 - 2026-09-01 **A quote post shows what it quotes — the video included.** When someone posts a
   comment on top of somebody else's post, the feed used to show only the comment: a sentence
   like "is it so bad to expect our leaders to have a decent command of the English language?"
