@@ -225,11 +225,21 @@ export async function run() {
   // `/f/<slug>` route is the check that the registration moved to
   // ensureSavedFeeds rather than leaving with the card.
   assert.equal(await page.locator('#side .card a[href="/feeds"]').count(), 0, 'no Feeds card on the rail');
-  assert.ok(await page.locator('.nav a[href="/f/whats-hot"]').count() === 1, 'the nav names the saved feed');
-  await page.goto(`${s.origin}/f/whats-hot`);
-  await page.waitForSelector('[data-feed-header]');
-  assert.equal(await page.locator('text=Unknown feed').count(), 0, 'a saved feed still resolves by its bare slug');
+  assert.ok(await page.locator('.nav a[href="/f/following"]').count() === 1, 'the nav names the saved timeline');
+  // `/f/following` and NOT `/f/whats-hot`: whats-hot is in CURATED, so it
+  // resolves whether or not anything registered it and proves nothing. Only a
+  // saved source the registry does not ship can tell the two apart — checked by
+  // deleting the registerSource call and watching this go red.
+  // CLICKED, not `goto`: a bare slug is the IN-SESSION form by design (3v — an
+  // rkey has no did, so it cannot resolve cold), and a fresh load would test the
+  // cold path this route has never had. Clicking is also what a reader does.
+  await page.click('.nav a[href="/f/following"]');
+  await page.waitForSelector('#main *');
+  await page.waitForTimeout(200);
+  assert.equal(await page.locator('text=Unknown feed').count(), 0,
+    `a saved source outside CURATED still resolves by its bare slug: ${await page.locator('#main').innerText()}`);
   await page.goto(`${s.origin}/`);
+  await page.waitForSelector('.nav a[href="/f/following"]');
 
   // the masthead @handle IS the profile link
   await page.goto(`${s.origin}/`);
