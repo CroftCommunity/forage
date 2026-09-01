@@ -86,6 +86,26 @@ export async function run() {
     } finally { await s.close(); }
   }
 
+  // ---- R9 (measure): right-aligned on whatever row it lands on. At 390 the
+  //      count state pushes the bar to two rows; `.grow` cannot help there,
+  //      because the spacer stays on row one. The first capture caught the
+  //      control sitting at the LEFT of row two — the opposite of the ask.
+  for (const [name, vp] of [['phone', PHONE], ['desktop', DESKTOP]]) {
+    const s = await board(vp);
+    try {
+      await s.page.evaluate(() => { window.__shimAdvance(); return window.__forageCheckForNew(); });
+      await s.page.waitForSelector('[data-refresh][data-state="news"]');
+      const m = await s.page.evaluate(() => {
+        const btn = document.querySelector('[data-refresh]');
+        const card = [...document.querySelectorAll('.card')].find((c) => c.querySelector('.postrow'));
+        return { btnRight: Math.round(btn.getBoundingClientRect().right),
+                 cardRight: Math.round(card.getBoundingClientRect().right) };
+      });
+      assert.ok(Math.abs(m.btnRight - m.cardRight) <= 2,
+        `R9 ${name}: with a count showing, refresh still ends at the column's right edge (btn ${m.btnRight}, card ${m.cardRight})`);
+    } finally { await s.close(); }
+  }
+
   // ---- R8 (behaviour): the bar scrolls away, so a pending count follows the
   //      reader down as a pill — and appears ONLY when there is something to say
   for (const [name, vp] of [['desktop', DESKTOP], ['phone', PHONE]]) {
