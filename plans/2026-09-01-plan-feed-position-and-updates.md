@@ -1,7 +1,7 @@
 # Plan: come back to your place in the feed — and be told what changed while you were gone
 
 date: 2026-09-01
-status: **WRITTEN, nothing built.** Mechanism decided by measurement (below); phases 1–6 unstarted.
+status: **WRITTEN, nothing built.** Mechanism decided by measurement (below); phases 0–6 unstarted. D9 (the refresh control's placement) decided by the owner 2026-09-01; D13/D14 measured against that placement and open.
 repo: `CroftCommunity/forage`
 baseline: `main` @ `3345405` (quote-embed landed)
 related: `claude/logged-out-refine` item 7 (the centre column's scroller) — **decided compatibly, see Reasoning D0**; `e2e/open-at-top.workflow.mjs` (the rule this must not break)
@@ -81,7 +81,9 @@ So the work is in the **render pipeline**, not in scroll code. Six phases.
 | 2 | **The board record.** Per board identity, keep `{posts, cursor, sort, timeframe, savedAt}`. On return, render rows synchronously from the record; **do not fetch.** This is what makes Phase 1's restore land in the right document | `getFeed` call count does not increase across a Back; the restored row under the reader is the same post URI it was |
 | 3 | **Board to board.** A *link* navigation to a board that has a record restores its offset instead of scrolling to top. The existing link-nav rule keeps applying to everything else, and `open-at-top` stays green. **Tapping the nav entry for the board you are already on is the tab-tap gesture: go to top and refresh** — otherwise D3 strands the reader | `open-at-top` unchanged; a new claim for board→board→board; a claim for the same-board tap |
 | 4 | **The deep board.** More-paged posts survive the round trip (falls out of Phase 2), under the cap from D4 | Back after More ×3 restores a post from page 4 |
-| 5 | **What changed while you were gone.** After restoring, fetch page 1 in the background, diff against the record, and *announce* the count. Never inject. Placement is an open decision (D9) | a claim that the restored offset does not move when the background fetch lands |
+| 5a | **The bar has to be able to hold it.** `.sortbar` shrink-wraps to 295px inside a 680px column, so its `.grow` spacer measures **0** and nothing in it is right-aligned today (D13). Stretch the bar to its host, which moves the density and card-size dials to the column's right edge — a visible change to an approved surface, so it is drawn and captured before it is built | `mock-board` at both viewports: the bar's right edge meets the feed card's right edge; the dials keep their order and their 44px |
+| 5b | **The control.** One control with states at the bar's right end: quiet ⟳ at rest, ⟳ + count when there is something, a spinner while fetching. After restoring, fetch page 1 in the background, diff against the record, and *announce* — never inject. Its count is a live region, so the change is heard and not only seen | a claim that the restored offset does not move when the background fetch lands; a claim that the count is announced; 44px at 390 |
+| 5c | **The reader who is deep in the feed.** The bar is `position: static` and leaves the viewport at scrollY 256 (desktop) / 274 (phone) — under one screen, so the control is invisible in exactly the case it exists for (D14). Needs a second affordance or a sticky bar; **open for the owner** | pending D14 |
 | 6 | **Prepend without moving anyone.** When the reader accepts new posts mid-list, measure the first visible row before and after and add the delta to the offset. Chrome and Firefox do a version of this automatically as CSS scroll anchoring; **Safari does not**, so it is done explicitly | a claim at 390×844 in webkit that a prepend leaves the anchored row's viewport position unchanged |
 
 ## Reasoning
@@ -189,13 +191,14 @@ before and after the prepend and add the difference to the offset.
 
 ## Open decisions
 
-- **D9 — where "12 new posts" lives.** The owner: "maybe we show something on the left side
-  since that bar doesn't move, or we have a notifications thing in the top bar and this is
-  one of them, we'll have to see how it looks and behaves." **A constraint to weigh first:**
-  `claude/logged-out-refine` pins the left nav only at `min-width: 801px`; below that it is a
-  drawer, so a left-rail indicator is *invisible on a phone* — the surface the owner reads on.
-  So the left rail can be the desktop home, but it cannot be the only home. Decide against a
-  mock (MOCKS.md: built from the engine, both viewports, the reader's own skin).
+- ~~**D9 — where "12 new posts" lives.**~~ **DECIDED 2026-09-01 by the owner:** on the feed
+  column, at the top of the post stack, **on the same horizontal line as the sort control
+  bar, right-aligned** — an indicator and a refresh button. Not the left rail (which the
+  earlier sketch favoured "since that bar doesn't move") and not the masthead. This settles
+  the phone problem the rail had: `claude/logged-out-refine` pins the left nav only at
+  `min-width: 801px`, so a rail indicator would have been invisible on the surface the owner
+  actually reads on. The bar is in the column at every width. Two obstacles were measured
+  after the decision and are recorded as D13 and D14 — neither changes the placement.
 - **D10 — does the pill carry a count or just "new posts"?** A count needs a real page-1
   fetch and a diff; "new" could ride a cheaper signal. Phase 5 needs this settled.
 - **D11 — the stale threshold**, and whether a very old record still restores. Recommendation:
@@ -203,6 +206,30 @@ before and after the prepend and add the difference to the offset.
   bug being fixed here, and age does not change that.
 - **D12 — does a keep-alive hot tier earn its complexity?** Answer with Phase 2 in hand, not
   before.
+- **D13 — the bar does not currently right-align anything, and fixing it moves two existing
+  controls.** Measured: `.sortbar` is a shrink-wrapping flex item inside a full-width host, so
+  it is **295px wide in a 680px column** and its `.grow` spacer measures **0px**. The density
+  and card-size dials are therefore *not* at the column's right edge — they sit right after
+  the Sort pill, leaving **385px of unused bar on desktop** and 79px on the phone. Stretching
+  the bar is a one-line CSS change, but it relocates two approved controls by that distance,
+  which is a visible change the owner should see rather than discover. Hence Phase 5a draws it
+  first. Open sub-question: does refresh sit *outboard* of the two display dials (furthest
+  right, the conventional home for a refresh affordance) or *inboard* of them, keeping the
+  display controls together as one family? Recommendation: outboard — refresh acts on content,
+  the dials on presentation, and the outermost position is the one a thumb reaches.
+- **D14 — the chosen line scrolls away, so it cannot be the whole answer.** Measured: the
+  toolbar is `position: static` and its bottom leaves the viewport at **scrollY 256 (desktop)
+  / 274 (phone)** — less than one screen. A reader restored to 4270px on a phone is 15 screens
+  past it. So the control is out of sight in precisely the situation Phase 5 exists to serve:
+  you came back to a deep position and something changed. Three ways out, for the owner:
+  **(a)** make the toolbar sticky under the masthead — always visible, costs 56px on the phone
+  on top of the 61px masthead, so 14% of an 844px viewport is permanently chrome;
+  **(b)** keep the bar as the control's home and add a floating pill that appears *only when
+  the bar is off-screen and there is something to report* — costs nothing at rest, and is what
+  Twitter and Instagram converged on; **(c)** accept the limit and treat the control as an
+  arrival-and-near-the-top affordance only. Recommendation: **(b)**. It keeps the owner's
+  placement as the resting home, spends no permanent vertical space on a phone, and the
+  floating pill is the surface that can also carry the Phase 6 "accept these posts" press.
 
 ## Measurements
 
@@ -218,3 +245,8 @@ Probes are scratch, not committed; each is reproduced by the workflow its phase 
    immediate and settled both at the saved offset in all three engines.
 5. **Per-board cost** — 30-post board: data ~22 KB heap; DOM 1,020 nodes / 73 KB HTML
    (node count only — see D4 for why there is no byte figure).
+6. **The sort bar, for D9's placement** — real app, `/f/whats-hot`, both viewports:
+   `position: static`; host spans the column (680 desktop / 374 phone) but `.sortbar` measures
+   **295px** in both and `.grow` measures **0**; bar right edge 545 vs the feed card's 930 on
+   desktop (303 vs 382 on the phone); the bar's bottom leaves the viewport at scrollY 256 /
+   274; bar height 46 desktop / 56 phone, masthead 61.
