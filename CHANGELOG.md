@@ -8,6 +8,17 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-01 **A post's own words, as its author wrote them.** A news post — the kind with a
+  link card under it — used to render its whole text as a large bold serif headline with every
+  blank line squeezed out of it and the article's own address printed, unlinked, in the middle.
+  On a phone that headline filled the screen and the card the post was about sat below the fold.
+  Now the post's words are words: the author's paragraph breaks are kept, links, `#tags` and
+  `@mentions` are live wherever they appear, and the trailing address is left off when the card
+  right below already carries it in full. The same is true in the replies, which until now
+  showed every link in a comment as dead text, and a link whose page has no picture finally
+  gets a card of its own instead of vanishing. (owner: "our version of this post is much less
+  readable"; mock post-text v1)
+
 - 2026-09-01 **One line down a repost, not two.** A post that quoted the thread's post used to
   carry two vertical lines: a coloured bar on its outer edge, plus the grey rail every comment
   with replies draws under its avatar — with the bar's indent pushing the whole node right of
