@@ -720,7 +720,11 @@ function renderBoard(card, posts, { wholeCorpus = false } = {}) {
       `${hidden} post${hidden === 1 ? '' : 's'} hidden by your content languages (${prefs.join(', ')}). `,
       el('a', { href: '/me' }, 'change that ›')));
   }
-  if (!wholeCorpus && (boardSort !== 'feed' || (boardSort === 'top' && boardTimeframe !== 'all'))) {
+  // v11: the second clause was `boardSort === 'top' && boardTimeframe !== 'all'`,
+  // which the first already covers — it read as though "all time" were exempt
+  // from the loaded-window caveat, and now that All time walks like every other
+  // rung it plainly is not. Same condition, one clause.
+  if (!wholeCorpus && boardSort !== 'feed') {
     card.append(el('div', { class: 'xs muted', style: 'padding:6px' },
       'Sorted within the loaded posts — load More to widen the window.'));
   }
