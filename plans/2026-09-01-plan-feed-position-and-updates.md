@@ -199,13 +199,20 @@ before and after the prepend and add the difference to the offset.
   `min-width: 801px`, so a rail indicator would have been invisible on the surface the owner
   actually reads on. The bar is in the column at every width. Two obstacles were measured
   after the decision and are recorded as D13 and D14 — neither changes the placement.
-- **D10 — does the pill carry a count or just "new posts"?** A count needs a real page-1
+- ~~**D10 — does the pill carry a count or just "new posts"?**~~ **ANSWERED by what shipped (#46):**
+  a count. The control reads `3 new` and the pill `↑ 3 new posts`, and `mock-refresh` R5 holds that
+  the number is the number that arrived. Original note: A count needs a real page-1
   fetch and a diff; "new" could ride a cheaper signal. Phase 5 needs this settled.
 - **D11 — the stale threshold**, and whether a very old record still restores. Recommendation:
   it always restores, and the pill says more — silently discarding a reading position is the
   bug being fixed here, and age does not change that.
-- **D12 — does a keep-alive hot tier earn its complexity?** Answer with Phase 2 in hand, not
-  before.
+- ~~**D12 — does a keep-alive hot tier earn its complexity?**~~ **ANSWERED by Phase 2 (#50): no.**
+  The question was whether retaining a live DOM node would restore more accurately than
+  re-rendering from data. Measured with Phase 2 in hand: re-rendering reproduces every row height
+  exactly and the restored offset holds through the whole settle — once `stage.js` remembers the
+  ratios it has measured, which was the only thing that actually moved. A keep-alive tier would
+  buy nothing measurable and would cost retained DOM and decoded images, the one cost this plan
+  could never put a number on (D4). Closed rather than deferred.
 - **D13 — the bar does not currently right-align anything, and fixing it moves two existing
   controls.** Measured: `.sortbar` is a shrink-wrapping flex item inside a full-width host, so
   it is **295px wide in a 680px column** and its `.grow` spacer measures **0px**. The density
