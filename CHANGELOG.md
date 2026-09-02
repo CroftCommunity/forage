@@ -8,6 +8,24 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-02 **Press Back and you come back to your place in the feed.** Reading down a board,
+  opening a post, and pressing Back used to put you at the top of a freshly reloaded feed — and
+  if you had pressed More to load further pages, those were gone too, so the place you wanted
+  no longer existed. Now the board is still the board you left: the same posts in the same
+  order, every page you had loaded, and you are where you were in it. This works on a phone
+  and on a desktop, going Back and going Forward. It also works when you *walk away* — leave a
+  board for another one and come back to it later by any route, and it puts you where you
+  stopped rather than at the top. If you want the top, the board's own entry in the left nav
+  takes you there, which is what tapping the thing you are already on has always meant.
+  Two quieter improvements came out of the same work. Opening a board used to fetch it **four
+  times** over; it now fetches once. And a board no longer jumps under your thumb when a
+  picture finishes loading and its frame resizes — the app remembers the shape of a picture it
+  has already seen, so scrolling back up a board is steady where it used to shift.
+  Unchanged on purpose: opening a post still takes you to the top of it, because that is where
+  you start reading. (owner: "I want to browse the feed, go into a particular post, hit back
+  and come back to my place in the feed"; plan `2026-09-01-plan-feed-position-and-updates.md`,
+  phases 0–4)
+
 - 2026-09-01 **A refresh button that tells you whether it is worth pressing.** The board's
   control bar now ends, at the right edge of the feed column, with a refresh button. Press it and
   it looks: if nothing has arrived it goes quiet again, and if three posts have it says "3 new"

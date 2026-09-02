@@ -1,7 +1,7 @@
 # Plan: come back to your place in the feed — and be told what changed while you were gone
 
 date: 2026-09-01
-status: **Phases 5a + 5b + 5c COMPLETE** on `claude/feed-position` — mock `plans/mocks/feed-refresh.html` v4 (Current `forage@71f66f0`, Proposed `forage@09daed3`), nine claims in `e2e/mock-refresh.workflow.mjs`, gate green (680/680 unit, 86/86 conformance, 34 workflows). **Phases 0–4 and 6 unstarted.** D9 decided by the owner 2026-09-01; D13 resolved in 5a; **D14 settled by the owner 2026-09-01 on the v1 frames** — option (b), the pill; it is decision 5 of mock v2.
+status: **Phases 0, 1, 2, 3, 4 and 5 COMPLETE.** Phase 6 CLOSED AS UNNEEDED (see below). Phases 0–4 on `claude/feed-position-restore`, seven claims in `e2e/feed-position.workflow.mjs`; phase 5 landed as #46 — on `claude/feed-position` — mock `plans/mocks/feed-refresh.html` v4 (Current `forage@71f66f0`, Proposed `forage@09daed3`), nine claims in `e2e/mock-refresh.workflow.mjs`, gate green (680/680 unit, 86/86 conformance, 34 workflows). **Phases 0–4 and 6 unstarted.** D9 decided by the owner 2026-09-01; D13 resolved in 5a; **D14 settled by the owner 2026-09-01 on the v1 frames** — option (b), the pill; it is decision 5 of mock v2.
 repo: `CroftCommunity/forage`
 baseline: `main` @ `3345405` (quote-embed landed); **rebased onto `3132a25`** 2026-09-01 after reply-embeds (#48) and thread guides (#49) landed mid-flight
 related: `claude/logged-out-refine` item 7 (the centre column's scroller) — **decided compatibly, see Reasoning D0**; `e2e/open-at-top.workflow.mjs` (the rule this must not break)
@@ -28,7 +28,7 @@ tall, and the clamp takes it to 0. Measured, `/f/whats-hot`, 30 rows:
 | | scrollY | scrollHeight | rows |
 |---|---|---|---|
 | desktop 1280×900, scrolled to p29 | 3173 | 4073 | 30 |
-| → open the post | 0 | — | — |
+| → open the post | 0 | **DONE**  — | — |
 | → Back, **immediately** | **0** | **900** | **0** | ← the browser restores here |
 | → Back, settled (600ms) | 0 | 4073 | 30 | ← too late; nothing retries |
 | phone 390×844, scrolled to p29 | 4270 | 5274 | 30 |
@@ -77,14 +77,14 @@ So the work is in the **render pipeline**, not in scroll code. Six phases.
 | Phase | What | Held by (RED first) |
 |---|---|---|
 | 0 | **One mount per navigation.** `render()` re-mounts the board on every store change and refetches each time (measured 3×). Make a board mount once per navigation; a store change repaints without re-fetching. Prerequisite for everything below — a cache that is thrown away three times on arrival is not a cache | a workflow asserting exactly ONE `getFeed` per board navigation |
-| 1 | **The instrument.** `history.scrollRestoration = 'manual'`; stamp every history entry with an id at `pushState` (`router.go`, `interceptLinks`, and every `replaceState` preserves it); save `window.scrollY` against that id on navigate-away; restore it synchronously on popstate. Add `data-uri` to `.postrow` (two lines; unlocks Phase 6) | a workflow reproducing the measured table above, RED on `main`, asserting a non-zero restored offset on desktop AND phone viewports |
-| 2 | **The board record.** Per board identity, keep `{posts, cursor, sort, timeframe, savedAt}`. On return, render rows synchronously from the record; **do not fetch.** This is what makes Phase 1's restore land in the right document | `getFeed` call count does not increase across a Back; the restored row under the reader is the same post URI it was |
-| 3 | **Board to board.** A *link* navigation to a board that has a record restores its offset instead of scrolling to top. The existing link-nav rule keeps applying to everything else, and `open-at-top` stays green. **Tapping the nav entry for the board you are already on is the tab-tap gesture: go to top and refresh** — otherwise D3 strands the reader | `open-at-top` unchanged; a new claim for board→board→board; a claim for the same-board tap |
-| 4 | **The deep board.** More-paged posts survive the round trip (falls out of Phase 2), under the cap from D4 | Back after More ×3 restores a post from page 4 |
+| 1 | **DONE**  **The instrument.** `history.scrollRestoration = 'manual'`; stamp every history entry with an id at `pushState` (`router.go`, `interceptLinks`, and every `replaceState` preserves it); save `window.scrollY` against that id on navigate-away; restore it synchronously on popstate. Add `data-uri` to `.postrow` (two lines; unlocks Phase 6) | a workflow reproducing the measured table above, RED on `main`, asserting a non-zero restored offset on desktop AND phone viewports |
+| 2 | **DONE**  **The board record.** Per board identity, keep `{posts, cursor, sort, timeframe, savedAt}`. On return, render rows synchronously from the record; **do not fetch.** This is what makes Phase 1's restore land in the right document | `getFeed` call count does not increase across a Back; the restored row under the reader is the same post URI it was |
+| 3 | **DONE**  **Board to board.** A *link* navigation to a board that has a record restores its offset instead of scrolling to top. The existing link-nav rule keeps applying to everything else, and `open-at-top` stays green. **Tapping the nav entry for the board you are already on is the tab-tap gesture: go to top and refresh** — otherwise D3 strands the reader | `open-at-top` unchanged; a new claim for board→board→board; a claim for the same-board tap |
+| 4 | **DONE**  **The deep board.** More-paged posts survive the round trip (falls out of Phase 2), under the cap from D4 | Back after More ×3 restores a post from page 4 |
 | 5a | **The bar has to be able to hold it.** `.sortbar` shrink-wraps to 295px inside a 680px column, so its `.grow` spacer measures **0** and nothing in it is right-aligned today (D13). Stretch the bar to its host, which moves the density and card-size dials to the column's right edge — a visible change to an approved surface, so it is drawn and captured before it is built | `mock-board` at both viewports: the bar's right edge meets the feed card's right edge; the dials keep their order and their 44px |
 | 5b | **The control.** One control with states at the bar's right end: quiet ⟳ at rest, ⟳ + count when there is something, a spinner while fetching. After restoring, fetch page 1 in the background, diff against the record, and *announce* — never inject. Its count is a live region, so the change is heard and not only seen | a claim that the restored offset does not move when the background fetch lands; a claim that the count is announced; 44px at 390 |
 | 5c | **The reader who is deep in the feed.** The bar is `position: static` and leaves the viewport at scrollY 256 (desktop) / 274 (phone) — under one screen, so the control is invisible in exactly the case it exists for (D14). **DONE** as option (b): a pill that appears only while the bar is off-screen and there is something to say, and stands down when the bar returns | `mock-refresh` R8, both frames |
-| 6 | **Prepend without moving anyone.** When the reader accepts new posts mid-list, measure the first visible row before and after and add the delta to the offset. Chrome and Firefox do a version of this automatically as CSS scroll anchoring; **Safari does not**, so it is done explicitly | a claim at 390×844 in webkit that a prepend leaves the anchored row's viewport position unchanged |
+| 6 | **CLOSED AS UNNEEDED — decision 4 removed its caller.** Was: **Prepend without moving anyone.** When the reader accepts new posts mid-list, measure the first visible row before and after and add the delta to the offset. Chrome and Firefox do a version of this automatically as CSS scroll anchoring; **Safari does not**, so it is done explicitly | a claim at 390×844 in webkit that a prepend leaves the anchored row's viewport position unchanged |
 
 ## Reasoning
 
@@ -306,3 +306,46 @@ becoming a third positional argument. This time the re-capture changed **every**
 v3's had come back byte-identical — the difference is the whole reason a mock names its trees.
 The control is unaffected and still ends at the column's right edge. Gate green again: 688/688
 unit, 86/86 conformance, 34 workflows 0 failed.
+
+## Phases 0–4, executed 2026-09-02
+
+**The measured failure was never the scroll offset.** Four `getFeed` calls to arrive at one
+board; the paged-in posts held in closure locals that died with the view; and a document that
+was empty at the instant the browser restored. `js/board-cache.js` answers phases 0, 2 and 4
+together, because all three are the same question — *does this board still know what it was
+showing?*
+
+**Two things the measurements changed rather than confirmed:**
+
+- **The restore landed exactly right and then the floor moved.** `scrollTo(0, 3877)` was
+  correct; 50ms later the document had shrunk 168px as one stage resolved its picture ratio,
+  and the browser clamped the scroll to the new height. `js/ui/stage.js` already *documented*
+  this — "the one case a board can jump" — and it was survivable while every board was built
+  once from a fresh fetch. Repainting from a record made it load-bearing. The stage now
+  remembers what it measured, keyed by src, which also fixes the jump for an ordinary reader
+  scrolling back up a board.
+- **In-flight dedupe was not optional.** Two mounts race, both miss an empty cache, both
+  fetch. The count went 4 → **2**, not 4 → 1, until `board-cache` tracked flights.
+
+**Phase 6 is closed as unneeded, not deferred.** It was specified as "when the reader accepts
+new posts mid-list, measure the first visible row before and after and add the delta". Decision
+4 removed its caller: nothing is ever prepended without an explicit press, and that press takes
+the reader to the top by design. Building the anchor maths now would be code with no path to
+it. The half of Phase 6 that turned out to be *real* — content changing height under a reader —
+arrived from the opposite direction as the stage's measured-ratio memo, which is the same
+promise kept at the point where the shift actually happens. If a future decision ever does
+inject mid-list, this phase reopens with its original spec.
+
+**Seven claims, six mutations, six killed.** One survived on the first round and the fault was
+in the claim, not the code: P6 pressed an anchor at the top of the document through
+`page.click()`, which scrolls its target into view *before* clicking — so the page was already
+at 0 and the assertion was reading Playwright's scroll rather than ours. Deleting the entire
+rule under test left it green. It now clicks programmatically and asserts the premise at the
+moment of the press.
+
+**One regression, caught by this repo's own gate.** Stamping the first history entry went
+through `pathOf()`, which is pathname + search and drops the **fragment** — and atproto's
+browser OAuth returns `code`/`state` in the fragment. Sign-in broke outright, and
+`e2e/signin.workflow.mjs` said so in words: "the callback params must survive until the
+exchange reads them". `stampCurrent()` now omits the url argument, which is all it ever needed
+to do. Worth recording because nothing in the diff *looked* like it touched authentication.
