@@ -73,6 +73,41 @@ export async function run() {
     assert.ok(railGeo.width >= 2, `the rail is pronounced (${railGeo.width}px)`);
     assert.ok(railGeo.plainInk && railGeo.ink !== railGeo.plainInk,
       `the quote's rail is highlighted, an ordinary reply's is not (both ${railGeo.ink})`);
+
+    // The elbow MEETS the rail. Each child draws an elbow from its parent's rail
+    // into its own avatar's left edge; the parent's rail sits 15px in from the
+    // comment's left edge (a 32px avatar column with the line centred in it), so
+    // the elbow's vertical stroke has to land there and nowhere else. It is one
+    // number derived two ways, which is how it drifted: the elbow's offset was
+    // written as a bare -7px, correct only at the 22px indent, and the phone's
+    // 14px indent left every elbow floating 8px to the LEFT of the rail it was
+    // drawn to meet (owner, 2026-09-01, on a 390px frame: "why do these thread
+    // guides not line up?"). Asserted at BOTH widths, because the desktop was
+    // right all along and a fix that derives the offset must keep it right.
+    // What is asserted is the AXIS, not the curve: on a phone the horizontal run
+    // clamps to zero (the indent is narrower than the rail's own offset), so the
+    // branch is a straight continuation there and this still pins where it sits.
+    const elbows = async () => page.evaluate(() => [...document.querySelectorAll('.comment')].flatMap((parent) => {
+      const rail = parent.querySelector(':scope > .avcol > .line');
+      const kid = parent.querySelector(':scope > .kids > .comment');
+      if (!rail || !kid) return [];
+      const r = rail.getBoundingClientRect(), k = kid.getBoundingClientRect();
+      const before = getComputedStyle(kid, '::before');
+      const left = k.left + parseFloat(before.left);
+      return [{ who: parent.querySelector('.who')?.textContent.slice(0, 20), kind: parent.dataset.kind,
+        railMid: r.left + r.width / 2, elbowMid: left + parseFloat(before.borderLeftWidth) / 2 }];
+    }));
+    for (const [w, h] of [[390, 844], [1280, 900]]) {
+      await page.setViewportSize({ width: w, height: h });
+      await page.waitForTimeout(50);
+      const seen = await elbows();
+      assert.ok(seen.length >= 3, `${w}px: there are parents with children to measure (saw ${seen.length})`);
+      for (const e of seen) {
+        assert.ok(Math.abs(e.elbowMid - e.railMid) <= 0.5,
+          `${w}px: ${e.who} (${e.kind}) — its child's elbow is at ${e.elbowMid}, the rail it meets is at ${e.railMid}: ${(e.elbowMid - e.railMid).toFixed(1)}px apart`);
+      }
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
     assert.ok(railGeo.reachesText, `the rail runs the quote’s own rows ${JSON.stringify(railGeo)}`);
     assert.ok(railGeo.hasKid, 'the fixture quote has a reply, so the claim has something to fail under');
     assert.ok(railGeo.stopsBeforeKids, 'the rail runs down the quote’s replies');
