@@ -11,7 +11,8 @@
 //        board-lens-cards board-lens-quote board-lens-hover board-lens-refresh
 //        board-lens-refresh-news board-lens-refresh-pill post-lens-quote thread-lens
 //        thread-lens-quote thread-lens-sheet thread-lens-embed menu-lens focus-lens reply-lens thread-lens-reply
-//        news-lens news-lens-replies news-board news-board-nothumb)
+//        news-lens news-lens-replies news-board news-board-nothumb
+//        gif-lens gif-lens-paused gif-lens-alt gif-board)
 //   node scripts/mock-snaps.mjs --as current --serve ../../forage
 //       # the same script and fixtures, rendering ANOTHER checkout (main): the
 //       # Current frames come from the tree the owner is running, captured by
@@ -29,6 +30,11 @@
 //                    the load the mock is judged against (real handle lengths,
 //                    a quote, depth 4, signed in). The thread the owner sees on
 //                    forage.fyi is the lens, so this is the frame that matters.
+//   lens:mock-gif    e2e/harness/mock-gif.mjs — the gif-embeds load: the owner's
+//                    two reported klipy records verbatim (landscape and
+//                    portrait), a GIF with alt a person WROTE, a tenor .gif
+//                    with no verified video form, a 96-char title, and a news
+//                    card as the control the alt-text setting must not touch.
 //   lens:mock-newspost e2e/harness/mock-newspost.mjs — the post-text load: a
 //                    verbatim news record (three blocks split by \n\n, a #link
 //                    facet over a truncated display URL, a link card), a
@@ -41,6 +47,7 @@ import { RESPONSES, FAKE_SIGNED_IN, THREAD_PATH, NODE_IDS, ROOT as THREAD_ROOT }
 import { RESPONSES as BOARD, BOARD_PATH, QUOTE_PATH } from '../e2e/harness/mock-board.mjs';
 import { RESPONSES as NEWS, BOARD_PATH as NEWS_BOARD, THREAD_PATH as NEWS_THREAD, NODE_IDS as NEWS_NODES } from '../e2e/harness/mock-newspost.mjs';
 import { RESPONSES as REFRESH } from '../e2e/harness/mock-refresh.mjs';
+import { RESPONSES as GIF, BOARD_PATH as GIF_BOARD, THREAD_PATH as GIF_THREAD } from '../e2e/harness/mock-gif.mjs';
 import { mergeManifest } from './lib/snaps-manifest.mjs';
 import { SKINS } from '../js/skins.js';
 import { execFileSync } from 'node:child_process';
@@ -326,6 +333,45 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
     await shoot(hov.page, 'board-lens-hover', 'lens:mock-board', name, vp);
     hov.consoleErrors(); hov.errors();
     await hov.close();
+  }
+  // ---- lens:mock-gif — the gif-embeds mock's frames -----------------------
+  // The surface the owner reported twice on 2026-09-02: a GIF on a REPLY, which
+  // is where they met it both times. Three frames, because the change is a
+  // player AND two settings, and a setting with one frame cannot be judged:
+  // the defaults, autoplay off (the overlay a reader actually presses), and
+  // alt text on.
+  const GIF_FRAMES = [
+    ['gif-lens', []],
+    // autoplay off: the paused state, which is also what a reader with
+    // prefers-reduced-motion gets without touching anything
+    ['gif-lens-paused', ["try { localStorage.setItem('forage.gifautoplay','off'); } catch {}"]],
+    // alt text on: the "ALT: <title again>" duplication comes BACK, on purpose
+    // — that is what the switch is for, and the frame has to show its cost
+    ['gif-lens-alt', ["try { localStorage.setItem('forage.alttext','on'); } catch {}"]],
+  ];
+  for (const [route, prefs] of GIF_FRAMES) {
+    if (!wanted(route)) continue;
+    const gw = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, ...prefs, FAKE_SIGNED_IN], responses: GIF });
+    await gw.page.setViewportSize({ width: vp.width, height: vp.height });
+    await gw.page.goto(`${gw.origin}${GIF_THREAD}`);
+    await gw.page.waitForSelector('.comment', { timeout: 15000 });
+    await gw.page.evaluate(() => document.fonts?.ready);
+    await gw.page.waitForTimeout(200);
+    await shoot(gw.page, route, 'lens:mock-gif', name, vp);
+    gw.consoleErrors(); gw.errors();
+    await gw.close();
+  }
+  // the same GIFs as board ROWS, with the news card below them as the control
+  if (wanted('gif-board')) {
+    const gb = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: SKIN_INIT, responses: GIF });
+    await gb.page.setViewportSize({ width: vp.width, height: vp.height });
+    await gb.page.goto(`${gb.origin}${GIF_BOARD}`);
+    await gb.page.waitForSelector('.postrow', { timeout: 15000 });
+    await gb.page.evaluate(() => document.fonts?.ready);
+    await gb.page.waitForTimeout(200);
+    await shoot(gb.page, 'gif-board', 'lens:mock-gif', name, vp);
+    gb.consoleErrors(); gb.errors();
+    await gb.close();
   }
   // ---- lens:mock-newspost — the post-text mock's frames -------------------
   // The surface the owner compared on 2026-09-01: a news post's own words at the
