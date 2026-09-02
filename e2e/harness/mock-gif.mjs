@@ -16,8 +16,9 @@
 //     card is where the letterboxing shows
 //   - a GIF with alt a person actually WROTE ("Alt: " — the other prefix), long
 //     enough to wrap: the case where showing alt text is worth doing
-//   - a tenor .gif: no verified video form, so it plays as an image. The rung
+//   - a giphy .gif: no probed video form, so it plays as an image. The rung
 //     below, rendered beside the rung above so they can be told apart
+//   - a TENOR record, which since 2026-09-02 has a probed video form of its own
 //   - a GIF with a 96-character title, because the caption is one link and the
 //     title is its accessible name
 //   - a NEWS card with a real og:description: the control. The alt-text setting
@@ -69,7 +70,8 @@ const post = (rkey, did, handle, ts, text, { likes = 0, replies = 0, reposts = 0
 // ── the two reported uris, verbatim ─────────────────────────────────────────
 export const KLIPY_LANDSCAPE = 'https://static.klipy.com/ii/4e7bea9f7a3371424e6c16ebc93252fe/61/56/RiZHW3kybKsT6j.gif?hh=415&ww=498&mp4=8pcPaPB1Eow6fc&webm=0Ds0ULMJw0vWjEZ6NMLN';
 export const KLIPY_PORTRAIT = 'https://static.klipy.com/ii/4493325008d34b7bf8cd6813cd5c1619/75/c5/PbsJs3z2wdMgRe6u.gif?hh=343&ww=260&mp4=ULTEdSmY5WVrY4&webm=5pnMJhe2bAm1ixZ';
-const TENOR_GIF = 'https://media.tenor.com/AAAAC3q2Kn0AAAAC/shrug-i-dont-know.gif?hh=220&ww=320';
+const GIPHY_GIF = 'https://media.giphy.com/media/l0HlvtIPzPdt2usKs/giphy.gif';
+const TENOR_GIF = 'https://media.tenor.com/Zc-ZTPzlEHoAAAAC/i-don%27t-know-idk.gif?hh=220&ww=320';
 
 const LONG_TITLE = 'A Very Long GIF Title That Klipy Generated From The Scene Description And Nobody Trimmed';
 const AUTHORED_ALT = 'Alt: a golden retriever wearing sunglasses gives a slow, deliberate thumbs-up to the camera and then falls over sideways into a pile of autumn leaves';
@@ -104,17 +106,18 @@ const r3 = { post: post('r3', 'did:plc:tk', 'thekeeper.bsky.social', '2026-09-02
     view: external({ uri: KLIPY_LANDSCAPE.replace('RiZHW3kybKsT6j', 'ThumbsUpDogAAA'), n: 'dog',
       aspect: { width: 498, height: 415 }, title: 'Thumbs Up Dog', description: AUTHORED_ALT }) }), replies: [] };
 
-// the rung below: no verified video form, so it animates as an image
+// the rung below: no probed video form, so it animates as the .gif itself
 const r4 = { post: post('r4', 'did:plc:av', 'averyveryverylonghandle.bsky.social', '2026-09-02T16:02:00Z',
   'honestly same', { likes: 3,
-    view: external({ uri: TENOR_GIF, n: 'shrug', aspect: { width: 320, height: 220 },
+    view: external({ uri: GIPHY_GIF, n: 'shrug', aspect: { width: 320, height: 220 },
       title: 'Shrug I Dont Know', description: 'ALT: Shrug I Dont Know' }) }), replies: [] };
 
 // ── the board's other loads ─────────────────────────────────────────────────
 const longtitle = post('longtitle', 'did:plc:tk', 'thekeeper.bsky.social', '2026-09-02T13:00:00Z',
   'the title on this one is absurd', { likes: 8, replies: 1,
-    view: external({ uri: KLIPY_PORTRAIT.replace('PbsJs3z2wdMgRe6u', 'LongTitleAAAAAAA'), n: 'long',
-      aspect: { width: 260, height: 343 }, title: LONG_TITLE, description: `ALT: ${LONG_TITLE}` }) });
+    // and this one is TENOR, whose video form was probed on 2026-09-02
+    view: external({ uri: TENOR_GIF, n: 'long',
+      aspect: { width: 320, height: 220 }, title: LONG_TITLE, description: `ALT: ${LONG_TITLE}` }) });
 
 // THE CONTROL. A news card with a genuine og:description: the alt-text setting
 // governs alt, and an article summary is not alt. If this line ever disappears

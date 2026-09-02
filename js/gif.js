@@ -16,12 +16,18 @@
 //     `access-control-allow-origin: *`. So where the record hands us the slugs,
 //     the video is what plays.
 //
+//   tenor — the same idea with a different spelling. Tenor encodes the format
+//     in the id's SUFFIX (AAAAC gif, AAAP3 webm, AAAP1 mp4). Probed 2026-09-02
+//     against two independent real ids, on tenor's OWN host:
+//
+//       Zc-ZTPzlEHo   gif    66,865 B   webm 37,761 B   mp4 20,255 B   3.3x
+//       r2ZObFlQ5I4   gif 4,160,427 B   webm 79,370 B   mp4 77,723 B    52x
+//
+//     both 200 with `access-control-allow-origin: *`. This rung was left
+//     unbuilt when gif-embeds landed precisely because it had NOT been probed;
+//     it is written now because it has been.
+//
 //   .gif — everything else, on the record's OWN uri with nothing constructed.
-//     Tenor has a cheaper video form (social-app rewrites AAAAC->AAAP1/AAAP3
-//     and serves it from t.gifs.bsky.app), but that rewrite could not be
-//     exercised from here against a real tenor record, and CLAUDE.md § External
-//     APIs forbids writing code against an unconfirmed url shape. A guess that
-//     404s is a silently broken player; an image is merely a bigger one.
 //
 // D3: forage uses `static.klipy.com`, not social-app's `k.gifs.bsky.app` proxy.
 // Both answer with identical bytes and open CORS, and the origin host is
@@ -71,6 +77,41 @@ function klipyVideo(urlp) {
   return { kind: 'video', sources, aspect: { w, h } };
 }
 
+// tenor's video URLs: the same path with the id's format suffix swapped.
+//
+// The suffix is REQUIRED to be at the end, which is stricter than social-app's
+// `id.replace('AAAAC', …)`. That rewrites the first match, so an id merely
+// CONTAINING AAAAC earlier would be mangled into a url that 404s — a silently
+// broken player, the exact failure this whole two-rung split exists to avoid.
+// Requiring the suffix makes such an id fall back to the image instead, which
+// is correct rather than broken.
+//
+// The filename is taken from `pathname` and never decoded: a real one is
+// `i-don%27t-know-idk.gif`, and decoding then re-encoding it is how a working
+// url turns into a 404.
+const TENOR_GIF_CODE = 'AAAAC';
+const TENOR_FORMATS = [['AAAP3', 'webm', 'video/webm'], ['AAAP1', 'mp4', 'video/mp4']];
+
+function tenorVideo(urlp) {
+  if (urlp.hostname !== 'media.tenor.com') return null;
+
+  // tenor's shape is exactly /{id}/{filename} — nothing deeper, nothing else
+  const [, id, filename, ...rest] = urlp.pathname.split('/');
+  if (!id || !filename || rest.length) return null;
+  if (!id.endsWith(TENOR_GIF_CODE) || !filename.toLowerCase().endsWith('.gif')) return null;
+
+  const h = Number(urlp.searchParams.get('hh'));
+  const w = Number(urlp.searchParams.get('ww'));
+  if (!(h > 0) || !(w > 0)) return null;
+
+  const stem = id.slice(0, -TENOR_GIF_CODE.length);
+  const base = filename.slice(0, -'.gif'.length);
+  const sources = TENOR_FORMATS.map(([code, ext, type]) => ({
+    src: `${urlp.origin}/${stem}${code}/${base}.${ext}`, type,
+  }));
+  return { kind: 'video', sources, aspect: { w, h } };
+}
+
 // Is this external uri an animation, and what plays? `null` leaves the embed an
 // ordinary link card — the caller must not invent a GIF out of a news article.
 export function gifOf(uri) {
@@ -78,11 +119,11 @@ export function gifOf(uri) {
   let urlp;
   try { urlp = new URL(uri); } catch { return null; }
 
-  const video = klipyVideo(urlp);
+  const video = klipyVideo(urlp) || tenorVideo(urlp);
   if (video) return video;
 
-  // A klipy uri that failed the checks above is still a .gif, so it still
-  // animates — one rung down, never a dead card.
+  // A klipy or tenor uri that failed the checks above is still a .gif, so it
+  // still animates — one rung down, never a dead card.
   if (extensionOf(urlp.pathname) !== 'gif') return null;
   return { kind: 'image', src: uri, aspect: null };
 }

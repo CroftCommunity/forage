@@ -8,6 +8,14 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-02 **Two follow-ups to the GIF work: nothing vanishes, and Tenor got cheaper.** If you
+  reply to your own post to continue a thread, Forage folds those parts into the post itself —
+  but it was only keeping your words. A picture, a video, a link card or a GIF on any part after
+  the first was dropped without a trace. They all show up now, each under the words it belongs
+  to. Separately, Tenor GIFs now play Tenor's own video the way klipy ones already did: on one
+  measured GIF that is 79 KB instead of 4.2 MB for exactly the same animation, fetched from
+  Tenor itself rather than through anyone else. (owner: "cna you fix 1 and look into 2?")
+
 - 2026-09-02 **GIFs play, and you decide whether they start on their own.** A GIF posted from
   Bluesky arrives dressed as an ordinary link card, and Forage believed the costume: you got a
   frozen thumbnail with a link out, and — because Bluesky hides alt text inside the card's

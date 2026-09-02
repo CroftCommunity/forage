@@ -842,8 +842,10 @@ test('gif-embeds: "Alt:" marks alt a person actually wrote', () => {
   assert.equal(p.media.altAuthored, true);
 });
 
-test('gif-embeds: a non-klipy .gif plays as an image on its own uri', () => {
-  const uri = 'https://media.tenor.com/AAAAC3q2Kn0AAAAC/warrior-nun.gif?hh=415&ww=498';
+test('gif-embeds: a .gif with no verified video form plays as an image on its own uri', () => {
+  // giphy: no probed video rewrite, so the record's own uri animates. klipy
+  // and tenor both have one (js/gif.js) and take the cheaper rung.
+  const uri = 'https://media.giphy.com/media/l0HlvtIPzPdt2usKs/giphy.gif';
   const p = shapeLensPost(extPost('g3', { uri, title: 'T', description: '', thumb: 'https://cdn/g3.jpg' }), QSRC);
   assert.equal(p.media.kind, 'gif');
   assert.equal(p.media.player, 'image');
