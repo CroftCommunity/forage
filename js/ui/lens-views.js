@@ -10,7 +10,7 @@ import { el, timeAgo, fmtScore, domainOf, plural } from '../util.js';
 import { postRow, commentNode, vote, focusComment, skeleton, emptyState, toast, reportSheet, whoNode, byline, providerMark as providerMarkNode } from './components.js';
 import * as providerMark from '../provider-mark.js';
 import * as drafts from '../drafts.js';
-import { go } from '../router.js';
+import { go, navKind, rerenderNow } from '../router.js';
 import { appFor } from '../auth/hosts.js';
 import { navTree } from './nav.js';
 import { LADDER, RUNG_IDS, labelFor } from '../rings.js';
@@ -91,7 +91,8 @@ function ensureSavedFeeds() {
   return savedFeedsPromise;
 }
 
-const rerender = () => window.dispatchEvent(new PopStateEvent('popstate'));
+// a repaint, and it says so — a bare popstate here read as a Back (see router)
+const rerender = () => rerenderNow();
 
 // 3i: the OAuth identity, for the bluesky masthead. null = signed out;
 // 'connecting' while restore is in flight (the masthead must never ask for a
@@ -1285,6 +1286,16 @@ function feedBoardView(entry, preInfo) {
     allPosts.push(...cached.posts);
     nextCursor = cached.cursor ?? null;
     paint(cached.info);
+    // On return to board (owner, 2026-09-02, choosing among three candidate
+    // triggers). A cache hit means you have been here before, so this mount is
+    // either Back out of a post or a walk back to a board you were reading —
+    // both are the moment "what did I miss" has an answer.
+    //
+    // Keyed on ARRIVING, not on mounting: render() re-runs on every store change
+    // and each run hits the cache, so a check keyed on the mount would ask the
+    // network on a timer nobody chose. It costs one page-one request per return
+    // and cannot move the reader — checkForNew only counts and announces.
+    if (navKind() !== 'rerender') checkForNew();
   } else {
     main.append(
       el('div', { class: 'row spread wrap' }, el('h1', {}, entry.title)),

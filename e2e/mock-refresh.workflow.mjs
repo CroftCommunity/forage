@@ -9,8 +9,12 @@ import { scenario } from './harness/scenario.mjs';
 import { RESPONSES, BOARD_PATH, ARRIVALS } from './harness/mock-refresh.mjs';
 import { FAKE_SIGNED_IN } from './harness/mock-thread.mjs';
 
+const COUNT = `window.__feedCalls = []; const _f = window.fetch;
+  window.fetch = function (u) { try { const s = String(u?.url || u);
+    if (s.includes('getFeed?')) window.__feedCalls.push(s); } catch {} return _f.apply(this, arguments); };`;
+
 const board = async (vp) => {
-  const s = await scenario('first-visit', { mode: 'bluesky', initScripts: [FAKE_SIGNED_IN], responses: RESPONSES });
+  const s = await scenario('first-visit', { mode: 'bluesky', initScripts: [FAKE_SIGNED_IN, COUNT], responses: RESPONSES });
   await s.page.setViewportSize(vp);
   await s.page.goto(`${s.origin}${BOARD_PATH}`);
   await s.page.waitForSelector('.postrow');
@@ -103,6 +107,53 @@ export async function run() {
       });
       assert.ok(Math.abs(m.btnRight - m.cardRight) <= 2,
         `R9 ${name}: with a count showing, refresh still ends at the column's right edge (btn ${m.btnRight}, card ${m.cardRight})`);
+    } finally { await s.close(); }
+  }
+
+  // ---- R10 (behaviour): coming BACK to a board checks on its own. The owner,
+  //      2026-09-02, choosing among three candidate triggers: "on return to board".
+  //      Until now the press was the only thing that looked, so the indicator half
+  //      of the control never lit unless you pressed it.
+  {
+    const s = await board(DESKTOP);
+    try {
+      await s.page.evaluate(() => window.scrollTo(0, 400));
+      await s.page.waitForTimeout(120);
+      const before = await s.page.evaluate(() => ({
+        y: window.scrollY, rows: document.querySelectorAll('.postrow').length }));
+      // the world changes while the reader is inside a post
+      await s.page.locator('.postrow').first().click({ position: { x: 6, y: 6 } });
+      await s.page.waitForSelector('.head-byline');
+      await s.page.evaluate(() => window.__shimAdvance());
+      await s.page.goBack();
+      await s.page.waitForSelector('[data-refresh][data-state="news"]', { timeout: 10000 });
+      const after = await s.page.evaluate(() => ({
+        y: window.scrollY, rows: document.querySelectorAll('.postrow').length,
+        text: document.querySelector('[data-refresh]').textContent.trim() }));
+      assert.match(after.text, new RegExp(`\\b${ARRIVALS.length}\\b`),
+        `R10: the return found what arrived without a press (got "${after.text}")`);
+      assert.equal(after.rows, before.rows, 'R10: and still nothing is injected');
+      assert.ok(Math.abs(after.y - before.y) <= 4,
+        `R10: and the reader is still where they were (was ${before.y}, got ${after.y})`);
+    } finally { await s.close(); }
+  }
+
+  // ---- R11 (behaviour): a store re-render is not a return. This is the case that
+  //      makes the trigger a NAVIGATION and not a mount — render() re-runs on every
+  //      store change, and checking on each would ask the network on a timer nobody
+  //      chose.
+  {
+    const s = await board(DESKTOP);
+    try {
+      await s.page.waitForTimeout(400);
+      const before = await s.page.evaluate(() => window.__feedCalls.length);
+      await s.page.evaluate(async () => {
+        const store = await import('/js/store.js');
+        store.setDev?.({ ...store.getDev() });
+      });
+      await s.page.waitForTimeout(400);
+      const after = await s.page.evaluate(() => window.__feedCalls.length);
+      assert.equal(after, before, `R11: a store re-render does not check (${before} -> ${after})`);
     } finally { await s.close(); }
   }
 

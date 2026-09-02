@@ -63,6 +63,37 @@ export function dispatch(rawPath = currentPath()) {
 // rewrites the current entry rather than making a new one.
 let seq = 0;
 export function nextEntryKey() { return `e${++seq}`; }
+
+// WHY this render is happening, which several decisions turn on and none of them
+// can get from the URL: a store change and a re-click on the current link produce
+// the same address. 'link' a new page · 'same' the page you are already on ·
+// 'pop' Back or Forward · 'rerender' a store change and not a navigation at all.
+//
+// It lives here rather than in main.js because a VIEW needs it too: a board only
+// checks for new posts when the reader has ARRIVED (owner 2026-09-02, "on return
+// to board"), and render() re-runs on every store change — so a check keyed on
+// mounting would ask the network on a timer nobody chose.
+//
+// A synthetic popstate is NOT a Back. Three places in this app dispatch one to
+// force a repaint — `go()` here, and `rerender()` in lens-views — and a listener
+// that reads every popstate as a navigation believes all of them. That is not
+// hypothetical: it made a plain page load issue three feed fetches instead of
+// one, because a repaint helper called `rerender` was indistinguishable from the
+// reader pressing Back. So a dispatcher CLAIMS its kind, and only an unclaimed
+// popstate — a real one, from the browser — is a Back or Forward.
+let kind = 'rerender';
+let claimed = false;
+export function navKind() { return kind; }
+export function setNavKind(k) { kind = k || 'rerender'; claimed = true; }
+export function claimPop() { if (!claimed) { kind = 'pop'; claimed = true; } }
+export function clearNavKind() { kind = 'rerender'; claimed = false; }
+
+// A forced repaint that goes through the render pipeline without pretending to
+// be a navigation. Views use this; it is why `kind` is claimed, not inferred.
+export function rerenderNow() {
+  setNavKind('rerender');
+  window.dispatchEvent(new PopStateEvent('popstate'));
+}
 export function entryKey() { return history.state?.__k ?? null; }
 
 export function pushPath(path) {
@@ -88,8 +119,9 @@ export function stampCurrent() {
 // Navigate without a page load. Same path → re-dispatch (a no-op click still
 // refreshes the view, matching the old hash behavior).
 export function go(path) {
-  if (pathOf() === path) return dispatch();
+  if (pathOf() === path) { setNavKind('same'); return dispatch(); }
   pushPath(path);
+  setNavKind('link');   // a forward navigation, whatever event carries it
   window.dispatchEvent(new PopStateEvent('popstate'));
   return undefined;
 }
@@ -110,8 +142,9 @@ export function interceptLinks(onNavigate) {
     // phase 3 makes an ordinary link to a board you were reading RESTORE you —
     // which would leave this press doing nothing at all, on the one control a
     // reader reaches for when they want out of where they are.
-    if (pathOf() === href) { onNavigate?.('same'); return; }
+    if (pathOf() === href) { setNavKind('same'); onNavigate?.('same'); return; }
     pushPath(href);
+    setNavKind('link');
     onNavigate?.('link');
   });
 }

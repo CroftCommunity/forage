@@ -50,17 +50,32 @@ export async function run() {
       const before = await y(s);
       assert.ok(before > 300, `premise ${name}: the board must really be scrolled (got ${before})`);
       const beforeCalls = await calls(s);
+      const beforeRows = await rows(s);
       await last.click({ position: { x: 6, y: 6 } });
       await s.page.waitForSelector('.head-byline');
       assert.equal(await y(s), 0, `${name}: the post still opens at its top (open-at-top holds)`);
       await s.page.goBack();
-      await s.page.waitForSelector('.postrow');
-      await s.page.waitForTimeout(250);
+      // P2a: the board is PAINTED from the record, not fetched. Sampled with no
+      // wait at all — if the rows and the offset are already right here, nothing
+      // was waited on. (This is also the whole mechanism: the browser restores
+      // after the popstate handler returns, so a board still fetching has lost.)
+      const atOnce = await s.page.evaluate(() => ({
+        y: window.scrollY, rows: document.querySelectorAll('.postrow').length }));
+      assert.equal(atOnce.rows, beforeRows, `P2a ${name}: the rows are there immediately, from the record`);
+      assert.ok(Math.abs(atOnce.y - before) <= 4,
+        `P2a ${name}: and you are already back where you were (was ${before}, got ${atOnce.y})`);
+
+      await s.page.waitForTimeout(400);
       const after = await y(s);
       assert.ok(Math.abs(after - before) <= 4,
-        `P1 ${name}: Back returns you to where you were (was ${before}, came back to ${after})`);
+        `P1 ${name}: Back returns you to where you were, and you stay there (was ${before}, came back to ${after})`);
+      // P2b: ONE extra request, and it is the on-return check the owner asked for
+      // (2026-09-02) — never a refetch of the board being shown. Before that
+      // decision this asserted equality; the check is an addition to it, not a
+      // relaxation of it, which is what P2a now pins.
       const afterCalls = await calls(s);
-      assert.equal(afterCalls, beforeCalls, `P2 ${name}: Back restores, it does not refetch (${beforeCalls} -> ${afterCalls})`);
+      assert.equal(afterCalls, beforeCalls + 1,
+        `P2b ${name}: Back adds exactly one request, the check (${beforeCalls} -> ${afterCalls})`);
     } finally { await s.close(); }
   }
 
