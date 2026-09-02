@@ -14,13 +14,31 @@ import { el } from '../util.js';
 
 let saidSizedOnLoad = false;
 
+// What a picture turned out to be, keyed by its source. A stage with no declared
+// aspect takes the cap and resizes when the picture lands — the one case this file
+// already said a board can jump. That was survivable while every board was built
+// once from a fresh fetch. It stopped being survivable when boards began repainting
+// from a record (js/board-cache.js): the restore put the reader back at the right
+// pixel and the board then shrank 168px under them as one such stage resolved,
+// and the browser clamped the scroll to the new height. Measured 2026-09-01.
+//
+// So the ratio is learned once and reused. Nothing is fetched to find it, no post
+// is mutated, and a second sight of the same picture is sized before it loads —
+// which fixes the same jump for an ordinary reader scrolling back up a board, not
+// only for a restore.
+const MEASURED = new Map();
+export function measuredAspect(src) { return MEASURED.get(src) || null; }
+export function forgetMeasured() { MEASURED.clear(); }
+
 // One picture on its stage. `link` is where the tap goes (full size, or bsky.app
 // for a video), `linkLabel` the anchor's name when the picture has no alt.
 // feed-row v13 decisions 29–30: `onPlay` makes the stage a PLAYER's poster —
 // a button over the picture, no link out — and the caller swaps the player in
 // (a <video> for a Bluesky clip, YouTube's embed for a YouTube link). Nothing
 // is fetched from the video's host until the press.
-export function stage({ kind, thumb, alt = '', aspect = null, link, linkLabel = null, linkAttrs = {}, onPlay = null, playLabel = 'Play' }) {
+export function stage({ kind, thumb, alt = null, aspect = null, link, linkLabel = null, linkAttrs = {}, onPlay = null, playLabel = 'Play' }) {
+  alt = alt ?? '';
+  aspect = aspect || MEASURED.get(thumb) || null;
   const fore = el('img', { class: 'stage-fore', src: thumb, alt, loading: 'lazy', decoding: 'async' });
   const attrs = { class: 'stage', 'data-stage': kind };
   if (aspect) attrs.style = `--aspect: ${aspect.w} / ${aspect.h}`;
@@ -39,6 +57,7 @@ export function stage({ kind, thumb, alt = '', aspect = null, link, linkLabel = 
   if (!aspect) {
     fore.addEventListener('load', () => {
       if (!(fore.naturalWidth > 0 && fore.naturalHeight > 0)) return;
+      MEASURED.set(thumb, { w: fore.naturalWidth, h: fore.naturalHeight });
       node.style.setProperty('--aspect', `${fore.naturalWidth} / ${fore.naturalHeight}`);
       node.removeAttribute('data-aspect');
       if (!saidSizedOnLoad) { saidSizedOnLoad = true; console.debug('forage: stage sized from the picture — no aspect on the embed'); }
@@ -58,7 +77,7 @@ const SWIPE_PX = 40;
 export function carousel({ items, linkAttrs = {} }) {
   const n = items.length;
   let at = 0;
-  const first = items[0].aspect;
+  const first = items[0].aspect || MEASURED.get(items[0].thumb) || null;
   const slides = items.map((i, idx) => el('div', { class: 'stage-slide', 'data-slide': String(idx + 1) },
     el('a', { class: 'stage-link', href: i.full, draggable: 'false', ...(i.alt ? {} : { 'aria-label': 'Image, opens full size' }), ...linkAttrs },
       el('img', { class: 'stage-back', src: i.thumb, alt: '', 'aria-hidden': 'true', loading: 'lazy', decoding: 'async', draggable: 'false' }),

@@ -27,6 +27,7 @@ import * as lang from '../lang.js';
 import { density, densityDial } from '../board-density.js';
 import { sortBar, TIMEFRAMES, WALK_TIMEFRAMES, nearestTimeframe } from './sortbar.js';
 import { refreshControl } from './refresh-control.js';
+import * as boardCache from '../board-cache.js';
 import { sortItems } from '../engines/rank.js';
 import { POST_LIMITS, IMAGE_LIMITS, graphemes, withTag } from '../compose.js';
 import { cardSizeDial } from '../card-size.js';
@@ -1122,14 +1123,17 @@ export function lensFeedView(params) {
 }
 
 function feedBoardView(entry, preInfo) {
-  const main = el('div', {},
-    // feed-row v4 (owner, 2026-08-30): the DL-010/DL-011 frontier chips are off
-    // a reader's board — they told a tier-comparison story nobody browsing
-    // needs; the ledger and /frontiers keep them
-    el('div', { class: 'row spread wrap' }, el('h1', {}, entry.title)),
-    skeleton(6));
+  const main = el('div', {});
   const allPosts = [];
   let nextCursor = null;
+  // phases 0/2/4: what this board was showing when you left it. Read BEFORE
+  // anything is drawn, because a hit paints synchronously and a miss must not
+  // have drawn a skeleton it is about to replace.
+  const cacheKey = boardCache.keyOf(entry);
+  const cached = boardCache.read(cacheKey);
+  let lastInfo = cached?.info ?? null;
+  const remember = () => boardCache.write(cacheKey,
+    { posts: allPosts.slice(), cursor: nextCursor, info: lastInfo, at: Date.now() });
   const card = el('div', { class: 'card' });
   const moreHost = el('div', {});
   const repaint = () => {
@@ -1139,7 +1143,7 @@ function feedBoardView(entry, preInfo) {
       const more = el('button', { class: 'btn sm', style: 'margin:8px' }, 'More');
       more.addEventListener('click', () => {
         lens.feed(entry.source, { title: entry.title, cursor: nextCursor })
-          .then((next) => { allPosts.push(...next.posts); nextCursor = next.cursor || null; repaint(); })
+          .then((next) => { allPosts.push(...next.posts); nextCursor = next.cursor || null; repaint(); remember(); })
           .catch((e) => toast('More failed: ' + e.message, 'err'));
       });
       moreHost.append(more);
@@ -1162,6 +1166,7 @@ function feedBoardView(entry, preInfo) {
         pending = [];
         refresh.setState('rest');
         repaint();
+        remember();
         window.scrollTo(0, 0);
         return;
       }
@@ -1217,6 +1222,7 @@ function feedBoardView(entry, preInfo) {
         allPosts.push(...out.posts);
         nextCursor = out.cursor || null;
         repaint();
+        remember();
         deepNote.replaceChildren(
           out.outcome === 'covered'
             ? `Ranked every post this feed served in the last ${boardTimeframe} (${out.pages} page${out.pages === 1 ? '' : 's'}).`
@@ -1241,24 +1247,23 @@ function feedBoardView(entry, preInfo) {
         .then(([info]) => info)
         .catch(() => null)   // the board still works without its card
     : Promise.resolve(null);
-  Promise.all([infoReady, lens.feed(entry.source, { title: entry.title })]).then(([info, f]) => {
-    if (info?.hidden) {
-      main.replaceChildren(emptyState('This feed is hidden by your moderation settings',
-        'It carries an adult content label and your Bluesky account has adult content turned off. Forage mirrors that setting and adds no switch of its own — change it in your Bluesky settings if you want it back.'));
-      return;
-    }
-    if (info) headerHost.replaceChildren(feedHeaderCard(info));
-    allPosts.push(...f.posts);
-    nextCursor = f.cursor || null;
+  // ONE paint, reached from a record or from the network. It must be callable
+  // synchronously: `render()` is the popstate handler, and the browser applies
+  // the saved offset after that handler returns and before the next frame — so
+  // a board that is still fetching when it returns has already lost the reader's
+  // place, in every engine (measured chromium/webkit/firefox 2026-09-01).
+  const paint = (info) => {
+    lastInfo = info ?? lastInfo;
+    if (lastInfo) headerHost.replaceChildren(feedHeaderCard(lastInfo));
     main.replaceChildren(
       el('div', { class: 'row spread wrap' },
         // 4h: `info` is the network's answer and is already resolved here —
         // reaching past it for the registry string is how a retired name shipped.
-        el('h1', {}, info?.title || entry.title)), // the DL chips are gone (feed-row v4)
+        el('h1', {}, lastInfo?.title || entry.title)), // the DL chips are gone (feed-row v4)
       headerHost,
       // this board widens by walking, so it offers what a walk can tell apart
       boardToolbar(() => { repaint(); deepen(); }, { timeframes: WALK_TIMEFRAMES, refresh }),
-      f.posts.length ? card : emptyState('Nothing here', 'This source returned no posts.'),
+      allPosts.length ? card : emptyState('Nothing here', 'This source returned no posts.'),
       deepNote,
       moreHost);
     repaint();
@@ -1271,8 +1276,36 @@ function feedBoardView(entry, preInfo) {
       const m = href.match(/\/p\/(at:.+)$/);
       if (m) a.setAttribute('href', `/p?uri=${encodeURIComponent(m[1])}&from=${entry.slug}`);
     }
-  }).catch((e) => main.replaceChildren(emptyState('Lens fetch failed', e.message)));
-  return { main, side: el('div', { class: 'side' }, ...lensRail()) };
+  };
+
+  if (cached) {
+    // Phase 0/2: a rebuild or a Back asks the record, not the network. This is
+    // also why arriving at a board no longer costs four fetches — `render()`
+    // runs on every store change and each run used to re-fetch.
+    allPosts.push(...cached.posts);
+    nextCursor = cached.cursor ?? null;
+    paint(cached.info);
+  } else {
+    main.append(
+      el('div', { class: 'row spread wrap' }, el('h1', {}, entry.title)),
+      skeleton(6));
+    const flight = boardCache.inflight(cacheKey)
+      || boardCache.track(cacheKey, Promise.all([infoReady, lens.feed(entry.source, { title: entry.title })]));
+    flight.then(([info, f]) => {
+      if (info?.hidden) {
+        main.replaceChildren(emptyState('This feed is hidden by your moderation settings',
+          'It carries an adult content label and your Bluesky account has adult content turned off. Forage mirrors that setting and adds no switch of its own — change it in your Bluesky settings if you want it back.'));
+        return;
+      }
+      allPosts.push(...f.posts);
+      nextCursor = f.cursor || null;
+      paint(info);
+      remember();
+    }).catch((e) => main.replaceChildren(emptyState('Lens fetch failed', e.message)));
+  }
+  // the board's identity travels with the view, so main.js can ask scroll memory
+  // where this board was without needing to know what a board is
+  return { main, side: el('div', { class: 'side' }, ...lensRail()), boardKey: cacheKey };
 }
 
 // 3e/3q: a quote-response rendered as thread continuation. 3q gives it a left

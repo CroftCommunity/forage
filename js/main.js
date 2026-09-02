@@ -15,6 +15,7 @@ import { setToaster } from './actions.js';
 import * as views from './ui/views.js';
 import * as lensViews from './ui/lens-views.js';
 import * as pmode from './mode.js';
+import * as scrollMemory from './scroll-memory.js';
 import { modeView, wrongPopulation } from './ui/mode-view.js';
 
 setToaster(toast);
@@ -166,7 +167,7 @@ const blueskyOnly = (handler) => (p, q) => (inBluesky() ? handler(p, q) : wrongP
 router.route('/', byMode((p, q) => {
   const path = lensViews.landingPath();
   if (path && router.currentPath() === '/') {
-    history.replaceState({}, '', path);
+    router.replacePath(path);
     return router.dispatch(path);
   }
   return lensViews.lensHomeView(p, q);
@@ -211,7 +212,7 @@ router.route('/create-feed', memoryOnly(views.createFeedView));
 // and the moderation mirror. /settings stays a working address and redirects,
 // because links to it exist. The MEMORY population keeps its own /settings.
 router.route('/settings', byMode(() => {
-  history.replaceState({}, '', '/me');
+  router.replacePath('/me');
   return router.dispatch('/me');
 }, views.settingsView));
 router.route('/frontiers', views.frontiersView);
@@ -226,7 +227,7 @@ router.route('/u/:handle', byMode(lensViews.lensUserView, views.profileView));
 router.route('/about', views.aboutView);
 router.route('/signup', memoryOnly(views.signupView));
 // legacy /lens* deep links → the unified namespace
-const redirectTo = (path) => { history.replaceState({}, '', path); return router.dispatch(path); };
+const redirectTo = (path) => { router.replacePath(path); return router.dispatch(path); };
 router.route('/lens', () => redirectTo('/'));
 router.route('/lens/f/:slug', (p) => redirectTo(`/f/${p.slug}`));
 router.route('/lens/h/:tag', (p) => redirectTo(`/h/${p.tag}`));
@@ -257,7 +258,12 @@ window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && drawerOpen
 
 // ---------- render pipeline ----------
 let currentCleanup = null;
-let navigatedByLink = false;
+// What KIND of render this is, which is the whole input to where the reader ends
+// up. 'link' opens a new page at its top; 'pop' puts them back exactly where that
+// entry was; 'rerender' is a store change and must not move them at all — that
+// last one is why this cannot be inferred from the path (a store change and a
+// re-click on the current link look identical from the URL).
+let navKind = 'rerender';
 function render() {
   // dev bar (memory-only scaffolding, user 2026-08-26) + masthead always fresh
   devHost.replaceChildren(pmode.active() === 'memory' ? devBar() : '');
@@ -293,25 +299,30 @@ function render() {
   sideEl.hidden = lensMode && !out.side;
   // reflect frontier dev toggle
   document.body.classList.toggle('hide-frontiers', !store.getDev().frontiers);
-  // A LINK navigation opens the new page at its top (owner, 2026-08-29: a
-  // thread opened wherever the board had been scrolled to — this line used to
-  // read `window.scrollingReset && …`, and nothing ever set that). A store
-  // re-render never moves the reader, and Back is left to the browser's own
-  // scroll restoration. A `?focus=` deep link still wins: focusComment scrolls
-  // in a later frame.
-  if (navigatedByLink) { navigatedByLink = false; window.scrollTo(0, 0); }
+  // Where the reader ends up. A LINK navigation opens the new page at its top
+  // (owner, 2026-08-29: a thread opened wherever the board had been scrolled to)
+  // — unless it is a board they were already reading, which is phase 3. A store
+  // re-render never moves them. Back and Forward go exactly where that entry was,
+  // which works only because the board painted from its record synchronously just
+  // above: the browser applies its own restore after this handler returns, and we
+  // have taken that job with scrollRestoration = 'manual'. A `?focus=` deep link
+  // still wins: focusComment scrolls in a later frame.
+  scrollMemory.setEntry(router.entryKey());
+  scrollMemory.setBoard(out.boardKey ?? null);
+  scrollMemory.land(navKind, out.boardKey ?? null);
+  navKind = 'rerender';
 }
 
 // re-render on any store change (persona switch, dispatch, dev flags)
-store.subscribe(render);
-window.addEventListener('popstate', render);
-router.interceptLinks(() => { navigatedByLink = true; render(); }); // real hrefs, no page loads
+store.subscribe(() => { navKind = 'rerender'; render(); });
+window.addEventListener('popstate', () => { navKind = 'pop'; render(); });
+router.interceptLinks((kind) => { navKind = kind || 'link'; render(); }); // real hrefs, no page loads
 // A legacy '#/...' link followed while the app is ALREADY open is a
 // same-document change — boot never re-runs, so bridge it here too.
 window.addEventListener('hashchange', () => {
   const path = router.legacyHashPath(location.hash);
   if (!path) return;
-  history.replaceState({}, '', path);
+  router.replacePath(path);
   render();
 });
 
@@ -326,6 +337,11 @@ skins.onChange(render);
 density.onChange(render);
 
 // ---------- boot ----------
+// The first entry is the page load's, so it has no id until we give it one, and
+// the restore has to be ours before anything can scroll.
+router.stampCurrent();
+scrollMemory.arm();
+
 const hadState = store.hydrate();
 // An OAuth callback landing (code+state in the query OR the hash fragment —
 // atproto's browser default is response_mode=fragment) must complete the
@@ -335,14 +351,14 @@ import('./auth/session.js').then(async ({ isOAuthCallback }) => {
   if (isOAuthCallback(location.search) || isOAuthCallback(location.hash)) {
     const lv = await import('./ui/lens-views.js');
     await lv.ensureAuthBoot();
-    history.replaceState({}, '', '/'); // drop the callback params from the bar
+    router.replacePath('/'); // drop the callback params from the bar
     render();
   }
 });
 // 3n: bridge the hash URLs already shared from the deployed site. Runs AFTER
 // the OAuth check so a fragment response is never mistaken for a route.
 const legacy = router.legacyHashPath(location.hash);
-if (legacy) history.replaceState({}, '', legacy);
+if (legacy) router.replacePath(legacy);
 if (!hadState && pmode.active() === 'memory') {
   // First ever visit IN THE MEMORY POPULATION: seed once so the sandbox has
   // content. Seeding keys off the presentation mode now (3h) — the Bluesky

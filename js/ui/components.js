@@ -361,7 +361,10 @@ export function postRow(p, viewerCanVote, opts = {}) {
   // no empty line where the crumb was — and appended conditionally, because
   // Element.append stringifies a null into the word "null" (the v7 frame)
   if (meta.childElementCount) right.append(meta);
-  const wrap = el('div', { class: 'postrow' + (p.pinned ? ' pinned-row' : '') + (opts.compact ? ' compact' : '') }, right);
+  // the row carries its post's identity, so a reader's position can be expressed
+  // as "this post, this far down it" and not only as a pixel (feed-position D2)
+  const wrap = el('div', { class: 'postrow' + (p.pinned ? ' pinned-row' : '') + (opts.compact ? ' compact' : ''),
+    ...(p.id ? { 'data-uri': String(p.id) } : {}) }, right);
   // feed-row v13 (E, bsky.app's card): the ROW opens its thread on a press on its
   // own ground — the text is text now (tags, links and mentions live in it), so
   // it is no longer the link. Anything that is a control keeps its own press;
