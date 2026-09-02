@@ -203,7 +203,10 @@ before and after the prepend and add the difference to the offset.
   a count. The control reads `3 new` and the pill `↑ 3 new posts`, and `mock-refresh` R5 holds that
   the number is the number that arrived. Original note: A count needs a real page-1
   fetch and a diff; "new" could ride a cheaper signal. Phase 5 needs this settled.
-- **D11 — the stale threshold**, and whether a very old record still restores. Recommendation:
+- ~~**D11 — the stale threshold**~~ **ANSWERED 2026-09-02: there is none, and none is wanted.**
+  With the trigger settled as "on return to a board", every return checks — one page-one request,
+  which the record makes cheap. A threshold would only suppress an answer the reader is standing
+  there waiting for. The recommendation below was right and is now the behaviour. Original note:, and whether a very old record still restores. Recommendation:
   it always restores, and the pill says more — silently discarding a reading position is the
   bug being fixed here, and age does not change that.
 - ~~**D12 — does a keep-alive hot tier earn its complexity?**~~ **ANSWERED by Phase 2 (#50): no.**

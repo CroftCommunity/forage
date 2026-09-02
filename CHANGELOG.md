@@ -8,6 +8,15 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-02 **The refresh button now notices on its own when you come back.** Since it landed
+  it has only looked when you pressed it, which meant the count never appeared unless you went
+  asking, and a reader deep in a board pressed twice — once to look, once to take. Now coming
+  back to a board you were reading checks for you: press Back out of a post, or wander off and
+  return later, and the button already knows whether anything arrived while you were gone. It
+  still never puts those posts in front of you unasked — the board holds exactly where it was
+  and taking them is still the press. Nothing polls while you read, so the app asks the network
+  once per return and not on a clock. (owner: "on return to board")
+
 - 2026-09-02 **Press Back and you come back to your place in the feed.** Reading down a board,
   opening a post, and pressing Back used to put you at the top of a freshly reloaded feed — and
   if you had pressed More to load further pages, those were gone too, so the place you wanted

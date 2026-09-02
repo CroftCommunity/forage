@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forage Feed Refresh v4</title>
-<meta name="mock-version" content="4">
+<title>Forage Feed Refresh v5</title>
+<meta name="mock-version" content="5">
 <meta name="mock-baseline" content="forage@71f66f0">
 <meta name="mock-proposal" content="forage@09daed3">
 <style>
@@ -43,9 +43,9 @@ code{font-size:.92em}
 <body>
 <div class="wrap">
   <header>
-    <div class="eyebrow">Forage &middot; mock &middot; feed-refresh <b>v4</b> &middot; Current forage@71f66f0 &middot; Proposed forage@09daed3 &middot; 2026-09-01</div>
+    <div class="eyebrow">Forage &middot; mock &middot; feed-refresh <b>v5</b> &middot; Current forage@71f66f0 &middot; Proposed forage@09daed3 &middot; 2026-09-01</div>
     <h1>A refresh button that tells you whether it is worth pressing</h1>
-    <p class="sub"><b>One proposal in five decisions</b>, from the owner 2026-09-01:
+    <p class="sub"><b>One proposal in six decisions</b>, from the owner 2026-09-01:
       &ldquo;let's put a refresh indicator and button to refresh on the top of the post feed stack,
       on the same horizontal line as the sort control bar, right aligned over the feed column.&rdquo;
       It is Phase 5 of <code>plans/2026-09-01-plan-feed-position-and-updates.md</code> &mdash; the half of
@@ -120,6 +120,18 @@ code{font-size:.92em}
         <td><code>mock-refresh</code> R8 &mdash; both frames: no pill while there is nothing to report, the pill in
           view and &ge;44px once there is, and it stands down when the bar returns</td></tr>
 
+      <tr><td>6</td><td><b>It checks on RETURN to a board</b> (v5 &mdash; owner 2026-09-02, choosing among the
+        three candidates: &ldquo;on return to board&rdquo;)</td>
+        <td>Coming back to a board you were reading &mdash; Back out of a post, or a walk back to it later &mdash;
+          checks page one and says what arrived, with no press. That is the moment &ldquo;what did I miss&rdquo;
+          has an answer. Before this the press was the only thing that looked, so the indicator half of the
+          control never lit on its own and a reader deep in a board pressed twice.</td>
+        <td>A timer while you read (asks the network on a cadence nobody chose); the tab becoming visible
+          (real, but a weaker signal than arriving at the board itself); checking on every MOUNT — which is
+          not the same thing, since <code>render()</code> re-runs on every store change</td>
+        <td><code>mock-refresh</code> R10 (the return finds it with no press, injects nothing, moves nobody),
+          R11 (a store re-render is not a return); <code>feed-position</code> P2b (exactly one extra request)</td></tr>
+
       <tr><td>4</td><td><b>It never injects</b> &mdash; announcing is automatic, taking them is the press</td>
         <td>The check counts what sits above the post you are holding and says so. The board does not move,
           the row count does not change, and your scroll offset does not change. Pressing prepends the posts
@@ -134,7 +146,7 @@ code{font-size:.92em}
   <section>
     <div class="eyebrow">Open</div>
     <h2>Open decisions &mdash; for the owner</h2>
-    <div class="callout"><p class="small"><b>D14 closed in v2</b> &mdash; the pill is decision 5 above, not an open
+    <div class="callout"><p class="small"><b>D14 closed in v2; the check's trigger closed in v5</b> (decision 6 above) &mdash; the pill is decision 5 above, not an open
       question. What remains open is everything below, and none of it blocks this landing.</p><ul>
       <li><b>How often does the check run?</b> Nothing runs it on a timer yet. On returning to a board is the
         obvious moment (and is what Phase 2 of the plan makes cheap); a poll while you read is a separate
@@ -232,6 +244,11 @@ code{font-size:.92em}
       to exist on the day.</p>
     <div class="tablewrap"><table>
       <tr><th>v</th><th>When</th><th>Commit</th><th>What changed</th></tr>
+      <tr><td>5</td><td>2026-09-02</td><td><code>__PROPOSAL__</code></td><td><b>The check now runs on return to a
+        board</b> (owner's pick of the three candidates), promoted from open question to decision 6. Frames
+        re-captured against a <code>main</code> that has since gained the feed-position work (#50) &mdash; the
+        board paints from a record now, so its Current column is a different engine even though the pixels
+        are the same.</td></tr>
       <tr><td>4</td><td>2026-09-01</td><td><code>09daed3</code></td><td><b>Both columns re-captured against the
         signed-out-board landing</b> (#47), which reworked this very surface: <code>js/ui/sortbar.js</code> gained
         per-board timeframes, the rail lost its Feeds card, Trending moved into the nav, and the curator is now
