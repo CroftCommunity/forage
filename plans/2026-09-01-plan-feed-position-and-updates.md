@@ -1,7 +1,7 @@
 # Plan: come back to your place in the feed — and be told what changed while you were gone
 
 date: 2026-09-01
-status: **Phases 5a + 5b + 5c COMPLETE** on `claude/feed-position` — mock `plans/mocks/feed-refresh.html` v3 (Current `forage@3132a25`, Proposed `forage@7e7c08d`), nine claims in `e2e/mock-refresh.workflow.mjs`, gate green (680/680 unit, 86/86 conformance, 34 workflows). **Phases 0–4 and 6 unstarted.** D9 decided by the owner 2026-09-01; D13 resolved in 5a; **D14 settled by the owner 2026-09-01 on the v1 frames** — option (b), the pill; it is decision 5 of mock v2.
+status: **Phases 5a + 5b + 5c COMPLETE** on `claude/feed-position` — mock `plans/mocks/feed-refresh.html` v4 (Current `forage@71f66f0`, Proposed `forage@09daed3`), nine claims in `e2e/mock-refresh.workflow.mjs`, gate green (680/680 unit, 86/86 conformance, 34 workflows). **Phases 0–4 and 6 unstarted.** D9 decided by the owner 2026-09-01; D13 resolved in 5a; **D14 settled by the owner 2026-09-01 on the v1 frames** — option (b), the pill; it is decision 5 of mock v2.
 repo: `CroftCommunity/forage`
 baseline: `main` @ `3345405` (quote-embed landed); **rebased onto `3132a25`** 2026-09-01 after reply-embeds (#48) and thread guides (#49) landed mid-flight
 related: `claude/logged-out-refine` item 7 (the centre column's scroller) — **decided compatibly, see Reasoning D0**; `e2e/open-at-top.workflow.mjs` (the rule this must not break)
@@ -298,3 +298,11 @@ the design changed and no frame looks different — but a sha that does not name
 precisely the drift MOCKS.md rule 2 exists to prevent, so **both columns were captured again**
 (v3) instead of editing the metas to fit. Gate re-run green on the merged tree: 682/682 unit
 (two new tests arrived with #48), 86/86 conformance, 34 workflows 0 failed.
+
+**Rebased a second time, onto #47** (the signed-out board), which reworked this exact surface:
+`js/ui/sortbar.js` gained per-board timeframes, the rail lost its Feeds card, Trending moved
+into the nav. `boardToolbar` had grown an options object, so `refresh` went into it rather than
+becoming a third positional argument. This time the re-capture changed **every** frame, where
+v3's had come back byte-identical — the difference is the whole reason a mock names its trees.
+The control is unaffected and still ends at the column's right edge. Gate green again: 688/688
+unit, 86/86 conformance, 34 workflows 0 failed.

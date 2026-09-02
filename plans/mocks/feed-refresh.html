@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forage Feed Refresh v3</title>
-<meta name="mock-version" content="3">
-<meta name="mock-baseline" content="forage@3132a25">
-<meta name="mock-proposal" content="forage@7e7c08d">
+<title>Forage Feed Refresh v4</title>
+<meta name="mock-version" content="4">
+<meta name="mock-baseline" content="forage@71f66f0">
+<meta name="mock-proposal" content="forage@09daed3">
 <style>
 :root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
   --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
@@ -43,7 +43,7 @@ code{font-size:.92em}
 <body>
 <div class="wrap">
   <header>
-    <div class="eyebrow">Forage &middot; mock &middot; feed-refresh <b>v3</b> &middot; Current forage@3132a25 &middot; Proposed forage@7e7c08d &middot; 2026-09-01</div>
+    <div class="eyebrow">Forage &middot; mock &middot; feed-refresh <b>v4</b> &middot; Current forage@71f66f0 &middot; Proposed forage@09daed3 &middot; 2026-09-01</div>
     <h1>A refresh button that tells you whether it is worth pressing</h1>
     <p class="sub"><b>One proposal in five decisions</b>, from the owner 2026-09-01:
       &ldquo;let's put a refresh indicator and button to refresh on the top of the post feed stack,
@@ -54,8 +54,8 @@ code{font-size:.92em}
       &ldquo;is there anything newer than the post you are holding&rdquo;, not the restore machinery, so it
       ships and is judged on its own.</p>
     <p class="sub"><b>Every frame here is a capture of the engine</b> (MOCKS.md P1): Current is
-      <code>main</code> at <code>3132a25</code>, Proposed is <code>claude/feed-position</code> at
-      <code>7e7c08d</code>, both by <code>scripts/mock-snaps.mjs</code>, in the default skin (rule 4),
+      <code>main</code> at <code>71f66f0</code>, Proposed is <code>claude/feed-position</code> at
+      <code>09daed3</code>, both by <code>scripts/mock-snaps.mjs</code>, in the default skin (rule 4),
       at 390&times;844 and 1280&times;900. Captures live in <code>plans/mocks/snaps/feed-refresh/</code>.
       The population is <code>e2e/harness/mock-refresh.mjs</code>: <code>mock-board</code>'s load &mdash; the
       64-grapheme chosen name, four-digit counts, a video stage &mdash; plus the one thing that board
@@ -226,21 +226,32 @@ code{font-size:.92em}
   <section>
     <div class="eyebrow">Revisions</div>
     <h2>Revisions</h2>
+    <p class="sub">This branch was rebased twice while it was open, so the v1&ndash;v3 commits named below are
+      their <b>post-rebase</b> identities &mdash; the pre-rebase ones are unreachable and would not resolve for a
+      reader. Rule 1 wants a commit per revision that a reader can actually check out, not the one that happened
+      to exist on the day.</p>
     <div class="tablewrap"><table>
       <tr><th>v</th><th>When</th><th>Commit</th><th>What changed</th></tr>
-      <tr><td>3</td><td>2026-09-01</td><td><code>7e7c08d</code></td><td><b>Both columns re-captured.</b> Two other
+      <tr><td>4</td><td>2026-09-01</td><td><code>09daed3</code></td><td><b>Both columns re-captured against the
+        signed-out-board landing</b> (#47), which reworked this very surface: <code>js/ui/sortbar.js</code> gained
+        per-board timeframes, the rail lost its Feeds card, Trending moved into the nav, and the curator is now
+        named rather than handled. Every frame changed &mdash; unlike v3, where the re-capture came back
+        byte-identical. The refresh control is unaffected and still ends at the column's right edge, which is the
+        thing this version exists to show. <code>boardToolbar</code> took <code>refresh</code> into the options
+        object that landing introduced, rather than adding a third positional argument.</td></tr>
+      <tr><td>3</td><td>2026-09-01</td><td><code>09daed3</code></td><td><b>Both columns re-captured.</b> Two other
         features landed on <code>main</code> while this branch was open (reply embeds #48, thread guides #49), so the
         branch was rebased and every sha moved. v2's <code>mock-baseline</code> named a tree that was no longer what
         the owner runs and its <code>mock-proposal</code> named a pre-rebase commit on no branch. Nothing in the
         design changed and no frame looks different &mdash; but a sha that does not name a live tree is exactly the
         drift rule 2 exists to prevent, so the pixels were taken again rather than the metas edited to fit.</td></tr>
-      <tr><td>2</td><td>2026-09-01</td><td><code>7ee52ab</code></td><td><b>D14 settled by the owner on the v1
+      <tr><td>2</td><td>2026-09-01</td><td><code>c3b9206</code></td><td><b>D14 settled by the owner on the v1
         frames</b> and promoted from an open question to decision 5; &sect;&nbsp;C retitled. No frame changed &mdash;
         <code>mock-proposal</code> still named the tree the pixels came from.
         MOCKS.md P3: a decision that settles goes back into the mock in the same landing.</td></tr>
-      <tr><td>1</td><td>2026-09-01</td><td><code>1a5cb96</code></td><td>First publication. Four decisions, eight captures.
+      <tr><td>1</td><td>2026-09-01</td><td><code>4888e5b</code></td><td>First publication. Four decisions, eight captures.
         The Proposed frames were re-captured once before publishing: the first set showed the control wrapping to the
-        left at 390 and the pill vanishing on a green video, both fixed in <code>1a5cb96</code> and now held by R9 and
+        left at 390 and the pill vanishing on a green video, both fixed in <code>4888e5b</code> and now held by R9 and
         a ring respectively.</td></tr>
     </table></div>
   </section>
