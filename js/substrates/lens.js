@@ -11,6 +11,7 @@
 import { buildPost, withTag, IMAGE_LIMITS } from '../compose.js';
 import { RUNG_IDS, membersFor, labelFor } from '../rings.js';
 import { sortItems } from '../engines/rank.js';
+import { gifOf, parseAlt } from '../gif.js';
 
 export const LENS_PERMS = Object.freeze({
   viewerId: null, loggedIn: false, admin: false, probation: false,
@@ -228,6 +229,26 @@ function mediaOf(embedView) {
   // to be `external?.thumb`, so such a post produced no media at all and its
   // link went nowhere (press releases, statements).
   if (e?.$type === 'app.bsky.embed.external#view' && e.external?.uri) {
+    // gif-embeds (owner, 2026-09-02): Bluesky's GIF button attaches the
+    // animation as an ORDINARY external embed, so this branch has been drawing
+    // a frozen JPEG thumbnail with a link out. Ask first whether the uri is
+    // really an animation; a GIF is its own kind because it has sources, a
+    // loop, a play state and a true aspect ratio that a link card never had.
+    //
+    // Deciding it HERE is what makes a quoted GIF, a reply GIF and a feed GIF
+    // one piece of work — mediaOf is the one door (3i), and the alternative
+    // was every view learning Bluesky's "ALT: " description hack for itself.
+    const gif = gifOf(e.external.uri);
+    if (gif) {
+      const { text, authored } = parseAlt(e.external.description);
+      return { kind: 'gif', player: gif.kind, thumb: e.external.thumb || null, uri: e.external.uri,
+        title: e.external.title || null, aspect: gif.aspect,
+        ...(gif.kind === 'video' ? { sources: gif.sources } : { src: gif.src }),
+        // the alt is the description with Bluesky's prefix taken off; `authored`
+        // separates alt a person wrote from the GIF's own title auto-filled in,
+        // which is the duplication the owner reported
+        alt: text, altAuthored: authored };
+    }
     return { kind: 'external', thumb: e.external.thumb || null, uri: e.external.uri,
       title: e.external.title || null, description: e.external.description || '' }; // v13 decision 31: the card's words
   }
