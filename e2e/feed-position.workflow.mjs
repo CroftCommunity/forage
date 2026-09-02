@@ -155,8 +155,15 @@ export async function run() {
         a.href = p; a.id = 'same-board'; a.textContent = 'here';
         document.getElementById('main').prepend(a);
       }, BOARD_PATH);
-      await s.page.click('#same-board');
+      // Clicked PROGRAMMATICALLY, not through page.click(). Playwright scrolls an
+      // element into view before clicking it, and this anchor is at the top of the
+      // document — so page.click() scrolled to 0 first and the assertion passed
+      // whatever the code did. Caught by mutation: deleting the 'same' rule left
+      // this claim green. A real press on a nav entry does not move the page first.
+      const wasAt = await y(s);
+      await s.page.evaluate(() => document.getElementById('same-board').click());
       await s.page.waitForTimeout(300);
+      assert.ok(wasAt > 300, `premise: still scrolled when the press happened (${wasAt})`);
       assert.equal(await y(s), 0, 'P6: the link for the board you are on takes you to the top');
     } finally { await s.close(); }
   }
