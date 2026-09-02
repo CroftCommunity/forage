@@ -26,6 +26,7 @@ import * as pictures from '../pictures.js';
 import * as lang from '../lang.js';
 import { density, densityDial } from '../board-density.js';
 import { sortBar, TIMEFRAMES, WALK_TIMEFRAMES, nearestTimeframe } from './sortbar.js';
+import { refreshControl } from './refresh-control.js';
 import { sortItems } from '../engines/rank.js';
 import { POST_LIMITS, IMAGE_LIMITS, graphemes, withTag } from '../compose.js';
 import { cardSizeDial } from '../card-size.js';
@@ -660,7 +661,10 @@ const THREAD_WINDOW_MS = { day: 86400e3, week: 6048e5, month: 2592e6, year: 3153
 // that widens by walking offers the rungs its walk can be told apart by; one
 // with a real server window offers all five. The carried choice is clamped
 // here, once, so the select can never show a value it does not have.
-function boardToolbar(onChange, { timeframes = TIMEFRAMES } = {}) {
+// `refresh` is the board's refresh control (feed-position D9/D13), passed in
+// rather than built here because the BOARD owns the check and the pending
+// list — the bar only gives it its outboard slot.
+function boardToolbar(onChange, { timeframes = TIMEFRAMES, refresh = null } = {}) {
   boardTimeframe = nearestTimeframe(boardTimeframe, timeframes);
   // Phase 11c: the same bar the memory board has. Sorts the LOADED posts —
   // the feed itself is ranked by its generator (DL-010); Hot is engagement
@@ -676,7 +680,11 @@ function boardToolbar(onChange, { timeframes = TIMEFRAMES } = {}) {
     onChange: ({ sort, from }) => { boardSort = sort; boardTimeframe = from; drawBar(); onChange(); },
     // decision 7: the card size dial (1–4) stands where the 3t slider stood —
     // a notch is a choice a thumb can make; the slider moved in visible jumps
-    extra: [el('span', { class: 'grow' }), densityDial(el, () => onChange()), cardSizeDial(el)],
+    // feed-position D13: refresh sits OUTBOARD of the two display dials. It
+    // acts on content where they act on presentation, and the outermost slot
+    // is the one a thumb reaches — so it is last, at the column's right edge.
+    extra: [el('span', { class: 'grow' }), densityDial(el, () => onChange()), cardSizeDial(el),
+      ...(refresh ? [refresh.live, refresh.node] : [])],
   }));
   drawBar();
   return el('div', { class: 'row wrap', style: 'gap:6px;margin:6px 0;align-items:center', 'data-board-toolbar': '1' }, barHost);
@@ -1138,6 +1146,47 @@ function feedBoardView(entry, preInfo) {
     }
   };
   const headerHost = el('div', {});
+  // feed-position Phase 5: what changed while you were gone. The check reads
+  // page one and counts what sits ABOVE the top post the reader is holding —
+  // it never writes into the board. Accepting is the press (D6): restoring is
+  // automatic, refreshing is a press.
+  //
+  // Deliberately independent of Phases 0–4: the count needs only "is there
+  // anything newer than allPosts[0]", not the board record, so this ships and
+  // is judged on its own.
+  let pending = [];
+  const refresh = refreshControl({
+    onRefresh: () => {
+      if (pending.length) {
+        allPosts.unshift(...pending);
+        pending = [];
+        refresh.setState('rest');
+        repaint();
+        window.scrollTo(0, 0);
+        return;
+      }
+      refresh.setState('busy');
+      checkForNew().finally(() => { if (!pending.length) refresh.setState('rest'); });
+    },
+  });
+  const checkForNew = () => {
+    const top = allPosts[0]?.id;
+    return lens.feed(entry.source, { title: entry.title })
+      .then((f) => {
+        const known = new Set(allPosts.map((p) => p.id));
+        // what is ABOVE the post the reader is holding — a post further down
+        // that we simply never paged to is not news, it is depth
+        const idx = f.posts.findIndex((p) => p.id === top);
+        const fresh = (idx === -1 ? f.posts : f.posts.slice(0, idx)).filter((p) => !known.has(p.id));
+        pending = fresh;
+        refresh.setState(fresh.length ? 'news' : 'rest', fresh.length);
+      })
+      .catch(() => refresh.setState('rest'));
+  };
+  // The deterministic seam the mock captures and the parity claims drive, in
+  // the shape js/auth/session.js already uses for its fake manager. A timer
+  // would make both of them wait on a clock they cannot see.
+  window.__forageCheckForNew = checkForNew;
   // 4f: a /f/ board has no server window (DL-032), so "Top · this week" widens
   // by paging backwards on a budget and then says which of the three ways it
   // ended. The note is part of the answer, not decoration.
@@ -1208,11 +1257,14 @@ function feedBoardView(entry, preInfo) {
         el('h1', {}, info?.title || entry.title)), // the DL chips are gone (feed-row v4)
       headerHost,
       // this board widens by walking, so it offers what a walk can tell apart
-      boardToolbar(() => { repaint(); deepen(); }, { timeframes: WALK_TIMEFRAMES }),
+      boardToolbar(() => { repaint(); deepen(); }, { timeframes: WALK_TIMEFRAMES, refresh }),
       f.posts.length ? card : emptyState('Nothing here', 'This source returned no posts.'),
       deepNote,
       moreHost);
     repaint();
+    // the pill follows the reader only once the bar is on the page to watch
+    const stop = refresh.watch();
+    main._cleanup = () => { stop(); if (window.__forageCheckForNew === checkForNew) delete window.__forageCheckForNew; };
     // thread links: lens posts route through #/p?uri=
     for (const a of card.querySelectorAll('a[href*="/p/at:"], a[href^="/f/"]')) {
       const href = a.getAttribute('href');

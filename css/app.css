@@ -454,7 +454,51 @@ dialog.menu::backdrop { background: transparent; }
 
 /* ---- Sort tabs ---- */
 /* the sort bar (js/ui/sortbar.js): two selects dressed as pills, on boards and threads */
-.sortbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: var(--s3); }
+/* feed-position 5a: the bar STRETCHES to its host. It is a flex ITEM of `.row`
+   on a board, so it shrink-wrapped — 295px inside a 680px column — and its
+   `.grow` spacer measured 0, which meant nothing in it was right-aligned and
+   the density and card-size dials sat against the Sort pill with 385px of
+   empty bar to their right (measured 2026-09-01). `flex: 1` is the whole fix;
+   everywhere the bar's parent is a plain block it already filled the width. */
+.sortbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: var(--s3);
+  flex: 1; min-width: 0; }
+
+/* the refresh control (js/ui/refresh-control.js): the pill family the sort
+   selects belong to, without a select's caret — it is a button, not a choice */
+.pillbtn { appearance: none; border: 1px solid var(--border); border-radius: var(--radius-chip);
+  background: var(--card); color: var(--text); font: inherit; font-size: var(--t-xs); font-weight: 600;
+  padding: 6px 12px; min-height: 32px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.pillbtn:hover { border-color: var(--muted); }
+.refresh[data-state="news"] { border-color: var(--brand-ink); color: var(--brand-ink); }
+.refresh[data-state="busy"] { cursor: progress; opacity: .7; }
+.refresh[data-state="busy"] .refresh-glyph { animation: refresh-spin 900ms linear infinite; }
+@keyframes refresh-spin { to { transform: rotate(360deg); } }
+/* a reader who asked for less motion gets the state without the spin */
+@media (prefers-reduced-motion: reduce) { .refresh[data-state="busy"] .refresh-glyph { animation: none; } }
+.refresh-glyph { display: inline-block; line-height: 1; }
+.refresh-words { white-space: nowrap; }
+/* Right-aligned on WHATEVER ROW it lands on. `.grow` only right-aligns while
+   everything fits one line: at 390 the count state ("3 new") pushed the bar to
+   two rows, the spacer stayed up on row one, and the control came down on the
+   LEFT of row two — the opposite of what was asked for. Caught by the first
+   capture (feed-refresh v1, phone/news); the at-rest frame fits one row and
+   could never have shown it. */
+.refresh { margin-left: auto; }
+
+/* D14 (b): the count follows the reader down only while the bar is off-screen
+   and there is something to say. Centred over the column, clear of the phone's
+   home indicator, and above the board but under any dialog. */
+.newspill { position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 30;
+  min-height: 44px; padding: 10px 18px; border-radius: var(--radius-round);
+  border: 1px solid var(--brand-fill); background: var(--brand-fill); color: var(--on-brand);
+  font: inherit; font-size: var(--t-sm); font-weight: 600; cursor: pointer;
+  /* a ring in the page's own ground, so the pill separates from whatever it is
+     over. Without it the brand green sat on a green video frame and all but
+     vanished — the first capture's phone/pill frame, over the fixture's clip. */
+  box-shadow: 0 0 0 2px var(--bg), 0 4px 16px rgba(0,0,0,.3); }
+
+@media (max-width: 480px) { .pillbtn { min-height: 44px; } }
 .pillsel { appearance: none; -webkit-appearance: none; border: 1px solid var(--border); border-radius: var(--radius-chip);
   background: var(--card); color: var(--text); font: inherit; font-size: var(--t-xs); font-weight: 600;
   padding: 6px 26px 6px 12px; min-height: 32px; cursor: pointer;

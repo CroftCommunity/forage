@@ -1,0 +1,77 @@
+{
+  "capturedAt": "2026-09-01",
+  "files": [
+    {
+      "file": "board-lens-refresh.phone.proposed.png",
+      "route": "board-lens-refresh",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@09daed3",
+      "population": "lens:mock-refresh"
+    },
+    {
+      "file": "board-lens-refresh-news.phone.proposed.png",
+      "route": "board-lens-refresh-news",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@09daed3",
+      "population": "lens:mock-refresh"
+    },
+    {
+      "file": "board-lens-refresh-pill.phone.proposed.png",
+      "route": "board-lens-refresh-pill",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@09daed3",
+      "population": "lens:mock-refresh"
+    },
+    {
+      "file": "board-lens-refresh.desktop.proposed.png",
+      "route": "board-lens-refresh",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@09daed3",
+      "population": "lens:mock-refresh"
+    },
+    {
+      "file": "board-lens-refresh-news.desktop.proposed.png",
+      "route": "board-lens-refresh-news",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@09daed3",
+      "population": "lens:mock-refresh"
+    },
+    {
+      "file": "board-lens-refresh-pill.desktop.proposed.png",
+      "route": "board-lens-refresh-pill",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@09daed3",
+      "population": "lens:mock-refresh"
+    },
+    {
+      "file": "board-lens-refresh.phone.current.png",
+      "route": "board-lens-refresh",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@71f66f0",
+      "population": "lens:mock-refresh"
+    },
+    {
+      "file": "board-lens-refresh.desktop.current.png",
+      "route": "board-lens-refresh",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@71f66f0",
+      "population": "lens:mock-refresh"
+    }
+  ]
+}

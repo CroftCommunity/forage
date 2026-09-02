@@ -8,6 +8,27 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-01 **A refresh button that tells you whether it is worth pressing.** The board's
+  control bar now ends, at the right edge of the feed column, with a refresh button. Press it and
+  it looks: if nothing has arrived it goes quiet again, and if three posts have it says "3 new"
+  and waits. It waits on purpose — posts are never slipped into a feed you are reading, which is
+  the thing that makes you lose your sentence, so taking them is a second press and that press
+  puts them at the top. If you are far enough down that the bar has scrolled off, the count
+  follows you as a pill above the board and stands down again the moment the bar is back in view,
+  so there is never more than one of it and never any of it when there is nothing to say. The
+  count is announced to a screen reader as well as drawn.
+  **What it does not do yet:** it only looks when you press it. Nothing checks in the background,
+  so the button will not light up on its own while you read — deciding when it should look is the
+  next piece of this work, and so is keeping your place in the feed when you press Back, which
+  this change does not address.
+  Two things moved to make room, and they are worth naming because you will see them: the
+  control bar now spans the whole width of the feed column instead of huddling on its left,
+  which puts the density and card-size dials where they always looked like they should be —
+  at the column's right edge, next to the new button. (owner: "put a refresh indicator and
+  button to refresh on the top of the post feed stack, on the same horizontal line as the
+  sort control bar, right aligned over the feed column";
+  plan `2026-09-01-plan-feed-position-and-updates.md`, D9/D13/D14)
+
 - 2026-09-01 **The thread's guide lines meet again on a phone.** Under every reply that has
   replies of its own, a line runs down from the avatar and each child branches out of it into
   its own. On a narrow screen that branch was drawn eight pixels to the left of the line it was
