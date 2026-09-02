@@ -974,6 +974,40 @@ dialog.authsheet::backdrop, dialog.sheet::backdrop { background: var(--scrim); }
 .navburger { display: none; }
 .navscrim { display: none; }
 
+/* ---- v11: the centre column scrolls on its own (owner, 2026-09-01) --------
+   "can we make the center column scroll independently like reddit.com?" — yes,
+   and the way reddit does it is the way that survives contact with everything
+   else: the PAGE keeps being the scroller and the two side columns are PINNED
+   to it. Nothing here is a scroll container for the content, so the browser's
+   scrollbar, the space bar, Home/End, `#anchor` links, scroll restoration on
+   Back, and every `scrollIntoView` in the app and its journeys go on meaning
+   what they meant. The alternative — `body { overflow: hidden }` with three
+   `overflow-y: auto` columns — buys the same picture and breaks all of that.
+
+   A rail TALLER than the viewport gets its own scrollbar rather than being
+   clipped, and `overscroll-behavior: contain` stops that inner scroll from
+   handing off to the page when it bottoms out, which is what makes the two
+   feel independent rather than chained.
+
+   Both rules are scoped ABOVE the widths where each column folds into the
+   content flow (the nav becomes a drawer at 800; the rail stacks under the
+   column at 1100). Pinning a stacked column would pin it to the wrong thing. */
+:root { --masthead-h: 61px; } /* measured; e2e/lens-layout holds it to the real one */
+@media (min-width: 801px) {
+  .shell.with-nav > #navhost {
+    position: sticky; top: calc(var(--masthead-h) + var(--s2)); align-self: start;
+    max-height: calc(100vh - var(--masthead-h) - var(--s4));
+    overflow-y: auto; overscroll-behavior: contain;
+  }
+}
+@media (min-width: 1101px) {
+  .shell > #side {
+    position: sticky; top: calc(var(--masthead-h) + var(--s2)); align-self: start;
+    max-height: calc(100vh - var(--masthead-h) - var(--s4));
+    overflow-y: auto; overscroll-behavior: contain;
+  }
+}
+
 @media (max-width: 800px) {
   .shell.with-nav, .shell.with-nav[data-rail="off"] { grid-template-columns: minmax(0, 1fr); }
   .shell.with-nav #side { grid-column: auto; }

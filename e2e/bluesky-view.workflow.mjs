@@ -500,6 +500,31 @@ export async function run() {
     'the /f/ caveat must not follow a server-ranked board');
   await page.waitForSelector('text=weighs engagement, not likes alone');
 
+  // v11: this is the board whose window is REAL, so it keeps all five rungs —
+  // the /f/ board's shorter list is about what a backward walk can be told
+  // apart by, and none of that applies to a server query (owner, 2026-09-01).
+  const hashtagWindows = await page.$$eval('[data-board-toolbar] select[data-from] option', (os) => os.map((o) => o.value));
+  assert.deepEqual(hashtagWindows, ['day', 'week', 'month', 'year', 'all'],
+    `a server-windowed board keeps all five (${JSON.stringify(hashtagWindows)})`);
+
+  // …and a choice only this board offers must not survive onto one that does
+  // not. Carried unclamped, the /f/ select would have rendered with no option
+  // matching its value — which browsers resolve by showing the FIRST option,
+  // so the control would have read "Today" over a board answering "this month".
+  // CLICKED through the trending rail, not loaded: the choice is per-page-load
+  // view state, so a `goto` would reset it and test nothing.
+  await page.locator('[data-board-toolbar] select[data-from]').selectOption('month');
+  await page.waitForTimeout(200);
+  await page.locator('[data-trending] a:has-text("Meadow Fest")').click();
+  await page.waitForSelector('[data-affordance="curated"]');
+  const carried = await page.$eval('[data-board-toolbar] select[data-from]', (sel) => ({
+    value: sel.value, shown: sel.options[sel.selectedIndex]?.text,
+  }));
+  assert.equal(carried.value, 'all', 'a month carried onto a walking board widens to All time');
+  assert.equal(carried.shown, 'All time', 'and the control says so rather than reading "Today"');
+
+  await page.goBack();
+  await page.waitForSelector('h1:has-text("#camp")');
   await page.locator('[data-board-toolbar] select').first().selectOption('feed');
   await page.waitForSelector('text=post tagged1');
 
@@ -631,15 +656,18 @@ export async function run() {
   await page.locator('[data-board-toolbar] select[data-density]').selectOption('card');
   await page.waitForSelector('.stage');
 
-  // board-cards Phase 7: the right rail is lensSidebar restyled — the same
-  // curated sources a guest was always offered, now beside the column with the
-  // sign-in card first and Trending last; and it is a setting (Side panel).
-  // (signed in here, so the Feeds card lists the ACCOUNT's saved feeds, which
-  // land async — the card and its browse link are the invariant; the guest's
-  // curated list is guest-surface's to pin)
-  assert.ok(await page.locator('#side .card a[href="/feeds"]').count() >= 1, 'the rail carries the Feeds card');
+  // board-cards Phase 7, revised by v11 (owner, 2026-09-01: "remove this
+  // duplicate box on the right"): the rail's Feeds card is GONE — signed in it
+  // listed the account's saved feeds, which is exactly what the left nav's
+  // Feeds section lists. Trending is what the rail is for now, and signed in it
+  // is the whole of it.
+  assert.equal(await page.locator('#side .card a[href="/feeds"]').count(), 0, 'no Feeds card on the rail');
   const railOrder = await page.$$eval('#side .card', (cs) => cs.map((c) => c.querySelector('h2')?.textContent.trim() ?? c.getAttribute('data-trending') ?? '?'));
-  assert.equal(railOrder.at(-1), 'Trending', `Trending is the last card on the rail: ${JSON.stringify(railOrder)}`);
+  assert.deepEqual(railOrder, ['Trending'], `signed in, the rail is Trending alone: ${JSON.stringify(railOrder)}`);
+  // (removing that card must not take the SLUG ROUTING with it — it was the
+  // only caller that registered a saved feed under its slug. This account has
+  // no saved feeds to route, so that check lives in signin.workflow, which
+  // signs in against a real savedFeedsPrefV2.)
   // (the Side panel switch itself is guest-surface's: a trending board is not
   // restorable by URL, so leaving it for /settings cannot come back)
 

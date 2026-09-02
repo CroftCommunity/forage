@@ -39,6 +39,13 @@ export function navTree({ el, session, feeds, tags, current }) {
 
   section('Feeds');
   for (const f of feeds || []) item(f.slug, f.title, '▦', f.href || `/f/${f.slug}`);
+  // v11 (owner, 2026-09-01: "remove Bluesky from the default feed on the left
+  // under Discovery … and put Trending in its place"). Trending is not a second
+  // copy of the row that used to sit below the rule — it MOVED. It belongs with
+  // the feeds by this file's own taxonomy: the directory is a board, its posts
+  // come from a source (what the network says is hot), and the rule below
+  // separates boards you read from the browse surfaces that find you new ones.
+  item('directory', 'Trending', '✧', '/trending');
 
   if (session && (tags || []).length) {
     section('Hashtags');
@@ -49,7 +56,6 @@ export function navTree({ el, session, feeds, tags, current }) {
   }
 
   nav.append(el('hr', { class: 'navrule' }));
-  item('directory', 'Trending', '✧', '/trending');
   item('feeds', 'Browse all feeds', '☷', '/feeds');
   item('hashtags', 'Browse hashtags', '#', '/hashtags');
 

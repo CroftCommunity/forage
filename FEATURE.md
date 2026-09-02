@@ -1,13 +1,17 @@
-# reply-embeds
+# logged-out-refine — the signed-out board, as the owner read it
 
-A reply's embeds — its pictures, its video, its link card, the post it quotes —
-never rendered in a forage thread. The thread's shaping seam copied a reply's
-words and dropped everything else, so a reply whose whole content is an embed
-drew a byline over an empty row.
+**Scope:** forage. Owner review of forage.fyi without an account, 2026-09-01. Seven items:
 
-Owner report, 2026-09-01: hookcity's reply to mollyjongfast's "Anybody know what
-happened to mitch McConnell?" is a wordless quote of an image post. bsky.app
-draws the quoted picture; forage.fyi drew nothing at all.
+1. Discover's own description ("Trending content from your personal network") is a
+   promise a guest has no account to cash — hidden signed out, for that feed only.
+2. "Curated by @bsky.app" → the human-readable name (probed: "Bluesky", not the
+   "Bluesky Team" this repo once shipped); the handle stays one hover away.
+3. Right-align the curator inside the feed card's box, not just inside its text block.
+4. Drop "Bluesky" from the left nav's Feeds list; move "Trending" into its place.
+5. Remove the rail's Feeds card — it duplicates the left nav.
+6. Top's month / year / all-time on a `/f/` board: measured (the backward walk reaches
+   29.4h on Discover, so week/month/year rank one identical list and All time ranked
+   fewer than any of them). A board now offers what its window can answer.
+7. Independent-scrolling centre column, like reddit.com.
 
-Scope: the third surface on the rendering matrix (the REPLY NODE), plus the
-shaping and rendering that makes it pass.
+**Branch:** `claude/logged-out-refine`

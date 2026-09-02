@@ -388,14 +388,30 @@ test('3j: feedInfo returns the generator card — avatar, description, creator, 
     return { ok: true, status: 200, json: async () => ({ view: {
       uri: URI, displayName: 'Garden Talk', description: 'Post with #gardening to appear here.',
       avatar: 'https://cdn/av.png', likeCount: 42,
-      creator: { did: 'did:plc:a', handle: 'grower.test' },
+      creator: { did: 'did:plc:a', handle: 'grower.test', displayName: 'The Grower' },
     }, isOnline: true, isValid: true }) };
   };
   const info = await createLens({ transport }).feedInfo(URI);
   assert.deepEqual(info, {
     uri: URI, title: 'Garden Talk', description: 'Post with #gardening to appear here.',
-    avatar: 'https://cdn/av.png', likeCount: 42, creator: 'grower.test', online: true, valid: true,
+    avatar: 'https://cdn/av.png', likeCount: 42, creator: 'grower.test', creatorName: 'The Grower',
+    online: true, valid: true,
   });
+});
+
+// v11 (owner, 2026-09-01: "is there a human readable version of that?"). There
+// is — the curator's own displayName — and the shape has to carry it before the
+// card can read it out. An account that has never set one has only its handle,
+// and creatorName is null rather than a repeat of the handle, so the view can
+// tell "no name" from "named the same as the handle".
+test('v11: feedInfo carries the curator’s display name, and null when they have none', async () => {
+  const URI = 'at://did:plc:a/app.bsky.feed.generator/aaa111';
+  const info = async (creator) => createLens({ transport: async () => ({ ok: true, status: 200,
+    json: async () => ({ view: { uri: URI, displayName: 'Garden Talk', creator }, isOnline: true, isValid: true }) }) })
+    .feedInfo(URI);
+  assert.equal((await info({ handle: 'bsky.app', displayName: 'Bluesky' })).creatorName, 'Bluesky');
+  assert.equal((await info({ handle: 'grower.test' })).creatorName, null, 'no display name is null, never the handle');
+  assert.equal((await info({ handle: 'grower.test', displayName: '' })).creatorName, null, 'an empty name is no name');
 });
 
 test('3j: discoverFeeds lists popular generators and searches by query; guests get results too', async () => {
@@ -969,6 +985,51 @@ test('3p: feedCardModel never restates the feed title — the <h1> above it alre
   assert.equal(m.likeCount, 16);
   assert.equal(m.blurb, info.description, 'the feed’s own words, verbatim (DL-025)');
   assert.equal(m.blurbIsOwnWords, true, 'quotable: this text came FROM the feed');
+});
+
+// v11 (owner, 2026-09-01): two changes to what the one box says.
+test('v11: the card carries the curator’s readable name beside the handle it is made of', async () => {
+  const { feedCardModel } = await import('../js/substrates/lens.js');
+  const base = { uri: 'at://x/y/z', title: 'Discover', likeCount: 1, description: 'd' };
+  const named = feedCardModel({ ...base, creator: 'bsky.app', creatorName: 'Bluesky' });
+  assert.equal(named.creatorName, 'Bluesky');
+  assert.equal(named.creator, 'bsky.app', 'the handle stays — it is the link and the hover');
+  assert.equal(named.creatorUrl, 'https://bsky.app/profile/bsky.app');
+  // "Bluesky Team" is the name this repo shipped for a while and the account
+  // has never used. Nothing may synthesise it; only what the network reports.
+  assert.doesNotMatch(String(named.creatorName), /Team/);
+  assert.equal(feedCardModel({ ...base, creator: 'grower.test' }).creatorName, null,
+    'a curator with no display name leaves the view nothing to read but the handle');
+});
+
+test('v11: signed out, a feed whose description addresses an account shows no description', async () => {
+  const { feedCardModel, GUEST_BLIND_BLURBS } = await import('../js/substrates/lens.js');
+  const DISCOVER = 'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot';
+  assert.ok(GUEST_BLIND_BLURBS.has(DISCOVER), 'Discover is the feed the owner named');
+  const discover = { uri: DISCOVER, title: 'Discover', creator: 'bsky.app', likeCount: 39411,
+    description: 'Trending content from your personal network' };
+
+  // signed out: the line is ABSENT — null, so the view renders no element at
+  // all rather than an empty quote block where the sentence was
+  const guest = feedCardModel(discover, { signedIn: false });
+  assert.equal(guest.blurb, null);
+  // and everything else about the card is untouched
+  assert.equal(guest.likeCount, 39411);
+  assert.equal(guest.creator, 'bsky.app');
+
+  // signed in: the feed's own words, verbatim, exactly as before (DL-025)
+  assert.equal(feedCardModel(discover, { signedIn: true }).blurb, discover.description);
+  assert.equal(feedCardModel(discover).blurb, discover.description, 'signed-in is the default');
+
+  // and this is NOT "hide every description from guests" — the owner was
+  // explicit that it is about this feed. Any other feed reads the same either way.
+  const other = { uri: 'at://did:plc:a/app.bsky.feed.generator/garden', title: 'Garden',
+    creator: 'grower.test', likeCount: 3, description: 'Post with #gardening to appear here.' };
+  assert.equal(feedCardModel(other, { signedIn: false }).blurb, other.description);
+  // nor is it "hide OUR fallback": a guest on a feed that says nothing still
+  // gets the sentence explaining that it says nothing
+  const silent = { uri: 'at://did:plc:a/app.bsky.feed.generator/quiet', title: 'Quiet', creator: 'a.test', description: '' };
+  assert.match(feedCardModel(silent, { signedIn: false }).blurb, /does not say/i);
 });
 
 test('3p: a feed with no description still gets one box, and the blurb is ours — not quotable', async () => {

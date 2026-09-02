@@ -33,6 +33,49 @@ below are the landings of that month, and everything earlier is in `git log`.
   quotes, because that post is the one directly above it.
   (owner, with a live example: "reply with an image that doesn't load")
 
+- 2026-09-01 **The signed-out board says less, and says it in the right places.** Six changes
+  the owner found reading forage.fyi without an account. Discover's own description —
+  "Trending content from your personal network" — is a promise to somebody with a network,
+  so signed out it is not shown at all; every other feed still quotes its description
+  verbatim, including feeds that say nothing, which still get the sentence explaining that
+  they say nothing. The line above it now reads "Curated by Bluesky" rather than "Curated by
+  @bsky.app", using the curator's own chosen name with the handle kept in the tooltip and the
+  link, the way every other name in the app works; a curator who has set no name is still
+  shown their handle rather than an invented one. That line now runs the full width of the
+  feed's box, so the curator sits at its right edge instead of stopping short of it. On the
+  left, `Bluesky` is no longer one of the two boards you are handed before you have chosen
+  anything — Trending moved up into its place, out of the group below the rule, so a guest's
+  Feeds list is Discover and Trending; `/f/bsky.app` is still there to open from the home
+  page. On the right, the Feeds box is gone: it listed the same boards the left nav lists,
+  beside it, under a heading pointing where the nav's "Browse all feeds" already points.
+  And the two side columns are now PINNED, like reddit's: scrolling moves the middle column
+  and leaves the navigation and the rail where they are, each getting its own scrollbar if it
+  outgrows the window. The page itself is still what scrolls, so the scrollbar, the space bar,
+  Back, and every in-page link go on meaning what they meant.
+  (owner: "remove this from 'discovery' bc the user is logged out and that's confusing …
+  don't remove every feed description this is specifically for discovery", "is there 'human
+  readable' version of that?", "attribution like 'Curated by @bsky.app' should be right
+  aligned inside the feed information box", "remove Bluesky from the default feed on the left
+  under Discovery … and put 'Trending' in its place", "remove this duplicate box on the
+  right", "can we make the center column scroll independently like reddit.com?")
+
+- 2026-09-01 **Top's timeframe now offers only what the board can actually answer.** The
+  owner asked whether "this month", "this year" and "all time" did anything. Measured: on a
+  feed board they mostly did not. A feed generator publishes no way to ask for a date range,
+  so Forage widens the board by paging backwards on a budget — eight pages — and against the
+  live Discover feed that reaches about **29 hours**. "This week", "this month" and "this
+  year" therefore ranked the same 240 posts in the same order: three names for one answer.
+  "All time" was worse: it was the one choice that skipped the widening altogether, so it
+  ranked *fewer* posts than "this year" did. A feed board now offers **Today · This week ·
+  All time**, and All time is the widest walk rather than the absent one, so asking for more
+  can no longer give you less. Hot widens the same way Top does — the window means the same
+  thing under both, and only one of them was honouring it. Hashtag boards are untouched and
+  keep all five: there the window is a real search query over every post that matched, which
+  is the one place the limitation genuinely lifts. Carrying "this month" from a hashtag board
+  to a feed board now widens to All time and says so, instead of leaving a control reading
+  "Today" over a board answering something else.
+  (owner: "tell me does 'top' month, year and all time really do anything?")
+
 - 2026-09-01 **A quote post shows what it quotes — the video included.** When someone posts a
   comment on top of somebody else's post, the feed used to show only the comment: a sentence
   like "is it so bad to expect our leaders to have a decent command of the English language?"

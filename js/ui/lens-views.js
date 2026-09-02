@@ -25,7 +25,7 @@ import { stage, carousel, grid } from './stage.js';
 import * as pictures from '../pictures.js';
 import * as lang from '../lang.js';
 import { density, densityDial } from '../board-density.js';
-import { sortBar } from './sortbar.js';
+import { sortBar, TIMEFRAMES, WALK_TIMEFRAMES, nearestTimeframe } from './sortbar.js';
 import { sortItems } from '../engines/rank.js';
 import { POST_LIMITS, IMAGE_LIMITS, graphemes, withTag } from '../compose.js';
 import { cardSizeDial } from '../card-size.js';
@@ -70,6 +70,14 @@ function ensureSavedFeeds() {
     savedFeedsPromise = lens.feeds()
       .then((fs) => {
         for (const f of fs) {
+          // v11: registering a saved feed under its slug happens HERE, in the
+          // one place that fetches them. It used to happen in the rail's Feeds
+          // card as a side effect of drawing a row — so removing that card (a
+          // duplicate of the left nav) would have quietly broken `/f/<slug>`
+          // for every feed you had joined.
+          registerSource({ slug: f.slug, humanSlug: f.humanSlug, title: f.title, kind: f.kind, creator: f.creator,
+            source: f.kind === 'author' ? { kind: 'author', actor: f.id }
+              : f.kind === 'timeline' ? { kind: 'timeline' } : { kind: f.kind, uri: f.id } });
           if (f.kind !== 'feed') continue;
           savedFeedUris.add(f.id);
           if (f.pinned) pinnedFeedUris.add(f.id);
@@ -386,7 +394,16 @@ const CURATED = [
   // 4h: the FALLBACK name again — probed 2026-08-26, this account reports
   // displayName "Bluesky". It had been shipping as "Bluesky Team", which the
   // account has never called itself.
-  { slug: 'bsky.app', title: 'Bluesky', kind: 'author', source: { kind: 'author', actor: 'bsky.app' } },
+  //
+  // v11 (owner, 2026-09-01: "remove Bluesky from the default feed on the left"):
+  // `inNav: false` keeps it OUT of the left nav's Feeds list and nowhere else.
+  // It stays in this registry because that is what makes /f/bsky.app resolve,
+  // and it stays on the home page's Browse card, which is a list of what a
+  // guest can open rather than a list of their boards. A guest's Feeds section
+  // is now Discover and the directory — the two boards a signed-out reader can
+  // actually read — where one company's own account was a default nobody chose.
+  { slug: 'bsky.app', title: 'Bluesky', kind: 'author', inNav: false,
+    source: { kind: 'author', actor: 'bsky.app' } },
 ];
 const sources = new Map(CURATED.map((c) => [c.slug, c]));
 // Register a source under its canonical slug AND its human alias (3i: route
@@ -639,7 +656,12 @@ const THREAD_WINDOW_MS = { day: 86400e3, week: 6048e5, month: 2592e6, year: 3153
 // HONEST about scope — it re-orders the loaded window only (the generator
 // owns the true ranking, DL-010; whole-feed live sorts are the Jetstream v2
 // frontier, E139).
-function boardToolbar(onChange) {
+// `timeframes` says what THIS board's window can answer (sortbar.js). A board
+// that widens by walking offers the rungs its walk can be told apart by; one
+// with a real server window offers all five. The carried choice is clamped
+// here, once, so the select can never show a value it does not have.
+function boardToolbar(onChange, { timeframes = TIMEFRAMES } = {}) {
+  boardTimeframe = nearestTimeframe(boardTimeframe, timeframes);
   // Phase 11c: the same bar the memory board has. Sorts the LOADED posts —
   // the feed itself is ranked by its generator (DL-010); Hot is engagement
   // over that window (decision 9), From applies to Hot and Top.
@@ -650,7 +672,7 @@ function boardToolbar(onChange) {
   const barHost = el('div', { style: 'display:contents' });
   const drawBar = () => barHost.replaceChildren(sortBar({
     sorts: [['feed', 'Default'], ['hot', 'Hot'], ['new', 'New'], ['top', 'Top']],
-    sort: boardSort, from: boardTimeframe,
+    sort: boardSort, from: boardTimeframe, timeframes,
     onChange: ({ sort, from }) => { boardSort = sort; boardTimeframe = from; drawBar(); onChange(); },
     // decision 7: the card size dial (1–4) stands where the 3t slider stood —
     // a notch is a choice a thumb can make; the slider moved in visible jumps
@@ -698,7 +720,11 @@ function renderBoard(card, posts, { wholeCorpus = false } = {}) {
       `${hidden} post${hidden === 1 ? '' : 's'} hidden by your content languages (${prefs.join(', ')}). `,
       el('a', { href: '/me' }, 'change that ›')));
   }
-  if (!wholeCorpus && (boardSort !== 'feed' || (boardSort === 'top' && boardTimeframe !== 'all'))) {
+  // v11: the second clause was `boardSort === 'top' && boardTimeframe !== 'all'`,
+  // which the first already covers — it read as though "all time" were exempt
+  // from the loaded-window caveat, and now that All time walks like every other
+  // rung it plainly is not. Same condition, one clause.
+  if (!wholeCorpus && boardSort !== 'feed') {
     card.append(el('div', { class: 'xs muted', style: 'padding:6px' },
       'Sorted within the loaded posts — load More to widen the window.'));
   }
@@ -804,46 +830,17 @@ function langChip(p) {
   return code ? el('span', { class: 'chip lang-chip', 'data-lang-chip': code, title: `This post declares its language as ${code}` }, code) : null;
 }
 
-function lensSidebar() {
-  const feedsCard = el('div', { class: 'card' },
-    el('div', { class: 'row spread' },
-      el('h2', { style: 'margin:0' }, el('a', { href: '/feeds' }, 'Feeds')),
-      el('a', { href: '/feeds', class: 'xs' }, 'browse ›')));
-  const list = el('div', { class: 'stack' });
-  feedsCard.append(list);
-  if (!session) {
-    for (const c of CURATED) {
-      list.append(el('div', { class: 'row spread' },
-        el('a', { href: `/f/${c.slug}` }, `f/${sourceLabel(c)}`),
-        el('span', { class: 'xs muted' }, c.kind)));
-    }
-    list.append(el('div', { class: 'xs muted', style: 'margin-top:6px' },
-      'Guest boards. Sign in and these become YOUR feeds.'));
-  } else {
-    list.append(skeleton(3));
-    ensureSavedFeeds().then((feeds) => {
-      list.replaceChildren(...feeds.map((f) => {
-        const entry = { slug: f.slug, humanSlug: f.humanSlug, title: f.title, kind: f.kind, creator: f.creator,
-          source: f.kind === 'author' ? { kind: 'author', actor: f.id }
-            : f.kind === 'timeline' ? { kind: 'timeline' } : { kind: f.kind, uri: f.id } };
-        registerSource(entry);
-        // share links carry the FIXED identity (the rkey); the human alias
-        // still routes when typed
-        return el('div', { class: 'row spread' },
-          el('a', { href: feedPath({ creator: f.creator, rkey: f.slug }) || `/f/${f.slug}`,
-            title: f.creator ? `Shareable: /f/@${f.creator}/${f.slug}` : `/f/${f.slug}` }, `f/${sourceLabel(f)}`),
-          el('span', { class: 'xs muted' }, `${f.kind}${f.pinned ? ' · pinned' : ''}`));
-      }));
-    }).catch((e) => list.replaceChildren(el('div', { class: 'xs muted' }, 'Feeds failed: ' + e.message)));
-  }
-  return feedsCard;
-}
-
-// board-cards decision 6: the rail — the guest's sign-in card first, then the
-// Feeds card, then Trending last (the home page draws Trending in its column
-// and passes trending: false). One order, so seven views cannot each invent one.
+// board-cards decision 6: the rail — the guest's sign-in card first, then
+// Trending last (the home page draws Trending in its column and passes
+// trending: false). One order, so seven views cannot each invent one.
+//
+// v11 (owner, 2026-09-01: "remove this duplicate box on the right"): the Feeds
+// card is GONE. It listed exactly what the left nav's Feeds section lists — the
+// curated boards for a guest, your saved feeds signed in — and its "browse ›"
+// pointed where the nav's "Browse all feeds" already points. Two lists of one
+// thing, side by side, is a question about which one is authoritative.
 function lensRail({ trending = true } = {}) {
-  return [session ? null : sessionCard(), lensSidebar(), trending ? trendingRail() : null];
+  return [session ? null : sessionCard(), trending ? trendingRail() : null];
 }
 
 function sessionCard() {
@@ -1001,10 +998,10 @@ function ringBoard(ring, cursor) {
 
 // The left nav for the Bluesky population. Feeds arrive async, so the tree is
 // drawn immediately with what is known and the feed rows are filled in when
-// they land — the same shape lensSidebar used, moved to the side of the screen
-// navigation actually belongs on.
+// they land — the same shape the rail's Feeds card used, moved to the side of
+// the screen navigation actually belongs on.
 export function lensNav(current) {
-  const guestFeeds = CURATED.map((c) => ({ slug: c.slug, title: c.title }));
+  const guestFeeds = CURATED.filter((c) => c.inNav !== false).map((c) => ({ slug: c.slug, title: c.title }));
   const host = el('div', { 'data-navhost': '1' },
     navTree({ el, session, feeds: guestFeeds, tags: effectiveTags(session?.did), current }));
   if (session) {
@@ -1146,11 +1143,25 @@ function feedBoardView(entry, preInfo) {
   // ended. The note is part of the answer, not decoration.
   const deepNote = el('div', { class: 'xs muted', style: 'padding:6px', 'data-deepen': '1' });
   let deepening = false;
+  // v11 (owner, 2026-09-01), two changes to WHEN this runs:
+  //
+  // - "All time" walks. It used to be the one window that returned here without
+  //   widening, so it ranked whatever the previous choice happened to have
+  //   loaded — measured: 210 posts where "this year" ranked 240. A rung that
+  //   promises the most and delivers the least inverts the whole ladder, which
+  //   is the incoherence the owner was looking at. Infinity as the target means
+  //   the walk never "covers"; it ends on the budget or on the feed running out,
+  //   and says which.
+  // - Hot walks too. From applies to Hot and Top alike (decision 9) and means
+  //   the same window in both, so widening one and not the other made
+  //   "Hot · today" and "Top · today" two different promises under one control.
+  const WINDOWED = ['hot', 'top'];
   const deepen = () => {
-    if (deepening || boardSort !== 'top' || boardTimeframe === 'all') { deepNote.replaceChildren(''); return; }
-    const hours = { day: 24, week: 168, month: 720, year: 8760 }[boardTimeframe];
+    if (deepening || !WINDOWED.includes(boardSort)) { deepNote.replaceChildren(''); return; }
+    const hours = { day: 24, week: 168, month: 720, year: 8760, all: Infinity }[boardTimeframe];
+    const span = boardTimeframe === 'all' ? 'as far back as it goes' : `the last ${boardTimeframe}`;
     deepening = true;
-    deepNote.replaceChildren(`Widening to the last ${boardTimeframe}…`);
+    deepNote.replaceChildren(`Widening to ${span}…`);
     lens.deepen(entry.source, { toHours: hours, nowMs: Date.now() })
       .then((out) => {
         allPosts.length = 0;
@@ -1162,7 +1173,9 @@ function feedBoardView(entry, preInfo) {
             ? `Ranked every post this feed served in the last ${boardTimeframe} (${out.pages} page${out.pages === 1 ? '' : 's'}).`
             : out.outcome === 'exhausted'
               ? `This feed only goes back ${out.reachedHours}h — that is everything it has, ranked.`
-              : `This feed posts faster than we can page: ranked the last ${out.reachedHours}h of it, not the whole ${boardTimeframe}.`);
+              : boardTimeframe === 'all'
+                ? `Ranked the last ${out.reachedHours}h — as far back as this feed lets us page.`
+                : `This feed posts faster than we can page: ranked the last ${out.reachedHours}h of it, not the whole ${boardTimeframe}.`);
       })
       .catch((e) => deepNote.replaceChildren(`Could not widen the window: ${e.message}`))
       .finally(() => { deepening = false; });
@@ -1194,7 +1207,8 @@ function feedBoardView(entry, preInfo) {
         // reaching past it for the registry string is how a retired name shipped.
         el('h1', {}, info?.title || entry.title)), // the DL chips are gone (feed-row v4)
       headerHost,
-      boardToolbar(() => { repaint(); deepen(); }),
+      // this board widens by walking, so it offers what a walk can tell apart
+      boardToolbar(() => { repaint(); deepen(); }, { timeframes: WALK_TIMEFRAMES }),
       f.posts.length ? card : emptyState('Nothing here', 'This source returned no posts.'),
       deepNote,
       moreHost);
@@ -1885,6 +1899,11 @@ export function lensUserView(params) {
     .then(([p, board]) => {
       const card = el('div', { class: 'card' });
       const repaint = () => renderBoard(card, board.posts);
+      // A profile board is ONE page and has no More: its window is neither a
+      // server query nor a walk, it is the loaded posts. All five rungs stay,
+      // because on a quiet account one page of 30 spans years and each of them
+      // filters it differently — the case that is degenerate on a fast feed is
+      // the live one here. What it cannot do is widen, and the board says so.
       main.replaceChildren(profileHeader(p, followButton(p)), boardToolbar(repaint),
         board.posts.length ? card : emptyState('No posts', 'Nothing here yet.'));
       repaint();
@@ -1900,7 +1919,7 @@ export function lensUserView(params) {
 // prose is the only inclusion rule that exists (DL-025). feedCardModel decides
 // what belongs; this function only draws it.
 function feedHeaderCard(info, onChange) {
-  const m = feedCardModel(info);
+  const m = feedCardModel(info, { signedIn: !!session });
   const savedNow = () => savedFeedUris.has(info.uri);
   const favNow = () => pinnedFeedUris.has(info.uri);
 
@@ -1965,22 +1984,45 @@ function feedHeaderCard(info, onChange) {
   // a link OUT to bsky.app (their profile lives there, not here) — the
   // description quoted under it, and the card outlined so the feed's own box
   // reads apart from the rows
+  // v11 (owner, 2026-09-01): the curator READS as a name — "Curated by Bluesky"
+  // — and the handle it is really made of stays in the hover and the href. An
+  // account with no display name has only its handle, and that is what shows.
+  const curatorLabel = m.creatorName || (m.creator ? `@${m.creator}` : '@unknown');
+  const curatorTitle = m.creator
+    ? `@${m.creator} — their profile, on bsky.app`
+    : 'This feed’s creator could not be resolved';
+  // v11 (owner: "should be right aligned inside the feed information box"): v8
+  // right-aligned it inside the TEXT BLOCK, which shrink-wraps its content, so
+  // on a wide card the curator stopped a long way short of the box's edge and
+  // the alignment was invisible. `flex:1` on the group and on the block is what
+  // makes the line as wide as the card, which is what "inside the box" meant.
   return el('div', { class: 'card highlight', 'data-feed-header': '1', 'data-affordance': 'curated' },
     el('div', { class: 'row spread wrap', style: 'gap:10px;align-items:center' },
-      el('div', { class: 'row', style: 'gap:10px;align-items:center;min-width:0' },
+      el('div', { class: 'row', style: 'gap:10px;align-items:center;min-width:0;flex:1' },
         m.avatar ? el('img', { src: m.avatar, alt: '', class: 'feed-avatar', loading: 'lazy' }) : null,
-        el('div', { style: 'min-width:0' },
+        el('div', { style: 'min-width:0;flex:1' },
           // v8 (owner): likes at the left, the curator right-aligned on the same line
           el('div', { class: 'small feed-line', 'data-feed-line': '1' },
             el('strong', { 'data-feed-likes': '1' }, `${fmtScore(m.likeCount)} likes`),
             el('span', { 'data-feed-curator': '1' }, 'Curated by ',
-              m.creator ? el('a', { href: m.creatorUrl, target: '_blank', rel: 'noopener noreferrer', title: 'Their profile, on bsky.app' }, `@${m.creator}`) : '@unknown')),
+              m.creator
+                ? el('a', { href: m.creatorUrl, target: '_blank', rel: 'noopener noreferrer', title: curatorTitle }, curatorLabel)
+                : curatorLabel)),
           adoption)),
       // A guest manages nothing here — the header reads as a thing you are
       // looking at rather than one you own. Absent, not disabled (owner).
-      el('div', { class: 'row', style: 'gap:6px;align-items:center' }, ...(session ? [star, btn] : []))),
-    el('div', { class: 'feed-blurb' + (m.blurbIsOwnWords ? '' : ' muted'), 'data-feed-blurb': m.blurbIsOwnWords ? 'feed' : 'ours' },
-      m.blurb),
+      // v11: absent means the GROUP too. An empty flex item is zero-wide but
+      // still costs the row's 10px gap, and that gap was the whole reason the
+      // curator stopped 11px short of the card's edge once the line was made
+      // full-width — a nothing that was still taking up space.
+      session ? el('div', { class: 'row', style: 'gap:6px;align-items:center' }, star, btn) : null),
+    // v11: no blurb at all for a guest on a feed whose description addresses an
+    // account it does not have (GUEST_BLIND_BLURBS) — an absent line, not an
+    // empty one, so nothing is left behind where the quote was.
+    m.blurb
+      ? el('div', { class: 'feed-blurb' + (m.blurbIsOwnWords ? '' : ' muted'), 'data-feed-blurb': m.blurbIsOwnWords ? 'feed' : 'ours' },
+        m.blurb)
+      : null,
     m.degraded ? el('div', { class: 'xs muted' }, 'This feed’s server is not responding right now.') : null);
 }
 
@@ -2474,7 +2516,10 @@ export function lensHashtagView(params) {
         if (first) {
           main.replaceChildren(heading(),
             affordanceStrip({ kind: 'hashtag', key: tag }),
-            boardToolbar(() => load(false)),
+            // the one board with a REAL window: searchPosts takes since/until
+            // server-side, so all five rungs are five different queries over
+            // the whole corpus rather than five names for one page (4e)
+            boardToolbar(() => load(false), { timeframes: TIMEFRAMES }),
             board.posts.length ? card : emptyState('A quiet tag', `No recent posts carry #${tag}.`),
             note);
         }

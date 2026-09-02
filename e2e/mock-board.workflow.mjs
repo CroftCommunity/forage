@@ -102,23 +102,47 @@ export async function run() {
     // a bit of a highlight outline … make bsky.app a link out'): one line — likes,
     // then the curator as a link out to bsky.app — the description quoted under
     // it, and the card outlined
-    const fh = await page.$eval('#main [data-feed-header]', (c) => ({
+    const feedCard = (c) => ({
       line: [c.querySelector('[data-feed-likes]'), c.querySelector('[data-feed-curator]')].map((e) => e?.textContent.replace(/\s+/g, ' ').trim() ?? null).join(' | '),
       // v8 (owner: "right align the Curated by"): likes at the left edge, the curator at the right edge of the same line
       ...((() => { const l = c.querySelector('[data-feed-likes]'), r = c.querySelector('[data-feed-curator]'), row = c.querySelector('[data-feed-line]');
-        if (!l || !r || !row) return { aligned: false };
+        if (!l || !r || !row) return { aligned: false, inBox: false };
         const lb = l.getBoundingClientRect(), rb = r.getBoundingClientRect(), rw = row.getBoundingClientRect();
-        return { aligned: Math.round(lb.left - rw.left) <= 1 && Math.round(rw.right - rb.right) <= 1 && Math.abs((lb.top + lb.height / 2) - (rb.top + rb.height / 2)) <= 3 }; })()),
+        // v11 (owner: "should be right aligned inside the feed information
+        // box"): v8's check measured the curator against the LINE, and the
+        // line shrink-wrapped its own text — so it passed while the curator
+        // sat a long way short of the card's edge. The box is the card's own
+        // content edge, and that is what the measurement is against now.
+        const cb = c.getBoundingClientRect();
+        const pad = parseFloat(getComputedStyle(c).paddingRight) || 0;
+        return {
+          aligned: Math.round(lb.left - rw.left) <= 1 && Math.round(rw.right - rb.right) <= 1 && Math.abs((lb.top + lb.height / 2) - (rb.top + rb.height / 2)) <= 3,
+          inBox: Math.round((cb.right - pad) - rb.right),
+        }; })()),
       link: c.querySelector('[data-feed-line] a')?.getAttribute('href') ?? null,
+      linkText: c.querySelector('[data-feed-line] a')?.textContent.trim() ?? null,
+      linkTitle: c.querySelector('[data-feed-line] a')?.getAttribute('title') ?? null,
       blank: c.querySelector('[data-feed-line] a')?.getAttribute('target') ?? null,
       blurb: c.querySelector('[data-feed-blurb]')?.textContent.trim() ?? null,
       highlight: c.classList.contains('highlight'), shadow: getComputedStyle(c).boxShadow,
-    }));
-    assert.equal(fh.line, '39.4k likes | Curated by @bsky.app', `the card's first line, likes then curator (${fh.line})`);
+    });
+    const fh = await page.$eval('#main [data-feed-header]', feedCard);
+    // v11 (owner: "is there a human readable version of that?"): there is —
+    // the curator's own displayName, "Bluesky". The handle it is made of is the
+    // href and the hover, the way sourceLabel already treats identifiers.
+    assert.equal(fh.line, '39.4k likes | Curated by Bluesky', `the card's first line, likes then curator (${fh.line})`);
+    assert.equal(fh.linkText, 'Bluesky', 'the curator reads as a name');
+    assert.equal(fh.linkTitle, '@bsky.app — their profile, on bsky.app', 'the handle is one hover away');
     assert.ok(fh.aligned, 'likes sit at the left edge and the curator at the right edge of one line');
+    assert.ok(fh.inBox <= 1, `and that line is the box's own width, so the curator lands at the card's edge (${fh.inBox}px short)`);
     assert.equal(fh.link, 'https://bsky.app/profile/bsky.app', 'the curator links out to bsky.app');
     assert.equal(fh.blank, '_blank', 'in a new tab — it leaves Forage');
-    assert.equal(fh.blurb, 'trending', 'the description sits under it, quoted');
+    // v11 (owner: "remove this from 'discovery' bc the user is logged out and
+    // that's confusing"): signed out, Discover's description is a promise about
+    // a network this reader has no account for, so the line is absent — not
+    // emptied, absent, so nothing is left where the quote was.
+    assert.equal(fh.blurb, null, 'signed out, Discover shows no description');
+    assert.equal(await page.locator('#main [data-feed-blurb]').count(), 0, 'and no empty quote block behind it');
     assert.ok(fh.highlight && fh.shadow !== 'none', `the card carries a highlight outline (class ${fh.highlight}, shadow ${fh.shadow})`);
     // feed-row v10 claim 27 (owner: "we give a mouseover underline … bsky and reddit
     // both give a subtle highlight to the moused over card and that's a better
