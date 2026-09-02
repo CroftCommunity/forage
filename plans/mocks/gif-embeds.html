@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forage GIF Embeds v1</title>
+<meta name="mock-version" content="1">
+<meta name="mock-baseline" content="forage@05101a9">
+<meta name="mock-proposal" content="forage@0636215">
+<style>
+:root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
+  --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page-bg:#1C1813;--page-card:#262019;--page-ink:#EFE7D9;--page-muted:#B5A88F;--page-line:#3D3527;--page-accent:#A5CD98}}
+:root[data-theme="dark"]{--page-bg:#1C1813;--page-card:#262019;--page-ink:#EFE7D9;--page-muted:#B5A88F;--page-line:#3D3527;--page-accent:#A5CD98}
+*{box-sizing:border-box}
+body{background:var(--page-bg);color:var(--page-ink);font-family:var(--f-body);line-height:1.55;margin:0;padding:32px 20px 72px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:30px}
+h1{font-family:var(--f-display);font-size:30px;font-weight:600;margin:0;letter-spacing:-.01em}
+h2{font-family:var(--f-display);font-size:22px;font-weight:600;margin:0}
+h3{font-family:var(--f-display);font-size:17px;margin:0 0 7px;font-weight:600}
+.sub{color:var(--page-muted);font-size:15px;max-width:78ch;margin:0}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+section{display:flex;flex-direction:column;gap:14px}
+.stage{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap}
+.device{display:flex;flex-direction:column;gap:9px;min-width:0}
+.device-label{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+.phone{width:390px;max-width:100%}
+.desk{flex:1 1 460px;min-width:0}
+.shot{max-width:100%;display:block;border:1px solid var(--page-line);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.10),0 8px 24px rgba(0,0,0,.06)}
+.callout{background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:16px 18px}
+.callout p,.callout li{margin:0;font-size:14px;color:var(--page-muted)}
+.callout b,.callout code,td b{color:var(--page-ink);font-weight:600}
+.callout ul,.callout ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+table{border-collapse:collapse;font-size:14px;width:100%}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--page-line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page-muted)}
+.tablewrap{overflow-x:auto;background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:6px 8px}
+code{font-size:.92em}
+.small{font-size:13px;color:var(--page-muted)}
+.tag{display:inline-block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;padding:1px 8px;border-radius:999px;border:1px solid var(--page-line);color:var(--page-muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Forage &middot; mock &middot; gif-embeds <b>v1</b> &middot; Current forage@05101a9 &middot; Proposed forage@0636215 &middot; 2026-09-02</div>
+    <h1>A GIF should play like a GIF</h1>
+    <p class="sub"><b>One proposal in three parts and eight decisions</b>, from the owner 2026-09-02:
+      &ldquo;the gif shuld show a play/pause overlay and there should be a setting in use rproifle to
+      play gifs by default or not&rdquo; &mdash; then, on a second post, &ldquo;not just tha tpost, but
+      that TYPE of post&rdquo; &mdash; and then &ldquo;additionally we should have an advanced setting
+      checkbox to show or hide alt txt with hide as default&rdquo;.
+      Plan: <code>plans/2026-09-02-plan-gif-embeds.md</code>.</p>
+    <p class="sub"><b>Every frame here is a capture of the engine</b> (MOCKS.md P1): Current is
+      <code>main</code> at <code>05101a9</code>, Proposed is <code>claude/gif-embeds</code> at
+      <code>0636215</code>, both by <code>scripts/mock-snaps.mjs</code>, in the default skin (rule 4),
+      at 390&times;844 and 1280&times;900. Captures live in <code>plans/mocks/snaps/gif-embeds/</code>.
+      The population is <code>e2e/harness/mock-gif.mjs</code>, and the two GIF records in it are the
+      owner's OWN, verbatim from the network &mdash; so <code>js/gif.js</code> parses real klipy uris
+      here rather than something shaped like one.</p>
+  </header>
+
+  <section>
+    <h2>What is wrong today</h2>
+    <div class="callout">
+      <p>Bluesky's GIF button attaches the animation as an ordinary
+      <code>app.bsky.embed.external</code>. Forage believes the costume: it draws the frozen JPEG
+      thumbnail, the title, the description and the host, with a link out. <b>Nothing moves, and
+      nothing can be made to move.</b></p>
+      <p style="margin-top:8px">The second line is the sting. Bluesky's composer hides alt text
+      inside that <code>description</code> behind a prefix whose <b>case carries the meaning</b>
+      (<code>social-app/src/lib/gif-alt-text.ts</code>):
+      <code>"Alt: "</code> is alt a person wrote; <code>"ALT: "</code> is the GIF's own title
+      auto-filled. Both reported posts carry the all-caps form, so the card printed the same eight
+      words twice &mdash; and main prints the prefix too.</p>
+    </div>
+    <div class="tablewrap"><table>
+      <tr><th>The uri, measured 2026-09-02</th><th>bytes</th><th>type</th><th>CORS</th></tr>
+      <tr><td>the <code>.gif</code> itself</td><td><b>8,773,093</b></td><td>image/gif</td><td>*</td></tr>
+      <tr><td><code>&hellip;/8pcPaPB1Eow6fc.mp4</code> (the <code>mp4=</code> slug)</td><td><b>1,458,814</b></td><td>video/mp4</td><td>*</td></tr>
+      <tr><td><code>&hellip;/0Ds0ULMJw0vWjEZ6NMLN.webm</code> (the <code>webm=</code> slug)</td><td><b>953,992</b></td><td>video/webm</td><td>*</td></tr>
+    </table></div>
+    <p class="small">The query string is not decoration: <code>hh</code>/<code>ww</code> are the true
+    dimensions and <code>mp4=</code>/<code>webm=</code> are filename slugs for the same animation as
+    video. Playing the <code>.gif</code> costs <b>9.2&times; the webm</b>, and
+    <code>static.klipy.com</code> &mdash; the host already in the record &mdash; serves all three.</p>
+  </section>
+
+  <section>
+    <h2>Open decisions</h2>
+    <div class="tablewrap"><table>
+      <tr><th>#</th><th>Decision</th><th>Proposed</th><th>Status</th></tr>
+      <tr><td>1</td><td>Does a GIF card keep its title and host?</td>
+        <td><b>Yes.</b> bsky.app hides them (<code>hideDetails</code>) and shows the GIF alone. You asked for a player and a setting, not for the card to lose its name &mdash; and with alt hidden the duplication is already gone.</td>
+        <td><span class="tag">open</span></td></tr>
+      <tr><td>2</td><td>Does autoplay default on or off?</td>
+        <td><b>The device answers.</b> <code>prefers-reduced-motion: reduce</code> &rarr; off, otherwise on. An explicit choice then wins both ways. DESIGN.md &sect; Foundations: defaults from the device, choices from the person.</td>
+        <td><span class="tag">open</span></td></tr>
+      <tr><td>3</td><td>Alt text default</td><td><b>Hidden</b>, no device signal.</td>
+        <td><span class="tag">settled by you</span></td></tr>
+      <tr><td>4</td><td>Where the two switches live</td>
+        <td>Autoplay with the other reading preferences on <code>/me</code>; alt text behind <b>Advanced</b>, beside Browse Hashtags.</td>
+        <td><span class="tag">settled by you</span></td></tr>
+      <tr><td>5</td><td>Does the alt setting cover pictures too, or only GIFs?</td>
+        <td><b>Pictures too</b> &mdash; a visible caption under a photo, which forage has never drawn. An ordinary link card's <code>og:description</code> is untouched in both states: an article summary is not alt text.</td>
+        <td><span class="tag">settled by you</span></td></tr>
+      <tr><td>6</td><td>Is the whole surface the play/pause control, or a small button?</td>
+        <td><b>The whole surface.</b> It is the gesture every other GIF a reader has met uses, and the 44px floor stops being a question at stage size.</td>
+        <td><span class="tag">open</span></td></tr>
+      <tr><td>7</td><td>Tenor's cheaper video form</td>
+        <td><b>Not built.</b> social-app rewrites <code>AAAAC</code>&rarr;<code>AAAP1</code>/<code>AAAP3</code> onto its own CDN; that could not be exercised from here against a real tenor record, and CLAUDE.md &sect; External APIs forbids writing it on inference. Tenor animates as an image; a probe is filed in <code>TODO.md</code>.</td>
+        <td><span class="tag">deferred</span></td></tr>
+      <tr><td>8</td><td>Whose CDN serves klipy's video?</td>
+        <td><b>klipy's own.</b> social-app proxies through <code>k.gifs.bsky.app</code>; both answer with identical bytes and open CORS, and the origin host is already in the record &mdash; so reading a post trusts nobody new.</td>
+        <td><span class="tag">open</span></td></tr>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>1 &middot; The reported post, where it was reported &mdash; on a reply</h2>
+    <p class="sub">Defaults in both columns: autoplay on, alt text hidden. Current has no control and
+      no badge, and prints <code>Alt: &hellip;</code> with the prefix intact.</p>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Current &middot; phone 390&times;844</div>
+        <img class="shot" src="snaps/gif-embeds/gif-lens.phone.current.png" alt="Current: a still GIF card with the alt prefix printed"></div>
+      <div class="device phone"><div class="device-label">Proposed &middot; phone 390&times;844</div>
+        <img class="shot" src="snaps/gif-embeds/gif-lens.phone.proposed.png" alt="Proposed: a GIF player with a GIF badge and no alt line"></div>
+    </div>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Current &middot; desktop 1280&times;900</div>
+        <img class="shot" src="snaps/gif-embeds/gif-lens.desktop.current.png" alt="Current, desktop"></div>
+      <div class="device desk"><div class="device-label">Proposed &middot; desktop 1280&times;900</div>
+        <img class="shot" src="snaps/gif-embeds/gif-lens.desktop.proposed.png" alt="Proposed, desktop"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>2 &middot; Autoplay off &mdash; the overlay you press</h2>
+    <p class="sub">This is also what a reader with <code>prefers-reduced-motion</code> gets without
+      touching anything. <b>Nothing is downloaded in this state</b>: <code>preload="none"</code> and no
+      <code>src</code> until the press, so a reader who turned autoplay off does not pay the bytes
+      either. Current has no such state to show &mdash; its column is the same still card.</p>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Current &middot; phone</div>
+        <img class="shot" src="snaps/gif-embeds/gif-lens-paused.phone.current.png" alt="Current, unchanged by the setting"></div>
+      <div class="device phone"><div class="device-label">Proposed &middot; phone &mdash; paused</div>
+        <img class="shot" src="snaps/gif-embeds/gif-lens-paused.phone.proposed.png" alt="Proposed: the play glyph and a dimming scrim"></div>
+    </div>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Current &middot; desktop</div>
+        <img class="shot" src="snaps/gif-embeds/gif-lens-paused.desktop.current.png" alt="Current, desktop"></div>
+      <div class="device desk"><div class="device-label">Proposed &middot; desktop &mdash; paused</div>
+        <img class="shot" src="snaps/gif-embeds/gif-lens-paused.desktop.proposed.png" alt="Proposed paused, desktop"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>3 &middot; Alt text switched on</h2>
+    <p class="sub">The reply in frame carries alt a person actually <em>wrote</em> (<code>"Alt: "</code>),
+      long enough to wrap &mdash; the case the switch is for. Switched on, the
+      <code>ALT: &lt;title again&gt;</code> duplication comes back on the other cards too; that is the
+      cost, and the frame has to show it.</p>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Current &middot; phone (prefix and all)</div>
+        <img class="shot" src="snaps/gif-embeds/gif-lens-alt.phone.current.png" alt="Current: the description printed with its prefix"></div>
+      <div class="device phone"><div class="device-label">Proposed &middot; phone &mdash; alt on</div>
+        <img class="shot" src="snaps/gif-embeds/gif-lens-alt.phone.proposed.png" alt="Proposed: alt printed without the prefix"></div>
+    </div>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Current &middot; desktop</div>
+        <img class="shot" src="snaps/gif-embeds/gif-lens-alt.desktop.current.png" alt="Current, desktop"></div>
+      <div class="device desk"><div class="device-label">Proposed &middot; desktop &mdash; alt on</div>
+        <img class="shot" src="snaps/gif-embeds/gif-lens-alt.desktop.proposed.png" alt="Proposed alt on, desktop"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>4 &middot; The board, and the control</h2>
+    <p class="sub">The same GIFs as feed rows &mdash; landscape, portrait, a tenor <code>.gif</code> with
+      no verified video form, and a 96-character title &mdash; with a news card below them. <b>The news
+      card is the control</b>: its <code>og:description</code> is genuine page content and must be
+      unaffected by the alt-text setting in either state.</p>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Current &middot; phone</div>
+        <img class="shot" src="snaps/gif-embeds/gif-board.phone.current.png" alt="Current board rows"></div>
+      <div class="device phone"><div class="device-label">Proposed &middot; phone</div>
+        <img class="shot" src="snaps/gif-embeds/gif-board.phone.proposed.png" alt="Proposed board rows"></div>
+    </div>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Current &middot; desktop</div>
+        <img class="shot" src="snaps/gif-embeds/gif-board.desktop.current.png" alt="Current board, desktop"></div>
+      <div class="device desk"><div class="device-label">Proposed &middot; desktop</div>
+        <img class="shot" src="snaps/gif-embeds/gif-board.desktop.proposed.png" alt="Proposed board, desktop"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Where it is in the code</h2>
+    <div class="tablewrap"><table>
+      <tr><th>Piece</th><th>File</th><th>What it decides</th></tr>
+      <tr><td>the parser</td><td><code>js/gif.js</code></td><td>Is this uri an animation, and what plays &mdash; pure, no network, no DOM.</td></tr>
+      <tr><td>the shape</td><td><code>js/substrates/lens.js</code> <code>mediaOf</code></td><td><code>kind:&nbsp;'gif'</code> before the external branch. One door, so a quoted GIF and a reply GIF are the same work.</td></tr>
+      <tr><td>the player</td><td><code>js/ui/stage.js</code> <code>gifStage</code></td><td><code>&lt;video muted loop playsinline&gt;</code> or <code>&lt;img&gt;</code>, under a full-surface play/pause button.</td></tr>
+      <tr><td>the card</td><td><code>js/ui/lens-views.js</code> <code>gifCard</code></td><td>The player plus the caption that keeps the card's identity.</td></tr>
+      <tr><td>the captions</td><td><code>js/ui/lens-views.js</code> <code>withAltCaption</code></td><td>Alt under a picture, when asked for. Never touches <code>&lt;img alt&gt;</code>.</td></tr>
+      <tr><td>autoplay</td><td><code>js/gif-autoplay.js</code></td><td>Choice &gt; device. An explicit <code>on</code> is written, never left absent.</td></tr>
+      <tr><td>alt text</td><td><code>js/alt-text.js</code></td><td>Hidden until asked for; only the literal <code>on</code> shows it.</td></tr>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>Revisions</h2>
+    <div class="tablewrap"><table>
+      <tr><th>v</th><th>Commit</th><th>What changed</th></tr>
+      <tr><td>1</td><td><code>0636215</code></td><td>First publication. Four proposals, eight decisions, eight frames captured from the engine on both sides.</td></tr>
+    </table></div>
+  </section>
+</div>
+</body>
+</html>

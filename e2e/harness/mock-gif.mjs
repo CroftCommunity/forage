@@ -38,6 +38,7 @@ const WH = 'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-
 const NAMES = {
   'msjulesb.bsky.social': '💛💜JB💛💜 🦋',
   'dirkvanderwoude.bsky.social': 'Dirk van der Woude',
+  'thekeeper.bsky.social': 'The Keeper of Small Bogs',
   'averyveryverylonghandle.bsky.social': 'A Very, Very, Very Long Display Name Indeed',
   'videogameschronicle.com': 'VGC',
 };
@@ -73,9 +74,17 @@ const TENOR_GIF = 'https://media.tenor.com/AAAAC3q2Kn0AAAAC/shrug-i-dont-know.gi
 const LONG_TITLE = 'A Very Long GIF Title That Klipy Generated From The Scene Description And Nobody Trimmed';
 const AUTHORED_ALT = 'Alt: a golden retriever wearing sunglasses gives a slow, deliberate thumbs-up to the camera and then falls over sideways into a pile of autumn leaves';
 
-// ── the head: the reported post's own thread root ────────────────────────────
-const root = post('root', 'did:plc:bqmixtqt7niypsaj6h7yy6ju', 'msjulesb.bsky.social', '2026-09-02T14:02:00Z',
-  'Good morning Dirk… thank you my dear friend… I hope your day is wonderful 💚🩵🧡🫶☕️', { likes: 31, replies: 4, reposts: 2 });
+// ── the head ────────────────────────────────────────────────────────────────
+// The root is by someone OTHER than the GIF repliers, deliberately. forage
+// hoists an unbroken same-author reply chain into the head as the post's body
+// (lens.js § selfThread), and `selfThread` carries only { uri, text, facets } —
+// so a hoisted part's embed is dropped entirely. That is a real defect, it
+// predates this branch, it hits pictures and video the same way, and it is
+// FILED in TODO.md rather than fixed here: it belongs to the head's shaping,
+// not to whether a GIF plays. A fixture that walked into it would have been
+// grading that bug instead of this change.
+const root = post('root', 'did:plc:dv', 'dirkvanderwoude.bsky.social', '2026-09-02T14:02:00Z',
+  'Good morning ☕️ — I hope everyone has a wonderful day out there.', { likes: 31, replies: 4, reposts: 2 });
 
 // ── the reported shape, in its reported PLACE: a GIF on a reply ──────────────
 const r1 = { post: post('r1', 'did:plc:bqmixtqt7niypsaj6h7yy6ju', 'msjulesb.bsky.social', '2026-09-02T17:23:50Z',
@@ -90,7 +99,7 @@ const r2 = { post: post('r2', 'did:plc:bqmixtqt7niypsaj6h7yy6ju', 'msjulesb.bsky
       title: 'Give Up Im Done', description: 'ALT: Give Up Im Done' }) }), replies: [] };
 
 // alt a person actually wrote, long enough to wrap: the case the setting is FOR
-const r3 = { post: post('r3', 'did:plc:dv', 'dirkvanderwoude.bsky.social', '2026-09-02T15:40:00Z',
+const r3 = { post: post('r3', 'did:plc:tk', 'thekeeper.bsky.social', '2026-09-02T15:40:00Z',
   'this is how I feel about it', { likes: 12,
     view: external({ uri: KLIPY_LANDSCAPE.replace('RiZHW3kybKsT6j', 'ThumbsUpDogAAA'), n: 'dog',
       aspect: { width: 498, height: 415 }, title: 'Thumbs Up Dog', description: AUTHORED_ALT }) }), replies: [] };
@@ -102,7 +111,7 @@ const r4 = { post: post('r4', 'did:plc:av', 'averyveryverylonghandle.bsky.social
       title: 'Shrug I Dont Know', description: 'ALT: Shrug I Dont Know' }) }), replies: [] };
 
 // ── the board's other loads ─────────────────────────────────────────────────
-const longtitle = post('longtitle', 'did:plc:dv', 'dirkvanderwoude.bsky.social', '2026-09-02T13:00:00Z',
+const longtitle = post('longtitle', 'did:plc:tk', 'thekeeper.bsky.social', '2026-09-02T13:00:00Z',
   'the title on this one is absurd', { likes: 8, replies: 1,
     view: external({ uri: KLIPY_PORTRAIT.replace('PbsJs3z2wdMgRe6u', 'LongTitleAAAAAAA'), n: 'long',
       aspect: { width: 260, height: 343 }, title: LONG_TITLE, description: `ALT: ${LONG_TITLE}` }) });
