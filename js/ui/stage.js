@@ -130,3 +130,91 @@ export function grid({ items, linkAttrs = {} }) {
     ...items.map((i) => el('a', { class: 'stage-cell', href: i.full, ...(i.alt ? {} : { 'aria-label': 'Image, opens full size' }), ...linkAttrs },
       el('img', { class: 'stage-fore', src: i.thumb, alt: i.alt, loading: 'lazy', decoding: 'async' }))));
 }
+
+// A GIF on its stage (gif-embeds phase 2; owner 2026-09-02: "the gif shuld
+// show a play/pause overlay"). Not `stage()`'s `onPlay`, which is a ONE-WAY
+// swap — press the poster, mount a player, done. A GIF has to go back: the
+// whole point of the overlay is that a reader can stop the thing moving.
+//
+// Two players, chosen by js/gif.js from what the record actually verified:
+//
+//   video — klipy's own mp4/webm. `muted` + `playsinline` are what let it
+//     behave like the GIF it replaces instead of like a video post: muted is
+//     the only way a browser permits autoplay at all, and playsinline stops
+//     iOS Safari throwing the clip fullscreen. `loop` because a GIF loops.
+//   image — the .gif itself. There is no pause API for an animated image, so
+//     "paused" swaps the src back to the still poster; with no poster to swap
+//     to, the stage simply goes empty, which still stops the motion.
+//
+// AUTOPLAY OFF FETCHES NOTHING. `preload="none"` and no src until the press,
+// so a reader who turned it off does not pay for the bytes either — the same
+// promise js/ui/lens-views.js already makes for YouTube and for a video post.
+// This matters here more than there: the owner's own GIF is 8.8 MB as a .gif.
+export function gifStage({ player, sources = [], src = null, thumb = null, alt = '', aspect = null, autoplay = false }) {
+  aspect = aspect || (thumb ? MEASURED.get(thumb) : null) || null;
+  const attrs = { class: 'stage', 'data-stage': 'gif', 'data-gif': player, 'data-playing': String(!!autoplay) };
+  if (aspect) attrs.style = `--aspect: ${aspect.w} / ${aspect.h}`;
+  else attrs['data-aspect'] = 'none';
+
+  // the blurred backdrop, as for a picture — a portrait GIF on a wide card
+  // otherwise sits in a black gutter (board-cards decision 4)
+  const back = thumb ? el('img', { class: 'stage-back', src: thumb, alt: '', 'aria-hidden': 'true', loading: 'lazy', decoding: 'async' }) : null;
+
+  // D7: the alt is written in BOTH states. The alt-text setting governs a
+  // visible caption; it never takes the accessible name away.
+  const name = alt || 'Animated GIF';
+  let fore, play, pause;
+
+  if (player === 'video') {
+    const v = el('video', { class: 'stage-fore stage-gif', loop: true, playsinline: true,
+      preload: autoplay ? 'metadata' : 'none', ...(thumb ? { poster: thumb } : {}), 'aria-label': name });
+    // as a PROPERTY too: several browsers only honour muted autoplay when the
+    // property is set before play() is called, not merely the attribute
+    v.muted = true;
+    v.setAttribute('muted', '');
+    for (const s of sources) v.append(el('source', { src: s.src, type: s.type }));
+    if (autoplay) v.setAttribute('autoplay', '');
+    fore = v;
+    // play() rejects when a browser refuses autoplay; that is a refusal to
+    // handle, not an error to throw — the stage just stays paused and the
+    // reader still has the button.
+    play = () => { const p = v.play(); if (p?.catch) p.catch(() => setPlaying(false)); };
+    pause = () => v.pause();
+  } else {
+    const i = el('img', { class: 'stage-fore stage-gif', alt, loading: 'lazy', decoding: 'async' });
+    if (autoplay) i.src = src; else if (thumb) i.src = thumb;
+    fore = i;
+    play = () => { i.src = src; };
+    pause = () => { if (thumb) i.src = thumb; else i.removeAttribute('src'); };
+  }
+
+  // The whole surface toggles — a 44px floor is not a question at stage size,
+  // and it is the gesture a reader expects from every other GIF they have met.
+  const toggle = el('button', { type: 'button', class: 'stage-toggle', 'data-gifplay': '1',
+    'aria-label': autoplay ? 'Pause GIF' : 'Play GIF' },
+    el('span', { class: 'stage-toggle-glyph', 'aria-hidden': 'true' }, '▶'));
+  // the kind, said out loud, as bsky.app does — a still GIF and a photo are
+  // otherwise the same picture
+  const badge = el('span', { class: 'stage-badge', 'aria-hidden': 'true' }, 'GIF');
+
+  const node = el('div', attrs, back, fore, toggle, badge);
+
+  function setPlaying(on) {
+    node.setAttribute('data-playing', String(on));
+    toggle.setAttribute('aria-label', on ? 'Pause GIF' : 'Play GIF');
+  }
+  toggle.addEventListener('click', () => {
+    const on = node.getAttribute('data-playing') !== 'true';
+    if (on) play(); else pause();
+    setPlaying(on);
+  });
+
+  if (!aspect && player === 'image') {
+    fore.addEventListener('load', () => {
+      if (!(fore.naturalWidth > 0 && fore.naturalHeight > 0)) return;
+      node.style.setProperty('--aspect', `${fore.naturalWidth} / ${fore.naturalHeight}`);
+      node.removeAttribute('data-aspect');
+    }, { once: true });
+  }
+  return node;
+}

@@ -21,7 +21,9 @@ import { createLens, LENS_PERMS, RING_CAP, facetSegments, trimCardLink, slugifyF
 import { initSession, createAccountRoster, isOAuthCallback } from '../auth/session.js';
 import { hostById, featuredHosts, otherHosts, canCreateAccount } from '../auth/hosts.js';
 import { heroDismissed, dismissHero, EMBLEM } from '../hero.js';
-import { stage, carousel, grid } from './stage.js';
+import { stage, carousel, grid, gifStage } from './stage.js';
+import * as gifAutoplay from '../gif-autoplay.js';
+import * as altText from '../alt-text.js';
 import * as pictures from '../pictures.js';
 import * as lang from '../lang.js';
 import { density, densityDial } from '../board-density.js';
@@ -493,11 +495,15 @@ function mediaNode(p) {
     // grid; more fold into a carousel (js/pictures.js owns the rule)
     const linkAttrs = { target: '_blank', rel: 'noopener noreferrer' };
     const layout = pictures.layoutFor(p.media.items.length, pictures.active());
-    if (layout === 'grid') return grid({ items: p.media.items, linkAttrs });
-    if (layout === 'carousel') return carousel({ items: p.media.items, linkAttrs });
     const i = p.media.items[0];
-    return stage({ kind: 'images', thumb: i.thumb, alt: i.alt, aspect: i.aspect, link: i.full,
-      linkLabel: i.alt ? null : 'Image, opens full size', linkAttrs });
+    const picture = layout === 'grid' ? grid({ items: p.media.items, linkAttrs })
+      : layout === 'carousel' ? carousel({ items: p.media.items, linkAttrs })
+      : stage({ kind: 'images', thumb: i.thumb, alt: i.alt, aspect: i.aspect, link: i.full,
+          linkLabel: i.alt ? null : 'Image, opens full size', linkAttrs });
+    // gif-embeds phase 4: the alt a person wrote, printed where it can be read
+    // without a screen reader. Hidden by default (the owner's choice); the
+    // <img alt> above is written either way (D7).
+    return withAltCaption(picture, p.media.items);
   }
   if (p.media.kind === 'video') {
     // v13 decision 30 (owner: "this video seems to open directly on bluesky
@@ -513,8 +519,55 @@ function mediaNode(p) {
     return stage({ kind: 'video', thumb: p.media.thumb || '', alt: '[video]', aspect: p.media.aspect, playLabel: 'Play video',
       onPlay: (node) => mountVideo(node, { playlist: p.media.playlist, poster: p.media.thumb, fallback: link }) });
   }
+  if (p.media.kind === 'gif') return gifCard(p);
   if (p.media.kind === 'external') return externalCard(p);
   return null;
+}
+
+// gif-embeds phase 4: alt text as a VISIBLE caption, off unless asked for.
+//
+// Today alt lives only in `<img alt>`, which is right for a screen reader and
+// invisible to everyone else. The owner asked for a switch; the default is
+// hide, because the case that prompted it was Bluesky auto-filling a GIF's alt
+// with the GIF's own title and printing the same words twice.
+//
+// D7: this adds a caption. It never removes the `<img alt>` written above it —
+// a display preference must not become an accessibility regression.
+function altCaptionNode(items) {
+  const named = items.map((i, n) => ({ alt: (i.alt || '').trim(), n })).filter((x) => x.alt);
+  if (!named.length) return null;
+  const many = items.length > 1;
+  return el('div', { class: 'alt-caption', 'data-alt-text': '1' },
+    ...named.map(({ alt, n }) => el('div', {},
+      // numbered only when there is more than one picture to tell apart
+      many ? el('span', { class: 'muted' }, `${n + 1}. `) : null, alt)));
+}
+function withAltCaption(picture, items) {
+  if (!altText.shown()) return picture;
+  const caption = altCaptionNode(items);
+  return caption ? el('div', { class: 'stages' }, picture, caption) : picture;
+}
+
+// gif-embeds phase 2: the GIF CARD (owner, 2026-09-02 — "the gif shuld show a
+// play/pause overlay … not just tha tpost, but that TYPE of post").
+//
+// The stage is a player rather than a still thumbnail with a link out; the
+// caption keeps the card's identity. D8: bsky.app hides the title and host for
+// a GIF (`hideDetails`), forage does not — the owner asked for a player and a
+// setting, not for the card to lose its name. The duplication that prompted
+// the report is gone anyway, because the "ALT: <the title again>" line is what
+// the alt-text setting hides by default.
+function gifCard(p) {
+  const { uri, thumb, title, alt, player, sources, src, aspect } = p.media;
+  const host = domainOf(uri) || '';
+  const name = title || host || 'GIF';
+  const linkAttrs = { target: '_blank', rel: 'noopener noreferrer' };
+  return el('div', { class: 'extcard', 'data-extcard': '1', 'data-gifcard': '1', 'data-provider': 'gif' },
+    gifStage({ player, sources, src, thumb, alt, aspect, autoplay: gifAutoplay.enabled() }),
+    el('a', { class: 'ext-caption', href: uri, ...linkAttrs, 'aria-label': `${name} — opens in a new tab` },
+      el('div', { class: 'ext-title', 'data-ext-title': '1' }, name),
+      altText.shown() && alt ? el('div', { class: 'ext-desc', 'data-alt-text': '1' }, alt) : null,
+      el('div', { class: 'ext-host' }, el('span', { 'data-ext-host': '1' }, host))));
 }
 
 // v13 decisions 29 and 31: the EXTERNAL CARD — the picture on a stage (centred,
@@ -2814,10 +2867,22 @@ export function lensProfileView() {
       box.append(el('label', { class: 'seccheck', for: `sec-${id}` },
         cb, el('span', {}, label)));
     }
+    // gif-embeds phase 4 (owner, 2026-09-02): show or hide alt text, hidden by
+    // default. Advanced because most readers should never need it — the same
+    // reason Browse Hashtags is here. D7: this prints a caption; the alt on the
+    // picture itself is written either way, so a screen reader is unaffected in
+    // both states.
+    const altBox = el('input', { type: 'checkbox', id: 'pref-alttext', 'data-alttext': '1',
+      checked: altText.shown() || false });
+    altBox.addEventListener('change', () => { altText.set(altBox.checked); rerenderNow(); });
     return el('details', { class: 'card', 'data-advanced': '1' },
       el('summary', { style: 'cursor:pointer;min-height:44px;display:flex;align-items:center' }, 'Advanced'),
       el('div', { style: 'margin-top:8px' },
-        el('h3', { style: 'font-size:var(--t-md);margin:0 0 4px' }, 'Browse Hashtags'),
+        el('h3', { style: 'font-size:var(--t-md);margin:0 0 4px' }, 'Alt text'),
+        el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
+          'Alt text is the description an author writes for people who cannot see a picture. Off, it stays where screen readers read it. On, it is printed under the picture too — including on GIFs, where Bluesky often fills it in with the GIF’s own title.'),
+        el('label', { class: 'seccheck', for: 'pref-alttext' }, altBox, el('span', {}, 'Show alt text under pictures')),
+        el('h3', { style: 'font-size:var(--t-md);margin:12px 0 4px' }, 'Browse Hashtags'),
         el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
           'Which sections appear on the Hashtags page. Unchecking all of them leaves it empty, which is allowed.'),
         box));

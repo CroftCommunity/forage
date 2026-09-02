@@ -82,7 +82,7 @@ const quoting = (record) => ({ $type: 'app.bsky.embed.record#view', record });
 // All three are declared for every shape; `expect()` below fails a shape that
 // leaves any of them out, so "we forgot to think about the other surface"
 // is a red test rather than a silent gap.
-const NOTHING = { ownStage: 0, ownGrid: 0, ownExt: 0, carousel: 0, strip: 0, quoted: 0, quotedStage: 0, quotedExt: 0,
+const NOTHING = { ownStage: 0, ownGrid: 0, ownExt: 0, ownGif: 0, gifPlayer: null, carousel: 0, strip: 0, quoted: 0, quotedStage: 0, quotedExt: 0,
   quotedWho: null, quotedHandle: null };
 const SHAPES = [
   { key: 'text', why: 'a plain text post draws no media anywhere',
@@ -122,6 +122,19 @@ const SHAPES = [
     text: 'a statement with no picture', embed: external({ uri: 'https://example.test/b', title: 'A statement', thumb: null }),
     row: { ...NOTHING, ownExt: 1, words: true }, post: { ...NOTHING, ownExt: 1, words: true },
     reply: { ...NOTHING, ownExt: 1, words: true } },
+
+  { key: 'klipygif', why: 'gif-embeds 2026-09-02: a klipy GIF is a PLAYER on every surface, not a frozen link card — and it plays klipy\'s own video, 9.2x cheaper than the .gif',
+    text: 'a gif', embed: external({ uri: 'https://static.klipy.com/ii/4e7bea9f7a3371424e6c16ebc93252fe/61/56/RiZHW3kybKsT6j.gif?hh=415&ww=498&mp4=8pcPaPB1Eow6fc&webm=0Ds0ULMJw0vWjEZ6NMLN',
+      title: 'Warrior Nun Ava Running Through Water', description: 'ALT: Warrior Nun Ava Running Through Water' }),
+    row: { ...NOTHING, ownExt: 1, ownGif: 1, ownStage: 1, gifPlayer: 'video', words: true },
+    post: { ...NOTHING, ownExt: 1, ownGif: 1, ownStage: 1, gifPlayer: 'video', words: true },
+    reply: { ...NOTHING, ownExt: 1, ownGif: 1, ownStage: 1, gifPlayer: 'video', words: true } },
+
+  { key: 'plaingif', why: 'gif-embeds: a .gif we have no verified video for still animates — on its OWN uri, never a constructed one (CLAUDE.md § External APIs)',
+    text: 'a tenor gif', embed: external({ uri: 'https://media.tenor.com/AAAAC3q2Kn0AAAAC/shrug.gif?hh=200&ww=200', title: 'Shrug' }),
+    row: { ...NOTHING, ownExt: 1, ownGif: 1, ownStage: 1, gifPlayer: 'image', words: true },
+    post: { ...NOTHING, ownExt: 1, ownGif: 1, ownStage: 1, gifPlayer: 'image', words: true },
+    reply: { ...NOTHING, ownExt: 1, ownGif: 1, ownStage: 1, gifPlayer: 'image', words: true } },
 
   { key: 'quotetext', why: 'quote-embed 2026-09-01: the FEED ROW shows what the post quotes — before this it showed nothing',
     text: 'look at this', embed: quoting(viewRecord('qt', 'the quoted words')),
@@ -260,6 +273,11 @@ async function observe(page, scope) {
       ownGrid: n('.stage-grid') - inQuote('.stage-grid'),
       carousel: n('.stage.carousel') - inQuote('.stage.carousel'),
       ownExt: n('.extcard') - inQuote('.extcard'),
+      // gif-embeds: a GIF card IS an .extcard (it keeps the card's identity,
+      // D8), so ownExt still counts it — this says which of them animate, and
+      // `gifPlayer` says whether the cheap video or the .gif itself is loaded.
+      ownGif: n('[data-gifcard]') - inQuote('[data-gifcard]'),
+      gifPlayer: (el.querySelector('[data-gifcard] .stage[data-stage="gif"]') || {}).getAttribute?.('data-gif') ?? null,
       strip: n('.media-strip') - inQuote('.media-strip'),
       quoted: n('[data-quoted]'),
       quotedStage: inQuote('.stage'),

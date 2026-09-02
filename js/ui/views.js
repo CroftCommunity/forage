@@ -15,6 +15,7 @@ import { postRow, commentNode, vote, guestGate, focusComment, emptyState, gate, 
 import { densityDial, isCompact } from '../board-density.js';
 import * as cardSize from '../card-size.js';
 import * as pictures from '../pictures.js';
+import * as gifAutoplay from '../gif-autoplay.js';
 import * as rail from '../rail.js';
 import * as providerMark from '../provider-mark.js';
 import { sortBar } from './sortbar.js';
@@ -692,12 +693,34 @@ export function settingsView() {
     markBox.setAttribute('aria-checked', String(on));
     markBox.querySelector('.switch-state').textContent = on ? 'On' : 'Off';
   });
+  // gif-embeds phase 3: should a GIF start on its own? DESIGN.md § Foundations
+  // — the device answers until a person does, and the row SAYS which is in
+  // force, because a switch reading "Off" with nothing stored looks like a
+  // choice the reader does not remember making.
+  const gifBox = el('button', { type: 'button', class: 'switch', id: 'pref-gifautoplay', role: 'switch',
+    'aria-checked': String(gifAutoplay.enabled()) }, el('span', { class: 'switch-state' }, gifAutoplay.enabled() ? 'On' : 'Off'));
+  const gifWhy = el('span', { class: 'xs muted', style: 'margin-left:8px' });
+  const sayGif = () => {
+    gifWhy.textContent = gifAutoplay.stored() === null && !gifAutoplay.deviceDefault()
+      ? 'animated posts play by themselves; off, they wait for a press — following your device’s “reduce motion” setting until you choose here'
+      : 'animated posts play by themselves; off, they wait for a press and nothing is downloaded until you make one';
+  };
+  sayGif();
+  gifBox.addEventListener('click', () => {
+    const on = gifBox.getAttribute('aria-checked') !== 'true';
+    gifAutoplay.set(on);
+    gifBox.setAttribute('aria-checked', String(on));
+    gifBox.querySelector('.switch-state').textContent = on ? 'On' : 'Off';
+    sayGif();
+  });
   const themeCard = el('div', { class: 'card' },
     fieldRow('Skin', skinSel),
     notchRow('pref-cardsize', 'Card size', sizeNotches, 'how much room a post takes — 1 is small, 4 is the full picture'),
     notchRow('pref-pictures', 'Pictures shown at once', picNotches, 'up to this many side by side; more become a carousel'),
     el('div', { class: 'field-row' }, el('label', { for: 'pref-rail' }, 'Side panel'),
       el('span', {}, railBox, el('span', { class: 'xs muted', style: 'margin-left:8px' }, 'the right-hand column — suggestions, and sign-in when you are signed out; off, the posts take the middle'))),
+    el('div', { class: 'field-row' }, el('label', { for: 'pref-gifautoplay' }, 'Play GIFs automatically'),
+      el('span', {}, gifBox, gifWhy)),
     el('div', { class: 'field-row' }, el('label', { for: 'pref-providermark' }, 'Provider mark'),
       el('span', {}, markBox, el('span', { class: 'xs muted', style: 'margin-left:8px' }, 'a small mark beside each name saying which atmo provider they post from; the handle is always in the name’s tooltip'))),
     // Say where the other half of the choice lives. Without this the picker

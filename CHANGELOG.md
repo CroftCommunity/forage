@@ -8,6 +8,20 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-02 **GIFs play, and you decide whether they start on their own.** A GIF posted from
+  Bluesky arrives dressed as an ordinary link card, and Forage believed the costume: you got a
+  frozen thumbnail with a link out, and — because Bluesky hides alt text inside the card's
+  description — the same words printed twice underneath. Now a GIF is a player. Tap anywhere on
+  it to pause, tap again to carry on. Under Preferences, **Play GIFs automatically** decides
+  whether they start by themselves; if your phone or laptop is set to reduce motion, they wait
+  for you until you say otherwise. Turned off, nothing is downloaded until you press — which on
+  the GIF that prompted this is 8.8 MB you do not spend. Where the record gives us one, the
+  cheaper video is what plays instead of the GIF itself, from the same site the post already
+  points at. And under **Advanced**, a new **Show alt text under pictures** switch prints the
+  description an author wrote beneath a picture or a GIF; it is off to begin with, and turning it
+  off has never hidden anything from a screen reader. (owner: "the gif shuld show a play/pause
+  overlay … not just tha tpost, but that TYPE of post")
+
 - 2026-09-02 **The refresh button now notices on its own when you come back.** Since it landed
   it has only looked when you pressed it, which meant the count never appeared unless you went
   asking, and a reader deep in a board pressed twice — once to look, once to take. Now coming

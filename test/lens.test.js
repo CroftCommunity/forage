@@ -806,3 +806,68 @@ test('quote-embed: the quoted author carries the name they chose, null when they
     assert.equal(p.quoted.authorName, null, `${JSON.stringify(author.displayName)} is not a name`);
   }
 });
+
+// ---- gif-embeds phase 1: a GIF is its own kind ----------------------------
+// Bluesky's GIF button attaches the animation as an ordinary external embed,
+// so the lens drew a frozen JPEG with a link out (owner, 2026-09-02, on two
+// klipy posts). The kind is decided in mediaOf — the ONE door every surface
+// comes through — so a feed row, a reply node and a QUOTED post all inherit it.
+const KLIPY_GIF = 'https://static.klipy.com/ii/4e7bea9f7a3371424e6c16ebc93252fe/61/56/RiZHW3kybKsT6j.gif?hh=415&ww=498&mp4=8pcPaPB1Eow6fc&webm=0Ds0ULMJw0vWjEZ6NMLN';
+
+const extPost = (rkey, external) => qPost(rkey, 'did:plc:a', '2026-09-02T00:00:00Z', {
+  embed: { $type: 'app.bsky.embed.external#view', external } });
+
+test('gif-embeds: a klipy external embed shapes as kind "gif", carrying what plays', () => {
+  const p = shapeLensPost(extPost('g1', { uri: KLIPY_GIF, title: 'Warrior Nun Ava Running Through Water',
+    description: 'ALT: Warrior Nun Ava Running Through Water', thumb: 'https://cdn/gt.jpg' }), QSRC);
+  assert.equal(p.media.kind, 'gif', 'not "external" — a still card cannot be made to move');
+  assert.equal(p.media.player, 'video');
+  assert.deepEqual(p.media.aspect, { w: 498, h: 415 }, 'hh/ww size the stage before anything loads');
+  assert.deepEqual(p.media.sources.map((s) => s.type), ['video/webm', 'video/mp4']);
+  // the card keeps its identity (D8): the owner asked for a player, not for the
+  // card to lose its name
+  assert.equal(p.media.uri, KLIPY_GIF);
+  assert.equal(p.media.title, 'Warrior Nun Ava Running Through Water');
+  assert.equal(p.media.thumb, 'https://cdn/gt.jpg', 'the poster, and the paused frame');
+  // the ALT: prefix is parsed HERE so no view has to know about Bluesky's hack
+  assert.equal(p.media.alt, 'Warrior Nun Ava Running Through Water');
+  assert.equal(p.media.altAuthored, false, 'all-caps ALT: = auto-filled from the title');
+  assert.equal(p.format, 'link', 'still a link post — only the media changed');
+});
+
+test('gif-embeds: "Alt:" marks alt a person actually wrote', () => {
+  const p = shapeLensPost(extPost('g2', { uri: KLIPY_GIF, title: 'Give Up Im Done',
+    description: 'Alt: a woman collapsing dramatically onto a sofa', thumb: 'https://cdn/g2.jpg' }), QSRC);
+  assert.equal(p.media.alt, 'a woman collapsing dramatically onto a sofa');
+  assert.equal(p.media.altAuthored, true);
+});
+
+test('gif-embeds: a non-klipy .gif plays as an image on its own uri', () => {
+  const uri = 'https://media.tenor.com/AAAAC3q2Kn0AAAAC/warrior-nun.gif?hh=415&ww=498';
+  const p = shapeLensPost(extPost('g3', { uri, title: 'T', description: '', thumb: 'https://cdn/g3.jpg' }), QSRC);
+  assert.equal(p.media.kind, 'gif');
+  assert.equal(p.media.player, 'image');
+  assert.equal(p.media.src, uri, 'the record\'s own uri — nothing constructed (External APIs)');
+  assert.equal(p.media.aspect, null);
+  assert.equal(p.media.sources, undefined);
+});
+
+test('gif-embeds: an ordinary link card is untouched', () => {
+  const p = shapeLensPost(extPost('g4', { uri: 'https://www.videogameschronicle.com/news/a/',
+    title: 'Sony says a thing', description: 'The publisher confirmed on Tuesday…', thumb: 'https://cdn/n.jpg' }), QSRC);
+  assert.equal(p.media.kind, 'external');
+  assert.equal(p.media.description, 'The publisher confirmed on Tuesday…',
+    'og:description is page content, never governed by the alt-text setting');
+  assert.equal(p.media.alt, undefined, 'a link card has no alt to hide');
+});
+
+test('gif-embeds: a GIF a post QUOTES comes out the same door', () => {
+  const p = shapeLensPost(qPost('g5', 'did:plc:a', '2026-09-02T00:00:00Z', {
+    embed: { $type: 'app.bsky.embed.record#view', record: {
+      $type: 'app.bsky.embed.record#viewRecord', uri: 'at://did:plc:b/app.bsky.feed.post/q1',
+      author: { handle: 'b.test' }, value: { text: 'quoted words' },
+      embeds: [{ $type: 'app.bsky.embed.external#view', external: {
+        uri: KLIPY_GIF, title: 'W', description: 'ALT: W', thumb: 'https://cdn/qg.jpg' } }] } } }), QSRC);
+  assert.equal(p.quoted.media.kind, 'gif');
+  assert.equal(p.quoted.media.player, 'video');
+});
