@@ -130,8 +130,14 @@ const SHAPES = [
     post: { ...NOTHING, ownExt: 1, ownGif: 1, ownStage: 1, gifPlayer: 'video', words: true },
     reply: { ...NOTHING, ownExt: 1, ownGif: 1, ownStage: 1, gifPlayer: 'video', words: true } },
 
+  { key: 'tenorgif', why: 'gif-embeds follow-up 2026-09-02: tenor has a probed video form too (52x on one measured id), served from tenor\'s OWN host',
+    text: 'a tenor gif', embed: external({ uri: 'https://media.tenor.com/Zc-ZTPzlEHoAAAAC/i-don%27t-know-idk.gif?hh=220&ww=320', title: 'I Dont Know' }),
+    row: { ...NOTHING, ownExt: 1, ownGif: 1, ownStage: 1, gifPlayer: 'video', words: true },
+    post: { ...NOTHING, ownExt: 1, ownGif: 1, ownStage: 1, gifPlayer: 'video', words: true },
+    reply: { ...NOTHING, ownExt: 1, ownGif: 1, ownStage: 1, gifPlayer: 'video', words: true } },
+
   { key: 'plaingif', why: 'gif-embeds: a .gif we have no verified video for still animates — on its OWN uri, never a constructed one (CLAUDE.md § External APIs)',
-    text: 'a tenor gif', embed: external({ uri: 'https://media.tenor.com/AAAAC3q2Kn0AAAAC/shrug.gif?hh=200&ww=200', title: 'Shrug' }),
+    text: 'a giphy gif', embed: external({ uri: 'https://media.giphy.com/media/l0HlvtIPzPdt2usKs/giphy.gif', title: 'Shrug' }),
     row: { ...NOTHING, ownExt: 1, ownGif: 1, ownStage: 1, gifPlayer: 'image', words: true },
     post: { ...NOTHING, ownExt: 1, ownGif: 1, ownStage: 1, gifPlayer: 'image', words: true },
     reply: { ...NOTHING, ownExt: 1, ownGif: 1, ownStage: 1, gifPlayer: 'image', words: true } },

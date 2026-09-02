@@ -86,11 +86,73 @@ test('gif: a klipy uri missing what video needs degrades to its own .gif, never 
   }
 });
 
-test('gif: tenor, giphy and a bare link animate as images on their own uri', () => {
+test('gif: giphy and a bare link animate as images on their own uri', () => {
   for (const uri of [
-    'https://media.tenor.com/AAAAC3q2Kn0AAAAC/warrior-nun.gif?hh=415&ww=498',
     'https://media.giphy.com/media/l0HlvtIPzPdt2usKs/giphy.gif',
     'https://example.org/deep/path/dancing.GIF',
+  ]) {
+    const g = gifOf(uri);
+    assert.equal(g.kind, 'image', uri);
+    assert.equal(g.src, uri);
+  }
+});
+
+// ---- tenor, probed 2026-09-02 ------------------------------------------
+// Left unbuilt when gif-embeds landed because the url shape could not be
+// exercised from here (CLAUDE.md § External APIs). Now probed against two
+// independent real ids, and the rewrite social-app uses answers 200 with
+// `access-control-allow-origin: *` on TENOR'S OWN HOST — no proxy needed:
+//
+//   Zc-ZTPzlEHo   gif 66,865 B   webm 37,761 B   mp4 20,255 B   (3.3x)
+//   r2ZObFlQ5I4   gif 4,160,427  webm 79,370     mp4 77,723     (52x)
+//
+// Tenor encodes the format in the id's SUFFIX: AAAAC gif, AAAP3 webm,
+// AAAP1 mp4.
+const TENOR = 'https://media.tenor.com/Zc-ZTPzlEHoAAAAC/i-don%27t-know-idk.gif?hh=220&ww=320';
+
+test('gif: a tenor record plays tenor\'s video, from tenor\'s own host', () => {
+  const g = gifOf(TENOR);
+  assert.equal(g.kind, 'video');
+  assert.deepEqual(g.sources, [
+    { src: 'https://media.tenor.com/Zc-ZTPzlEHoAAAP3/i-don%27t-know-idk.webm', type: 'video/webm' },
+    { src: 'https://media.tenor.com/Zc-ZTPzlEHoAAAP1/i-don%27t-know-idk.mp4', type: 'video/mp4' },
+  ]);
+  assert.deepEqual(g.aspect, { w: 320, h: 220 });
+});
+
+test('gif: the tenor filename is passed through BYTE FOR BYTE', () => {
+  // "i-don%27t-know-idk" — a percent-encoded apostrophe. Decoding and
+  // re-encoding it is how a working url becomes a 404; the probe used this
+  // exact name, so the test uses it too.
+  for (const s of gifOf(TENOR).sources) assert.ok(s.src.includes('i-don%27t-know-idk'), s.src);
+});
+
+test('gif: D3 again — tenor\'s host, not bsky\'s proxy', () => {
+  // social-app serves these from t.gifs.bsky.app. Both answer; forage takes
+  // the origin, for the same reason it does with klipy.
+  for (const s of gifOf(TENOR).sources) {
+    assert.equal(new URL(s.src).hostname, 'media.tenor.com');
+  }
+});
+
+test('gif: the format code is a SUFFIX, and only a suffix is swapped', () => {
+  // social-app does id.replace('AAAAC', …), which rewrites the FIRST match.
+  // An id that merely CONTAINS AAAAC earlier would be mangled into a url that
+  // 404s — a silently broken player, which is the thing this rung exists to
+  // avoid. Requiring the suffix means such an id falls back to the image,
+  // which is correct rather than broken.
+  const odd = 'https://media.tenor.com/AAAACxyz123/thing.gif?hh=100&ww=100';
+  const g = gifOf(odd);
+  assert.equal(g.kind, 'image', 'AAAAC in the middle is not a format code');
+  assert.equal(g.src, odd);
+});
+
+test('gif: a tenor uri missing what video needs still animates', () => {
+  for (const uri of [
+    'https://media.tenor.com/Zc-ZTPzlEHoAAAAC/idk.gif',                       // no hh/ww
+    'https://media.tenor.com/Zc-ZTPzlEHoAAAAM/idk.gif?hh=220&ww=320',         // not the gif format code
+    'https://media1.tenor.com/m/Zc-ZTPzlEHoAAAAC/idk.gif?hh=220&ww=320',      // the /m/ form: probed, 404s as video
+    'https://media.tenor.com/Zc-ZTPzlEHoAAAAC/deep/idk.gif?hh=220&ww=320',    // three segments, not tenor's shape
   ]) {
     const g = gifOf(uri);
     assert.equal(g.kind, 'image', uri);

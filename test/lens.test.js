@@ -842,8 +842,10 @@ test('gif-embeds: "Alt:" marks alt a person actually wrote', () => {
   assert.equal(p.media.altAuthored, true);
 });
 
-test('gif-embeds: a non-klipy .gif plays as an image on its own uri', () => {
-  const uri = 'https://media.tenor.com/AAAAC3q2Kn0AAAAC/warrior-nun.gif?hh=415&ww=498';
+test('gif-embeds: a .gif with no verified video form plays as an image on its own uri', () => {
+  // giphy: no probed video rewrite, so the record's own uri animates. klipy
+  // and tenor both have one (js/gif.js) and take the cheaper rung.
+  const uri = 'https://media.giphy.com/media/l0HlvtIPzPdt2usKs/giphy.gif';
   const p = shapeLensPost(extPost('g3', { uri, title: 'T', description: '', thumb: 'https://cdn/g3.jpg' }), QSRC);
   assert.equal(p.media.kind, 'gif');
   assert.equal(p.media.player, 'image');
@@ -870,4 +872,95 @@ test('gif-embeds: a GIF a post QUOTES comes out the same door', () => {
         uri: KLIPY_GIF, title: 'W', description: 'ALT: W', thumb: 'https://cdn/qg.jpg' } }] } } }), QSRC);
   assert.equal(p.quoted.media.kind, 'gif');
   assert.equal(p.quoted.media.player, 'video');
+});
+
+// ---- the self-thread continuation carries its embeds --------------------
+// Found 2026-09-02 while building gif-embeds: forage hoists an unbroken
+// same-author reply chain into the head as the post's BODY (forum shape), but
+// the shape it built was { uri, text, facets } — no media, no quote. So an
+// author who answered their own post with a picture, a clip, a link card or a
+// GIF had the words rendered and the embed silently dropped.
+//
+// Same family as the quote-embed drop fixed 2026-09-01 ("a quote of a video
+// read as words alone"), and the same fix: everything comes out mediaOf's one
+// door, including the parts that get hoisted.
+const selfKlipy = 'https://static.klipy.com/ii/4e7bea9f7a3371424e6c16ebc93252fe/61/56/RiZHW3kybKsT6j.gif?hh=415&ww=498&mp4=8pcPaPB1Eow6fc&webm=0Ds0ULMJw0vWjEZ6NMLN';
+
+// the author replying to themselves, 1/3 -> 2/3 -> 3/3, each part carrying
+// something the old shape threw away
+// threads shape through .thread(), which fetches; a minimal transport that
+// answers getPostThread and an empty getQuotes is all this needs
+const selfThreadOf = async (threadPayload) => {
+  const transport = async (path) => {
+    const json = (d) => ({ ok: true, status: 200, json: async () => d });
+    if (path.includes('getPostThread')) return json(threadPayload);
+    if (path.includes('getQuotes')) return json({ posts: [] });
+    return { ok: false, status: 404, json: async () => ({}) };
+  };
+  return createLens({ session: { did: 'did:plc:me', handle: 'me', fetchHandler: transport } })
+    .thread('at://did:plc:op/app.bsky.feed.post/root', QSRC);
+};
+
+const selfThreadResponse = () => ({ thread: {
+  post: qPost('root', 'did:plc:op', '2026-09-02T08:00:00Z'),
+  replies: [
+    { post: qPost('p2', 'did:plc:op', '2026-09-02T08:01:00Z', {
+        embed: { $type: 'app.bsky.embed.images#view',
+          images: [{ thumb: 'https://cdn/t.jpg', fullsize: 'https://cdn/f.jpg', alt: 'a chart',
+            aspectRatio: { width: 1600, height: 900 } }] } }),
+      replies: [
+        { post: qPost('p3', 'did:plc:op', '2026-09-02T08:02:00Z', {
+            embed: { $type: 'app.bsky.embed.external#view',
+              external: { uri: selfKlipy, title: 'W', description: 'ALT: W', thumb: 'https://cdn/g.jpg' } } }),
+          replies: [] },
+        // a reply by someone ELSE under a hoisted part re-roots as a comment
+        { post: qPost('other', 'did:plc:bb', '2026-09-02T08:03:00Z'), replies: [] },
+      ] },
+  ] } });
+
+test('self-thread: a hoisted part keeps its picture, and its GIF', async () => {
+  const t = await selfThreadOf(selfThreadResponse());
+  assert.equal(t.selfThread.length, 2, 'both parts of the chain hoist');
+
+  const [p2, p3] = t.selfThread;
+  assert.equal(p2.media?.kind, 'images', 'part 2 carried a picture and it survives');
+  assert.equal(p2.media.items[0].alt, 'a chart');
+  assert.deepEqual(p2.media.items[0].aspect, { w: 1600, h: 900 },
+    'with the ratio, so the stage is sized before it loads');
+
+  assert.equal(p3.media?.kind, 'gif', 'part 3 carried a GIF and it survives');
+  assert.equal(p3.media.player, 'video');
+
+  // the words are untouched — this adds to the shape, it does not replace it
+  assert.equal(p2.text, 'text p2');
+  assert.ok(Array.isArray(p2.facets));
+});
+
+test('self-thread: a hoisted part carries who and where, so its media can link out', async () => {
+  // mediaNode builds a bsky.app link for a video from `author` + `id`; a part
+  // with neither would render a link to "undefined/post/undefined".
+  const t = await selfThreadOf(selfThreadResponse());
+  const [p2] = t.selfThread;
+  assert.equal(p2.author, 'op.test');
+  assert.equal(p2.id, 'at://did:plc:op/app.bsky.feed.post/p2');
+});
+
+test('self-thread: a hoisted part keeps what it QUOTES too', async () => {
+  const t = await selfThreadOf({ thread: {
+    post: qPost('root', 'did:plc:op', '2026-09-02T08:00:00Z'),
+    replies: [{ post: qPost('p2', 'did:plc:op', '2026-09-02T08:01:00Z', {
+      embed: { $type: 'app.bsky.embed.record#view', record: {
+        $type: 'app.bsky.embed.record#viewRecord', uri: 'at://did:plc:q/app.bsky.feed.post/q1',
+        author: { handle: 'q.test' }, value: { text: 'the quoted words' } } } }), replies: [] }] } });
+  assert.equal(t.selfThread[0].quoted?.excerpt, 'the quoted words',
+    'a self-thread part that quotes somebody still shows who');
+});
+
+test('self-thread: a part with no embed is unchanged — media is absent, not null-shaped', async () => {
+  const t = await selfThreadOf({ thread: {
+    post: qPost('root', 'did:plc:op', '2026-09-02T08:00:00Z'),
+    replies: [{ post: qPost('p2', 'did:plc:op', '2026-09-02T08:01:00Z'), replies: [] }] } });
+  assert.equal(t.selfThread[0].media, undefined);
+  assert.equal(t.selfThread[0].quoted, undefined,
+    'absent, like the head\'s — the view checks truthiness, and a null-shaped quote would render an empty card');
 });

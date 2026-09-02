@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forage GIF Embeds v1</title>
-<meta name="mock-version" content="1">
+<title>Forage GIF Embeds v2</title>
+<meta name="mock-version" content="2">
 <meta name="mock-baseline" content="forage@05101a9">
 <meta name="mock-proposal" content="forage@2dd9bc5">
 <style>
@@ -46,7 +46,7 @@ code{font-size:.92em}
 <body>
 <div class="wrap">
   <header>
-    <div class="eyebrow">Forage &middot; mock &middot; gif-embeds <b>v1</b> &middot; Current forage@05101a9 &middot; Proposed forage@2dd9bc5 &middot; 2026-09-02</div>
+    <div class="eyebrow">Forage &middot; mock &middot; gif-embeds <b>v2</b> &middot; Current forage@05101a9 &middot; Proposed forage@2dd9bc5 &middot; 2026-09-02</div>
     <h1>A GIF should play like a GIF</h1>
     <p class="sub"><b>One proposal in three parts and eight decisions</b>, from the owner 2026-09-02:
       &ldquo;the gif shuld show a play/pause overlay and there should be a setting in use rproifle to
@@ -111,8 +111,8 @@ code{font-size:.92em}
         <td><b>The whole surface.</b> It is the gesture every other GIF a reader has met uses, and the 44px floor stops being a question at stage size.</td>
         <td><span class="tag">open</span></td></tr>
       <tr><td>7</td><td>Tenor's cheaper video form</td>
-        <td><b>Not built.</b> social-app rewrites <code>AAAAC</code>&rarr;<code>AAAP1</code>/<code>AAAP3</code> onto its own CDN; that could not be exercised from here against a real tenor record, and CLAUDE.md &sect; External APIs forbids writing it on inference. Tenor animates as an image; a probe is filed in <code>TODO.md</code>.</td>
-        <td><span class="tag">deferred</span></td></tr>
+        <td><b>Built, after the probe.</b> Two independent real ids, against tenor's OWN host: <code>Zc-ZTPzlEHo</code> gif 66,865&nbsp;B &rarr; webm 37,761 / mp4 20,255 (3.3&times;); <code>r2ZObFlQ5I4</code> gif 4,160,427&nbsp;B &rarr; webm 79,370 / mp4 77,723 (<b>52&times;</b>). Both <code>200</code>, CORS <code>*</code> &mdash; so no proxy, as with klipy. forage requires the <code>AAAAC</code> code to be a <b>suffix</b>, stricter than social-app's first-match <code>replace</code>, so an id that merely contains it falls back to the image rather than to a 404.</td>
+        <td><span class="tag">done v2</span></td></tr>
       <tr><td>8</td><td>Whose CDN serves klipy's video?</td>
         <td><b>klipy's own.</b> social-app proxies through <code>k.gifs.bsky.app</code>; both answer with identical bytes and open CORS, and the origin host is already in the record &mdash; so reading a post trusts nobody new.</td>
         <td><span class="tag">open</span></td></tr>
@@ -179,8 +179,12 @@ code{font-size:.92em}
 
   <section>
     <h2>4 &middot; The board, and the control</h2>
-    <p class="sub">The same GIFs as feed rows &mdash; landscape, portrait, a tenor <code>.gif</code> with
-      no verified video form, and a 96-character title &mdash; with a news card below them. <b>The news
+    <p class="sub">The same GIFs as feed rows &mdash; landscape, portrait, a <code>.gif</code> with
+      no probed video form, and a 96-character title &mdash; with a news card below them.
+      <b>These frames are v1's</b>, so the third card here is the tenor <code>.gif</code> as it played
+      <em>before</em> decision 7 was resolved; on <code>main</code> today that card is a tenor video
+      and the image rung is a giphy link. The frame is kept because the comparison it makes is
+      about the player, not about which provider is on which rung. <b>The news
       card is the control</b>: its <code>og:description</code> is genuine page content and must be
       unaffected by the alt-text setting in either state.</p>
     <div class="stage">
@@ -216,6 +220,7 @@ code{font-size:.92em}
     <div class="tablewrap"><table>
       <tr><th>v</th><th>Commit</th><th>What changed</th></tr>
       <tr><td>1</td><td><code>2dd9bc5</code></td><td>First publication. Four proposals, eight decisions, eight frames captured from the engine on both sides.</td></tr>
+      <tr><td>2</td><td><code>c16ab4c</code></td><td><b>Text only &mdash; decision 7 resolved</b> (tenor probed and built). The frames are v1's and are deliberately unchanged: v1 landed as <code>60ee9b7</code>, so a re-capture would put the FIXED state in the Current column and destroy the before/after this page exists to show. The shas above still name the trees those pixels came from.</td></tr>
     </table></div>
   </section>
 </div>

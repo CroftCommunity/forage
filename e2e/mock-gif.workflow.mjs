@@ -84,11 +84,11 @@ export async function run() {
       'the GIF is still NAMED for a screen reader, with Bluesky\'s prefix stripped');
 
     // ---- claim 7 (structure): the second rung — a .gif with no video form --
-    const tenor = page.locator(`${REPLY(3)} [data-gifcard] .stage[data-stage="gif"]`);
-    assert.equal(await tenor.getAttribute('data-gif'), 'image',
-      'a tenor .gif animates as an image: no video url is invented for it');
-    const isrc = await tenor.locator('img.stage-gif').getAttribute('src');
-    assert.ok(isrc.startsWith('https://media.tenor.com/'),
+    const plain = page.locator(`${REPLY(3)} [data-gifcard] .stage[data-stage="gif"]`);
+    assert.equal(await plain.getAttribute('data-gif'), 'image',
+      'a .gif with no PROBED video form animates as itself: no video url is invented for it');
+    const isrc = await plain.locator('img.stage-gif').getAttribute('src');
+    assert.ok(isrc.startsWith('https://media.giphy.com/'),
       `it plays the record's OWN uri, nothing constructed (${isrc})`);
 
     // ---- claim 8 (look): the kind is said out loud -------------------------

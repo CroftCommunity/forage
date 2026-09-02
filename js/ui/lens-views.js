@@ -2970,8 +2970,16 @@ export function lensThreadView(params, query) {
       // 3i: the poster's own 1/3-2/3-3/3 chain reads as the post body
       // post-text: the third copy of the segment mapping, collapsed onto
       // facetNodes; `posttext` gives the continuation its line structure too
-      ...(t.selfThread || []).map((part) => el('div', { class: 'small posttext', style: 'margin-top:8px' },
-        ...facetNodes(part.text, part.facets))),
+      // 2026-09-02: and whatever the part CARRIED. A hoisted part is the post's
+      // body, so it renders like one — words, then its picture / clip / link
+      // card / GIF, then what it quotes. Before this the shape had no media at
+      // all and an author answering their own post with a picture had it
+      // silently dropped (found while building gif-embeds).
+      ...(t.selfThread || []).flatMap((part) => [
+        el('div', { class: 'small posttext', style: 'margin-top:8px' }, ...facetNodes(part.text, part.facets)),
+        part.media ? mediaNode(part) : null,
+        part.quoted ? quotedContext(part.quoted) : null,
+      ].filter(Boolean)),
       p.quoted ? quotedContext(p.quoted) : null,
       t.quotesFailed ? el('div', { class: 'row', style: 'gap:6px;margin-top:6px' },
         chip(`${t.quoteCount} quote${t.quoteCount === 1 ? '' : 's'} — couldn't fetch`, 'getQuotes failed; replies still render. Reload to retry.')) : null,
