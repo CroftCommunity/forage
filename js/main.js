@@ -258,12 +258,9 @@ window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && drawerOpen
 
 // ---------- render pipeline ----------
 let currentCleanup = null;
-// What KIND of render this is, which is the whole input to where the reader ends
-// up. 'link' opens a new page at its top; 'pop' puts them back exactly where that
-// entry was; 'rerender' is a store change and must not move them at all — that
-// last one is why this cannot be inferred from the path (a store change and a
-// re-click on the current link look identical from the URL).
-let navKind = 'rerender';
+// What KIND of render this is lives in the router now (router.navKind), because a
+// VIEW needs it too: a board checks for new posts only when the reader ARRIVED,
+// and render() re-runs on every store change.
 function render() {
   // dev bar (memory-only scaffolding, user 2026-08-26) + masthead always fresh
   devHost.replaceChildren(pmode.active() === 'memory' ? devBar() : '');
@@ -309,14 +306,16 @@ function render() {
   // still wins: focusComment scrolls in a later frame.
   scrollMemory.setEntry(router.entryKey());
   scrollMemory.setBoard(out.boardKey ?? null);
-  scrollMemory.land(navKind, out.boardKey ?? null);
-  navKind = 'rerender';
+  scrollMemory.land(router.navKind(), out.boardKey ?? null);
+  router.clearNavKind();
 }
 
 // re-render on any store change (persona switch, dispatch, dev flags)
-store.subscribe(() => { navKind = 'rerender'; render(); });
-window.addEventListener('popstate', () => { navKind = 'pop'; render(); });
-router.interceptLinks((kind) => { navKind = kind || 'link'; render(); }); // real hrefs, no page loads
+store.subscribe(() => { router.setNavKind('rerender'); render(); });
+// only an UNCLAIMED popstate is a real Back or Forward — go() and rerenderNow()
+// both dispatch one, and reading those as navigation cost three fetches a load
+window.addEventListener('popstate', () => { router.claimPop(); render(); });
+router.interceptLinks(() => render()); // real hrefs, no page loads (the router claimed the kind)
 // A legacy '#/...' link followed while the app is ALREADY open is a
 // same-document change — boot never re-runs, so bridge it here too.
 window.addEventListener('hashchange', () => {

@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-09-01",
+  "capturedAt": "2026-09-02",
   "files": [
     {
       "file": "board-lens-refresh.phone.proposed.png",
@@ -7,7 +7,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@09daed3",
+      "baseline": "forage@4ec3459",
       "population": "lens:mock-refresh"
     },
     {
@@ -16,7 +16,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@09daed3",
+      "baseline": "forage@4ec3459",
       "population": "lens:mock-refresh"
     },
     {
@@ -25,7 +25,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@09daed3",
+      "baseline": "forage@4ec3459",
       "population": "lens:mock-refresh"
     },
     {
@@ -34,7 +34,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@09daed3",
+      "baseline": "forage@4ec3459",
       "population": "lens:mock-refresh"
     },
     {
@@ -43,7 +43,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@09daed3",
+      "baseline": "forage@4ec3459",
       "population": "lens:mock-refresh"
     },
     {
@@ -52,7 +52,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@09daed3",
+      "baseline": "forage@4ec3459",
       "population": "lens:mock-refresh"
     },
     {
@@ -61,7 +61,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@71f66f0",
+      "baseline": "forage@5d66442",
       "population": "lens:mock-refresh"
     },
     {
@@ -70,7 +70,43 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@71f66f0",
+      "baseline": "forage@5d66442",
+      "population": "lens:mock-refresh"
+    },
+    {
+      "file": "board-lens-refresh-news.phone.current.png",
+      "route": "board-lens-refresh-news",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@5d66442",
+      "population": "lens:mock-refresh"
+    },
+    {
+      "file": "board-lens-refresh-pill.phone.current.png",
+      "route": "board-lens-refresh-pill",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@5d66442",
+      "population": "lens:mock-refresh"
+    },
+    {
+      "file": "board-lens-refresh-news.desktop.current.png",
+      "route": "board-lens-refresh-news",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@5d66442",
+      "population": "lens:mock-refresh"
+    },
+    {
+      "file": "board-lens-refresh-pill.desktop.current.png",
+      "route": "board-lens-refresh-pill",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@5d66442",
       "population": "lens:mock-refresh"
     }
   ]
