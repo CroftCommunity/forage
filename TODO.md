@@ -12,7 +12,9 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 
 ## Needs the owner
 
-- **When should the refresh check run on its own?** (feed-refresh decision 2, landed 2026-09-01
+- **When should the refresh check run on its own?** *(Now cheaper than it was: returning to a
+  board no longer refetches, so a check on return costs one request and has a record to compare
+  against — plan phases 0–4, landed 2026-09-02.)* (feed-refresh decision 2, landed 2026-09-01
   with only the press as a trigger.) Nothing checks in the background, so the indicator half of the
   control never lights unless you press it, and a reader deep in a board presses twice — once to
   look, once to take. Returning to a board is the obvious moment and is what plan

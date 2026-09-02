@@ -56,11 +56,40 @@ export function dispatch(rawPath = currentPath()) {
   return notFound();
 }
 
+// Every history entry carries an id, because "where was I" is a question about
+// an ENTRY and not about a path: two visits to one board at different depths are
+// two answers, and js/scroll-memory.js keys on this to tell them apart. A pushed
+// entry gets a fresh id; a REPLACED one keeps the id it had, since replaceState
+// rewrites the current entry rather than making a new one.
+let seq = 0;
+export function nextEntryKey() { return `e${++seq}`; }
+export function entryKey() { return history.state?.__k ?? null; }
+
+export function pushPath(path) {
+  history.pushState({ __k: nextEntryKey() }, '', path);
+}
+export function replacePath(path) {
+  history.replaceState({ ...(history.state || {}), __k: entryKey() ?? nextEntryKey() }, '', path);
+}
+// The first entry is created by the page load, not by us, so it has no id until
+// we give it one — without this, Back to the landing entry has nothing to look up.
+//
+// The URL is deliberately NOT passed. `pathOf()` is pathname + search and drops
+// the FRAGMENT, and atproto's browser OAuth returns `code`/`state` in the
+// fragment by default — so stamping through pathOf() erased the callback before
+// the exchange could read it, and sign-in broke outright. Caught by
+// e2e/signin.workflow.mjs ("the callback params must survive until the exchange
+// reads them"). Omitting the url argument leaves the address bar untouched,
+// which is all this ever needed to do.
+export function stampCurrent() {
+  if (!entryKey()) history.replaceState({ ...(history.state || {}), __k: nextEntryKey() }, '');
+}
+
 // Navigate without a page load. Same path → re-dispatch (a no-op click still
 // refreshes the view, matching the old hash behavior).
 export function go(path) {
   if (pathOf() === path) return dispatch();
-  history.pushState({}, '', path);
+  pushPath(path);
   window.dispatchEvent(new PopStateEvent('popstate'));
   return undefined;
 }
@@ -76,8 +105,13 @@ export function interceptLinks(onNavigate) {
     const href = a.getAttribute('href');
     if (!href || !href.startsWith('/') || a.target === '_blank' || a.hasAttribute('download')) return;
     e.preventDefault();
-    if (pathOf() === href) { onNavigate?.(); return; }
-    history.pushState({}, '', href);
-    onNavigate?.();
+    // Tapping the link for the page you are already on is the tab-tap gesture:
+    // go to the top. It has to be told apart from an ordinary link, because
+    // phase 3 makes an ordinary link to a board you were reading RESTORE you —
+    // which would leave this press doing nothing at all, on the one control a
+    // reader reaches for when they want out of where they are.
+    if (pathOf() === href) { onNavigate?.('same'); return; }
+    pushPath(href);
+    onNavigate?.('link');
   });
 }
