@@ -12,6 +12,16 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 
 ## Needs the owner
 
+- **When should the refresh check run on its own?** (feed-refresh decision 2, landed 2026-09-01
+  with only the press as a trigger.) Nothing checks in the background, so the indicator half of the
+  control never lights unless you press it, and a reader deep in a board presses twice — once to
+  look, once to take. Returning to a board is the obvious moment and is what plan
+  `2026-09-01-plan-feed-position-and-updates.md` Phase 2 makes cheap; a tab becoming visible again
+  is a second candidate that needs nothing from Phase 2; a poll while you read is a third with a
+  real cost. Each changes how often the network is asked, which is why it is the owner's call and
+  not a default. Open decision 1 on `plans/mocks/feed-refresh.html` v2.
+
+
 - ~~**Images on a reply (feed-row O7).**~~ — DONE 2026-08-31 (feed-row v6): the reply page
   carries the composer's picker (`imagePicker` in `js/ui/lens-views.js`); the quick box
   stays text.

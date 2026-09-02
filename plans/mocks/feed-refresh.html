@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forage Feed Refresh v1</title>
-<meta name="mock-version" content="1">
+<title>Forage Feed Refresh v2</title>
+<meta name="mock-version" content="2">
 <meta name="mock-baseline" content="forage@3345405">
 <meta name="mock-proposal" content="forage@04a9228">
 <style>
@@ -43,9 +43,9 @@ code{font-size:.92em}
 <body>
 <div class="wrap">
   <header>
-    <div class="eyebrow">Forage &middot; mock &middot; feed-refresh <b>v1</b> &middot; Current forage@3345405 &middot; Proposed forage@04a9228 &middot; 2026-09-01</div>
+    <div class="eyebrow">Forage &middot; mock &middot; feed-refresh <b>v2</b> &middot; Current forage@3345405 &middot; Proposed forage@04a9228 &middot; 2026-09-01</div>
     <h1>A refresh button that tells you whether it is worth pressing</h1>
-    <p class="sub"><b>One proposal in four decisions</b>, from the owner 2026-09-01:
+    <p class="sub"><b>One proposal in five decisions</b>, from the owner 2026-09-01:
       &ldquo;let's put a refresh indicator and button to refresh on the top of the post feed stack,
       on the same horizontal line as the sort control bar, right aligned over the feed column.&rdquo;
       It is Phase 5 of <code>plans/2026-09-01-plan-feed-position-and-updates.md</code> &mdash; the half of
@@ -87,7 +87,11 @@ code{font-size:.92em}
 
       <tr><td>2</td><td><b>One control with three states</b>, not an indicator beside a button</td>
         <td><code>&#8635;</code> at rest &middot; <code>&#8635; 3 new</code> when three arrived &middot; spinning while it fetches.
-          The count is also in a live region, so a reader who is not looking at the bar hears it.</td>
+          The count is also in a live region, so a reader who is not looking at the bar hears it.
+          <b>Today the press is the only thing that looks</b> &mdash; nothing checks in the background yet, so a
+          deep reader presses once to look and once to take. That is decision 4's consequence, not a slip: while
+          you are mid-feed there is no press-free way to add posts without moving you. When the check should run
+          on its own is the first open question below.</td>
         <td>A separate count and button: a count with nothing to press is a dead end, and a button that cannot
           say whether pressing it will do anything makes you press it to find out</td>
         <td><code>mock-refresh</code> R4 (rest carries no count), R5 (the count is the number that arrived),
@@ -101,6 +105,20 @@ code{font-size:.92em}
           the weaker read: it puts a content control inside a presentation cluster)</td>
         <td><code>mock-refresh</code> R2 (last, and after density), R3 (&ge;44px at 390),
           R9 (right-aligned <em>with a count showing</em> &mdash; the defect the first capture found)</td></tr>
+
+      <tr><td>5</td><td><b>The count follows the reader down as a pill</b> (v2 &mdash; D14, settled by the owner
+        on the v1 frames: &ldquo;let's complete and land this&rdquo;)</td>
+        <td>The chosen line scrolls away: the bar is <code>position: static</code> and its bottom leaves the
+          viewport at <b>scrollY 256 (desktop) / 274 (phone)</b>, under one screen &mdash; and a reader restored to
+          4270px on a phone is fifteen screens past it, which is exactly the case this control exists for. So a
+          <b>pending</b> count follows as a pill above the board, and only while the bar is off-screen
+          <em>and</em> there is something to say. It stands down the moment the bar is back in view: one voice at
+          a time, and none at all when there is nothing to report.</td>
+        <td><b>(a)</b> a sticky bar &mdash; always visible, but 56px on top of the masthead's 61 is 14% of an
+          844px phone given permanently to chrome that is idle almost always; <b>(c)</b> accept the limit and let
+          the control be an arrival-only affordance, which abandons the reader this feature is for</td>
+        <td><code>mock-refresh</code> R8 &mdash; both frames: no pill while there is nothing to report, the pill in
+          view and &ge;44px once there is, and it stands down when the bar returns</td></tr>
 
       <tr><td>4</td><td><b>It never injects</b> &mdash; announcing is automatic, taking them is the press</td>
         <td>The check counts what sits above the post you are holding and says so. The board does not move,
@@ -116,15 +134,8 @@ code{font-size:.92em}
   <section>
     <div class="eyebrow">Open</div>
     <h2>Open decisions &mdash; for the owner</h2>
-    <div class="callout"><ul>
-      <li><b>D14 &mdash; the pill is proposed, not settled.</b> The bar is <code>position: static</code> and its bottom
-        leaves the viewport at <b>scrollY 256 (desktop) / 274 (phone)</b> &mdash; under one screen. A reader restored to
-        4270px on a phone is fifteen screens past it, which is exactly the case this control exists for. &sect;&nbsp;C
-        proposes option <b>(b)</b>: the count follows the reader down as a pill, only while the bar is off-screen
-        <em>and</em> there is something to say, and stands down when the bar is back. The alternatives are
-        <b>(a)</b> a sticky bar &mdash; always visible, but 56px on top of the masthead's 61 is 14% of an 844px phone
-        given permanently to chrome that is idle almost always &mdash; and <b>(c)</b> accept the limit and let the
-        control be an arrival-only affordance.</li>
+    <div class="callout"><p class="small"><b>D14 closed in v2</b> &mdash; the pill is decision 5 above, not an open
+      question. What remains open is everything below, and none of it blocks this landing.</p><ul>
       <li><b>How often does the check run?</b> Nothing runs it on a timer yet. On returning to a board is the
         obvious moment (and is what Phase 2 of the plan makes cheap); a poll while you read is a separate
         decision with a cost, and is not proposed here.</li>
@@ -176,7 +187,7 @@ code{font-size:.92em}
 
   <section>
     <div class="eyebrow">C</div>
-    <h2>C &mdash; The reader who is deep in the feed (D14, option b &mdash; proposed)</h2>
+    <h2>C &mdash; The reader who is deep in the feed (decision 5)</h2>
     <p class="sub">Scrolled to 1200px, the bar is gone. The count follows as a pill above the board, and standing
       on the fixture's video is the frame worth looking at: the first capture's pill was brand green on a green
       clip and all but disappeared, so it now carries a ring in the page's own ground. Scroll back up to the bar
@@ -217,6 +228,10 @@ code{font-size:.92em}
     <h2>Revisions</h2>
     <div class="tablewrap"><table>
       <tr><th>v</th><th>When</th><th>Commit</th><th>What changed</th></tr>
+      <tr><td>2</td><td>2026-09-01</td><td><code>33ff7fc</code>+</td><td><b>D14 settled by the owner on the v1
+        frames</b> and promoted from an open question to decision 5; &sect;&nbsp;C retitled. No frame changed &mdash;
+        <code>mock-proposal</code> still names <code>04a9228</code>, because the pixels are the ones it named.
+        MOCKS.md P3: a decision that settles goes back into the mock in the same landing.</td></tr>
       <tr><td>1</td><td>2026-09-01</td><td><code>04a9228</code></td><td>First publication. Four decisions, eight captures.
         The Proposed frames were re-captured once before publishing: the first set showed the control wrapping to the
         left at 390 and the pill vanishing on a green video, both fixed in <code>04a9228</code> and now held by R9 and

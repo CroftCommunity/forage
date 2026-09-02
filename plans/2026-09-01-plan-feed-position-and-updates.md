@@ -1,7 +1,7 @@
 # Plan: come back to your place in the feed — and be told what changed while you were gone
 
 date: 2026-09-01
-status: **Phases 5a + 5b BUILT and captured** on `claude/feed-position` — mock `plans/mocks/feed-refresh.html` v1 (`forage@3345405` → `forage@04a9228`), nine claims in `e2e/mock-refresh.workflow.mjs`, gate green (680/680, 86/86 conformance, 34 workflows). **Phases 0–4 and 6 unstarted.** D9 decided by the owner 2026-09-01; D13 resolved in 5a; **D14 proposed as option (b) and awaiting the owner** — it is § C of the mock.
+status: **Phases 5a + 5b + 5c COMPLETE** on `claude/feed-position` — mock `plans/mocks/feed-refresh.html` v2 (Current `forage@3345405`, Proposed `forage@04a9228`), nine claims in `e2e/mock-refresh.workflow.mjs`, gate green (680/680 unit, 86/86 conformance, 34 workflows). **Phases 0–4 and 6 unstarted.** D9 decided by the owner 2026-09-01; D13 resolved in 5a; **D14 settled by the owner 2026-09-01 on the v1 frames** — option (b), the pill; it is decision 5 of mock v2.
 repo: `CroftCommunity/forage`
 baseline: `main` @ `3345405` (quote-embed landed)
 related: `claude/logged-out-refine` item 7 (the centre column's scroller) — **decided compatibly, see Reasoning D0**; `e2e/open-at-top.workflow.mjs` (the rule this must not break)
@@ -83,7 +83,7 @@ So the work is in the **render pipeline**, not in scroll code. Six phases.
 | 4 | **The deep board.** More-paged posts survive the round trip (falls out of Phase 2), under the cap from D4 | Back after More ×3 restores a post from page 4 |
 | 5a | **The bar has to be able to hold it.** `.sortbar` shrink-wraps to 295px inside a 680px column, so its `.grow` spacer measures **0** and nothing in it is right-aligned today (D13). Stretch the bar to its host, which moves the density and card-size dials to the column's right edge — a visible change to an approved surface, so it is drawn and captured before it is built | `mock-board` at both viewports: the bar's right edge meets the feed card's right edge; the dials keep their order and their 44px |
 | 5b | **The control.** One control with states at the bar's right end: quiet ⟳ at rest, ⟳ + count when there is something, a spinner while fetching. After restoring, fetch page 1 in the background, diff against the record, and *announce* — never inject. Its count is a live region, so the change is heard and not only seen | a claim that the restored offset does not move when the background fetch lands; a claim that the count is announced; 44px at 390 |
-| 5c | **The reader who is deep in the feed.** The bar is `position: static` and leaves the viewport at scrollY 256 (desktop) / 274 (phone) — under one screen, so the control is invisible in exactly the case it exists for (D14). **Built as option (b)** — a pill that appears only while the bar is off-screen and there is something to say — and drawn as § C of the mock, awaiting the owner | `mock-refresh` R8, both frames |
+| 5c | **The reader who is deep in the feed.** The bar is `position: static` and leaves the viewport at scrollY 256 (desktop) / 274 (phone) — under one screen, so the control is invisible in exactly the case it exists for (D14). **DONE** as option (b): a pill that appears only while the bar is off-screen and there is something to say, and stands down when the bar returns | `mock-refresh` R8, both frames |
 | 6 | **Prepend without moving anyone.** When the reader accepts new posts mid-list, measure the first visible row before and after and add the delta to the offset. Chrome and Firefox do a version of this automatically as CSS scroll anchoring; **Safari does not**, so it is done explicitly | a claim at 390×844 in webkit that a prepend leaves the anchored row's viewport position unchanged |
 
 ## Reasoning
@@ -217,7 +217,11 @@ before and after the prepend and add the difference to the offset.
   right, the conventional home for a refresh affordance) or *inboard* of them, keeping the
   display controls together as one family? Recommendation: outboard — refresh acts on content,
   the dials on presentation, and the outermost position is the one a thumb reaches.
-- **D14 — the chosen line scrolls away, so it cannot be the whole answer.** Measured: the
+- ~~**D14 — the chosen line scrolls away, so it cannot be the whole answer.**~~ **DECIDED 2026-09-01
+  by the owner, on the v1 frames: option (b), the pill.** It is decision 5 of mock v2, built and
+  held by R8 at both viewports. The reasoning is kept below because the rejected options are the
+  reason the chosen one is right, and a later session asking "why isn't the bar just sticky?"
+  should find the 14%-of-a-phone answer here rather than re-deriving it. Measured: the
   toolbar is `position: static` and its bottom leaves the viewport at **scrollY 256 (desktop)
   / 274 (phone)** — less than one screen. A reader restored to 4270px on a phone is 15 screens
   past it. So the control is out of sight in precisely the situation Phase 5 exists to serve:
@@ -277,3 +281,10 @@ alignment kills R9.
 **Two gate catches** on the way through: an orphaned class literal (`.refresh-words` with no
 stylesheet rule) and an unprecached module (`/js/ui/refresh-control.js` missing from the sw
 SHELL). Both are checks this repo already had, doing their job.
+
+**What this landing does NOT do.** Phases 0–4 and 6 are unstarted, and the reported bug — press
+Back, land at the top of a refreshed feed — is **still there after this lands**. Phase 5 was
+built first because it is the half that needs nothing from the other half: the count asks only
+"is there anything newer than the post you are holding", never the board record. So this ships
+the *update* policy (announced, never injected) while the *position* policy is still to build.
+Anyone reading the changelog entry should not expect their place in the feed to be kept yet.
