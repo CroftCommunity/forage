@@ -213,6 +213,25 @@ Found by capturing the engine beside the drawing (`plans/mocks/post-and-thread.h
 
 ## Lens polish
 
+- **A self-thread continuation drops its embed (found 2026-09-02, gif-embeds).** forage hoists an
+  unbroken same-author reply chain into the head as the post's body (`selfThread` in
+  `js/substrates/lens.js`), but the shape it builds is `{ uri, text, facets }` only — no `media`.
+  So an author who replies to their own post with a GIF, a picture or a video has the words
+  rendered and the embed silently dropped. Same family as the quote-embed drop fixed 2026-09-01
+  ("a quote of a video read as words alone"), and the same fix shape: carry `mediaOf`'s output
+  through and render it, one door. Found because the gif-embeds fixture accidentally built that
+  structure and the GIF vanished; the fixture was changed to stop grading this bug instead of
+  the one it is for (`e2e/harness/mock-gif.mjs` says so at the root record).
+
+- **Tenor GIFs play the .gif, not its cheaper video (gif-embeds decision 7).** `js/gif.js` gives
+  klipy records a `<video>` because the record carries `mp4=`/`webm=` slugs and
+  `static.klipy.com` serves them (measured 2026-09-02: 954 KB webm against 8.8 MB for the .gif).
+  Tenor has a video form too — social-app rewrites the id `AAAAC`→`AAAP3`/`AAAP1` and serves it
+  from `t.gifs.bsky.app` — but that rewrite could not be exercised from here against a real
+  tenor record, and CLAUDE.md § External APIs forbids writing it on inference. Probe a live
+  tenor embed first, confirm the url shape answers 200, then add the rung. Until then tenor
+  animates as an image, which is correct but larger.
+
 - ~~Real OAuth replaces the in-memory app-password sign-in~~ — DONE 2026-08-25
   (plan 2026-08-25-1, 2a–2c): vendored official client, `js/auth/session.js`,
   app-password card deleted; live loopback round-trip validated.
