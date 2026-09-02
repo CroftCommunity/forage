@@ -255,6 +255,15 @@ function mediaOf(embedView) {
   return undefined;
 }
 
+// What an embed QUOTES, whichever wrapper it arrives in. Extracted 2026-09-02
+// (self-thread embeds) for the same reason mediaOf was extracted for quote-embed:
+// a second copy of this two-line ladder is how the two surfaces drift apart, and
+// the hoisted self-thread part needs exactly the same answer the head needs.
+function quotedIn(emb) {
+  return quotedOf(emb?.$type === 'app.bsky.embed.record#view' ? emb.record
+    : emb?.$type === 'app.bsky.embed.recordWithMedia#view' ? emb.record?.record : null);
+}
+
 // 3e inbound: what a quote post is quoting. quote-embed (owner, 2026-09-01):
 // the quoted record arrives HYDRATED — #viewRecord carries `embeds[]`, the same
 // #view unions mediaOf already reads — so the quoted post's picture, video or
@@ -359,8 +368,7 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
   // 3i: media embeds surface as post.media (card mode renders them; compact
   // and text-only surfaces skip them). recordWithMedia splits into both.
   const emb = post.embed;
-  const quoted = quotedOf(emb?.$type === 'app.bsky.embed.record#view' ? emb.record
-    : emb?.$type === 'app.bsky.embed.recordWithMedia#view' ? emb.record?.record : null);
+  const quoted = quotedIn(emb);
   const media = mediaOf(emb);
   // an image/video-only post titles from its alt text, never renders blank.
   // When even the alt is missing the title is a PLACEHOLDER — a name for
@@ -483,10 +491,21 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
   topLevel = topLevel.filter((n) => n !== chain);
   const reRooted = [];
   while (chain) {
+    // A hoisted part is the post's BODY, so it renders like one: its words AND
+    // whatever it carried. Until 2026-09-02 this shape was { uri, text, facets }
+    // and an author who answered their own post with a picture, a clip, a link
+    // card or a GIF had the embed silently dropped — the same drop quote-embed
+    // fixed for quoted posts on 2026-09-01, arriving from the other direction.
+    // `author` and `id` ride along because mediaNode builds a video's link out
+    // of them; without them a hoisted clip linked to undefined/post/undefined.
     selfThread.push({
       uri: chain.post.uri,
+      id: chain.post.uri,
+      author: chain.post.author?.handle || '[unknown]',
       text: chain.post.record?.text || '',
       facets: chain.post.record?.facets || [],
+      media: mediaOf(chain.post.embed),
+      quoted: quotedIn(chain.post.embed),
     });
     const kids = chain.replies || [];
     const next = kids.find((n) => n.post?.author?.did === rootDid && n.post);
