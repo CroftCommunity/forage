@@ -414,6 +414,12 @@ export function focusComment(container, id, { threadHref }) {
   const path = [];
   for (let n = target; n && n !== container; n = n.parentElement?.closest('.comment')) path.unshift(n);
   const setFolded = (node, folded) => {
+    // thread-depth Phase B: a deep-folded ancestor hides the target with a bar
+    // of its own, and the ⊖ fold does not know about it. Open it first, or a
+    // permalink into a deep subtree scrolls to something display:none —
+    // the target IS in the DOM (the bar hides, it never skips the render),
+    // which is the whole reason the fold is a class and not a lazy branch.
+    if (!folded) node.querySelector(':scope > [data-deep]')?.click();
     const fold = node.querySelector(':scope > .comment-body > .comment-actions > [data-fold]');
     const is = node.classList.contains('collapsed');
     if (fold && is !== folded) fold.click();      // keeps the fold's own label honest
@@ -446,6 +452,24 @@ export function focusComment(container, id, { threadHref }) {
 // (its score), and what this adds is a fact about the tree (its depth and its
 // shape). Nothing here reads a count of anyone's approval.
 const CHILD_PAGE = 20; // "load N more replies" threshold
+
+// thread-depth Phase B: the depth this tree arrives OPEN to. A comment at or
+// below this depth hands its replies over folded, behind one bar that says how
+// many there are; everything shallower is untouched, so an ordinary three- or
+// four-deep conversation never meets this rule at all.
+//
+// It is a RENDER budget, not a fetch one and not a judgement: the subtree is
+// built, shaped and put in the DOM exactly as before — the bar only hides it.
+// That is deliberate and it is what makes a permalink keep working: ?focus=<id>
+// finds its target with querySelector (js/ui/components.js focusComment) and
+// walks the path open, and a target that was never rendered would have made a
+// shared link land on "That comment isn't in this thread".
+//
+// Reddit's answer at this depth is a link that RE-ROOTS the page. We already
+// have that at the tree's own wall (the depth-10 continuation stub), and it
+// costs a navigation and a scroll position. At this depth the replies are
+// already in hand, so the bar opens them where they stand.
+export const DEEP_FOLD_AT = 5;
 
 export function commentNode(node, ctx) {
   const hasKids = (node.children || []).length > 0 || (node.deferred || 0) > 0;
@@ -571,10 +595,32 @@ export function commentNode(node, ctx) {
   const bodyWrap = el('div', { class: 'comment-body' }, ...[meta, text, embeds, actionsRow, replyHost].filter(Boolean));
   const childrenWrap = el('div', { class: 'kids' });
 
+  // thread-depth Phase B: past DEEP_FOLD_AT the replies arrive folded behind one
+  // bar. Only where there are rendered children to fold — a node standing at the
+  // tree's depth-10 wall has none, and its continuation stub says the true thing
+  // already; a bar over it would be a second control saying the same thing worse.
+  const deepFold = (node.depth ?? 0) >= DEEP_FOLD_AT && (node.children || []).length > 0;
+  let deepBar = null;
+  if (deepFold) {
+    wrap.classList.add('deep', 'folded');
+    deepBar = el('button', { type: 'button', class: 'deep-bar', 'data-deep': '1', 'aria-expanded': 'false' },
+      el('span', { class: 'glyph', 'aria-hidden': 'true' }, '\u2295'), ` ${plural(countDesc(node), 'reply', 'replies')}`);
+    deepBar.addEventListener('click', () => {
+      wrap.classList.remove('folded');
+      deepBar.setAttribute('aria-expanded', 'true');
+      deepBar.remove(); // the ⊖ fold on the action row folds it again — one control per job
+    });
+  }
+
   wrap.append(...[avcol, bodyWrap, childrenWrap].filter(Boolean)); // a null child would print as the word "null"
 
   // render children with paging + continuation stubs
   renderChildren(childrenWrap, node, ctx);
+  // the bar lives INSIDE .kids, first: that is the one place it picks up the
+  // indent this level was actually given (`--in`) without repeating the rule
+  // that decides it — a flattened chain's bar sits flush, an indented one's
+  // sits where its first reply would.
+  if (deepBar) childrenWrap.prepend(deepBar);
 
   return wrap;
 }
