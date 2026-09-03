@@ -327,16 +327,15 @@ h1.posttext { font-family: var(--font-body); font-size: var(--t-lg); font-weight
 h1.posttext { max-width: 68ch; letter-spacing: 0; }
 .postmeta { color: var(--muted); font-size: var(--t-xs); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 2px; }
 
-/* self-thread (2026-09-03): the strip a continuation part carries. A part is
-   the post's own body, so it gets no second byline — but it says WHICH part it
-   is, when it landed, and it carries its own delete. Before this a part was
-   anonymous words and the only Delete on the card was the post's. */
-.part-meta { gap: 8px; align-items: center; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); }
-.part-meta .part-badge { font-variant-numeric: tabular-nums; }
-.part-meta a { color: var(--link); }
-.part-meta .btn { margin-left: auto; }
-/* the same badge on a PINNED part, where the part is a node in the list */
-.comment[data-kind="part"] .part-badge { font-variant-numeric: tabular-nums; }
+/* self-thread (2026-09-03): the seam between one part of a post and the next.
+   Owner: parts 1, 2, 3 are ONE POST read as one narrative — so the seam is a
+   hairline and a number, and everything else (when it landed, its link, its own
+   delete) lives in the part's ⋯ menu. It cannot be nothing: a part with no mark
+   at all is what made a reply read as the post's own words. */
+.part-seam { display: flex; align-items: center; gap: 8px; margin: 14px 0 8px; }
+.part-badge { font-size: var(--t-xs); color: var(--muted); font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.part-rule { flex: 1 1 auto; height: 1px; background: var(--line); }
+.part-seam .kebab { flex: 0 0 auto; }
 .postmeta .domain { color: var(--link); }
 /* the byline — avatar slot · who · bare time · ⋯ (plan 2026-08-29 post-and-thread) */
 .byline { display: flex; align-items: center; gap: 8px; font-size: var(--t-xs); color: var(--muted); min-width: 0; flex-wrap: wrap; }

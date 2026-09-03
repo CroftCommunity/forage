@@ -576,49 +576,70 @@ test('3i: a part goes through the SHAPER, so policy can reach it', () => {
     mutedWords: [{ value: 'nobody asked', targets: ['content'] }] };
   const t = shapeLensThread(threadResponse, QSRC, { posture });
   assert.deepEqual(t.selfThread, [], 'a part the reader has hidden is not the post\'s body either');
-  assert.deepEqual(t.partNodes, [], 'and it is not a node waiting to be drawn');
-  assert.equal(t.parts, 1, 'a post whose only part is hidden is a post, not a post in parts');
 });
 
-test('3i: a hidden part stops the chain, and what was under it re-roots', () => {
-  // Consistent with build(): policy can only REMOVE. What was below the hidden
-  // part is not invented into the body — it goes back to the list, where the
-  // same policy is asked about it again.
-  const threadResponse = { thread: {
+test('3i: a muted word takes ONE part, not the rest of the post', () => {
+  // Parts share an author, so an author-level policy (ring, mute, block) hides
+  // all of a chain or none of it. A muted WORD does not: it lives in one
+  // part's text. Owner's rule is that parts 1, 2, 3 are ONE post, so a muted
+  // paragraph is a hole in it, not an end to it.
+  const chainOf = (...texts) => texts.reduceRight((kid, text, i) => ([{
+    post: qPost(`p${i + 2}`, 'did:plc:op', `2026-09-03T08:0${i + 1}:00Z`,
+      { record: { text, createdAt: `2026-09-03T08:0${i + 1}:00Z` } }),
+    replies: kid,
+  }]), [])[0];
+  const t = shapeLensThread({ thread: {
+    post: qPost('root', 'did:plc:op', '2026-09-03T08:00:00Z'),
+    replies: [chainOf('harmless', 'a spoiler lives here', 'also fine')],
+  } }, QSRC, { posture: { blockedDids: new Set(), mutedDids: new Set(), labelPrefs: {},
+    mutedWords: [{ value: 'spoiler', targets: ['content'] }] } });
+  assert.deepEqual(t.selfThread.map((s) => s.text), ['harmless', 'also fine'],
+    'the muted part is withheld and the walk goes on');
+  assert.deepEqual(t.selfThread.map((s) => s.part), [2, 4],
+    'and the numbers keep telling the truth — 3 is missing, not renumbered away');
+  assert.equal(t.parts, 4, 'the post is still in four parts; the reader is seeing three');
+});
+
+test('3i: what hangs off a withheld part is not taken down with it', () => {
+  // Other people's replies hang off the chain, and they are not the withheld
+  // author's to remove — the same reasoning by which a reply under a blocked
+  // author already survives.
+  const t = shapeLensThread({ thread: {
     post: qPost('root', 'did:plc:op', '2026-09-03T08:00:00Z'),
     replies: [{ post: qPost('p2', 'did:plc:op', '2026-09-03T08:01:00Z',
         { record: { text: 'hide me please', createdAt: '2026-09-03T08:01:00Z' } }),
-      replies: [{ post: qPost('p3', 'did:plc:op', '2026-09-03T08:02:00Z'), replies: [] }] }],
-  } };
-  const posture = { blockedDids: new Set(), mutedDids: new Set(), labelPrefs: {},
-    mutedWords: [{ value: 'hide me', targets: ['content'] }] };
-  const t = shapeLensThread(threadResponse, QSRC, { posture });
-  assert.deepEqual(t.selfThread, [], 'the chain stopped at the part that was hidden');
-  assert.deepEqual(t.comments.map((c) => c.id.split('/').pop()), ['p3'],
-    'and its continuation is a comment — removed from the body, not from the thread');
+      replies: [{ post: qPost('bystander', 'did:plc:bb', '2026-09-03T08:05:00Z'), replies: [] }] }],
+  } }, QSRC, { posture: { blockedDids: new Set(), mutedDids: new Set(), labelPrefs: {},
+    mutedWords: [{ value: 'hide me', targets: ['content'] }] } });
+  assert.deepEqual(t.selfThread, [], 'the part is withheld');
+  assert.deepEqual(t.comments.map((c) => c.id.split('/').pop()), ['bystander'],
+    'and someone else\'s reply to it still stands, re-rooted');
 });
 
-test('3i: the parts are also available as NODES, built by the same builder as a comment', () => {
-  // The two ways to draw a chain (in the head, or pinned above the comments)
-  // must not become two renderers — "a reply-only renderer is how the surfaces
-  // drift apart again". So the substrate hands the view the SAME node shape a
-  // comment has, carrying the badge, and one renderer draws both.
-  const threadResponse = { thread: {
-    post: qPost('root', 'did:plc:op', '2026-09-03T08:00:00Z'),
-    replies: [
-      { post: qPost('p2', 'did:plc:op', '2026-09-03T08:01:00Z'),
-        replies: [{ post: qPost('p3', 'did:plc:op', '2026-09-03T11:17:00Z'), replies: [] }] },
-    ],
-  } };
-  const t = shapeLensThread(threadResponse, QSRC);
-  assert.deepEqual(t.partNodes.map((n) => n.id.split('/').pop()), ['p2', 'p3'], 'in chain order');
-  assert.deepEqual(t.partNodes.map((n) => [n.part, n.parts]), [[2, 3], [3, 3]]);
-  const [n2] = t.partNodes;
-  assert.equal(n2.kind, 'part', 'a part is its own kind — not a reply, not a quote');
-  assert.equal(n2.depth, 0, 'a part stands at the top level; the chain is a spine, not a nest');
-  assert.equal(n2.body, 'text p2', 'and it is a full node: the body a comment renderer reads');
-  assert.equal(n2.authorId, 'did:plc:op', 'so its own Delete can be authorized');
-  assert.deepEqual(n2.children, [], 'its replies re-rooted; a part never nests them');
+test('3i: the author QUOTING their own post is a quote, never a part', () => {
+  // Owner, 2026-09-03: "if a user reposts their own post with comments it's
+  // now a repost style comment to be clear, not part of the post head."
+  // A quote is a different act from a continuation: the author is talking
+  // ABOUT the post, to a new audience, at a new moment — so it reads as a
+  // response even when it is their own. The hoist only ever walks `replies`,
+  // and this pins that the boundary is deliberate rather than incidental.
+  const selfQuote = qPost('sq', 'did:plc:op', '2026-09-03T09:00:00Z', {
+    embed: { $type: 'app.bsky.embed.record#view',
+      record: { $type: 'app.bsky.embed.record#viewRecord',
+        uri: 'at://did:plc:op/app.bsky.feed.post/root', cid: 'cid-root',
+        author: { did: 'did:plc:op', handle: 'op.test' },
+        value: { text: 'text root', createdAt: '2026-09-03T08:00:00Z' } } } });
+  const t = shapeLensThread({ thread: {
+    post: qPost('root', 'did:plc:op', '2026-09-03T08:00:00Z', { quoteCount: 1 }),
+    replies: [{ post: qPost('p2', 'did:plc:op', '2026-09-03T08:01:00Z'), replies: [] }],
+  } }, QSRC, { quotes: [{ post: selfQuote, replies: [], quotes: [] }] });
+
+  assert.deepEqual(t.selfThread.map((s) => s.id.split('/').pop()), ['p2'],
+    'the REPLY continues the post');
+  const quote = t.comments.find((c) => c.kind === 'quote');
+  assert.ok(quote, 'and the self-quote is a comment, drawn as a quote');
+  assert.equal(quote.id.split('/').pop(), 'sq');
+  assert.equal(t.parts, 2, 'a self-quote adds no part to the post');
 });
 
 test('3i: replies to a hoisted part are counted where they are shown', () => {

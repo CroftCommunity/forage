@@ -15,7 +15,7 @@
 //        deep-lens deep-lens-spine deep-lens-tail deep-lens-open deep-lens-run
 //        deep-lens-prefs deep-lens-off
 //        gif-lens gif-lens-paused gif-lens-alt gif-board
-//        self-lens self-lens-count self-lens-pin self-lens-pin-count self-lens-alone)
+//        self-lens self-lens-count self-lens-alone)
 //   node scripts/mock-snaps.mjs --as current --serve ../../forage
 //       # the same script and fixtures, rendering ANOTHER checkout (main): the
 //       # Current frames come from the tree the owner is running, captured by
@@ -433,24 +433,19 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
   //   deep-lens        the head and the ordinary replies — the control
   //   deep-lens-spine  the descent, anchored on the quote the chain hangs off
   //   deep-lens-tail   the far end: the deepest rungs and the depth-10 boundary
-  // self-thread (2026-09-03): the poster's own continuation chain, drawn the
-  // two ways the mock puts side by side. `self-lens` is whatever the tree's
-  // default is (main: the anonymous hoist; this branch: the hoist with each
-  // part carrying its own strip); `self-lens-pin` sets the mock switch and
-  // captures the network's placement. Both come out of the engine — a drawing
-  // of either would be a sketch (MOCKS.md P1).
+  // self-thread (2026-09-03): the poster's own continuation chain in the post's
+  // head — one post, read as one narrative (owner's decision on the v1 frames).
+  // `-count` anchors on the count row, which a phone pushes below the fold.
   const SELF_ROUTES = [
-    ['self-lens', null, SELF, SELF_PATH], ['self-lens-count', null, SELF, SELF_PATH],
-    ['self-lens-pin', 'pin', SELF, SELF_PATH], ['self-lens-pin-count', 'pin', SELF, SELF_PATH],
+    ['self-lens', SELF, SELF_PATH], ['self-lens-count', SELF, SELF_PATH],
     // the owner's own tree: one self-reply, no comments, both counts on screen
-    ['self-lens-alone', null, SELF_ALONE, SELF_ALONE_PATH],
+    ['self-lens-alone', SELF_ALONE, SELF_ALONE_PATH],
   ];
   if (SELF_ROUTES.some(([route]) => wanted(route))) {
-    for (const [route, mode, responses, path] of SELF_ROUTES) {
+    for (const [route, responses, path] of SELF_ROUTES) {
       if (!wanted(route)) continue;
-      const init = [...SKIN_INIT, FAKE_SIGNED_IN,
-        ...(mode ? [`try { localStorage.setItem('forage.selfthread', '${mode}'); } catch {}`] : [])];
-      const sp = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: init, responses });
+      const sp = await scenario('first-visit', { root: SERVE, mode: 'bluesky',
+        initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses });
       await sp.page.setViewportSize({ width: vp.width, height: vp.height });
       await sp.page.goto(`${sp.origin}${path}`);
       // the head's action row is the last thing the thread paints, and it is

@@ -553,26 +553,27 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
   let chain = oldestSelf(topLevel);
   topLevel = topLevel.filter((n) => n !== chain);
   const reRooted = [];
-  const chainPosts = [];
-  const chainShapes = [];
   while (chain) {
     // Through the SHAPER, always. Until 2026-09-03 the hoist read
     // `chain.post.record.text` off the raw appview post, which made the chain
     // the one path in a thread that skipped shapeLensPost — and every policy
     // that hides a post lives there. A muted or label-floored part rendered
-    // its words into the post's BODY while the same post vanished from a
-    // list; found against claude/ring-scope's ring, where a scoped-out
-    // author's words survived under a head that had been emptied.
+    // its words into the post's BODY while the same post vanished from a list;
+    // found against claude/ring-scope's ring, where a scoped-out author's
+    // words survived under a head that had been emptied. The ring is only the
+    // first policy narrow enough to make it visible.
     //
-    // A hidden part STOPS the chain rather than being skipped over, and what
-    // was below it re-roots into the comment list, where the same policy is
-    // asked about it again. Policy can only remove (see outsideRing): keeping
-    // a later part after dropping an earlier one would invent a body the
-    // author never wrote.
-    const shaped = shapeLensPost(chain.post, src, posture);
-    if (shaped.hidden) { reRooted.push(...(chain.replies || [])); break; }
-    chainPosts.push(chain.post);
-    chainShapes.push(shaped);
+    // A hidden part is WITHHELD and the walk goes on. An author-level policy
+    // (ring, mute, block) hides all of a chain or none of it, since the parts
+    // share an author — but a muted WORD lives in one part's text and must
+    // take only that part. Stopping the chain there would take the rest of
+    // the post with it, and the owner's rule is that parts 1, 2 and 3 are ONE
+    // post: a muted paragraph is a hole in it, not an end to it.
+    const part = shapeLensPost(chain.post, src, posture);
+    // The fields come off the SHAPED post now, so a part gets facet trimming
+    // and embed shaping on the same terms as every other path instead of
+    // re-deriving them from the record.
+    //
     // A hoisted part is the post's BODY, so it renders like one: its words AND
     // whatever it carried. Until 2026-09-02 this shape was { uri, text, facets }
     // and an author who answered their own post with a picture, a clip, a link
@@ -601,17 +602,30 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
     // words alone, so it drew as anonymous body text — no time, no permalink,
     // and nothing that could delete ITSELF. The owner pressed the only Delete
     // on the card and it deleted the post.
+    // A withheld part is still PUSHED, carrying a flag, and dropped after the
+    // numbering below — so the numbers keep telling the truth. A post whose
+    // second part is muted shows 1/3 and 3/3, with the gap where the part was;
+    // renumbering the survivors to 1/2 and 2/2 would make the mute invisible to
+    // the reader who asked for it.
     const part = shapeLensPost(chain.post, src, posture);
-    if (!part.hidden) selfThread.push({
+    selfThread.push({
+      hidden: !!part.hidden,
       uri: chain.post.uri,
       id: chain.post.uri,
+      hidden: !!part.hidden,
       author: chain.post.author?.handle || '[unknown]',
       authorId: part.authorId || chain.post.author?.did || '',
       cid: chain.post.cid,
       createdTs: part.createdTs || 0,
+<<<<<<< HEAD
       text: part.body,
       facets: part.facets || [],
       // Conditional, not a bare key: a part with no embed has no `media` KEY,
+=======
+      text: part.body || '',
+      facets: part.facets || [],
+      // Conditional, not `|| null`: a part with no embed has no `media` KEY,
+>>>>>>> 20a871f (thread: decision 2 closes on A — one post, read as one narrative)
       // which test/lens.test.js pins ("media is absent, not null-shaped").
       ...(part.media ? { media: part.media } : {}),
       ...(part.quoted ? { quoted: part.quoted } : {}),
@@ -622,20 +636,19 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
     chain = next;
   }
   // The badge the network renders, on our own arithmetic: the root is part 1,
-  // so a two-entry chain is a post in three parts. `parts` is 1 when there is
+  // so a three-entry chain is a post in four parts. `parts` is 1 when there is
   // no chain at all, and a lone part is not a chain — the same boundary
   // opThread draws ("only threads with OP replies count").
+  //
+  // Numbered BEFORE the withheld ones are dropped, so the numbers keep telling
+  // the truth: a post whose second part is muted shows 1/3 and 3/3, with the
+  // gap where the part was. Renumbering the survivors would make the mute
+  // invisible, and a reader who muted a word is owed the knowledge that it
+  // took something out — not a seamless post that was never written.
   const parts = selfThread.length + 1;
   selfThread.forEach((part, i) => { part.part = i + 2; part.parts = parts; });
-  // The same chain, as NODES. A part can be drawn inside the post's head (it
-  // is the post's body) or pinned above the comments the way the network
-  // draws it (an ordinary post carrying a 2/3 badge). Those are two placements
-  // of one thing, so they get one builder — a part-only renderer is how the
-  // reply renderer drifted from the row renderer, twice.
-  const partNodes = chainShapes.map((shaped, i) => ({
-    ...node(shaped, 0, { kind: 'part', part: i + 2, parts }),
-    children: [], deferred: 0,
-  }));
+  const shownParts = selfThread.filter((part) => !part.hidden);
+  shownParts.forEach((part) => { delete part.hidden; });
   const replies = build([...topLevel, ...reRooted], 0);
   // 3r: a quote cascade. A repost-with-comment collects replies of its own and
   // can itself be quoted, so a quote entry is a threadViewPost (post+replies)
@@ -676,7 +689,7 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
   // "No replies" (owner, 2026-09-03). This number is the list, by
   // construction: what is counted is what is drawn, mutes and blocks included.
   return { post, perms: LENS_PERMS, sort: 'lens', locked: false, comments, total,
-    selfThread, partNodes, parts, replyCount: comments.length, quoteCount: root.post.quoteCount ?? 0 };
+    selfThread: shownParts, parts, replyCount: comments.length, quoteCount: root.post.quoteCount ?? 0 };
 }
 
 // Plan 2026-08-28-1: an author-feed/timeline item is an ENVELOPE —

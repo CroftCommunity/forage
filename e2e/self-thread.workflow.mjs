@@ -31,10 +31,9 @@ export async function run() {
         const card = document.querySelector('.card');
         return {
           count: card.querySelector('.postmeta')?.textContent.trim(),
-          badges: [...card.querySelectorAll('.part-meta .part-badge')].map((b) => b.textContent.trim()),
-          partDeletes: card.querySelectorAll('.part-meta [data-delete-post]').length,
-          headDelete: [...card.querySelectorAll('[data-delete-post]')]
-            .filter((b) => !b.closest('.part-meta')).map((b) => b.textContent.trim()),
+          badges: [...card.querySelectorAll('.part-seam .part-badge')].map((b) => b.textContent.trim()),
+          seamMenus: card.querySelectorAll('.part-seam .kebab').length,
+          headDelete: [...card.querySelectorAll('[data-delete-post]')].map((b) => b.textContent.trim()),
           words: card.textContent,
           empty: !!document.querySelector('.empty'),
         };
@@ -51,9 +50,12 @@ export async function run() {
 
       // The delete hazard, both halves: a part can delete itself, and the button
       // that deletes the POST says so.
-      assert.equal(head.partDeletes, 2, 'every part carries its own Delete');
+      // Owner, 2026-09-03: parts 1, 2, 3 are ONE post read as one narrative, so
+      // the seam is a hairline and a number — the part's time, link and its own
+      // delete live in its ⋯ menu rather than on a strip through the words.
+      assert.equal(head.seamMenus, 2, 'every part carries its own menu');
       assert.deepEqual(head.headDelete, ['Delete post'],
-        'and the one that deletes the post is the only one that says post');
+        'and the only button on the card names what it takes');
 
       // Oldest-first: the decoy is NEWER than part two and the appview returned
       // it FIRST. It is a comment, not the post's second paragraph.
@@ -76,33 +78,6 @@ export async function run() {
     } finally { s.errors(); s.consoleErrors(); await s.close(); }
   }
 
-  // ---- the pinned placement ---------------------------------------------------
-  {
-    const s = await open({ mode: 'pin' });
-    try {
-      const out = await s.page.evaluate(() => {
-        const card = document.querySelectorAll('.card')[1] || document.querySelector('.card');
-        const kids = [...card.children];
-        const parts = [...document.querySelectorAll('.comment[data-kind="part"]')];
-        return {
-          parts: parts.map((c) => c.dataset.nodeId),
-          badges: parts.map((c) => c.querySelector('.part-badge')?.textContent.trim()),
-          partDeletes: parts.map((c) => c.querySelectorAll('[data-delete-post]').length),
-          // pinned parts stand ABOVE the sort bar: they are not competing for a
-          // position, they are the post continuing itself
-          firstSort: kids.findIndex((k) => k.querySelector?.('.pillsel') || k.classList.contains('sortbar')),
-          headWords: document.querySelector('.card').textContent,
-        };
-      });
-      assert.deepEqual(out.parts, PART_URIS, 'the parts are nodes in the list, in chain order');
-      assert.deepEqual(out.badges, ['2/3', '3/3'], 'each carrying its number');
-      assert.deepEqual(out.partDeletes, [1, 1], 'and its own Delete, because it never stopped being a post');
-      assert.equal(out.firstSort, 2, 'both parts precede the sort bar');
-      assert.ok(!out.headWords.includes('The whole jig took an afternoon'),
-        'and none of them is drawn inside the post');
-    } finally { s.errors(); s.consoleErrors(); await s.close(); }
-  }
-
   // ---- the reported tree: one self-reply, nothing else ------------------------
   // The contradiction verbatim. main prints "1 reply" above "No replies"; the
   // two numbers came from different places and one of them was not the list.
@@ -114,13 +89,23 @@ export async function run() {
         empty: document.querySelector('.empty')?.textContent || '',
         badges: [...document.querySelectorAll('.part-badge')].map((b) => b.textContent.trim()),
         deletes: [...document.querySelectorAll('[data-delete-post]')].map((b) => b.textContent.trim()),
+        seams: document.querySelectorAll('.part-seam .kebab').length,
       }));
       assert.equal(out.count, '2 parts · 0 replies', 'the head counts what is there');
       assert.ok(!out.count.includes('1 reply'), 'the sentence the owner read is gone');
       assert.ok(out.empty.includes('No replies'), 'and the empty state still says so honestly');
       assert.deepEqual(out.badges, ['2/2'], 'the reply is named as the post\'s second part');
-      assert.deepEqual(out.deletes, ['Delete', 'Delete post'],
-        'two buttons, and only one of them takes the post');
+      assert.deepEqual(out.deletes, ['Delete post'],
+        'one button on the card, and it says what it takes');
+      assert.equal(out.seams, 1, 'the part\'s own delete is a tap away in its menu, not a second button');
+
+      // and the part's delete is really THERE, named for the part — the whole
+      // point of moving it is that it stays reachable, not that it goes away
+      await s.page.click('.part-seam .kebab');
+      const items = await s.page.evaluate(() =>
+        [...document.querySelectorAll('[role="menu"] button, [role="menu"] [role="menuitem"]')].map((b) => b.textContent.trim()));
+      assert.ok(items.some((i) => i.includes('Delete part 2')),
+        `the part's own delete names the part; menu was ${JSON.stringify(items)}`);
     } finally { s.errors(); s.consoleErrors(); await s.close(); }
   }
 }
