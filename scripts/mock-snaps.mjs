@@ -12,7 +12,7 @@
 //        board-lens-refresh-news board-lens-refresh-pill post-lens-quote thread-lens
 //        thread-lens-quote thread-lens-sheet thread-lens-embed menu-lens focus-lens reply-lens thread-lens-reply
 //        news-lens news-lens-replies news-board news-board-nothumb
-//        deep-lens deep-lens-spine deep-lens-tail deep-lens-open
+//        deep-lens deep-lens-spine deep-lens-tail deep-lens-open deep-lens-run
 //        gif-lens gif-lens-paused gif-lens-alt gif-board)
 //   node scripts/mock-snaps.mjs --as current --serve ../../forage
 //       # the same script and fixtures, rendering ANOTHER checkout (main): the
@@ -423,7 +423,7 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
   //   deep-lens        the head and the ordinary replies — the control
   //   deep-lens-spine  the descent, anchored on the quote the chain hangs off
   //   deep-lens-tail   the far end: the deepest rungs and the depth-10 boundary
-  if (wanted('deep-lens') || wanted('deep-lens-spine') || wanted('deep-lens-tail') || wanted('deep-lens-open')) {
+  if (wanted('deep-lens') || wanted('deep-lens-spine') || wanted('deep-lens-tail') || wanted('deep-lens-open') || wanted('deep-lens-run')) {
     const dp = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: DEEP });
     await dp.page.setViewportSize({ width: vp.width, height: vp.height });
     await dp.page.goto(`${dp.origin}${DEEP_PATH}`);
@@ -446,6 +446,16 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
     // captured nothing under A+B (the anchor was inside the fold, so
     // scrollIntoView had no box to scroll to and the frame stayed at the top —
     // an honest capture of a useless frame).
+    // the whole chain open, anchored at the START of the flattened run (depth 2):
+    // decision 3's frames are about how often a label repeats down a run, and a
+    // frame that begins below the run's first rung cannot show that
+    if (wanted('deep-lens-run')) {
+      while (await dp.page.locator('.deep-bar').count()) await dp.page.locator('.deep-bar').first().click();
+      await anchor(SPINE_URIS[1]);
+      await shoot(dp.page, 'deep-lens-run', 'lens:mock-deepthread', name, vp);
+      await dp.page.reload();
+      await dp.page.waitForSelector('.comment[data-kind="quote"]', { timeout: 15000 });
+    }
     if (wanted('deep-lens-tail') || wanted('deep-lens-open')) { await anchor(SPINE_URIS[4]); }
     if (wanted('deep-lens-tail')) await shoot(dp.page, 'deep-lens-tail', 'lens:mock-deepthread', name, vp);
     // the bar pressed. On a tree with no bar this is the same frame as the tail,
