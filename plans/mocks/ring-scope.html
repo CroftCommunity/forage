@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forage Ring Scope</title>
+<meta name="mock-version" content="15">
+<meta name="mock-baseline" content="forage@fc50517">
+<meta name="mock-proposal" content="forage@20e9a0e">
+<style>
+:root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
+  --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page-bg:#1C1813;--page-card:#262019;--page-ink:#EFE7D9;--page-muted:#B5A88F;--page-line:#3D3527;--page-accent:#A5CD98}}
+:root[data-theme="dark"]{--page-bg:#1C1813;--page-card:#262019;--page-ink:#EFE7D9;--page-muted:#B5A88F;--page-line:#3D3527;--page-accent:#A5CD98}
+*{box-sizing:border-box}
+body{background:var(--page-bg);color:var(--page-ink);font-family:var(--f-body);line-height:1.55;margin:0;padding:32px 20px 72px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:30px}
+h1{font-family:var(--f-display);font-size:30px;font-weight:600;margin:0;letter-spacing:-.01em}
+h2{font-family:var(--f-display);font-size:22px;font-weight:600;margin:0}
+h3{font-family:var(--f-display);font-size:17px;margin:0 0 7px;font-weight:600}
+.sub{color:var(--page-muted);font-size:15px;max-width:78ch;margin:0}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+section{display:flex;flex-direction:column;gap:14px}
+.stage{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap}
+.device{display:flex;flex-direction:column;gap:9px;min-width:0}
+.device-label{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+.phone{width:390px;max-width:100%}
+.desk{flex:1 1 460px;min-width:0}
+.shot{max-width:100%;display:block;border:1px solid var(--page-line);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.10),0 8px 24px rgba(0,0,0,.06)}
+.callout{background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:16px 18px}
+.callout p,.callout li{margin:0;font-size:14px;color:var(--page-muted)}
+.callout b,.callout code,td b{color:var(--page-ink);font-weight:600}
+.callout ul,.callout ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+table{border-collapse:collapse;font-size:14px;width:100%}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--page-line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page-muted)}
+.tablewrap{overflow-x:auto;background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:6px 8px}
+code{font-size:.92em}
+.small{font-size:13px;color:var(--page-muted)}
+.tag{display:inline-block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;padding:1px 8px;border-radius:999px;border:1px solid var(--page-line);color:var(--page-muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Forage · mock · ring-scope</div>
+    <h1>The ring becomes a scope, and one pill sets it</h1>
+    <p class="sub"><b>Six frames, three surfaces, phone and desktop.</b> Captures of the engine, not
+    drawings: <b>Current</b> is <code>forage@8bc6cbd</code> (main), <b>Proposed</b> is
+    <code>forage@c5281f8</code> (<code>claude/ring-scope</code>), both taken by
+    <code>scripts/mock-snaps.mjs</code> at 390×844 and 1280×900 against the same signed-in
+    population. What this mock is for: the ring stops being five places you go and becomes one
+    control over what every surface shows you. Everything below is the visible half of that.</p>
+  </header>
+
+  <section>
+    <div class="callout">
+      <p><b>Read the pill as a scope, not a destination.</b> On main, "Your ring" is five rows in the
+      left nav and pressing one takes you to a board of those people. On the branch there are no
+      rows: there is a pill, it takes you nowhere, and it decides who is in everything you are
+      already looking at. World is the default, so a reader who never touches it sees exactly what
+      they see today.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">A · the board</div>
+    <h2>A. The nav loses five rows; the chrome gains one control</h2>
+    <p class="sub"><b>Current:</b> the left nav opens with <b>Your ring</b> — Just me, My mutuals,
+    My follows, My follows one hop out, World — above Feeds. Each is an address. <b>Proposed:</b>
+    that section is gone and a segmented pill sits in its own bar under the masthead:
+    <b>Mutuals · Follows · World</b>, World selected. The pill is a sibling of the masthead rather
+    than inside it, and that is a measurement rather than a preference — see Decision 3 below.</p>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · board · CURRENT (forage@8bc6cbd)</div>
+        <img class="shot" src="snaps/ring-scope/board-lens-in.phone.current.png" alt="Signed-in lens board on a phone today: masthead, then Discover; the ring lives in the drawer nav" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · board · PROPOSED (forage@c5281f8)</div>
+        <img class="shot" src="snaps/ring-scope/board-lens-in.phone.proposed.png" alt="Signed-in lens board on a phone on the branch: a Mutuals / Follows / World pill in its own bar under the masthead, World selected" width="390"></div>
+    </div>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Desktop · board · CURRENT (forage@8bc6cbd)</div>
+        <img class="shot" src="snaps/ring-scope/board-lens-in.desktop.current.png" alt="Signed-in lens board at 1280 today, with the ring section at the top of the left nav"></div>
+      <div class="device desk"><div class="device-label">Desktop · board · PROPOSED (forage@c5281f8)</div>
+        <img class="shot" src="snaps/ring-scope/board-lens-in.desktop.proposed.png" alt="Signed-in lens board at 1280 on the branch: no ring section in the nav, the pill in its own bar"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">B · the thread</div>
+    <h2>B. A thread carries its own pill, and it overrides that thread only</h2>
+    <p class="sub">The ring applies site-wide, threads included — the owner's call, against this
+    plan's own recommendation. That leaves one real hazard: a reply your ring hid is a reply whose
+    answer you cannot see. So the thread grew a widening control instead of an exemption. Moving it
+    changes <i>this thread</i>; the pill in the masthead stays exactly where you left it, and
+    navigating away drops the override. <b>Current:</b> no control. <b>Proposed:</b> the pill sits
+    above the head card, because it scopes the whole thread rather than the head post.</p>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · thread · CURRENT (forage@8bc6cbd)</div>
+        <img class="shot" src="snaps/ring-scope/thread-lens.phone.current.png" alt="Lens thread on a phone today, no ring control" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · thread · PROPOSED (forage@c5281f8)</div>
+        <img class="shot" src="snaps/ring-scope/thread-lens.phone.proposed.png" alt="Lens thread on a phone on the branch: a ring pill above the head card, plus the site-wide pill under the masthead" width="390"></div>
+    </div>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Desktop · thread · CURRENT (forage@8bc6cbd)</div>
+        <img class="shot" src="snaps/ring-scope/thread-lens.desktop.current.png" alt="Lens thread at 1280 today"></div>
+      <div class="device desk"><div class="device-label">Desktop · thread · PROPOSED (forage@c5281f8)</div>
+        <img class="shot" src="snaps/ring-scope/thread-lens.desktop.proposed.png" alt="Lens thread at 1280 on the branch, with the thread's own ring pill"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">C · settings</div>
+    <h2>C. Advanced: which stops the pill offers, and whether feeds are in scope</h2>
+    <p class="sub">Composability is the owner's ask — "users can remove or add entries on the
+    slider" — and this is where it is spent. One checkbox per scope, World checked and disabled
+    because it is the way back. Below it, the exemption: <b>Exclude feeds and hashtags from your
+    ring</b>, checked by default, on the grounds that a feed is something you went and asked for by
+    name. Uncheck it and a quiet feed can render empty, which is the setting working.</p>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · /me Advanced · CURRENT (forage@8bc6cbd)</div>
+        <img class="shot" src="snaps/ring-scope/deep-lens-prefs.phone.current.png" alt="Advanced settings on a phone today: alt text and deep threads" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · /me Advanced · PROPOSED (forage@c5281f8)</div>
+        <img class="shot" src="snaps/ring-scope/deep-lens-prefs.phone.proposed.png" alt="Advanced settings on a phone on the branch: a Your ring section with a stop per scope and the feeds exemption" width="390"></div>
+    </div>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Desktop · /me Advanced · CURRENT (forage@8bc6cbd)</div>
+        <img class="shot" src="snaps/ring-scope/deep-lens-prefs.desktop.current.png" alt="Advanced settings at 1280 today"></div>
+      <div class="device desk"><div class="device-label">Desktop · /me Advanced · PROPOSED (forage@c5281f8)</div>
+        <img class="shot" src="snaps/ring-scope/deep-lens-prefs.desktop.proposed.png" alt="Advanced settings at 1280 on the branch, with Your ring"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Decisions</div>
+    <h2>What was decided, and what is still open</h2>
+    <div class="tablewrap"><table>
+      <tr><th>#</th><th>Question</th><th>Answer</th></tr>
+      <tr><td>1</td><td>What is the middle stop? "Mutuals + follows" computes to the follows rung, so two stops would have shown identical content.</td>
+        <td><b>Closed — 1a.</b> Mutuals · Follows · World, tightest first. <code>hop</code> stays in the registry for anyone who adds it.</td></tr>
+      <tr><td>2</td><td>Does the ring reach inside a thread?</td>
+        <td><b>Closed — yes,</b> against this plan's recommendation. Decision 4 is what makes that safe.</td></tr>
+      <tr><td>3</td><td>Where does the pill live, and what do the labels say on a phone?</td>
+        <td><b>Answered by the gate.</b> Not the masthead: <code>e2e/avatar-nav</code> pins it at one row at 320px and three segments at the 44px touch floor took it to 167px. Own bar, not sticky, short labels.</td></tr>
+      <tr><td>4</td><td>The thread pill — global or local?</td>
+        <td><b>Closed — a transient override.</b> An argument, never a write, so leaving the thread drops it by construction.</td></tr>
+      <tr><td class="tag">open</td><td>Do the <code>/r/&lt;rung&gt;</code> routes retire?</td>
+        <td>They still resolve. Retiring them orphans the merged ring board — roughly 400 lines and fifteen tests — and that deletion is its own decision.</td></tr>
+      <tr><td class="tag">open</td><td>Should the pill be sticky?</td>
+        <td>It is not. Sticking it under a sticky masthead means two elements agreeing about a number that a skin changing the band's padding would break.</td></tr>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">What the frames cannot show</div>
+    <div class="callout">
+      <ul>
+        <li><b>World is unringed, not unfiltered.</b> Blocks, mutes, muted words and label prefs
+        apply identically at every stop. The ring is the last of four policies and can only ever
+        remove — it never gives back what an earlier one took.</li>
+        <li><b>Your own posts are in every ring.</b> Every rung is a cumulative union starting at
+        <code>me</code>, so no setting can narrow you out of your own conversation.</li>
+        <li><b>An honestly empty board is the feature.</b> Scoped to Follows with quiet follows, a
+        board renders empty and says so. That is the ring working, not a fetch failing.</li>
+        <li><b>Nothing is badged.</b> A post outside your ring is absent, not greyed with a reason —
+        the same rule mutes already follow, because a row announcing what it withheld defeats the
+        withholding twice.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+</body>
+</html>
