@@ -79,7 +79,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@501defc",
+      "baseline": "forage@3829e6e",
       "population": "lens:mock-selfthread"
     },
     {
@@ -106,7 +106,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@501defc",
+      "baseline": "forage@3829e6e",
       "population": "lens:mock-selfthread"
     },
     {

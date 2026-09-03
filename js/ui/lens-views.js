@@ -1586,16 +1586,19 @@ function partMeta(part, onDeleted) {
 // two deliberate clicks. NOT a confirm() dialog: a modal dialog freezes the
 // whole page, and this is a small enough act that arming the button in place
 // reads better than interrupting everything.
-function deleteControl(post, onDone) {
+// `label` because a post with continuation parts now shows more than one of
+// these on one card — the post's and each part's. Two buttons reading "Delete"
+// side by side is the ambiguity that cost the owner a post on 2026-09-03.
+function deleteControl(post, onDone, { label = 'Delete' } = {}) {
   if (!canDelete(post, session)) return null;
   let armed = false;
   const b = el('button', { class: 'btn sm', 'data-delete-post': '1',
-    title: 'Delete this post from your Bluesky account' }, 'Delete');
+    title: 'Delete this post from your Bluesky account' }, label);
   const disarm = () => {
     armed = false;
     b.removeAttribute('data-armed');
     b.classList.remove('danger');
-    b.replaceChildren('Delete');
+    b.replaceChildren(label);
   };
   b.addEventListener('click', async () => {
     if (!armed) {
@@ -3071,7 +3074,7 @@ export function lensThreadView(params, query) {
         main.replaceChildren(emptyState('This post was deleted',
           'It is gone from your Bluesky account. Anyone who already saw it may still have a copy — deleting removes the record, it does not un-send it.',
           el('a', { class: 'btn', href: `/f/${src.feedSlug}` }, 'Back to the board')));
-      })));
+      }, { label: 'Delete post' })));
     const ctx = { ...LENS_PERMS,
       // post-text: a reply's words, faceted — its links, #tags and @mentions are
       // as live as the head's. The node shape carries `facets` as of this change.
