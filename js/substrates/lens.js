@@ -92,10 +92,12 @@ export function buildPosture({ preferences = [], mutes = [], blocks = [], listMu
 // re-fetching mutes and blocks. Pure — a new posture comes back, the old one is
 // untouched.
 //
-// `members: null` is World and means DO NOT FILTER. An empty Set is not the
-// same thing: it means filter to nobody, which is a legitimate (if quiet) ring
-// and paints an empty board. js/rings.js owns that distinction and this
-// preserves it rather than collapsing the two into a falsy check.
+// `members: null` is World: the ring does not narrow. That is NOT "unfiltered"
+// — this guard is the last of four, and blocks, mutes, muted words and label
+// prefs have all already run by the time it is consulted. An empty Set is a
+// third thing again: narrow to nobody, a legitimate (if quiet) ring that paints
+// an empty board. js/rings.js owns that distinction and this preserves it
+// rather than collapsing the two into a falsy check.
 export function withRing(posture, { members = null, exemptKinds = [] } = {}) {
   return {
     ...posture,
@@ -106,8 +108,10 @@ export function withRing(posture, { members = null, exemptKinds = [] } = {}) {
   };
 }
 
-// Last policy in the order, and the weakest: it can only ever remove. A posture
-// with no ring, or a ring set to World, filters nothing.
+// Last policy in the order, and the weakest: it can only ever remove, and it
+// never restores. A posture with no ring, or a ring set to World, does no
+// NARROWING of its own — everything the three policies above it hid stays
+// hidden.
 //
 // The exemption tests the SOURCE, not the post. A feed or a hashtag is a board
 // the reader went and asked for by name, so by default it arrives whole; the

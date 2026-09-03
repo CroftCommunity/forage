@@ -82,6 +82,30 @@ test('a posture with no ring at all filters nothing', () => {
   assert.equal(shapeLensPost(mkPost(OUT), SRC, EMPTY_POSTURE).hidden, undefined);
 });
 
+test('World is UNRINGED, not unfiltered — every earlier policy still applies', () => {
+  // Owner, 2026-09-03: "no lack of all filters — still blocks, moderation etc,
+  // just not ring filtered". World is the ring declining to narrow, and nothing
+  // more. It is the last policy in the order that goes quiet, not all of them.
+  const now = Date.now();
+  const world = withRing(buildPosture({
+    mutes: [{ did: OUT }],
+    preferences: [{
+      $type: 'app.bsky.actor.defs#mutedWordsPref',
+      items: [{ value: 'spoiler', targets: ['content'] }],
+    }],
+  }, now), { members: null });
+
+  assert.equal(shapeLensPost(mkPost(OUT), SRC, world).hidden, true, 'a muted account is still hidden at World');
+  assert.equal(shapeLensPost(mkPost(IN, 'a spoiler'), SRC, world).hidden, true, 'a muted word still bites at World');
+
+  const blocked = withRing(buildPosture({ blocks: [{ did: OUT }] }, now), { members: null });
+  assert.equal(shapeLensFeed({ feed: [{ post: mkPost(OUT) }] }, SRC, {}, blocked).posts.length, 0,
+    'a blocked account never renders at World either');
+
+  assert.equal(shapeLensPost(mkPost(IN), SRC, world).hidden, undefined,
+    'and an ordinary post rides through, which is the only thing World changes');
+});
+
 // ---- the filter ----
 
 test('inside the ring renders; outside the ring is absent', () => {

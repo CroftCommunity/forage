@@ -19,10 +19,13 @@
 // something a reader has to re-derive from four independent definitions.
 //
 // World is the odd one and deliberately so: it has NO member list. `null` means
-// "do not filter", which is not the same as `[]` — an empty list would mean
-// "filter to nobody" and paint an empty board. The boundary at World is the
-// composition itself (the feeds and hashtags you have assembled), not a set of
-// people, which is why it cannot be expressed as one.
+// "the ring does not narrow" — NOT "nothing is filtered". Blocks, mutes, muted
+// words and label prefs all still apply at World (owner, 2026-09-03: "still
+// blocks, moderation etc, just not ring filtered"); World is the last policy in
+// the order going quiet, not all of them. And it is not the same as `[]` — an
+// empty list would mean "narrow to nobody" and paint an empty board. The
+// boundary at World is the composition itself (the feeds and hashtags you have
+// assembled), not a set of people, which is why it cannot be expressed as one.
 
 import { RING_CAP } from './substrates/lens.js';
 

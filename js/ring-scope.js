@@ -49,9 +49,11 @@ export const EXEMPT_KINDS = Object.freeze(['feed', 'hashtag']);
 const read = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
 const write = (k, v) => { try { localStorage.setItem(k, String(v)); } catch { /* private mode */ } };
 
-// World is pinned into every stop list. It is not a stop like the others — it
-// is the ABSENCE of filtering (`members === null`), which makes it the pill's
-// off position. A pill whose every segment filters cannot answer "what am I not
+// World is pinned into every stop list (owner, 2026-09-03: "fine on pinning
+// world"). It is not a stop like the others — it is the ring declining to narrow
+// (`members === null`), which makes it the pill's off position. Off for the
+// RING only: blocks, mutes and label prefs are untouched by where this pill
+// sits, and a reader at World is still moderated. A pill whose every segment filters cannot answer "what am I not
 // seeing?", which is the question a ring most needs to be able to answer, and a
 // reader who removed World would have no way back to it from the control itself.
 const withWorld = (ids) => byRank([...ids, 'world']);
