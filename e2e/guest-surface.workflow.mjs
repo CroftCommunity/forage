@@ -64,8 +64,12 @@ const seen = (page) => page.evaluate(() => ({
   // guest-surface rule is unchanged and so is this test's question — is the
   // control ABSENT for a guest, rather than present and greyed — but the thing
   // to count moved, so both are counted rather than one replacing the other.
-  ringPillStops: [...document.querySelectorAll('[data-ring-bar] [data-scope]')]
+  ringPillStops: [...document.querySelectorAll('.nav [data-ring-pill] [data-scope]')]
     .map((i) => i.getAttribute('data-scope')),
+  ringPillLive: [...document.querySelectorAll('.nav [data-ring-pill] [data-scope]')]
+    .filter((i) => !i.disabled).map((i) => i.getAttribute('data-scope')),
+  ringPillChecked: [...document.querySelectorAll('.nav [data-ring-pill] [data-scope]')]
+    .filter((i) => i.checked).map((i) => i.getAttribute('data-scope')),
   ringCardAnywhere: document.querySelector('.navnote')?.innerText?.replace(/\n+/g, ' ')
     ?? [...document.querySelectorAll('.card')].map((c) => c.innerText.replace(/\n+/g, ' ')).find((t) => /ring/i.test(t)) ?? null,
   favorite: document.querySelectorAll('[data-feed-favorite]').length,
@@ -114,8 +118,20 @@ export async function run() {
 
     assert.deepEqual(home.ringButtons, [],
       `a guest is shown no ring buttons at all — a one-option dial is not "clean", it is broken. Saw: ${JSON.stringify(home.ringButtons)}`);
-    assert.deepEqual(home.ringPillStops, [],
-      `and no ring PILL either — a ring is computed from your own follow graph, so a guest has none to scope by. Saw: ${JSON.stringify(home.ringPillStops)}`);
+    // The pill is the ONE guest-surface exception (owner, 2026-09-03: "on
+    // logged out I still want the pill but only world is selectable and
+    // selected"). It is drawn, so a signed-out reader can see that scoping
+    // exists and where they stand; only World is reachable, because the rest
+    // are computed from a follow graph they do not have. Checked three ways
+    // because "greyed" is precisely what this rule forbids everywhere else, and
+    // a half-applied exception is how it rots back into the thing the rule was
+    // written against.
+    assert.deepEqual(home.ringPillStops, ['mut', 'fol', 'world'],
+      `the pill IS drawn for a guest: ${JSON.stringify(home.ringPillStops)}`);
+    assert.deepEqual(home.ringPillLive, ['world'],
+      `and only World is selectable: ${JSON.stringify(home.ringPillLive)}`);
+    assert.deepEqual(home.ringPillChecked, ['world'],
+      `and World is what is selected: ${JSON.stringify(home.ringPillChecked)}`);
     assert.ok(home.ringCardAnywhere && /account|sign in|follow graph/i.test(home.ringCardAnywhere),
       `the absence must still be EXPLAINED once, in words: ${JSON.stringify(home.ringCardAnywhere)}`);
 
@@ -214,10 +230,12 @@ export async function run() {
     mode: 'bluesky', initScripts: [FAKE_SIGNED_IN], responses: RESPONSES });
   try {
     await inn.page.goto(`${inn.origin}/`);
-    await inn.page.waitForSelector('[data-ring-bar]');
+    await inn.page.waitForSelector('.nav [data-ring-pill]');
     const home = await seen(inn.page);
     assert.deepEqual(home.ringPillStops, ['mut', 'fol', 'world'],
       `signed in the pill is offered, tightest-first: ${JSON.stringify(home.ringPillStops)}`);
+    assert.deepEqual(home.ringPillLive, ['mut', 'fol', 'world'],
+      `and signed in every stop is live, which is the whole difference: ${JSON.stringify(home.ringPillLive)}`);
 
     await inn.page.goto(`${inn.origin}/f/whats-hot`);
     await inn.page.waitForSelector('.postrow');

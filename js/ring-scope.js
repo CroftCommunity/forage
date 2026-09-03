@@ -153,14 +153,22 @@ function notify() {
 // on the settings page, where there is room for it.
 let pillSeq = 0;
 
-export function ringPill(el, { override = null, onPicked, ariaLabel = 'How close' } = {}) {
+export function ringPill(el, {
+  override = null, onPicked, ariaLabel = 'How close', block = false, locked = false,
+} = {}) {
   const open = stops();
   // A control with one value is not a control — it is a label that absorbs
   // clicks. World is pinned, so this is what a reader who removed everything
   // else gets, and rendering nothing is the honest answer.
   if (open.length < 2) return null;
 
-  const current = effectiveScope(override);
+  // Locked is the signed-out pill (owner, 2026-09-03: "on logged out I still
+  // want the pill but only world is selectable and selected"). World is forced
+  // rather than read: a reader who scoped to Follows and signed out has no
+  // follow graph, so nothing is being narrowed and a pill still claiming
+  // Follows would be lying. Their stored scope is untouched and comes back with
+  // them.
+  const current = locked ? 'world' : effectiveScope(override);
   // Two pills can be on one page at once — the masthead and a thread header —
   // and radios sharing a `name` are ONE group, so the second would steer the
   // first. The sequence is what keeps them apart.
@@ -173,15 +181,28 @@ export function ringPill(el, { override = null, onPicked, ariaLabel = 'How close
       el('input', {
         type: 'radio', name: group, id: inputId, class: 'ringpill-in',
         'data-scope': id, checked: id === current || false,
+        disabled: (locked && id !== 'world') || false,
         onchange: () => onPicked(id),
       }),
-      el('label', { class: 'ringseg', for: inputId, title: `${s.label} — ${s.blurb}` },
-        el('span', { class: 'ico', 'aria-hidden': 'true' }, '◍'),
+      // The icon is dropped in the block variant: the nav column is 200px, and
+      // three segments there have room for a word each or a glyph and a word
+      // squeezed, not both. The word is the half that identifies the stop.
+      el('label', {
+        class: 'ringseg', for: inputId,
+        // A dead control that does not say why is worse than one that is
+        // missing, which is the half of the guest-surface rule still in force
+        // here.
+        title: locked && id !== 'world'
+          ? `${s.label} — computed from your own follow graph, so sign in to use it`
+          : `${s.label} — ${s.blurb}`,
+      },
+        block ? null : el('span', { class: 'ico', 'aria-hidden': 'true' }, '◍'),
         el('span', { class: 'ringseg-t' }, s.pill)),
     ];
   });
 
   return el('div', {
-    class: 'ringpill', 'data-ring-pill': '1', role: 'radiogroup', 'aria-label': ariaLabel,
+    class: block ? 'ringpill ringpill-block' : 'ringpill',
+    'data-ring-pill': '1', role: 'radiogroup', 'aria-label': ariaLabel,
   }, ...segs);
 }

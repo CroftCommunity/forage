@@ -511,8 +511,17 @@ dialog.menu::backdrop { background: transparent; }
    is what gives arrow-key navigation and the group announcement for free, and
    what puts a real tap target under each stop without a button fighting its own
    line-height. Same chip family as .pillsel beside it. */
+/* The thread's own pill sits in one of these. The site-wide pill lives in the
+   left nav (.navring) — it used to have a bar under the masthead too, and that
+   put two identical pills one above the other on a thread. */
 .ringbar { display: flex; justify-content: center; padding: var(--s2) var(--s4);
   border-bottom: 1px solid var(--border); background: var(--card); }
+/* In the 200px nav column the pill is full width and the segments share it
+   evenly, so the three stops read as one control rather than three chips that
+   happen to be adjacent. */
+.navring { padding: 2px var(--s3) 6px; }
+.ringpill-block { display: flex; width: 100%; }
+.ringpill-block .ringseg { flex: 1 1 0; justify-content: center; padding: 5px 4px; min-height: 36px; }
 .ringpill { display: inline-flex; align-items: stretch; border: 1px solid var(--border);
   border-radius: var(--radius-chip); background: var(--card); overflow: hidden; }
 .ringpill-in { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
@@ -522,6 +531,10 @@ dialog.menu::backdrop { background: transparent; }
   color: var(--muted); white-space: nowrap; border-left: 1px solid var(--border); }
 .ringseg:first-of-type { border-left: 0; }
 .ringseg:hover { background: var(--card-2); color: var(--text); }
+/* Signed out: reachable-looking enough to read as part of one control, plainly
+   not pressable. The tooltip carries the reason (js/ring-scope.js). */
+.ringpill-in:disabled + .ringseg { opacity: .45; cursor: not-allowed; }
+.ringpill-in:disabled + .ringseg:hover { background: none; color: var(--muted); }
 .ringpill-in:checked + .ringseg { background: var(--clay-600); color: #fff; }
 /* The focus ring rides the LABEL, because the input it belongs to is the one
    thing on this control nobody can see. */
@@ -532,6 +545,9 @@ dialog.menu::backdrop { background: transparent; }
    short one and why the icon carries the segment when it has to. */
 @media (max-width: 480px) {
   .ringseg { min-height: 44px; padding: 5px 9px; }
+  /* The nav is a drawer at this width, so its pill has the full sheet to sit
+     in and takes the touch floor like everything else in there. */
+  .ringpill-block .ringseg { min-height: 44px; }
 }
 .tabs { background: var(--nav-fill); display: flex; gap: var(--s1); border-bottom: 1px solid var(--border); margin-bottom: var(--s3); flex-wrap: wrap; }
 .tab { padding: 6px 12px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; font-size: var(--t-sm); background: none; border-top: 0; border-left: 0; border-right: 0; }

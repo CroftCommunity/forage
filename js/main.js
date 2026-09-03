@@ -68,38 +68,6 @@ function skinToggle() {
   return btn;
 }
 
-// The ring pill, in a bar of its OWN — a sibling of the masthead, never inside
-// it.
-//
-// It started inside, and e2e/avatar-nav.workflow.mjs failed the measurement
-// that made E144 a dependency in the first place: the masthead must stay ONE
-// row at 320px, and three segments at the 44px touch floor took it to 167px.
-// That budget was spent once already (113px -> 61px, by deleting a duplicate
-// "Home" link, 2776537) and the saving is not available a second time. So this
-// is not a styling preference — the masthead has no room, measured, and a
-// control that scopes the whole site is too important to render at 30px to fit.
-//
-// Not sticky, deliberately. Making it stick under a sticky masthead means
-// pinning `top` to the masthead's height, which is exactly the kind of
-// two-elements-must-agree-about-a-number arrangement that breaks the moment a
-// skin changes the band's padding. The ring is a setting you move occasionally
-// rather than a control you reach for mid-scroll, and a thread carries its own
-// pill for the case where you do.
-//
-// Signed in only — the guest-surface rule this chrome already follows: hide
-// what a reader CANNOT use rather than greying it. A ring is computed from YOUR
-// follow graph, so a guest has none.
-function ringBar() {
-  if (pmode.active() !== 'bluesky') return null;
-  const who0 = lensViews.sessionIdentity();
-  if (!who0 || who0 === 'connecting') return null;
-  const pill = ringScope.ringPill(el, {
-    ariaLabel: 'How close — what you see is scoped to this',
-    onPicked: (id) => ringScope.setScope(id),
-  });
-  return pill ? el('div', { class: 'ringbar', 'data-ring-bar': '1' }, pill) : null;
-}
-
 function masthead() {
   const themeBtn0 = skinToggle();
   // 3h: populations do not mix — the Bluesky masthead carries NO memory
@@ -309,12 +277,7 @@ let currentCleanup = null;
 function render() {
   // dev bar (memory-only scaffolding, user 2026-08-26) + masthead always fresh
   devHost.replaceChildren(pmode.active() === 'memory' ? devBar() : '');
-  // .filter(Boolean), and it is load-bearing: replaceChildren(null) does not
-  // skip the argument, it appends the TEXT "null". ringBar() returns null for a
-  // guest and for a one-stop pill, so the word rendered under the masthead on
-  // every signed-out page. Found by a mock capture (2026-09-03) — no assertion
-  // in three test tiers looks for text that should not be there.
-  mastHost.replaceChildren(...[masthead(), ringBar()].filter(Boolean));
+  mastHost.replaceChildren(masthead());
   if (currentCleanup) { currentCleanup(); currentCleanup = null; }
   let out;
   try { out = router.dispatch() || { main: el('div', {}), side: null }; }

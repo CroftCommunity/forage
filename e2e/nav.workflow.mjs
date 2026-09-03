@@ -57,12 +57,21 @@ export async function run() {
     await guest.page.goto(`${guest.origin}/`);
     await guest.page.waitForSelector('[data-nav="1"]');
     const secs = await guest.page.$$eval('.navsec', (n) => n.map((e) => e.textContent.trim().toLowerCase()));
-    assert.ok(!secs.includes('your ring'),
-      'a guest gets NO ring section — hiding three of four rungs would leave one, which reads as broken');
+    // A guest DOES get the ring section now, and it is one control rather than
+    // five rows. The old reasoning still stands and is why: hiding three of
+    // four rungs left a list of one, which reads as broken. A pill with two
+    // quiet segments reads as a pill. (owner, 2026-09-03)
+    assert.ok(secs.includes('your ring'),
+      'a guest gets the ring section, holding the locked pill');
     assert.equal(await guest.page.locator('[data-nav-item="mut"]').count(), 0,
       'and no rung rows at all, greyed or otherwise');
-    assert.equal(await guest.page.locator('[data-ring-bar]').count(), 0,
-      'nor the ring pill the rungs became — same rule, new surface');
+    // The pill is the one thing a guest DOES get, locked to World — the
+    // exception the owner asked for on 2026-09-03, checked here so it cannot
+    // quietly become five greyed rows again by another route.
+    assert.equal(await guest.page.locator('.nav [data-ring-pill]').count(), 1,
+      'the ring pill IS drawn for a guest, unlike the rung rows it replaced');
+    assert.equal(await guest.page.locator('.nav [data-ring-pill] [data-scope]:not(:disabled)').count(), 1,
+      'with exactly one stop selectable');
     // replaceChildren(null) appends the TEXT "null" rather than skipping the
     // argument, so a chrome slot that renders conditionally can print the word
     // to the page. That shipped for the length of one commit in 2026-09-03 and
@@ -94,8 +103,12 @@ export async function run() {
       return out;
     });
     assert.deepEqual(groups.map((g) => [g.section, g.items]),
-      [['Feeds', ['whats-hot', 'directory']], ['—', ['feeds', 'hashtags']]],
-      `a guest's nav: Discover then Trending under Feeds, then the browse surfaces (${JSON.stringify(groups)})`);
+      // "Your ring" carries no nav ITEMS — it holds the pill, which is a
+      // control rather than a list of destinations. That empty items array is
+      // the shape of the whole change: the section kept its place at the top
+      // and stopped being five places to go.
+      [['Your ring', []], ['Feeds', ['whats-hot', 'directory']], ['—', ['feeds', 'hashtags']]],
+      `a guest's nav: the ring pill, then Discover and Trending under Feeds, then the browse surfaces (${JSON.stringify(groups)})`);
     assert.equal(await guest.page.locator('[data-nav-item="directory"]').count(), 1,
       'Trending appears ONCE — it moved up, it was not copied');
     assert.equal(await guest.page.locator('[data-nav-item="bsky.app"]').count(), 0,

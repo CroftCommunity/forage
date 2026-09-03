@@ -21,6 +21,8 @@
 // this is still the only place the absence is explained in words.
 
 
+import * as ringScope from '../ring-scope.js';
+
 export function navTree({ el, session, feeds, tags, current }) {
   const nav = el('nav', { class: 'nav', 'data-nav': '1', 'aria-label': 'Boards' });
   const section = (label) => nav.append(el('div', { class: 'navsec' }, label));
@@ -32,14 +34,39 @@ export function navTree({ el, session, feeds, tags, current }) {
     return a;
   };
 
-  // The "Your ring" section is GONE (plan 2026-09-03). Five rows here said
-  // "five places to go", and the ring stopped being a destination: it is now a
-  // scope over everything, set by the pill in the masthead. A nav row and a
-  // pill governing the same thing would be two controls with one job, which is
-  // the fault this file was written to fix — see the strip it replaced.
+  // "Your ring" keeps its place at the top of the nav and loses its five rows.
+  // The rows said "five places to go"; the ring is not a destination any more,
+  // it is a scope over everything, so one control stands where the list stood.
   //
-  // The rungs remain addressable at /r/<rung> for now; what changed is that
-  // they are no longer how you set your ring.
+  // IN THE SIDEBAR rather than the masthead (owner, 2026-09-03: "I was figuring
+  // the pill would go in the left side bar at the top"). It replaced the
+  // section in place, which is where a reader already looks for it — and it
+  // fixes a duplicate the owner spotted in the mock: with the site-wide pill
+  // under the masthead, a thread showed two identical pills stacked, its own
+  // above the head card and the site's directly above that. The sidebar is a
+  // drawer on a phone, so on a thread the thread's pill is now the only one on
+  // screen; changing your site-wide ring there means opening the drawer, which
+  // is exactly what setting it cost when it was five rows.
+  //
+  // The rungs remain addressable at /r/<rung>; what changed is that they are no
+  // longer how you set your ring.
+  // Signed out the pill is STILL DRAWN, with World selected and the tighter
+  // stops disabled (owner, 2026-09-03: "on logged out I still want the pill but
+  // only world is selectable and selected"). That is a deliberate exception to
+  // the guest-surface rule two paragraphs up, and the rule's own reasoning is
+  // what allows it: it exists so a control does not sit there absorbing clicks,
+  // and a locked segment absorbs nothing while showing a signed-out reader that
+  // scoping exists at all. The old five rows could not do this — five rows
+  // minus the four you cannot use is a list of one, which reads as broken. One
+  // control with two quiet segments reads as a control.
+  section('Your ring');
+  const pill = ringScope.ringPill(el, {
+    block: true,
+    locked: !session,
+    ariaLabel: 'How close — what you see is scoped to this',
+    onPicked: (id) => ringScope.setScope(id),
+  });
+  if (pill) nav.append(el('div', { class: 'navring' }, pill));
 
   section('Feeds');
   for (const f of feeds || []) item(f.slug, f.title, '▦', f.href || `/f/${f.slug}`);
@@ -65,8 +92,9 @@ export function navTree({ el, session, feeds, tags, current }) {
 
   if (!session) {
     nav.append(el('div', { class: 'navnote' },
-      'Your ring — how close to you a post has to come from before you see it — '
-      + 'needs your own follow graph, so it appears once you sign in.'));
+      'Your ring is how close to you a post has to come from before you see it. '
+      + 'World shows everything; the tighter stops are computed from your own '
+      + 'follow graph, so they need an account.'));
   }
   return nav;
 }

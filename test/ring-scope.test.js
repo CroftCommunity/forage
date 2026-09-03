@@ -265,3 +265,59 @@ test('picking a segment reports the scope it stands for', () => {
     assert.deepEqual(picked, ['fol']);
   });
 });
+
+// ---- the locked pill (signed out) ----
+//
+// Owner, 2026-09-03: "on logged out I still want the pill but only world is
+// selectable and selected."
+//
+// This is a deliberate exception to the guest-surface rule, which says hide
+// what a reader cannot use rather than greying it. The rule's own reasoning is
+// why it can bend here: it exists so a control does not sit there absorbing
+// clicks, and a locked pill is not absorbing anything — it is showing a signed
+// out reader that scoping exists and which stop they are on, with the three
+// they cannot reach visibly out of reach. The old ring section could not do
+// that: it was five rows, and five rows minus the four you cannot use is a list
+// of one, which reads as broken. One control with three quiet segments reads as
+// a control.
+
+test('locked: every stop is drawn, World is the one selected', () => {
+  withStorage({}, () => {
+    const pill = ringPill(fakeEl, { locked: true, onPicked() {} });
+    assert.deepEqual(inputs(pill).map((i) => i.attrs['data-scope']), ['mut', 'fol', 'world']);
+    const checked = inputs(pill).filter((i) => i.attrs.checked);
+    assert.deepEqual(checked.map((i) => i.attrs['data-scope']), ['world']);
+  });
+});
+
+test('locked: only World is selectable', () => {
+  withStorage({}, () => {
+    const pill = ringPill(fakeEl, { locked: true, onPicked() {} });
+    const disabled = inputs(pill).filter((i) => i.attrs.disabled).map((i) => i.attrs['data-scope']);
+    assert.deepEqual(disabled, ['mut', 'fol'], 'the two that need a follow graph');
+    assert.equal(inputs(pill).find((i) => i.attrs['data-scope'] === 'world').attrs.disabled, false);
+  });
+});
+
+test('locked: World is selected even when storage remembers another stop', () => {
+  // A reader who scoped to Follows and then signed out must not be shown a pill
+  // claiming they are still scoped to Follows — signed out there is no follow
+  // graph, so nothing is being narrowed and the pill has to say so.
+  withStorage({}, () => {
+    setScope('fol');
+    const pill = ringPill(fakeEl, { locked: true, onPicked() {} });
+    assert.deepEqual(inputs(pill).filter((i) => i.attrs.checked).map((i) => i.attrs['data-scope']), ['world']);
+    assert.equal(scope(), 'fol', 'and the remembered scope is still there for when they sign back in');
+  });
+});
+
+test('locked: an unreachable stop says why, rather than being mysteriously dead', () => {
+  withStorage({}, () => {
+    const pill = ringPill(fakeEl, { locked: true, onPicked() {} });
+    const labels = walk(pill).filter((n) => n.tag === 'label');
+    const mut = labels.find((l) => l.attrs.for.endsWith('-mut'));
+    assert.match(mut.attrs.title, /sign in/i, 'the tooltip names the reason');
+    const world = labels.find((l) => l.attrs.for.endsWith('-world'));
+    assert.ok(!/sign in/i.test(world.attrs.title), 'and World, which works, does not');
+  });
+});
