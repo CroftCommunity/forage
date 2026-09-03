@@ -475,6 +475,130 @@ test('3i: a same-author reply that BREAKS the chain (replies to someone else) is
   assert.equal(t.comments[0].children.length, 1);
 });
 
+// ---- 3i (2026-09-03): the hoist stopped lying about what it hoisted --------
+// The owner replied to their own image post and the reply rendered as the
+// post's BODY: no name, no time, no permalink, no controls — and the head's
+// Delete, the only control on that card, deleted the POST. Two counts said
+// different things about the same reply ("1 reply" over "No replies").
+//
+// The heuristic itself is right and stays: it is the network's own rule,
+// app.bsky.unspecced.defs#threadItemPost `opThread` — "a contiguous thread by
+// the OP from the thread root" — shipped to every Bluesky user 2026-09-02.
+// What was wrong is everything the shape threw away on the way out.
+
+test('3i: the chain follows the OLDEST self-reply, not the order the appview returned', () => {
+  // getPostThread RANKS replies; it does not return them oldest-first. The
+  // network's rule is explicit about which one continues the thread
+  // (packages/bsky/src/data-plane/server/op-thread.ts): "the oldest contiguous
+  // line of OP replies from a thread root". Ranking put the LATER self-reply
+  // first here, which is how a two-part post renders back to front.
+  const threadResponse = { thread: {
+    post: qPost('root', 'did:plc:op', '2026-09-03T08:00:00Z'),
+    replies: [
+      { post: qPost('late', 'did:plc:op', '2026-09-03T11:00:00Z'), replies: [] },
+      { post: qPost('first', 'did:plc:op', '2026-09-03T08:01:00Z'), replies: [] },
+    ],
+  } };
+  const t = shapeLensThread(threadResponse, QSRC);
+  assert.deepEqual(t.selfThread.map((s) => s.id.split('/').pop()), ['first'],
+    'the oldest self-reply continues the post; the later one is a comment');
+  assert.deepEqual(t.comments.map((c) => c.id.split('/').pop()), ['late'],
+    'and the one that did not continue it is still listed, not swallowed');
+});
+
+test('3i: a hoisted part knows which part it is, counting the root as part 1', () => {
+  const threadResponse = { thread: {
+    post: qPost('root', 'did:plc:op', '2026-09-03T08:00:00Z'),
+    replies: [
+      { post: qPost('p2', 'did:plc:op', '2026-09-03T08:01:00Z'),
+        replies: [{ post: qPost('p3', 'did:plc:op', '2026-09-03T08:02:00Z'), replies: [] }] },
+    ],
+  } };
+  const t = shapeLensThread(threadResponse, QSRC);
+  assert.deepEqual(t.selfThread.map((s) => [s.part, s.parts]), [[2, 3], [3, 3]],
+    'the badge the network renders: 2/3 then 3/3, the root being 1/3');
+  assert.equal(t.parts, 3, 'and the thread says how many parts it has, root included');
+});
+
+test('3i: a post with no chain has no parts to number', () => {
+  const t = shapeLensThread({ thread: {
+    post: qPost('root', 'did:plc:op', '2026-09-03T08:00:00Z'),
+    replies: [{ post: qPost('r1', 'did:plc:aa', '2026-09-03T08:01:00Z'), replies: [] }],
+  } }, QSRC);
+  assert.deepEqual(t.selfThread, []);
+  assert.equal(t.parts, 1, 'the post alone is one part, and a lone part is not a chain');
+});
+
+test('3i: a hoisted part carries what a control needs — its author, its time, its cid', () => {
+  // Until now the shape was { uri, id, author, text, facets, media, quoted }.
+  // A part drawn without a time and a cid cannot show when it was written,
+  // cannot be replied to, and cannot delete ITSELF — which is how the head's
+  // Delete came to be the only one on the card.
+  const threadResponse = { thread: {
+    post: qPost('root', 'did:plc:op', '2026-09-03T08:00:00Z'),
+    replies: [{ post: qPost('p2', 'did:plc:op', '2026-09-03T11:17:00Z'), replies: [] }],
+  } };
+  const [part] = shapeLensThread(threadResponse, QSRC).selfThread;
+  assert.equal(part.authorId, 'did:plc:op', 'whose it is — a delete is authorized on the did');
+  assert.equal(part.cid, 'cid-p2', 'a reply to a part needs its strongRef');
+  assert.equal(part.createdTs, Date.parse('2026-09-03T11:17:00Z'),
+    'when it was written — the owner\'s part landed 3h17m after the post');
+});
+
+test('3i: the head can no longer claim a reply the list does not show', () => {
+  // The bug verbatim: replyCount said 1, the list said none. The appview's
+  // replyCount counts the hoisted part; the list cannot. A thread now reports
+  // the two numbers separately so a view has no way to print a contradiction.
+  const threadResponse = { thread: {
+    post: qPost('root', 'did:plc:op', '2026-09-03T08:00:00Z', { replyCount: 1 }),
+    replies: [{ post: qPost('p2', 'did:plc:op', '2026-09-03T11:17:00Z'), replies: [] }],
+  } };
+  const t = shapeLensThread(threadResponse, QSRC);
+  assert.equal(t.comments.length, 0, 'nothing to list');
+  assert.equal(t.replyCount, 0, 'so nothing is claimed — not the appview\'s 1');
+  assert.equal(t.parts, 2, 'the reply is accounted for as the post\'s second part');
+});
+
+test('3i: the parts are also available as NODES, built by the same builder as a comment', () => {
+  // The two ways to draw a chain (in the head, or pinned above the comments)
+  // must not become two renderers — "a reply-only renderer is how the surfaces
+  // drift apart again". So the substrate hands the view the SAME node shape a
+  // comment has, carrying the badge, and one renderer draws both.
+  const threadResponse = { thread: {
+    post: qPost('root', 'did:plc:op', '2026-09-03T08:00:00Z'),
+    replies: [
+      { post: qPost('p2', 'did:plc:op', '2026-09-03T08:01:00Z'),
+        replies: [{ post: qPost('p3', 'did:plc:op', '2026-09-03T11:17:00Z'), replies: [] }] },
+    ],
+  } };
+  const t = shapeLensThread(threadResponse, QSRC);
+  assert.deepEqual(t.partNodes.map((n) => n.id.split('/').pop()), ['p2', 'p3'], 'in chain order');
+  assert.deepEqual(t.partNodes.map((n) => [n.part, n.parts]), [[2, 3], [3, 3]]);
+  const [n2] = t.partNodes;
+  assert.equal(n2.kind, 'part', 'a part is its own kind — not a reply, not a quote');
+  assert.equal(n2.depth, 0, 'a part stands at the top level; the chain is a spine, not a nest');
+  assert.equal(n2.body, 'text p2', 'and it is a full node: the body a comment renderer reads');
+  assert.equal(n2.authorId, 'did:plc:op', 'so its own Delete can be authorized');
+  assert.deepEqual(n2.children, [], 'its replies re-rooted; a part never nests them');
+});
+
+test('3i: replies to a hoisted part are counted where they are shown', () => {
+  // A reply to a part re-roots as a top-level comment (it has nowhere else to
+  // go once its parent became body). It must be counted there too, or the
+  // count under-reports the way it used to over-report.
+  const threadResponse = { thread: {
+    post: qPost('root', 'did:plc:op', '2026-09-03T08:00:00Z', { replyCount: 2 }),
+    replies: [
+      { post: qPost('p2', 'did:plc:op', '2026-09-03T08:01:00Z'),
+        replies: [{ post: qPost('under', 'did:plc:bb', '2026-09-03T08:05:00Z'), replies: [] }] },
+      { post: qPost('r1', 'did:plc:aa', '2026-09-03T08:03:00Z'), replies: [] },
+    ],
+  } };
+  const t = shapeLensThread(threadResponse, QSRC);
+  assert.equal(t.replyCount, 2, 'the re-rooted reply and the ordinary one, both listed, both counted');
+  assert.equal(t.replyCount, t.comments.length, 'the count IS the list, by construction');
+});
+
 // ---- 3i: media embeds (card mode renders images; compact does not) ----
 
 test('3i: an images embed becomes post.media with thumbs+alts; an image-only post titles from alt', () => {

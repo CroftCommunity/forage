@@ -326,6 +326,17 @@ h1.posttext { font-family: var(--font-body); font-size: var(--t-lg); font-weight
    assumes (the 680px content column at the body size). */
 h1.posttext { max-width: 68ch; letter-spacing: 0; }
 .postmeta { color: var(--muted); font-size: var(--t-xs); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 2px; }
+
+/* self-thread (2026-09-03): the strip a continuation part carries. A part is
+   the post's own body, so it gets no second byline — but it says WHICH part it
+   is, when it landed, and it carries its own delete. Before this a part was
+   anonymous words and the only Delete on the card was the post's. */
+.part-meta { gap: 8px; align-items: center; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); }
+.part-meta .part-badge { font-variant-numeric: tabular-nums; }
+.part-meta a { color: var(--link); }
+.part-meta .btn { margin-left: auto; }
+/* the same badge on a PINNED part, where the part is a node in the list */
+.comment[data-kind="part"] .part-badge { font-variant-numeric: tabular-nums; }
 .postmeta .domain { color: var(--link); }
 /* the byline — avatar slot · who · bare time · ⋯ (plan 2026-08-29 post-and-thread) */
 .byline { display: flex; align-items: center; gap: 8px; font-size: var(--t-xs); color: var(--muted); min-width: 0; flex-wrap: wrap; }

@@ -14,7 +14,8 @@
 //        news-lens news-lens-replies news-board news-board-nothumb
 //        deep-lens deep-lens-spine deep-lens-tail deep-lens-open deep-lens-run
 //        deep-lens-prefs deep-lens-off
-//        gif-lens gif-lens-paused gif-lens-alt gif-board)
+//        gif-lens gif-lens-paused gif-lens-alt gif-board
+//        self-lens self-lens-pin)
 //   node scripts/mock-snaps.mjs --as current --serve ../../forage
 //       # the same script and fixtures, rendering ANOTHER checkout (main): the
 //       # Current frames come from the tree the owner is running, captured by
@@ -41,6 +42,13 @@
 //                    load: a quote carrying a TWELVE-deep chain in which every
 //                    rung has exactly one reply, beside a two-child branch that
 //                    is not a chain. The owner's 2026-09-02 screenshot, measured.
+//   lens:mock-selfthread e2e/harness/mock-selfthread.mjs — the self-thread load:
+//                    the poster answering their OWN image post, a chain of
+//                    three (one part tied to the root's timestamp, one 3h17m
+//                    later carrying a picture), a decoy self-reply the appview
+//                    ranks first, the OP answering someone else, and eleven
+//                    replies at the measured median. Signed in AS the poster,
+//                    because the delete hazard only exists for them.
 //   lens:mock-newspost e2e/harness/mock-newspost.mjs — the post-text load: a
 //                    verbatim news record (three blocks split by \n\n, a #link
 //                    facet over a truncated display URL, a link card), a
@@ -55,6 +63,7 @@ import { RESPONSES as NEWS, BOARD_PATH as NEWS_BOARD, THREAD_PATH as NEWS_THREAD
 import { RESPONSES as REFRESH } from '../e2e/harness/mock-refresh.mjs';
 import { RESPONSES as DEEP, THREAD_PATH as DEEP_PATH, QUOTE_URI as DEEP_QUOTE, SPINE_URIS } from '../e2e/harness/mock-deepthread.mjs';
 import { RESPONSES as GIF, BOARD_PATH as GIF_BOARD, THREAD_PATH as GIF_THREAD } from '../e2e/harness/mock-gif.mjs';
+import { RESPONSES as SELF, THREAD_PATH as SELF_PATH } from '../e2e/harness/mock-selfthread.mjs';
 import { mergeManifest } from './lib/snaps-manifest.mjs';
 import { SKINS } from '../js/skins.js';
 import { execFileSync } from 'node:child_process';
@@ -424,6 +433,28 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
   //   deep-lens        the head and the ordinary replies — the control
   //   deep-lens-spine  the descent, anchored on the quote the chain hangs off
   //   deep-lens-tail   the far end: the deepest rungs and the depth-10 boundary
+  // self-thread (2026-09-03): the poster's own continuation chain, drawn the
+  // two ways the mock puts side by side. `self-lens` is whatever the tree's
+  // default is (main: the anonymous hoist; this branch: the hoist with each
+  // part carrying its own strip); `self-lens-pin` sets the mock switch and
+  // captures the network's placement. Both come out of the engine — a drawing
+  // of either would be a sketch (MOCKS.md P1).
+  if (wanted('self-lens') || wanted('self-lens-pin')) {
+    for (const [route, mode] of [['self-lens', null], ['self-lens-pin', 'pin']]) {
+      if (!wanted(route)) continue;
+      const init = [...SKIN_INIT, FAKE_SIGNED_IN,
+        ...(mode ? [`try { localStorage.setItem('forage.selfthread', '${mode}'); } catch {}`] : [])];
+      const sp = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: init, responses: SELF });
+      await sp.page.setViewportSize({ width: vp.width, height: vp.height });
+      await sp.page.goto(`${sp.origin}${SELF_PATH}`);
+      // the head's action row is the last thing the thread paints, and it is
+      // the row carrying the count this mock is about
+      await sp.page.waitForSelector('.head-actions', { timeout: 15000 });
+      await sp.page.evaluate(() => document.fonts?.ready);
+      await shoot(sp.page, route, 'lens:mock-selfthread', name, vp);
+      await sp.close();
+    }
+  }
   if (wanted('deep-lens') || wanted('deep-lens-spine') || wanted('deep-lens-tail') || wanted('deep-lens-open') || wanted('deep-lens-run')) {
     const dp = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: DEEP });
     await dp.page.setViewportSize({ width: vp.width, height: vp.height });
