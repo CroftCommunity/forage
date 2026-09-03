@@ -7,7 +7,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@f15c5b4",
+      "baseline": "forage@501defc",
       "population": "lens:mock-selfthread"
     },
     {
@@ -16,7 +16,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@f15c5b4",
+      "baseline": "forage@501defc",
       "population": "lens:mock-selfthread"
     },
     {
@@ -25,7 +25,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@f15c5b4",
+      "baseline": "forage@501defc",
       "population": "lens:mock-selfthread"
     },
     {
@@ -34,7 +34,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@f15c5b4",
+      "baseline": "forage@501defc",
       "population": "lens:mock-selfthread"
     },
     {
@@ -49,6 +49,96 @@
     {
       "file": "self-lens.desktop.current.png",
       "route": "self-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@8bc6cbd",
+      "population": "lens:mock-selfthread"
+    },
+    {
+      "file": "self-lens-count.phone.proposed.png",
+      "route": "self-lens-count",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@501defc",
+      "population": "lens:mock-selfthread"
+    },
+    {
+      "file": "self-lens-pin-count.phone.proposed.png",
+      "route": "self-lens-pin-count",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@501defc",
+      "population": "lens:mock-selfthread"
+    },
+    {
+      "file": "self-lens-alone.phone.proposed.png",
+      "route": "self-lens-alone",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@501defc",
+      "population": "lens:mock-selfthread"
+    },
+    {
+      "file": "self-lens-count.desktop.proposed.png",
+      "route": "self-lens-count",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@501defc",
+      "population": "lens:mock-selfthread"
+    },
+    {
+      "file": "self-lens-pin-count.desktop.proposed.png",
+      "route": "self-lens-pin-count",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@501defc",
+      "population": "lens:mock-selfthread"
+    },
+    {
+      "file": "self-lens-alone.desktop.proposed.png",
+      "route": "self-lens-alone",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@501defc",
+      "population": "lens:mock-selfthread"
+    },
+    {
+      "file": "self-lens-count.phone.current.png",
+      "route": "self-lens-count",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@8bc6cbd",
+      "population": "lens:mock-selfthread"
+    },
+    {
+      "file": "self-lens-alone.phone.current.png",
+      "route": "self-lens-alone",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@8bc6cbd",
+      "population": "lens:mock-selfthread"
+    },
+    {
+      "file": "self-lens-count.desktop.current.png",
+      "route": "self-lens-count",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@8bc6cbd",
+      "population": "lens:mock-selfthread"
+    },
+    {
+      "file": "self-lens-alone.desktop.current.png",
+      "route": "self-lens-alone",
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
