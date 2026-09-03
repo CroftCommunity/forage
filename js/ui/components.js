@@ -441,7 +441,10 @@ export function focusComment(container, id, { threadHref }) {
 // session that "restores" it is undoing a decision.
 //
 // No auto-collapse: the score-threshold fold was a downvote feature and is
-// retired (2026-08-27); the fold here is manual.
+// retired (2026-08-27); the fold here is manual. thread-depth (2026-09-03) does
+// NOT revive it — what that decision retired was a judgement about a comment
+// (its score), and what this adds is a fact about the tree (its depth and its
+// shape). Nothing here reads a count of anyone's approval.
 const CHILD_PAGE = 20; // "load N more replies" threshold
 
 export function commentNode(node, ctx) {
@@ -457,7 +460,14 @@ export function commentNode(node, ctx) {
   // the rail runs into the elbow of the first one, without them it stops at
   // the bottom of the quote's action row.
   const isQuote = node.kind === 'quote';
-  const wrap = el('div', { class: 'comment' + (hasKids ? '' : ' leaf') + (isQuote ? ' quote' : ''), 'data-node-id': node.id,
+  // thread-depth Phase A: a comment whose replies are ONE reply is a CHAIN —
+  // the conversation continued, it did not branch. The class says so; css/app.css
+  // decides at which depth that reply stops being indented, because the answer is
+  // a width judgement and differs between a phone and a desktop. `deferred`
+  // disqualifies: a node standing at the depth-10 wall has more under it than the
+  // one child we can see, and flattening it would promise a chain we cannot know is one.
+  const chain = (node.children || []).length === 1 && !(node.deferred || 0);
+  const wrap = el('div', { class: 'comment' + (hasKids ? '' : ' leaf') + (isQuote ? ' quote' : '') + (chain ? ' chain' : ''), 'data-node-id': node.id,
     ...(node.kind ? { 'data-kind': node.kind } : {}), ...(node.depth != null ? { 'data-depth': String(node.depth) } : {}) });
 
   const avcol = el('div', { class: 'avcol' }, avatarSlot(node.author, node.avatar || null),
