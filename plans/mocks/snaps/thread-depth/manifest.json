@@ -90,6 +90,42 @@
       "height": 900,
       "baseline": "forage@e6c5fa8",
       "population": "lens:mock-deepthread"
+    },
+    {
+      "file": "deep-lens-prefs.phone.current.png",
+      "route": "deep-lens-prefs",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@e6c5fa8",
+      "population": "lens:mock-deepthread"
+    },
+    {
+      "file": "deep-lens-off.phone.current.png",
+      "route": "deep-lens-off",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@e6c5fa8",
+      "population": "lens:mock-deepthread"
+    },
+    {
+      "file": "deep-lens-prefs.desktop.current.png",
+      "route": "deep-lens-prefs",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@e6c5fa8",
+      "population": "lens:mock-deepthread"
+    },
+    {
+      "file": "deep-lens-off.desktop.current.png",
+      "route": "deep-lens-off",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@e6c5fa8",
+      "population": "lens:mock-deepthread"
     }
   ]
 }
