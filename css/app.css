@@ -611,11 +611,21 @@ dialog.menu::backdrop { background: transparent; }
    "First of a run" is a structural fact, so it is said structurally: this reply's
    parent is a chain deep enough to flatten, AND the grandparent is not — either
    not a chain at all (a branch interrupted the run, and a run can start at any
-   depth) or a chain too shallow for the rule to have fired. */
-:where(.comment:not(.chain), .comment.chain:is([data-depth="0"],[data-depth="1"],[data-depth="2"],[data-depth="3"]))
-  > .kids > .comment.chain:not([data-depth="0"]):not([data-depth="1"]):not([data-depth="2"]):not([data-depth="3"])
-  > .kids > .comment > .comment-body > .comment-text::before {
-  content: "(Reply to above comment) "; color: var(--muted); font-size: var(--t-xs); }
+   depth) or a chain too shallow for the rule to have fired.
+
+   Unlike the flatten rules above, this one is fenced to its own width. Those
+   are monotonic — the phone set is a superset of the desktop set, so both
+   firing is the same answer twice. This one is not: at 390px the desktop
+   selector labelled depth 5 (its run start, counted from a depth-4 threshold)
+   while the phone selector labelled depth 3 (its own), and a variant whose
+   whole claim is "once per run" printed it twice. Measured, not spotted — the
+   frame anchored at depth 5 showed one label and looked right. */
+@media (min-width: 481px) {
+  :where(.comment:not(.chain), .comment.chain:is([data-depth="0"],[data-depth="1"],[data-depth="2"],[data-depth="3"]))
+    > .kids > .comment.chain:not([data-depth="0"]):not([data-depth="1"]):not([data-depth="2"]):not([data-depth="3"])
+    > .kids > .comment > .comment-body > .comment-text::before {
+    content: "(Reply to above comment) "; color: var(--muted); font-size: var(--t-xs); }
+}
 
 /* ---- thread-depth Phase B: the depth the tree arrives open to -------------
    Past `DEEP_FOLD_AT` (js/ui/components.js) a comment's replies arrive behind
