@@ -4,6 +4,7 @@ import { el, esc, mdLite, timeAgo, domainOf, fmtScore, plural } from '../util.js
 import * as actions from '../actions.js';
 import { openMenu } from './menu.js';
 import * as haptics from '../haptics.js';
+import { foldAt } from '../thread-shape.js';
 
 // ---------- toasts ----------
 export function toast(msg, kind = '') {
@@ -414,6 +415,12 @@ export function focusComment(container, id, { threadHref }) {
   const path = [];
   for (let n = target; n && n !== container; n = n.parentElement?.closest('.comment')) path.unshift(n);
   const setFolded = (node, folded) => {
+    // thread-depth Phase B: a deep-folded ancestor hides the target with a bar
+    // of its own, and the ⊖ fold does not know about it. Open it first, or a
+    // permalink into a deep subtree scrolls to something display:none —
+    // the target IS in the DOM (the bar hides, it never skips the render),
+    // which is the whole reason the fold is a class and not a lazy branch.
+    if (!folded) node.querySelector(':scope > .kids > [data-deep]')?.click();
     const fold = node.querySelector(':scope > .comment-body > .comment-actions > [data-fold]');
     const is = node.classList.contains('collapsed');
     if (fold && is !== folded) fold.click();      // keeps the fold's own label honest
@@ -441,8 +448,33 @@ export function focusComment(container, id, { threadHref }) {
 // session that "restores" it is undoing a decision.
 //
 // No auto-collapse: the score-threshold fold was a downvote feature and is
-// retired (2026-08-27); the fold here is manual.
+// retired (2026-08-27); the fold here is manual. thread-depth (2026-09-03) does
+// NOT revive it — what that decision retired was a judgement about a comment
+// (its score), and what this adds is a fact about the tree (its depth and its
+// shape). Nothing here reads a count of anyone's approval.
 const CHILD_PAGE = 20; // "load N more replies" threshold
+
+// thread-depth Phase B: the depth this tree arrives OPEN to. A comment at or
+// below this depth hands its replies over folded, behind one bar that says how
+// many there are; everything shallower is untouched, so an ordinary three- or
+// four-deep conversation never meets this rule at all.
+//
+// It is a RENDER budget, not a fetch one and not a judgement: the subtree is
+// built, shaped and put in the DOM exactly as before — the bar only hides it.
+// That is deliberate and it is what makes a permalink keep working: ?focus=<id>
+// finds its target with querySelector (js/ui/components.js focusComment) and
+// walks the path open, and a target that was never rendered would have made a
+// shared link land on "That comment isn't in this thread".
+//
+// Reddit's answer at this depth is a link that RE-ROOTS the page. We already
+// have that at the tree's own wall (the depth-10 continuation stub), and it
+// costs a navigation and a scroll position. At this depth the replies are
+// already in hand, so the bar opens them where they stand.
+//
+// Phase C (owner, 2026-09-03): the number is the READER's, under Advanced on
+// their account page — `foldAt()` is 5 by default and Infinity when they have
+// said never. It is read at render time rather than captured once, so a change
+// repaints correctly without a reload.
 
 export function commentNode(node, ctx) {
   const hasKids = (node.children || []).length > 0 || (node.deferred || 0) > 0;
@@ -457,7 +489,14 @@ export function commentNode(node, ctx) {
   // the rail runs into the elbow of the first one, without them it stops at
   // the bottom of the quote's action row.
   const isQuote = node.kind === 'quote';
-  const wrap = el('div', { class: 'comment' + (hasKids ? '' : ' leaf') + (isQuote ? ' quote' : ''), 'data-node-id': node.id,
+  // thread-depth Phase A: a comment whose replies are ONE reply is a CHAIN —
+  // the conversation continued, it did not branch. The class says so; css/app.css
+  // decides at which depth that reply stops being indented, because the answer is
+  // a width judgement and differs between a phone and a desktop. `deferred`
+  // disqualifies: a node standing at the depth-10 wall has more under it than the
+  // one child we can see, and flattening it would promise a chain we cannot know is one.
+  const chain = (node.children || []).length === 1 && !(node.deferred || 0);
+  const wrap = el('div', { class: 'comment' + (hasKids ? '' : ' leaf') + (isQuote ? ' quote' : '') + (chain ? ' chain' : ''), 'data-node-id': node.id,
     ...(node.kind ? { 'data-kind': node.kind } : {}), ...(node.depth != null ? { 'data-depth': String(node.depth) } : {}) });
 
   const avcol = el('div', { class: 'avcol' }, avatarSlot(node.author, node.avatar || null),
@@ -561,10 +600,40 @@ export function commentNode(node, ctx) {
   const bodyWrap = el('div', { class: 'comment-body' }, ...[meta, text, embeds, actionsRow, replyHost].filter(Boolean));
   const childrenWrap = el('div', { class: 'kids' });
 
+  // thread-depth Phase B: past the reader's fold depth the replies arrive behind one
+  // bar. Only where there are rendered children to fold — a node standing at the
+  // tree's depth-10 wall has none, and its continuation stub says the true thing
+  // already; a bar over it would be a second control saying the same thing worse.
+  const deepFold = (node.depth ?? 0) >= foldAt() && (node.children || []).length > 0;
+  let deepBar = null;
+  if (deepFold) {
+    wrap.classList.add('deep', 'folded');
+    deepBar = el('button', { type: 'button', class: 'deep-bar', 'data-deep': '1', 'aria-expanded': 'false' },
+      el('span', { class: 'glyph', 'aria-hidden': 'true' }, '\u2295'), ` ${plural(countDesc(node), 'reply', 'replies')}`);
+    deepBar.addEventListener('click', () => {
+      // The whole subtree, not one rung. The first capture of this control
+      // (snaps/thread-depth/phase-ab/deep-lens-open.phone.proposed.png, before
+      // this line) opened depth 6 and immediately drew another bar under it,
+      // because depth 6 is past the budget too — a reader answering "show me
+      // the rest of this" got one reply and another button, once per level.
+      // The budget is about what a thread ARRIVES as; once a reader has said
+      // they want this branch, they want the branch.
+      for (const el of [wrap, ...wrap.querySelectorAll('.comment.deep')]) el.classList.remove('folded');
+      for (const bar of wrap.querySelectorAll('.deep-bar')) bar.remove();
+      deepBar.setAttribute('aria-expanded', 'true');
+      deepBar.remove(); // the ⊖ fold on the action row folds it again — one control per job
+    });
+  }
+
   wrap.append(...[avcol, bodyWrap, childrenWrap].filter(Boolean)); // a null child would print as the word "null"
 
   // render children with paging + continuation stubs
   renderChildren(childrenWrap, node, ctx);
+  // the bar lives INSIDE .kids, first: that is the one place it picks up the
+  // indent this level was actually given (`--in`) without repeating the rule
+  // that decides it — a flattened chain's bar sits flush, an indented one's
+  // sits where its first reply would.
+  if (deepBar) childrenWrap.prepend(deepBar);
 
   return wrap;
 }

@@ -1,0 +1,131 @@
+{
+  "capturedAt": "2026-09-03",
+  "files": [
+    {
+      "file": "deep-lens.phone.proposed.png",
+      "route": "deep-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@b493be1",
+      "population": "lens:mock-deepthread"
+    },
+    {
+      "file": "deep-lens-spine.phone.proposed.png",
+      "route": "deep-lens-spine",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@b493be1",
+      "population": "lens:mock-deepthread"
+    },
+    {
+      "file": "deep-lens-tail.phone.proposed.png",
+      "route": "deep-lens-tail",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@b493be1",
+      "population": "lens:mock-deepthread"
+    },
+    {
+      "file": "deep-lens.desktop.proposed.png",
+      "route": "deep-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@b493be1",
+      "population": "lens:mock-deepthread"
+    },
+    {
+      "file": "deep-lens-spine.desktop.proposed.png",
+      "route": "deep-lens-spine",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@b493be1",
+      "population": "lens:mock-deepthread"
+    },
+    {
+      "file": "deep-lens-tail.desktop.proposed.png",
+      "route": "deep-lens-tail",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@b493be1",
+      "population": "lens:mock-deepthread"
+    },
+    {
+      "file": "deep-lens-open.phone.proposed.png",
+      "route": "deep-lens-open",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@b493be1",
+      "population": "lens:mock-deepthread"
+    },
+    {
+      "file": "deep-lens-open.desktop.proposed.png",
+      "route": "deep-lens-open",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@b493be1",
+      "population": "lens:mock-deepthread"
+    },
+    {
+      "file": "deep-lens-run.phone.proposed.png",
+      "route": "deep-lens-run",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@b493be1",
+      "population": "lens:mock-deepthread"
+    },
+    {
+      "file": "deep-lens-run.desktop.proposed.png",
+      "route": "deep-lens-run",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@b493be1",
+      "population": "lens:mock-deepthread"
+    },
+    {
+      "file": "deep-lens-prefs.phone.proposed.png",
+      "route": "deep-lens-prefs",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@b493be1",
+      "population": "lens:mock-deepthread"
+    },
+    {
+      "file": "deep-lens-off.phone.proposed.png",
+      "route": "deep-lens-off",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@b493be1",
+      "population": "lens:mock-deepthread"
+    },
+    {
+      "file": "deep-lens-prefs.desktop.proposed.png",
+      "route": "deep-lens-prefs",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@b493be1",
+      "population": "lens:mock-deepthread"
+    },
+    {
+      "file": "deep-lens-off.desktop.proposed.png",
+      "route": "deep-lens-off",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@b493be1",
+      "population": "lens:mock-deepthread"
+    }
+  ]
+}

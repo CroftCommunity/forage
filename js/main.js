@@ -9,6 +9,7 @@ import { devBar } from './devbar.js';
 import * as skins from './skins.js';
 import * as density from './board-density.js';
 import * as cardSize from './card-size.js';
+import * as threadShape from './thread-shape.js';
 import * as rail from './rail.js';
 import { toast } from './ui/components.js';
 import { setToaster } from './actions.js';
@@ -23,6 +24,7 @@ setToaster(toast);
 // board-cards decision 7: the stored card size lands on the root before the
 // first paint — the 3t slider it replaced was only ever applied on a drag.
 cardSize.apply();
+threadShape.apply();
 
 // ---------- layout skeleton (built once) ----------
 const app = document.getElementById('app');

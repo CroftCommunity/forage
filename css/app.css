@@ -528,7 +528,14 @@ dialog.menu::backdrop { background: transparent; }
    through action row, below the avatar — the rail passing behind it (owner, 2026-08-29; it was
    parked on the action row's line before) */
 .comment > .comment-body > .comment-actions { grid-column: 2; }
-.comment > .kids { grid-column: 1 / span 2; padding-left: var(--kids-indent); }
+/* `--in` is the indent this level of kids was given, set HERE and read by the
+   children's elbows below. It is not the same thing as `--kids-indent`, which
+   every `.comment` sets on itself: a child's `::before` that reads
+   `--kids-indent` resolves it on the CHILD, so it only ever agreed with the
+   padding because every comment carried the same number. thread-depth Phase A
+   makes them disagree on purpose (a chain gets no indent), and the elbow has
+   to follow the padding, not the default. */
+.comment > .kids { grid-column: 1 / span 2; --in: var(--kids-indent); --elbow: 25px; padding-left: var(--in); }
 /* each child draws its own elbow: from the rail into its avatar's left edge, turning at the avatar's centre;
    a child that is not the last continues the rail below its elbow.
    The indent and the elbow are ONE number, so they are written once. The parent's
@@ -549,12 +556,78 @@ dialog.menu::backdrop { background: transparent; }
    (e2e/mobile-fit.workflow.mjs). The budget allows at most 16px, which buys a 1px
    curve — so the straight continuation is the honest shape at this width.
    e2e/mock-thread.workflow.mjs measures elbow against rail at both widths. */
-.kids > .comment::before { content: ""; position: absolute; left: calc(15px - var(--kids-indent)); top: 0;
-  width: max(0px, calc(var(--kids-indent) - 15px)); height: 25px;
+.kids > .comment::before { content: ""; position: absolute; left: calc(15px - var(--in)); top: 0;
+  width: max(0px, calc(var(--in) - 15px)); height: var(--elbow);
   border-left: 2px solid var(--border); border-bottom: 2px solid var(--border); border-radius: 0 0 0 10px; pointer-events: none; }
-.kids > .comment:not(:last-child)::after { content: ""; position: absolute; left: calc(15px - var(--kids-indent)); top: 25px; bottom: 0; width: 2px; background: var(--border); pointer-events: none; }
+.kids > .comment:not(:last-child)::after { content: ""; position: absolute; left: calc(15px - var(--in)); top: 25px; bottom: 0; width: 2px; background: var(--border); pointer-events: none; }
 .comment.collapsed > .kids, .comment.collapsed > .comment-body > .comment-text,
 .comment.collapsed > .comment-body > .comment-embed { display: none; }
+
+/* ---- thread-depth Phase A: a chain is not a tree -------------------------
+   Owner, 2026-09-02, on a thread seven levels deep: "we have deep nested
+   threads not collapsed by default … it can get a little hard to follow and
+   read". Every rung of that chain was a comment with EXACTLY ONE reply, and an
+   indent is the renderer saying "this branched" about something that never
+   branched. The indent is spent and nothing is bought with it. Measured on main
+   at 390px against e2e/harness/mock-deepthread.mjs, a reply's words get 284px at
+   depth 1 and 158px at depth 10 — about twenty characters a line — losing 14px a
+   level the whole way; the frame we captured off main
+   (snaps/thread-depth/deep-lens-tail.phone.current.png) shows what 172px buys at
+   depth 9: a display name truncated to "Thes…" and a two-digit like count broken
+   across two lines. Flattened, every rung past the second keeps 270px.
+
+   So: a comment whose replies are ONE reply (js/ui/components.js marks it
+   `.chain`) gives that reply no new indent, past the depth where the indent has
+   stopped paying for itself. Nothing is hidden and nothing moves that the
+   reader has to find again — the rail runs straight on through the avatar,
+   which is the same shape the phone already draws below a 15px indent (see the
+   `max(0px, …)` note above), so this adds no geometry, it reuses the geometry
+   the narrow case already had.
+
+   The threshold is a width judgement, so it lives in CSS and differs by width:
+   the first four levels keep their indent on a desktop, the first two on a
+   phone. `:not([data-depth=…])` reads as what it is — "not one of the shallow
+   ones" — and keeps the number in ONE place per breakpoint.
+
+   Tildes ran this experiment in 2018 (flatten at depth 4+ when a comment has
+   exactly one reply) and kept it; theirs labels the flattened reply "(Reply to
+   above comment)" in words. We rely on the unbroken rail instead — an open
+   decision on the mock, not a settled one. */
+/* `--elbow` shrinks with the indent: at no indent there is no corner to turn,
+   and the connector is just the 8px of the comment's own top padding between
+   the parent's rail and this avatar. Drawing the full 25px would run the stroke
+   straight down the middle of the avatar it is pointing at — visible at a 0
+   indent, and only invisible at the phone's 14px because the stroke lands on
+   the avatar's outermost 2px. */
+/* The reader picks the threshold (js/thread-shape.js writes `data-flatten` on the
+   root; Phase C, owner 2026-09-03). One declaration, one selector per choice —
+   `:not([data-depth=…])` reads as "not one of the shallow ones", so each line
+   states its own number. `off` has no line, which is how it is off.
+
+   `auto` is the pair below: a desktop keeps four levels of indent, a phone two,
+   because a phone runs out of column two levels sooner. It is the default and it
+   is the only choice whose answer depends on the screen. */
+[data-flatten="auto"] .comment.chain:not([data-depth="0"]):not([data-depth="1"]):not([data-depth="2"]):not([data-depth="3"]) > .kids,
+[data-flatten="1"] .comment.chain:not([data-depth="0"]) > .kids,
+[data-flatten="2"] .comment.chain:not([data-depth="0"]):not([data-depth="1"]) > .kids,
+[data-flatten="4"] .comment.chain:not([data-depth="0"]):not([data-depth="1"]):not([data-depth="2"]):not([data-depth="3"]) > .kids,
+[data-flatten="6"] .comment.chain:not([data-depth="0"]):not([data-depth="1"]):not([data-depth="2"]):not([data-depth="3"]):not([data-depth="4"]):not([data-depth="5"]) > .kids { --in: 0px; --elbow: 8px; }
+
+/* ---- thread-depth Phase B: the depth the tree arrives open to -------------
+   Past `DEEP_FOLD_AT` (js/ui/components.js) a comment's replies arrive behind
+   one bar that says how many there are. The bar sits where the first reply
+   would, at the same indent, so the fold is legible as "there is more under
+   this one" and not as the thread ending.
+
+   The subtree is rendered and hidden, never skipped: a ?focus= permalink has to
+   be able to find its target, and find-in-page cannot see either way. */
+.comment.folded > .kids > :not(.deep-bar) { display: none; }
+.deep-bar { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 0 10px 0 4px;
+  border: 0; border-radius: var(--radius-chip); background: none; color: var(--brand);
+  font: inherit; font-size: var(--t-xs); cursor: pointer; white-space: nowrap; }
+.deep-bar .glyph { font-size: 16px; line-height: 1; }
+.deep-bar:hover, .deep-bar:focus-visible { background: var(--card-2); }
+@media (max-width: 480px) { .deep-bar { min-height: 44px; } } /* the tap floor (MOBILE-FIRST) */
 .fold { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 0 8px; border-radius: var(--radius-chip); border: 0;
   background: none; color: var(--muted); font: inherit; font-size: var(--t-xs); cursor: pointer; white-space: nowrap; }
 .fold .glyph { font-size: 16px; line-height: 1; }
@@ -851,6 +924,9 @@ hr.rule { border: none; border-top: 1px solid var(--border); margin: var(--s4) 0
 .media-strip img { max-width: 100%; height: auto; }
 @media (max-width: 480px) {
   .comment { --kids-indent: 14px; }
+  /* thread-depth Phase A: `auto` on a phone runs out of column two levels sooner.
+     The fixed choices are width-independent by definition and stay in the base rule. */
+  [data-flatten="auto"] .comment.chain:not([data-depth="0"]):not([data-depth="1"]) > .kids { --in: 0px; --elbow: 8px; }
   .shell { padding: var(--s2); }
 }
 .feed-avatar { width: 40px; height: 40px; border-radius: var(--radius-card); border: 1px solid var(--border); flex: none; }

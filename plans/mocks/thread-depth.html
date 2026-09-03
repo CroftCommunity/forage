@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forage Thread Depth v3</title>
+<meta name="mock-version" content="3">
+<meta name="mock-baseline" content="forage@e6c5fa8">
+<meta name="mock-proposal" content="forage@b493be1">
+<style>
+:root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
+  --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page-bg:#1C1813;--page-card:#262019;--page-ink:#EFE7D9;--page-muted:#B5A88F;--page-line:#3D3527;--page-accent:#A5CD98}}
+:root[data-theme="dark"]{--page-bg:#1C1813;--page-card:#262019;--page-ink:#EFE7D9;--page-muted:#B5A88F;--page-line:#3D3527;--page-accent:#A5CD98}
+*{box-sizing:border-box}
+body{background:var(--page-bg);color:var(--page-ink);font-family:var(--f-body);line-height:1.55;margin:0;padding:32px 20px 72px}
+.wrap{max-width:1280px;margin:0 auto;display:flex;flex-direction:column;gap:30px}
+h1{font-family:var(--f-display);font-size:30px;font-weight:600;margin:0;letter-spacing:-.01em}
+h2{font-family:var(--f-display);font-size:22px;font-weight:600;margin:0}
+h3{font-family:var(--f-display);font-size:17px;margin:0 0 7px;font-weight:600}
+.sub{color:var(--page-muted);font-size:15px;max-width:80ch;margin:0}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+section{display:flex;flex-direction:column;gap:14px}
+.stage{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
+.device{display:flex;flex-direction:column;gap:9px;min-width:0}
+.device-label{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+.phone{width:390px;max-width:100%}
+.desk{flex:1 1 520px;min-width:0}
+.shot{max-width:100%;display:block;border:1px solid var(--page-line);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.10),0 8px 24px rgba(0,0,0,.06)}
+.callout{background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:16px 18px}
+.callout p,.callout li{margin:0;font-size:14px;color:var(--page-muted)}
+.callout b,.callout code,td b{color:var(--page-ink);font-weight:600}
+.callout ul,.callout ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+table{border-collapse:collapse;font-size:14px;width:100%}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--page-line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page-muted)}
+.tablewrap{overflow-x:auto;background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:6px 8px}
+code{font-size:.92em}
+.small{font-size:13px;color:var(--page-muted)}
+.tag{display:inline-block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;padding:1px 8px;border-radius:999px;border:1px solid var(--page-line);color:var(--page-muted)}
+figure{margin:0}
+pre{font-size:12.5px;line-height:1.5;margin:0;overflow-x:auto;color:var(--page-muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Forage &middot; mock &middot; thread-depth <b>v3</b> &middot; Current forage@e6c5fa8 &middot; Proposed forage@b493be1 &middot; 2026-09-03</div>
+    <h1>A conversation is not a tree</h1>
+    <p class="sub"><b>Three proposals and four decisions, all settled</b>, from the owner&rsquo;s report on
+      2026-09-02 with a screenshot of a live thread seven levels deep:
+      &ldquo;we have deep nested threads not collapsed by default &hellip; it can get a little hard to
+      follow and read. can you research how reddit handled this and propose a solution? maybe collapse
+      at n depth or n responses by default?&rdquo;</p>
+    <p class="sub">The two proposals answer <b>different halves</b> of that, and the frames are here so
+      you can see whether you want one, both, or neither. <b>Phase&nbsp;A</b> buys back the
+      <b>width</b> the indent was spending. <b>Phase&nbsp;B</b> bounds the <b>scroll</b>. Phase&nbsp;A
+      hides nothing and costs the reader no taps; Phase&nbsp;B is the &ldquo;collapse at n depth&rdquo;
+      the report asked about, and it is the one with a cost.</p>
+    <p class="sub"><b>v3 &mdash; every decision is answered, and decision 2 grew a third phase.</b>
+      The owner, 2026-09-03: &ldquo;let's say no to the tildes and everything else looks good for A+B,
+      but I think the settings should be adjustable for the user in advanced on their profile.&rdquo;
+      So: <b>no label</b> (decision&nbsp;3 closes on A, and the two drawn alternatives stay below as the
+      record of what was compared), and <b>Phase&nbsp;C</b> &mdash; both numbers become reader settings
+      under Advanced on <code>/me</code>, which is decision&nbsp;2 answered by handing it over rather
+      than by picking. Decisions&nbsp;1 and 4 were settled in v2: both phases are wanted, and the
+      find-in-page cost is accepted.</p>
+    <p class="sub"><b>Every frame here is a capture of the engine</b> (MOCKS.md&nbsp;P1). Current is
+      <code>main</code> at <code>e6c5fa8</code>; Phase&nbsp;A is <code>claude/thread-depth</code> at
+      <code>bf16319</code>; Phase&nbsp;A+B+C is the same branch at <code>b493be1</code>. All three come
+      from <code>scripts/mock-snaps.mjs</code> against the same population, in the default skin
+      (rule&nbsp;4), at 390&times;844 and 1280&times;900. Captures live in
+      <code>plans/mocks/snaps/thread-depth/</code> (rule&nbsp;3). Nothing on this page is drawn.</p>
+    <p class="sub"><b>The population is new and it is measured</b> (P2):
+      <code>e2e/harness/mock-deepthread.mjs</code>. The fixture we had is four deep on purpose, and at
+      four levels the indent has not yet eaten the column &mdash; it could not have shown this. The new
+      one carries a <b>quote with a twelve-deep chain under it in which every rung has exactly one
+      reply</b>, beside a two-child branch that is <em>not</em> a chain. Handle lengths (10&ndash;30
+      chars), display names with emoji (up to 45), likes (0&ndash;1,158), reposts (171) and text
+      lengths (2&ndash;270) are read off the owner&rsquo;s own thread through the public appview on
+      2026-09-03. The words are written, not copied.</p>
+  </header>
+
+  <section>
+    <div class="eyebrow">What Reddit actually does</div>
+    <h2>Reddit does not collapse by depth &mdash; it truncates and re-roots</h2>
+    <div class="callout">
+      <ul>
+        <li><b>Past roughly nine or ten levels, old.reddit stops rendering</b> and emits
+          <code>continue this thread &rarr;</code>, a link that <b>reloads the page with that comment as
+          the new root</b>. It is a render budget, not a fold. Forage already has exactly this, at
+          depth&nbsp;10 (<code>js/substrates/lens.js</code>) &mdash; it is visible in the Current frames
+          below.</li>
+        <li><b>Siblings are budgeted separately</b>: <code>load more comments (N replies)</code> after a
+          per-level batch. Forage has this too (<code>CHILD_PAGE = 20</code>).</li>
+        <li><b>The apps cap the visual indent.</b> Past about five levels the offset stops growing and a
+          coloured rail carries the parentage instead. This is the part forage does not have, and it is
+          what Phase&nbsp;A is.</li>
+        <li><b>The only real collapse-by-default on Reddit is score-driven</b> (&ldquo;comment score
+          below threshold&rdquo;). That mechanism is a downvote feature, and forage retired downvotes on
+          2026-08-27. Neither proposal here revives it: that decision was about a judgement of a comment;
+          these are facts about the tree.</li>
+        <li><b>Tildes ran Phase&nbsp;A as an experiment in 2018</b> and kept it: flatten at depth&nbsp;4+
+          when a comment has exactly one reply. Theirs labels the flattened reply
+          &ldquo;(Reply to above comment)&rdquo; in words; ours relies on the unbroken rail &mdash;
+          decision&nbsp;3 below.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">The diagnosis</div>
+    <h2>Most of those indents were saying nothing</h2>
+    <p class="sub">An indent is the renderer saying <b>&ldquo;this branched&rdquo;</b>. In the
+      owner&rsquo;s screenshot, and in the spine of this fixture, nothing ever branched &mdash; each
+      reply was the only reply. The indent was spent and nothing was bought with it:</p>
+    <div class="callout">
+      <pre>Measured on main at 390px, against this fixture — a reply's words, by depth
+
+  depth  1   284px      the indent is honest here: the thread really does fan out
+  depth  5   228px
+  depth  9   172px      the Current frame below: a name cut to "Thes…", a
+  depth 10   158px      two-digit like count broken across two lines
+                        ≈ 20 characters a line
+
+  Phase A                every rung past the second: 270px, whatever the depth</pre>
+    </div>
+    <p class="sub">On a desktop the same staircase costs no readability but leaves a growing empty
+      gutter down the left of the column, which is what makes a long exchange hard to follow: the eye
+      has to track a diagonal.</p>
+  </section>
+
+  <section>
+    <div class="eyebrow">Open decisions</div>
+    <h2>Four things the frames could not settle &mdash; all four now answered</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th style="width:3ch">#</th><th>Decision</th><th>What is built</th><th>The alternative</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><b>1</b></td>
+            <td><b>Do you want Phase&nbsp;B at all?</b><br><span class="tag">Decided 2026-09-03 &mdash; both</span></td>
+            <td><b>Both.</b> Owner: &ldquo;all look good except 3&rdquo;. Phase&nbsp;A alone stays captured
+              beside it as the record of what was compared.</td>
+            <td>Phase&nbsp;A only. It is strictly cheaper: nothing is hidden, no taps, no permalink or
+              find-in-page cost, and it already fixes the width complaint outright. Phase&nbsp;B is the
+              only one that shortens the <em>scroll</em> &mdash; compare the third phone column against
+              the second and see whether that is worth its cost.</td>
+          </tr>
+          <tr>
+            <td><b>2</b></td>
+            <td><b>The two thresholds, and how they interact.</b><br><span class="tag">Decided 2026-09-03 &mdash; the reader picks</span></td>
+            <td><b>Both are dials under Advanced on <code>/me</code></b> (Phase&nbsp;C). The defaults are
+              what v1 shipped &mdash; flatten past parent depth&nbsp;2 on a phone and 4 on a desktop,
+              fold past 5 &mdash; and a reader can move either, including all the way off, which is
+              main&rsquo;s thread exactly. The desktop collision described opposite stops being an
+              argument: anyone it bothers moves the fold to 8.</td>
+            <td>On a <b>desktop</b> these collide: flattening starts at 4 and the fold bites at 5, so
+              Phase&nbsp;A barely gets to show before B cuts in (visible in the desktop frames). A
+              desktop has width to spare &mdash; its fold could sit at 8 or 10, or the flatten could
+              start at 2 there too. Say a number and both are one line.</td>
+          </tr>
+          <tr>
+            <td><b>3</b></td>
+            <td><b>Whether a flattened reply says so in words.</b><br><span class="tag">Decided 2026-09-03 &mdash; A, no label</span></td>
+            <td><b>A &mdash; nothing.</b> Owner: &ldquo;let's say no to the tildes&rdquo;. The rail runs unbroken
+              from the parent&rsquo;s avatar into the child&rsquo;s, the same shape a phone already draws
+              below a 15px indent.</td>
+            <b>Rejected:</b> B &mdash; Tildes&rsquo; words on every flattened reply
+              (<code>085c015</code>) &mdash; and C &mdash; the same words once per run
+              (<code>ce62744</code>). Both were built and captured; their frames stay below as the record
+              of what was compared, and neither is on the branch.</td>
+          </tr>
+          <tr>
+            <td><b>4</b></td>
+            <td><b>The cost of folding: find-in-page.</b><br><span class="tag">Decided 2026-09-03 &mdash; accepted</span></td>
+            <td>A folded subtree is rendered and hidden (<code>display:none</code>), so
+              <b>&#8984;F cannot see it</b>. A <code>?focus=</code> permalink still works &mdash; that
+              is why it is hidden rather than skipped, and it is held by a test.</td>
+            <td>Accept it (Reddit&rsquo;s re-rooting link is worse: the text is not even on the page),
+              or drop Phase&nbsp;B. There is no third option that also keeps the scroll short.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">The frames &middot; phone &middot; 390&times;844 &middot; the far end of the chain</div>
+    <h2>Three columns, anchored on the same reply</h2>
+    <p class="sub">All three are scrolled to the rung at <b>depth&nbsp;5</b> &mdash; the one
+      Phase&nbsp;B folds at &mdash; so the same comment is in the same place in each. Read left to
+      right: the staircase, the staircase removed, the staircase removed and the branch folded.</p>
+    <div class="stage">
+      <div class="device phone">
+        <div class="device-label">Current <span class="tag">forage@e6c5fa8</span></div>
+        <img class="shot" src="snaps/thread-depth/deep-lens-tail.phone.current.png" alt="Phone, main: five replies stepping right, each narrower than the last; the deepest name is cut to Thes… and its like count 12 is broken over two lines; a continue this thread link at the bottom.">
+      </div>
+      <div class="device phone">
+        <div class="device-label">Phase A &mdash; flatten <span class="tag">forage@bf16319</span></div>
+        <img class="shot" src="snaps/thread-depth/phase-a/deep-lens-tail.phone.proposed.png" alt="Phone, Phase A: the same five replies at one indent with a single unbroken rail through the avatars; full display names, single-line like counts, and the continue this thread link plus the next top-level reply both fit.">
+      </div>
+      <div class="device phone">
+        <div class="device-label">Phase A + B <span class="tag">forage@b493be1</span></div>
+        <img class="shot" src="snaps/thread-depth/phase-ab/deep-lens-tail.phone.proposed.png" alt="Phone, Phase A plus B: the chain stops at depth five behind a line reading circled plus 6 replies, and the rest of the thread — the branch and two more top-level replies — is visible below it.">
+      </div>
+    </div>
+    <div class="callout">
+      <p><b>What to look at.</b> Column 1: the name is <code>Thes&hellip;</code> and
+        <code>&#9650;&nbsp;12</code> is stacked over two lines &mdash; both are the 172px column. Column 2:
+        the same five replies, full names, and the depth-10 wall now fits in frame with a top-level reply
+        after it. Column 3: the same screen now reaches two more top-level replies and the branch,
+        because six replies are behind one line.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">The frames &middot; phone &middot; the bar pressed</div>
+    <h2>The fold opens where it stands</h2>
+    <p class="sub">Phase&nbsp;B&rsquo;s bar opens <b>the whole branch</b>, not one rung, and it does not
+      navigate. Reddit&rsquo;s answer at this depth re-roots the page; forage already does that at the
+      depth-10 wall, and it costs a load and your scroll position. Here the replies are already in hand.</p>
+    <div class="stage">
+      <div class="device phone">
+        <div class="device-label">Before the press <span class="tag">forage@b493be1</span></div>
+        <img class="shot" src="snaps/thread-depth/phase-ab/deep-lens-tail.phone.proposed.png" alt="Phone: the folded chain behind a circled-plus 6 replies line.">
+      </div>
+      <div class="device phone">
+        <div class="device-label">After the press <span class="tag">forage@b493be1</span></div>
+        <img class="shot" src="snaps/thread-depth/phase-ab/deep-lens-open.phone.proposed.png" alt="Phone: one press and the whole chain is open, five more replies at one indent, no further bars.">
+      </div>
+      <div class="device phone">
+        <div class="device-label">Current, same route <span class="tag">forage@e6c5fa8</span></div>
+        <img class="shot" src="snaps/thread-depth/deep-lens-open.phone.current.png" alt="Phone, main: identical to its own tail frame — there is no such control to press.">
+      </div>
+    </div>
+    <div class="callout">
+      <p><b>The frame found a bug before the gate did.</b> The first capture of this control opened
+        depth&nbsp;6 and immediately drew <em>another</em> bar under it &mdash; depth&nbsp;6 is past the
+        budget too &mdash; so a reader answering &ldquo;show me the rest of this&rdquo; got one reply and
+        another button, once per level, all the way down. Fixed in <code>3a2e732</code>: the budget is a
+        statement about what a thread <em>arrives</em> as, and once a reader has asked for a branch they
+        have asked for the branch. The third column is the honest Current: there is nothing to press.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">The frames &middot; phone &middot; the descent</div>
+    <h2>Where the chain starts &mdash; and where the depth comes from</h2>
+    <p class="sub">The owner&rsquo;s screenshot descended through a <b>quote</b>, and that is not a
+      detail. Forage renders the quote cascade as comment nodes, so a quote&rsquo;s own reply chain nests
+      <em>under</em> it: your depth is cascade depth plus reply depth. Both frames start at the quote.</p>
+    <div class="stage">
+      <div class="device phone">
+        <div class="device-label">Current <span class="tag">forage@e6c5fa8</span></div>
+        <img class="shot" src="snaps/thread-depth/deep-lens-spine.phone.current.png" alt="Phone, main: the quote with its brand-ink rail, then five replies stepping progressively right.">
+      </div>
+      <div class="device phone">
+        <div class="device-label">Phase A + B <span class="tag">forage@b493be1</span></div>
+        <img class="shot" src="snaps/thread-depth/phase-ab/deep-lens-spine.phone.proposed.png" alt="Phone, branch: the quote, then two indents, then a single column of replies under one continuous rail.">
+      </div>
+    </div>
+    <div class="callout">
+      <p><b>Two indents survive on a phone, on purpose.</b> Depth&nbsp;1 and depth&nbsp;2 still step in.
+        The first levels of a thread are where it really does fan out, and that is where the indent is
+        telling the truth &mdash; a rule that flattened everything would lose the shape of the part
+        people actually read. Decision&nbsp;2 is where that number lives.</p>
+      <p style="margin-top:10px"><b>Not fixed here, and not caused here:</b> the quote&rsquo;s
+        <code>&#9650;&nbsp;1158</code> breaks across two lines in <em>both</em> columns. A comment&rsquo;s
+        action row still wraps under four-digit counts; the feed row was fixed for this and the comment
+        row was not. Surfaced by this fixture, filed, out of scope.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Decision 3, drawn &middot; phone &middot; 390&times;844 &middot; the run, fully open</div>
+    <h2>Does a flattened reply need to say so in words? &mdash; no</h2>
+    <p class="sub"><b>Decided 2026-09-03: A.</b> Owner: &ldquo;let's say no to the tildes&rdquo;. The
+      frames stay as the record of what was compared; neither label is on the branch. All three are the same thread, every fold pressed open, anchored at
+      <b>depth&nbsp;2</b> &mdash; the rung the flattening starts under, so the whole run is in frame.
+      Six replies, each the only reply to the one above it. Only the label differs.</p>
+    <div class="stage">
+      <div class="device phone">
+        <div class="device-label">A &mdash; nothing (as built) <span class="tag">forage@b493be1</span></div>
+        <img class="shot" src="snaps/thread-depth/phase-ab/deep-lens-run.phone.proposed.png" alt="Phone: six replies in one column under a continuous rail, no label on any of them.">
+      </div>
+      <div class="device phone">
+        <div class="device-label">B &mdash; Tildes, every rung <span class="tag">forage@085c015</span></div>
+        <img class="shot" src="snaps/thread-depth/label-all/deep-lens-run.phone.proposed.png" alt="Phone: the same six replies, each opening with a grey (Reply to above comment) before its first word; five of the six wrap onto an extra line because of it.">
+      </div>
+      <div class="device phone">
+        <div class="device-label">C &mdash; once per run <span class="tag">forage@ce62744</span></div>
+        <img class="shot" src="snaps/thread-depth/label-first/deep-lens-run.phone.proposed.png" alt="Phone: the same six replies with one grey (Reply to above comment) on the first of them, the SHAMPOO, and nothing on the five below it.">
+      </div>
+    </div>
+    <div class="callout">
+      <ul>
+        <li><b>B is the honest version of the Tildes design</b> and it is also its own argument against
+          itself: five identical parentheticals down one chain, each pushing the reply&rsquo;s first
+          words onto another line. On a 390px phone that is roughly a full extra line of height per
+          rung, spent saying the same thing six times.</li>
+        <li><b>C says it once, at the top of the run</b>, and lets the unbroken rail carry it after that
+          &mdash; which is what the rail is for. A run can start at any depth (a branch interrupts one
+          and the next chain begins a new one), so &ldquo;first of a run&rdquo; is structural, not a
+          count: the reply&rsquo;s parent is a chain deep enough to flatten and the grandparent is not.</li>
+        <li><b>A is what is built.</b> The case for it is that B and C are both annotating something the
+          reader can already see &mdash; the rail runs from one avatar into the next without a step, and
+          nothing else in forage draws that shape.</li>
+        <li><b>The desktop frames differ by one rung, not by kind.</b> The desktop run starts at
+          depth&nbsp;5 rather than depth&nbsp;3, so B and C sit one level lower; the comparison is the
+          same and it is not repeated here.</li>
+      </ul>
+      <p style="margin-top:10px"><b>Building it caught a bug that looking at it did not.</b> Variant C
+        first shipped its desktop and phone selectors both unfenced. The flatten rules can do that
+        &mdash; the phone set is a superset of the desktop set, so both firing is the same answer twice
+        &mdash; but C&rsquo;s is not monotonic: at 390px the desktop selector labelled depth&nbsp;5 (its
+        run start, counted from a depth-4 threshold) while the phone selector labelled depth&nbsp;3, and
+        the variant whose whole claim is &ldquo;once per run&rdquo; printed it twice. The frame we had
+        was anchored at depth&nbsp;5, showed one label, and looked right. It took reading computed
+        <code>::before</code> content at both widths to see it &mdash; and a new frame,
+        <code>deep-lens-run</code>, that starts where the run does.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Phase C &middot; the numbers become the reader&rsquo;s</div>
+    <h2>Two dials under Advanced, and an off switch that means it</h2>
+    <p class="sub">Decision&nbsp;2 was an argument about two numbers. Phase&nbsp;C answers it by handing
+      them over. <b>Stop indenting a chain of single replies</b> is a <b>width</b> question, which is why
+      <code>Auto</code> is a real answer and the default &mdash; a phone and a desktop each keep their own
+      threshold. <b>Fold replies deeper than</b> is a <b>scroll</b> question, the same at every width, so
+      there is nothing for auto to mean there.</p>
+    <div class="stage">
+      <div class="device phone">
+        <div class="device-label">Advanced, Proposed <span class="tag">forage@b493be1</span></div>
+        <img class="shot" src="snaps/thread-depth/phase-ab/deep-lens-prefs.phone.proposed.png" alt="Phone, the Advanced disclosure open on the account page: an Alt text section, then a Deep threads section explaining the indent, with two dials — Stop indenting a chain of single replies set to Auto by screen width, and Fold replies deeper than set to Deeper than 5 levels.">
+      </div>
+      <div class="device phone">
+        <div class="device-label">Advanced, Current <span class="tag">forage@e6c5fa8</span></div>
+        <img class="shot" src="snaps/thread-depth/deep-lens-prefs.phone.current.png" alt="Phone, main: the same Advanced disclosure with an Alt text section and Browse Hashtags, and no Deep threads section at all.">
+      </div>
+      <div class="device phone">
+        <div class="device-label">Both turned off <span class="tag">forage@b493be1</span></div>
+        <img class="shot" src="snaps/thread-depth/phase-ab/deep-lens-off.phone.proposed.png" alt="Phone, branch with both settings off: the staircase is back, every reply indented and nothing folded — the same thread main draws.">
+      </div>
+    </div>
+    <div class="callout">
+      <ul>
+        <li><b>Off is main&rsquo;s thread, exactly</b> &mdash; every indent kept, nothing folded. That is
+          the third frame, and it is what makes these settings rather than a milder version of our
+          opinion. It is a claim in the gate, not a hope: the workflow reads the depths that flatten and
+          the depths that fold off the rendered DOM and asserts both lists are empty.</li>
+        <li><b>The choices.</b> Indent: Auto &middot; after level 1 &middot; 2 &middot; 4 &middot; 6
+          &middot; never. Fold: deeper than 3 &middot; 5 &middot; 8 &middot; never.</li>
+        <li><b>Device-local, like the skin and the card size</b>, and never account state. A corrupt
+          stored value reads as no choice and says so once in the console; the default is written onto
+          the root explicitly, so no stylesheet rule has to guess what &ldquo;unset&rdquo; means.</li>
+        <li><b>Where each number lives is not arbitrary.</b> The stylesheet owns the indent thresholds
+          (one selector per choice, keyed on <code>data-flatten</code>) because indenting is a style
+          question and CSS is what knows the screen width. The renderer owns the fold, read at render
+          time, because folding is a decision about what to draw and CSS cannot count.</li>
+      </ul>
+      <p style="margin-top:10px"><b>The panel&rsquo;s first capture caught its own layout bug:</b>
+        <code>.stack</code> is a margin rule and not a column, so the short label sat beside its select
+        while the long one wrapped above its own. Fixed in <code>b493be1</code>.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">The frames &middot; desktop &middot; 1280&times;900</div>
+    <h2>At desk width the cost is the diagonal, not the column</h2>
+    <div class="stage">
+      <div class="device desk">
+        <div class="device-label">Current <span class="tag">forage@e6c5fa8</span></div>
+        <img class="shot" src="snaps/thread-depth/deep-lens-tail.desktop.current.png" alt="Desktop, main: six replies stepping right across the column, the deepest starting more than half way in, with a large empty gutter down the left.">
+      </div>
+      <div class="device desk">
+        <div class="device-label">Phase A + B <span class="tag">forage@b493be1</span></div>
+        <img class="shot" src="snaps/thread-depth/phase-ab/deep-lens-tail.desktop.proposed.png" alt="Desktop, branch: four indents then a single column, the fold bar, and the rest of the thread including the branch and two more top-level replies.">
+      </div>
+    </div>
+    <div class="callout">
+      <p><b>Read decision 2 here.</b> On a desktop the flatten starts at depth&nbsp;4 and the fold bites
+        at depth&nbsp;5, so Phase&nbsp;A gets one rung to work before Phase&nbsp;B takes over. A desktop
+        has width to spare and this is the frame that says so &mdash; its fold could reasonably sit much
+        deeper than a phone&rsquo;s.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Evidence</div>
+    <h2>What is gated, and what is not</h2>
+    <div class="callout">
+      <ul>
+        <li><code>e2e/mock-depth.workflow.mjs</code> &mdash; nine claims, <b>red against main</b> at each
+          phase&rsquo;s centre (no <code>.chain</code> class; depth&nbsp;2 indents, 67 vs 53; nothing
+          folds at depth&nbsp;5) and green on the branch. It holds: a chain stops indenting and a
+          <em>branch</em> does not; the deepest reply keeps 270px of a 390px phone where main measures
+          158px; nothing shallower than the budget folds; the bar names the whole subtree, meets the 44px
+          tap floor, and one press opens the branch; and a <code>?focus=</code> permalink into a folded
+          subtree still lands.</li>
+        <li><code>e2e/mock-thread.workflow.mjs</code> &mdash; still green. Phase&nbsp;A carried a CSS
+          repair to the elbow geometry (a child&rsquo;s elbow read <code>--kids-indent</code>, which
+          resolves on the <em>child</em>, and only ever agreed with the parent&rsquo;s padding because
+          every comment carried the same number), and that workflow measures elbow against rail at both
+          widths.</li>
+        <li>Gates on the branch: <code>npm test</code> 723/723, <code>npm run workflows</code> 38 found /
+          0 failed, <code>npm run conformance</code>.</li>
+        <li><code>e2e/mock-depth.workflow.mjs</code> &mdash; <b>nine more claims for Phase&nbsp;C</b>,
+          red against main at the first (main writes no <code>data-flatten</code>). They read the shape
+          off the rendered DOM under four settings pairs, never off the module that wrote them: auto/5
+          flattens from level 2 and folds at 5; off/off flattens and folds <em>nothing</em>; 1/3 and 6/8
+          land where they say. The dials carry the stored choice, meet the 44px tap floor, take effect
+          with no reload, and survive one.</li>
+        <li><b>Not gated:</b> the four decisions. Three are judgements about numbers or words, and
+          the fourth (find-in-page) is a browser behaviour no test of ours can hold.</li>
+        <li><b>Found, filed, not fixed:</b> the focus bar reads &ldquo;That comment isn&rsquo;t in this
+          thread&rdquo; over a comment it <em>did</em> find, unfold and highlight, whenever the target
+          arrives with the quote cascade. Reproduced identically on main at cascade depth&nbsp;3, so it
+          is not this branch&rsquo;s and is not fixed quietly here. <code>TODO.md</code>.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Revisions</div>
+    <h2>v3</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th style="width:5ch">v</th><th>Date</th><th>Commit</th><th>What changed on this page</th></tr></thead>
+        <tbody>
+          <tr><td><b>3</b></td><td>2026-09-03</td><td><code>b493be1</code></td>
+            <td>Decision&nbsp;3 closed on A (&ldquo;no to the tildes&rdquo;) &mdash; B and C are off the
+              branch and their frames stay as the record. Decision&nbsp;2 answered by handing the numbers
+              to the reader: <b>Phase&nbsp;C</b>, two dials under Advanced on <code>/me</code>, with two
+              new frames (the panel, and the thread with both turned off). Nine more claims in the gate.
+              The Proposed column re-captured at <code>b493be1</code>.</td></tr>
+          <tr><td><b>2</b></td><td>2026-09-03</td><td><code>a9e4338</code></td>
+            <td>Decision&nbsp;3 drawn, on the owner&rsquo;s ask (&ldquo;I'm not sure what this looks like,
+              is it in the mock&rdquo;): both alternatives built and captured at <code>085c015</code> (B)
+              and <code>ce62744</code> (C), over a new frame <code>deep-lens-run</code> that starts where
+              the flattened run does. Decisions&nbsp;1, 2 and 4 recorded as settled (P3). The branch is
+              parked at A; B and C are recoverable from their shas, each being one CSS rule. The Proposed
+              column was re-captured at <code>a9e4338</code>, whose UI tree is identical to
+              <code>a773c5c</code>, so the whole column names one sha.</td></tr>
+          <tr><td><b>1</b></td><td>2026-09-03</td><td><code>a773c5c</code></td>
+            <td>First. Two proposals, four open decisions, three captured columns (main
+              <code>e6c5fa8</code>, Phase&nbsp;A <code>bf16319</code>, Phase&nbsp;A+B
+              <code>a773c5c</code>) over a new population, <code>e2e/harness/mock-deepthread.mjs</code>.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+</body>
+</html>

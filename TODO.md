@@ -24,6 +24,22 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
   carries the composer's picker (`imagePicker` in `js/ui/lens-views.js`); the quick box
   stays text.
 
+- **A comment's like count wraps at four digits.** On a 390px phone the comment action row breaks
+  `▲ 1158` across two lines (and `▲ 121` on a narrow deep row). The FEED ROW was fixed for
+  four-digit counts in feed-row v9; the comment row's five equal cells were not. Surfaced 2026-09-03
+  by `e2e/harness/mock-deepthread.mjs`, which is the first population carrying a four-digit count on
+  a comment — visible in every column of `plans/mocks/thread-depth.html` v1, Current included, so
+  it is not that branch's doing. Out of scope there.
+
+- **The focus bar lies about a comment it did find.** `?focus=` into a node that arrives with the
+  QUOTE CASCADE reads "That comment isn't in this thread" over a comment it has found, unfolded,
+  scrolled to and highlighted. The bar is built once from the first `focusComment` call, before
+  the cascade lands; `onCascade` calls `focusComment` again for its side effects and discards the
+  return value (`js/ui/lens-views.js`), so the wording never catches up. Reproduced on main at
+  cascade depth 3 on 2026-09-03, found while building `plans/mocks/thread-depth.html` — not that
+  branch's doing, and deliberately not fixed there. `e2e/mock-depth.workflow.mjs` records it in a
+  comment beside the claim that does not assert it.
+
 - **The post you are answering, on `/reply` (reply-embeds decision 2).** The reply-target card
   (`lensReplyView` in `js/ui/lens-views.js`) draws the post's own picture but has never drawn the
   post it QUOTES, and it clamps the words to four lines — so it is built as a summary, not as a

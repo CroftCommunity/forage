@@ -12,6 +12,8 @@
 //        board-lens-refresh-news board-lens-refresh-pill post-lens-quote thread-lens
 //        thread-lens-quote thread-lens-sheet thread-lens-embed menu-lens focus-lens reply-lens thread-lens-reply
 //        news-lens news-lens-replies news-board news-board-nothumb
+//        deep-lens deep-lens-spine deep-lens-tail deep-lens-open deep-lens-run
+//        deep-lens-prefs deep-lens-off
 //        gif-lens gif-lens-paused gif-lens-alt gif-board)
 //   node scripts/mock-snaps.mjs --as current --serve ../../forage
 //       # the same script and fixtures, rendering ANOTHER checkout (main): the
@@ -35,6 +37,10 @@
 //                    portrait), a GIF with alt a person WROTE, a tenor .gif
 //                    with no verified video form, a 96-char title, and a news
 //                    card as the control the alt-text setting must not touch.
+//   lens:mock-deepthread e2e/harness/mock-deepthread.mjs — the thread-depth
+//                    load: a quote carrying a TWELVE-deep chain in which every
+//                    rung has exactly one reply, beside a two-child branch that
+//                    is not a chain. The owner's 2026-09-02 screenshot, measured.
 //   lens:mock-newspost e2e/harness/mock-newspost.mjs — the post-text load: a
 //                    verbatim news record (three blocks split by \n\n, a #link
 //                    facet over a truncated display URL, a link card), a
@@ -47,6 +53,7 @@ import { RESPONSES, FAKE_SIGNED_IN, THREAD_PATH, NODE_IDS, ROOT as THREAD_ROOT }
 import { RESPONSES as BOARD, BOARD_PATH, QUOTE_PATH } from '../e2e/harness/mock-board.mjs';
 import { RESPONSES as NEWS, BOARD_PATH as NEWS_BOARD, THREAD_PATH as NEWS_THREAD, NODE_IDS as NEWS_NODES } from '../e2e/harness/mock-newspost.mjs';
 import { RESPONSES as REFRESH } from '../e2e/harness/mock-refresh.mjs';
+import { RESPONSES as DEEP, THREAD_PATH as DEEP_PATH, QUOTE_URI as DEEP_QUOTE, SPINE_URIS } from '../e2e/harness/mock-deepthread.mjs';
 import { RESPONSES as GIF, BOARD_PATH as GIF_BOARD, THREAD_PATH as GIF_THREAD } from '../e2e/harness/mock-gif.mjs';
 import { mergeManifest } from './lib/snaps-manifest.mjs';
 import { SKINS } from '../js/skins.js';
@@ -410,6 +417,94 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
     await shoot(nb.page, 'news-board-nothumb', 'lens:mock-newspost', name, vp);
     nb.consoleErrors(); nb.errors();
     await nb.close();
+  }
+  // thread-depth (owner, 2026-09-02: "deep nested threads not collapsed by
+  // default … hard to follow and read"). Three frames off ONE population,
+  // because the three things that go wrong go wrong in three places:
+  //   deep-lens        the head and the ordinary replies — the control
+  //   deep-lens-spine  the descent, anchored on the quote the chain hangs off
+  //   deep-lens-tail   the far end: the deepest rungs and the depth-10 boundary
+  if (wanted('deep-lens') || wanted('deep-lens-spine') || wanted('deep-lens-tail') || wanted('deep-lens-open') || wanted('deep-lens-run')) {
+    const dp = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: DEEP });
+    await dp.page.setViewportSize({ width: vp.width, height: vp.height });
+    await dp.page.goto(`${dp.origin}${DEEP_PATH}`);
+    await dp.page.waitForSelector('.comment[data-kind="quote"]', { timeout: 15000 }); // the quote cascade landed
+    await dp.page.evaluate(() => document.fonts?.ready);
+    await shoot(dp.page, 'deep-lens', 'lens:mock-deepthread', name, vp);
+    // anchored on a NODE, never on a scroll offset: the two columns differ in
+    // height by design, so the same pixel offset would frame different rungs
+    const anchor = async (id) => {
+      await dp.page.evaluate((nid) => {
+        document.querySelector(`.comment[data-node-id="${CSS.escape(nid)}"]`)?.scrollIntoView({ block: 'start' });
+        window.scrollBy(0, -72);
+      }, id);
+      await dp.page.waitForTimeout(200);
+    };
+    if (wanted('deep-lens-spine')) { await anchor(DEEP_QUOTE); await shoot(dp.page, 'deep-lens-spine', 'lens:mock-deepthread', name, vp); }
+    // SPINE_URIS[4] is depth 5 — the rung Phase B folds at, so this frame is the
+    // one place all three columns can be compared: main runs on past it, Phase A
+    // runs on past it flat, Phase A+B stops there behind a bar. Anchoring DEEPER
+    // captured nothing under A+B (the anchor was inside the fold, so
+    // scrollIntoView had no box to scroll to and the frame stayed at the top —
+    // an honest capture of a useless frame).
+    // the whole chain open, anchored at the START of the flattened run (depth 2):
+    // decision 3's frames are about how often a label repeats down a run, and a
+    // frame that begins below the run's first rung cannot show that
+    if (wanted('deep-lens-run')) {
+      while (await dp.page.locator('.deep-bar').count()) await dp.page.locator('.deep-bar').first().click();
+      // the presses left focus on whatever followed the removed bar, and a
+      // focus ring in a frame reads as a highlight nobody put there
+      await dp.page.evaluate(() => document.activeElement?.blur());
+      await anchor(SPINE_URIS[1]);
+      await shoot(dp.page, 'deep-lens-run', 'lens:mock-deepthread', name, vp);
+      await dp.page.reload();
+      await dp.page.waitForSelector('.comment[data-kind="quote"]', { timeout: 15000 });
+    }
+    if (wanted('deep-lens-tail') || wanted('deep-lens-open')) { await anchor(SPINE_URIS[4]); }
+    if (wanted('deep-lens-tail')) await shoot(dp.page, 'deep-lens-tail', 'lens:mock-deepthread', name, vp);
+    // the bar pressed. On a tree with no bar this is the same frame as the tail,
+    // which is the honest Current: there is no such control to press.
+    if (wanted('deep-lens-open')) {
+      const bar = dp.page.locator('.deep-bar').first();
+      if (await bar.count()) { await bar.click(); await anchor(SPINE_URIS[4]); }
+      await shoot(dp.page, 'deep-lens-open', 'lens:mock-deepthread', name, vp);
+    }
+    dp.consoleErrors(); dp.errors();
+    await dp.close();
+  }
+  // thread-depth Phase C (owner, 2026-09-03: "the settings should be adjustable
+  // for the user in advanced on their profile"). Two frames the earlier phases
+  // could not have: the dials themselves, and the thread with BOTH turned off —
+  // which is the claim that makes them real settings rather than a milder
+  // version of our opinion. On main the Advanced panel simply has no such
+  // section and the thread is main's thread, which is the honest Current.
+  if (wanted('deep-lens-prefs')) {
+    const pf = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: DEEP });
+    await pf.page.setViewportSize({ width: vp.width, height: vp.height });
+    await pf.page.goto(`${pf.origin}/me`);
+    await pf.page.waitForSelector('[data-advanced]', { timeout: 15000 });
+    await pf.page.locator('[data-advanced] summary').click();
+    await pf.page.evaluate(() => document.fonts?.ready);
+    await pf.page.evaluate(() => { document.querySelector('[data-advanced]')?.scrollIntoView({ block: 'start' }); window.scrollBy(0, -72); });
+    await pf.page.evaluate(() => document.activeElement?.blur()); // the summary press left a ring
+    await pf.page.waitForTimeout(200);
+    await shoot(pf.page, 'deep-lens-prefs', 'lens:mock-deepthread', name, vp);
+    await pf.close();
+  }
+  if (wanted('deep-lens-off')) {
+    const OFF = "try{localStorage.setItem('forage.threadflatten','off');localStorage.setItem('forage.threadfold','off');}catch{}";
+    const of = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN, OFF], responses: DEEP });
+    await of.page.setViewportSize({ width: vp.width, height: vp.height });
+    await of.page.goto(`${of.origin}${DEEP_PATH}`);
+    await of.page.waitForSelector('.comment[data-kind="quote"]', { timeout: 15000 });
+    await of.page.evaluate(() => document.fonts?.ready);
+    await of.page.evaluate((nid) => {
+      document.querySelector(`.comment[data-node-id="${CSS.escape(nid)}"]`)?.scrollIntoView({ block: 'start' });
+      window.scrollBy(0, -72);
+    }, SPINE_URIS[4]);
+    await of.page.waitForTimeout(200);
+    await shoot(of.page, 'deep-lens-off', 'lens:mock-deepthread', name, vp);
+    await of.close();
   }
   if (wanted('board-lens-in')) {
     const inn = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: BOARD });
