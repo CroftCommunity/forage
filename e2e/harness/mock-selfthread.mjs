@@ -160,8 +160,13 @@ export const RESPONSES = {
 // to show, and main prints both. It needs its own population because the
 // contradiction is only visible when the comment list is EMPTY — under eleven
 // replies the head's wrong number hides in the crowd.
+// No alt, no words: the owner's post carried `text: ""` and an image with
+// `alt: ""`, so the ONLY words on that card were the ones the hoist put there.
+// A fixture that gives the picture an alt hands the head a title and hides
+// exactly the thing that made the reply read as the post.
 const aloneRoot = op('alone', T(0), '',
-  { likes: 0, replies: 1, view: images(img('alone', { width: 2016, height: 2016 })) });
+  { likes: 0, replies: 1,
+    view: images({ ...img('alone', { width: 2016, height: 2016 }), alt: '' }) });
 const aloneReply = leaf(op('alonereply', T(197), 'comment visibility test'));
 
 export const ALONE_ROOT = aloneRoot.uri;
