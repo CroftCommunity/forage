@@ -7,6 +7,7 @@
 // sign-in survives reloads. The lens consumes { did, handle, fetchHandler }.
 
 import { el, timeAgo, fmtScore, domainOf, plural } from '../util.js';
+import * as selfThreadView from '../self-thread-view.js';
 import { postRow, commentNode, vote, focusComment, skeleton, emptyState, toast, reportSheet, whoNode, byline, providerMark as providerMarkNode } from './components.js';
 import * as providerMark from '../provider-mark.js';
 import * as drafts from '../drafts.js';
@@ -1564,6 +1565,22 @@ function affordanceStrip(stream, onPosted) {
   return host;
 }
 
+// The strip a hoisted part carries (2026-09-03). A part is the post's body,
+// so it gets no second byline — the author is the same person, and repeating
+// the avatar and the name would read as a new speaker. What it does need is
+// everything a part was missing when it was drawn as anonymous words: which
+// part it is, when it was written (the owner's landed 3h17m after the post),
+// a way to reach it on its own, and its OWN delete.
+function partMeta(part, onDeleted) {
+  const del = deleteControl(part, onDeleted);
+  return el('div', { class: 'row xs muted part-meta', 'data-part': String(part.part) },
+    el('span', { class: 'chip part-badge', title: `Part ${part.part} of ${part.parts} — the author continuing their own post` },
+      `${part.part}/${part.parts}`),
+    el('span', { 'data-time': '1', title: new Date(part.createdTs).toLocaleString() }, timeAgo(part.createdTs) + ' ago'),
+    el('a', { href: `/p?uri=${encodeURIComponent(part.id)}` }, 'link'),
+    del);
+}
+
 // Phase 2: the delete control. Deleting is irreversible and federated — the
 // record leaves your repo but copies may already be elsewhere — so it takes
 // two deliberate clicks. NOT a confirm() dialog: a modal dialog freezes the
@@ -2945,6 +2962,11 @@ export function lensThreadView(params, query) {
         bar ? null : el('a', { class: 'btn', href: '/me' }, 'Your ring'))].filter(Boolean));
       return;
     }
+    // Where the poster's own continuation chain is drawn — in the head (the
+    // post's body, forage's forum shape) or pinned above the comments (an
+    // ordinary post with a 2/3 badge, the way the network draws it). One mock
+    // switch, two placements, the same nodes: js/self-thread-view.js.
+    const partsInHead = selfThreadView.active() === 'hoist';
     // 3w: the thread is no longer read-only — replies are a real write now.
     // A reply's PARENT is the node you answered; its ROOT is the top of the
     // thread, which for a lens thread is always the post being read. Defined
@@ -3005,8 +3027,15 @@ export function lensThreadView(params, query) {
       // card / GIF, then what it quotes. Before this the shape had no media at
       // all and an author answering their own post with a picture had it
       // silently dropped (found while building gif-embeds).
-      ...(t.selfThread || []).flatMap((part) => [
-        el('div', { class: 'small posttext', style: 'margin-top:8px' }, ...facetNodes(part.text, part.facets)),
+      // 2026-09-03: a part is no longer ANONYMOUS body text. It used to arrive
+      // as words alone — no number, no time, no permalink, nothing that could
+      // delete itself — so the owner read their own comment as something they
+      // had appended to their post, and the only Delete on the card was the
+      // POST's. Each part now says which part it is and carries its own
+      // controls; `partMeta` is the strip that does it.
+      ...(partsInHead ? (t.selfThread || []) : []).flatMap((part) => [
+        partMeta(part, rerender),
+        el('div', { class: 'small posttext' }, ...facetNodes(part.text, part.facets)),
         part.media ? mediaNode(part) : null,
         part.quoted ? quotedContext(part.quoted) : null,
       ].filter(Boolean)),
@@ -3023,11 +3052,21 @@ export function lensThreadView(params, query) {
       // control that answers the post is on one line. (This supersedes feed-row
       // v11 decision 23, which moved Reply down here alone and left them behind.)
       el('div', { class: 'actions head-actions' },
-        el('div', { class: 'postmeta' }, plural(p.commentCount, 'reply', 'replies')), // the author and the time moved up into the byline (v6)
+        // The count is the LIST, by construction (lens.js § replyCount). It used
+        // to be the appview's replyCount, which counts a hoisted part and
+        // cannot count a re-rooted one — "1 reply" over "No replies", owner
+        // 2026-09-03. A post in parts says so, because a reader who sees three
+        // blocks of words needs to know they are one post and not three.
+        el('div', { class: 'postmeta' }, t.parts > 1
+          ? `${t.parts} parts · ${plural(t.replyCount, 'reply', 'replies')}`
+          : plural(t.replyCount, 'reply', 'replies')), // the author and the time moved up into the byline (v6)
         repostControl(p), // v12 decision 25: ⟳ on the head too
         vote('post', p.id, p, !!session, { onVote: lensVote(p), onGuest: session ? null : openAuthSheet }), // Phase 6c: the head's pill
         replyLink),
       // phase 2: only ever rendered for a post that is genuinely yours
+      // It says "Delete post" now, not "Delete". When a part was drawn as body
+      // with no control of its own, this was the only button on the card and
+      // it read as the comment's (owner, 2026-09-03 — it deleted the post).
       deleteControl(p, () => {
         main.replaceChildren(emptyState('This post was deleted',
           'It is gone from your Bluesky account. Anyone who already saw it may still have a copy — deleting removes the record, it does not un-send it.',
@@ -3061,6 +3100,15 @@ export function lensThreadView(params, query) {
       // signed in, the comment arrow did nothing — it was the guest span).
       canVote: !!session, onVote: (n) => lensVote(n),
       onGuest: session ? null : openAuthSheet, // board-cards decision 1: a guest's vote stack is the door too
+      // A PINNED part says which part it is, on the byline, through the seam
+      // the quote's "⟳ quoted this" already uses. The network puts the badge
+      // as a suffix on the text (ThreadItemPostNumber.tsx); forage puts it on
+      // the byline, where every other "what kind of node is this" mark already
+      // lives — one place a reader learns what they are looking at.
+      bylineExtra: (n) => (n.kind === 'part'
+        ? el('span', { class: 'kind part-badge', title: `Part ${n.part} of ${n.parts} — the author continuing their own post` },
+          `${n.part}/${n.parts}`)
+        : null),
       menuGroups: (n) => lensMenuGroups(n, { kind: 'comment' }), // 4b: the ⋯ on every reply
       permalink: (n) => `${location.origin}/p?uri=${encodeURIComponent(p.id)}&focus=${encodeURIComponent(n.id)}`, // decision 10
       authorHref: (n) => `/u/${encodeURIComponent(n.author)}`, // 3k: authors reach OUR profile page (which links out)
@@ -3090,9 +3138,17 @@ export function lensThreadView(params, query) {
       return sortItems(windowed, threadSort, nowSec);
     };
     let latest = t.comments;
+    // The pinned parts sit ABOVE the sort bar and outside the sort, because
+    // they are not competing with the replies for a position: the network says
+    // so in its own sorter — "the chain continuation always appears first
+    // beneath its parent, regardless of the selected sort" (atproto
+    // packages/bsky/src/views/threads-v2.ts). Sorting a post's second paragraph
+    // by Hot would be a category error.
+    const pinnedParts = partsInHead ? [] : (t.partNodes || []);
     const paintComments = (comments) => {
       latest = comments;
       commentsCard.replaceChildren(
+        ...pinnedParts.map((n) => lensNode(n, ctx)),
         sortBar({ sorts: [['hot', 'Hot'], ['top', 'Top'], ['new', 'New']], sort: threadSort, from: threadFrom,
           onChange: ({ sort, from }) => { threadSort = sort; threadFrom = from; paintComments(latest); } }),
         ...orderComments(comments).map((n) => lensNode(n, ctx)));
@@ -3107,8 +3163,33 @@ export function lensThreadView(params, query) {
     // comment AGAIN: the repaint is a fresh tree, and the first focus went with
     // the old one (mock v20 claim F, found by the shipped capture 2026-08-30)
     onCascade = (next) => { paintComments(next.comments); if (focus) focusComment(commentsCard, focus, { threadHref }); };
+<<<<<<< HEAD
     const threadRing = threadRingBar();
     main.replaceChildren(...[bar, threadRing, head, t.comments.length ? commentsCard : emptyState('No replies', 'Nothing below this post yet.')].filter(Boolean));
+=======
+    // A reply that your ring hid is a reply you cannot see the answer to, so
+    // the widening control belongs ON the thread rather than three pages away.
+    // Rebuilt on every paint, because its selected segment is the override and
+    // the override changes underneath it.
+    const threadRing = session ? (() => {
+      const pill = ringScope.ringPill(el, {
+        override: ringOverride,
+        ariaLabel: 'How close — this thread only',
+        onPicked: (id) => { ringOverride = id; main.replaceChildren(skeleton(8)); load(); },
+      });
+      return pill ? el('div', { class: 'ringbar', 'data-thread-ring': '1' }, pill) : null;
+    })() : null;
+    // A thread with parts pinned but no replies still has a card to draw — and
+    // the empty state below it must not say "nothing here" over three visible
+    // parts, which is the shape of the contradiction this whole change is about.
+    const anythingBelow = t.comments.length || pinnedParts.length;
+    main.replaceChildren(...[bar, threadRing, head,
+      anythingBelow ? commentsCard : null,
+      t.comments.length ? null : emptyState('No replies',
+        pinnedParts.length ? 'The parts above are the post continuing itself. Nobody has answered it yet.'
+          : 'Nothing below this post yet.'),
+    ].filter(Boolean));
+>>>>>>> 121c93b (thread: a continuation part stops being anonymous body text)
   }).catch((e) => main.replaceChildren(emptyState('Lens fetch failed', e.message)));
   };
   load();
