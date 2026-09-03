@@ -1,6 +1,11 @@
 # Plan: the ring as a display scope — one composable pill, every surface
 
-**Status:** DRAFTED, NOT STARTED (2026-09-03). Awaiting owner sign-off on Decision 1.
+**Status:** **PHASES A–E COMPLETE (2026-09-03)** on `claude/ring-scope`; gate green on all
+four CI steps (npm test 780/780, conformance 86/86, workflows 38/38, reference-gate 2/2).
+Not merged. Phase F (mock captures) outstanding. All four decisions closed by the owner
+the same day — see *Open decisions*, kept with their answers rather than deleted, because
+Decision 1 was the one the earlier plan got wrong and the reasoning is the record.
+~~DRAFTED, NOT STARTED. Awaiting owner sign-off on Decision 1.~~
 **Worktree:** `worktrees/ring-scope/forage` on `claude/ring-scope`.
 Claim: `CroftC/.coordination/claims/forage--ring-scope.md`.
 **Supersedes in part:** `plans/2026-08-26-4-plan-views-and-the-ring-ladder.md` — see
@@ -166,7 +171,7 @@ Mitigations, in order:
 
 ## Open decisions
 
-### Decision 1 — what the middle stop is *(needs the owner; one-line change)*
+### Decision 1 — what the middle stop is — **CLOSED: 1a** (owner, 2026-09-03: "1a seems right")
 
 The owner's words, twice: **`follows -> mutuals -> world`**, left to right, with
 *"if follows is set I only want to see content from people I follow"* and *"if mutuals
@@ -195,20 +200,42 @@ a reader who wants it adds it as a fourth stop, which is what composability is f
 Either way this is a one-line default in `js/ring-scope.js`. It is called out here
 because getting it wrong silently ships a pill with a stop that changes nothing.
 
-### Decision 2 — does the ring apply inside a thread?
+### Decision 2 — does the ring apply inside a thread? — **CLOSED: yes** (owner: "yes, it should apply site wide")
 
-"Site-wide" taken literally would drop out-of-ring replies from a thread you opened
-deliberately, which can leave an answer whose question is missing. Recommending the
-ring applies to **boards and search** but not to a thread's replies once you are
-inside it, on the same reasoning as the feeds exemption: you asked for this
-specific thing. Flagging rather than deciding.
+The recommendation here was *no* — exempt a thread's replies on the same reasoning as
+the feeds exemption. The owner overrode it: site-wide means site-wide. Recorded as a
+reversal rather than edited away, because the concern that produced the recommendation
+is real and its answer is Decision 4: an out-of-ring reply is a reply whose answer you
+cannot see, so the thread grew its own widening control instead of an exemption. The
+exemption would have made the case invisible; the override makes it recoverable.
 
-### Decision 3 — pill labels on a phone
+One consequence the implementation had to handle: a thread reached by direct link whose
+ROOT your ring hides. That post shapes with `hiddenReason: 'scope'` — a machine token,
+no wording — so the view can tell "your ring hid this" from "this post does not exist".
 
-Four segments at a 44px tap floor is 176px of the 390px viewport before labels.
-The reference image pairs an icon with a small label underneath. Recommending
-icon + label at three stops, icon-only past four, with the label in the accessible
-name either way.
+### Decision 4 — the thread pill — **CLOSED: a transient override** (owner: "just overrides the thread")
+
+A ring control at the top of a thread, adjusting *that thread only*. The override is an
+argument to `lens.thread()` held in the view's closure — never written — so navigating
+away drops it by construction rather than by cleanup, and the masthead pill is exactly
+where the reader left it.
+
+### Decision 3 — pill labels on a phone — **ANSWERED BY THE GATE, not by judgement**
+
+The plan proposed icon + label at three stops. Building it produced a harder answer:
+the pill cannot live in the masthead at all. `e2e/avatar-nav.workflow.mjs` pins the
+masthead at ONE ROW at 320px (≤72px), and three segments at the 44px touch floor took it
+to 167px. That budget was spent once already — 113px → 61px, by deleting a duplicate
+"Home" link — and the saving is not available twice.
+
+So the pill is a **sibling of the masthead**, in its own `.ringbar`, and not sticky:
+sticking it under a sticky masthead means pinning `top` to the masthead's height, which
+is two elements agreeing about a number that a skin changing the band's padding would
+break. Short labels (`Mutuals`, `Follows`, `World`) with the long wording in the title
+and on the settings page.
+
+This is the decision the plan would have got wrong by reasoning, and the gate got right
+by measuring.
 
 ## Reasoning
 
@@ -255,4 +282,25 @@ scope that costs no graph reads, so the walk is paid by readers who asked for it
 
 ## Review Log
 
-*(empty — nothing has run yet)*
+**2026-09-03 — three defects the unit tier could not see.** Worth recording as a group,
+because the common factor is not carelessness: each was invisible to a suite that was
+green at the time.
+
+1. **A dangling import.** Phase A deleted `LADDER`; `js/ui/lens-views.js` kept importing
+   it. That is a SyntaxError at module-link time and would have broken the app on load —
+   through 764 passing unit tests, because *nothing imports the UI modules*.
+   `test/css-classes.test.js` and `test/a11y-names.test.js` read them with `readFileSync`
+   as text, which proves a string is present and proves nothing about whether the file
+   loads. Closed by `test/module-links.test.js`, which links every module and names
+   `js/main.js` as the one it cannot cover rather than leaving the gap implicit.
+2. **The masthead height regression** (Decision 3 above), found by measurement.
+3. **A warm-up that had been dead for weeks.** `lens.ringMembers('mutuals')` ran on every
+   sign-in, rejected with "unknown rung" because the rungs were renamed to
+   `me/mut/fol/hop/world`, and its own `.catch(() => {})` swallowed the error. A cache
+   warm that never warmed anything, kept looking healthy by its own error handler.
+
+**Cross-session sequencing.** `croftc-ba` was restructuring `shapeLensThread`'s
+self-thread walk in the same file. Divided by claim before either branch moved: this one
+went first, `sw.js` cache versions split v74/v75, and their question — *can a reader
+narrow themselves out of their own thread?* — became two tests here. The answer is no,
+structurally: every rung is a cumulative union starting at `me`.
