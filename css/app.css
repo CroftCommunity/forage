@@ -601,12 +601,20 @@ dialog.menu::backdrop { background: transparent; }
    the avatar's outermost 2px. */
 .comment.chain:not([data-depth="0"]):not([data-depth="1"]):not([data-depth="2"]):not([data-depth="3"]) > .kids { --in: 0px; --elbow: 8px; }
 
-/* thread-depth decision 3, variant B — Tildes' words, on EVERY flattened reply.
-   Their 2018 experiment prints "(Reply to above comment)" at the start of the
-   flattened reply, because without an indent there is nothing else saying which
-   comment it answers. Captured so the owner can see it; the question the frame
-   settles is not the wording, it is the frequency. */
-.comment.chain:not([data-depth="0"]):not([data-depth="1"]):not([data-depth="2"]):not([data-depth="3"]) > .kids > .comment > .comment-body > .comment-text::before {
+/* thread-depth decision 3, variant C — the same words, on the FIRST flattened
+   reply of a run only. Tildes' words are unambiguous and, repeated down a
+   ten-rung chain, they are five identical parentheticals each pushing the
+   reply's first sentence onto a second line
+   (snaps/thread-depth/label-all/deep-lens-open.phone.proposed.png). A run needs
+   saying once: after the first, the unbroken rail is carrying the same claim.
+
+   "First of a run" is a structural fact, so it is said structurally: this reply's
+   parent is a chain deep enough to flatten, AND the grandparent is not — either
+   not a chain at all (a branch interrupted the run, and a run can start at any
+   depth) or a chain too shallow for the rule to have fired. */
+:where(.comment:not(.chain), .comment.chain:is([data-depth="0"],[data-depth="1"],[data-depth="2"],[data-depth="3"]))
+  > .kids > .comment.chain:not([data-depth="0"]):not([data-depth="1"]):not([data-depth="2"]):not([data-depth="3"])
+  > .kids > .comment > .comment-body > .comment-text::before {
   content: "(Reply to above comment) "; color: var(--muted); font-size: var(--t-xs); }
 
 /* ---- thread-depth Phase B: the depth the tree arrives open to -------------
@@ -922,8 +930,10 @@ hr.rule { border: none; border-top: 1px solid var(--border); margin: var(--s4) 0
   .comment { --kids-indent: 14px; }
   /* thread-depth Phase A: a phone runs out of column two levels sooner */
   .comment.chain:not([data-depth="0"]):not([data-depth="1"]) > .kids { --in: 0px; --elbow: 8px; }
-  /* decision 3 variant B: the phone threshold, so the label follows the flatten */
-  .comment.chain:not([data-depth="0"]):not([data-depth="1"]) > .kids > .comment > .comment-body > .comment-text::before {
+  /* decision 3 variant C: the phone threshold, so the label follows the flatten */
+  :where(.comment:not(.chain), .comment.chain:is([data-depth="0"],[data-depth="1"]))
+    > .kids > .comment.chain:not([data-depth="0"]):not([data-depth="1"])
+    > .kids > .comment > .comment-body > .comment-text::before {
     content: "(Reply to above comment) "; color: var(--muted); font-size: var(--t-xs); }
   .shell { padding: var(--s2); }
 }
