@@ -45,44 +45,46 @@ code{font-size:.92em}
   <header>
     <div class="eyebrow">Forage · mock · ring-scope</div>
     <h1>The ring becomes a scope, and one pill sets it</h1>
-    <p class="sub"><b>Six frames, three surfaces, phone and desktop.</b> Captures of the engine, not
-    drawings: <b>Current</b> is <code>forage@8bc6cbd</code> (main), <b>Proposed</b> is
-    <code>forage@c5281f8</code> (<code>claude/ring-scope</code>), both taken by
-    <code>scripts/mock-snaps.mjs</code> at 390×844 and 1280×900 against the same signed-in
-    population. What this mock is for: the ring stops being five places you go and becomes one
-    control over what every surface shows you. Everything below is the visible half of that.</p>
+    <p class="sub"><b>Eight frames, four surfaces, phone and desktop.</b> Captures of the engine,
+    not drawings: <b>Current</b> is <code>forage@8bc6cbd</code> (main), <b>Proposed</b> is
+    <code>forage@f52b8a6</code> (<code>claude/ring-scope</code>), both taken by
+    <code>scripts/mock-snaps.mjs</code> at 390×844 and 1280×900 against the same population.
+    What this mock is for: the ring stops being five places you go and becomes one control over
+    what every surface shows you.</p>
   </header>
 
   <section>
     <div class="callout">
-      <p><b>Read the pill as a scope, not a destination.</b> On main, "Your ring" is five rows in the
-      left nav and pressing one takes you to a board of those people. On the branch there are no
-      rows: there is a pill, it takes you nowhere, and it decides who is in everything you are
-      already looking at. World is the default, so a reader who never touches it sees exactly what
-      they see today.</p>
+      <p><b>Read the pill as a scope, not a destination.</b> On main, "Your ring" is five rows in
+      the left nav and pressing one takes you to a board of those people. On the branch the section
+      keeps its place and holds one control: it takes you nowhere, and it decides who is in
+      everything you are already looking at. World is the default, so a reader who never touches it
+      sees exactly what they see today.</p>
     </div>
   </section>
 
   <section>
-    <div class="eyebrow">A · the board</div>
-    <h2>A. The nav loses five rows; the chrome gains one control</h2>
-    <p class="sub"><b>Current:</b> the left nav opens with <b>Your ring</b> — Just me, My mutuals,
-    My follows, My follows one hop out, World — above Feeds. Each is an address. <b>Proposed:</b>
-    that section is gone and a segmented pill sits in its own bar under the masthead:
-    <b>Mutuals · Follows · World</b>, World selected. The pill is a sibling of the masthead rather
-    than inside it, and that is a measurement rather than a preference — see Decision 3 below.</p>
-    <div class="stage">
-      <div class="device phone"><div class="device-label">Phone · board · CURRENT (forage@8bc6cbd)</div>
-        <img class="shot" src="snaps/ring-scope/board-lens-in.phone.current.png" alt="Signed-in lens board on a phone today: masthead, then Discover; the ring lives in the drawer nav" width="390"></div>
-      <div class="device phone"><div class="device-label">Phone · board · PROPOSED (forage@c5281f8)</div>
-        <img class="shot" src="snaps/ring-scope/board-lens-in.phone.proposed.png" alt="Signed-in lens board on a phone on the branch: a Mutuals / Follows / World pill in its own bar under the masthead, World selected" width="390"></div>
-    </div>
+    <div class="eyebrow">A · the board, signed in</div>
+    <h2>A. Five rows become one control, in the same place</h2>
+    <p class="sub"><b>Current:</b> the nav opens with <b>Your ring</b> — Just me, My mutuals, My
+    follows, My follows one hop out, World — five addresses. <b>Proposed:</b> the heading stays and
+    holds a full-width pill, <b>Mutuals · Follows · World</b>, World selected. The section did not
+    move; it stopped being a list.</p>
     <div class="stage">
       <div class="device desk"><div class="device-label">Desktop · board · CURRENT (forage@8bc6cbd)</div>
-        <img class="shot" src="snaps/ring-scope/board-lens-in.desktop.current.png" alt="Signed-in lens board at 1280 today, with the ring section at the top of the left nav"></div>
-      <div class="device desk"><div class="device-label">Desktop · board · PROPOSED (forage@c5281f8)</div>
-        <img class="shot" src="snaps/ring-scope/board-lens-in.desktop.proposed.png" alt="Signed-in lens board at 1280 on the branch: no ring section in the nav, the pill in its own bar"></div>
+        <img class="shot" src="snaps/ring-scope/board-lens-in.desktop.current.png" alt="Signed-in board at 1280 today: the left nav opens with five Your ring rows above Feeds"></div>
+      <div class="device desk"><div class="device-label">Desktop · board · PROPOSED (forage@f52b8a6)</div>
+        <img class="shot" src="snaps/ring-scope/board-lens-in.desktop.proposed.png" alt="Signed-in board at 1280 on the branch: Your ring holds one full-width Mutuals / Follows / World pill, World selected"></div>
     </div>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · board · CURRENT (forage@8bc6cbd)</div>
+        <img class="shot" src="snaps/ring-scope/board-lens-in.phone.current.png" alt="Signed-in board on a phone today" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · board · PROPOSED (forage@f52b8a6)</div>
+        <img class="shot" src="snaps/ring-scope/board-lens-in.phone.proposed.png" alt="Signed-in board on a phone on the branch; the nav is a drawer at this width so the pill is behind the burger" width="390"></div>
+    </div>
+    <div class="callout"><p><b>On a phone the nav is a drawer,</b> so the site-wide pill is behind
+    the burger. That is what setting your ring already cost when it was five rows, and it is what
+    makes section B's thread pill matter rather than duplicate it.</p></div>
   </section>
 
   <section>
@@ -90,42 +92,67 @@ code{font-size:.92em}
     <h2>B. A thread carries its own pill, and it overrides that thread only</h2>
     <p class="sub">The ring applies site-wide, threads included — the owner's call, against this
     plan's own recommendation. That leaves one real hazard: a reply your ring hid is a reply whose
-    answer you cannot see. So the thread grew a widening control instead of an exemption. Moving it
-    changes <i>this thread</i>; the pill in the masthead stays exactly where you left it, and
-    navigating away drops the override. <b>Current:</b> no control. <b>Proposed:</b> the pill sits
-    above the head card, because it scopes the whole thread rather than the head post.</p>
+    answer you cannot see. So the thread grew a widening control rather than an exemption. Moving it
+    changes <i>this thread</i>; the pill in the nav stays where you left it, and navigating away
+    drops the override. <b>An earlier draft of this mock showed two identical pills stacked here</b>
+    — the site's under the masthead and the thread's directly below it. Moving the site-wide pill
+    into the nav is what fixed that: on a phone this is now the only pill on screen.</p>
     <div class="stage">
       <div class="device phone"><div class="device-label">Phone · thread · CURRENT (forage@8bc6cbd)</div>
         <img class="shot" src="snaps/ring-scope/thread-lens.phone.current.png" alt="Lens thread on a phone today, no ring control" width="390"></div>
-      <div class="device phone"><div class="device-label">Phone · thread · PROPOSED (forage@c5281f8)</div>
-        <img class="shot" src="snaps/ring-scope/thread-lens.phone.proposed.png" alt="Lens thread on a phone on the branch: a ring pill above the head card, plus the site-wide pill under the masthead" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · thread · PROPOSED (forage@f52b8a6)</div>
+        <img class="shot" src="snaps/ring-scope/thread-lens.phone.proposed.png" alt="Lens thread on a phone on the branch: one ring pill above the head card, the thread's own" width="390"></div>
     </div>
     <div class="stage">
       <div class="device desk"><div class="device-label">Desktop · thread · CURRENT (forage@8bc6cbd)</div>
         <img class="shot" src="snaps/ring-scope/thread-lens.desktop.current.png" alt="Lens thread at 1280 today"></div>
-      <div class="device desk"><div class="device-label">Desktop · thread · PROPOSED (forage@c5281f8)</div>
-        <img class="shot" src="snaps/ring-scope/thread-lens.desktop.proposed.png" alt="Lens thread at 1280 on the branch, with the thread's own ring pill"></div>
+      <div class="device desk"><div class="device-label">Desktop · thread · PROPOSED (forage@f52b8a6)</div>
+        <img class="shot" src="snaps/ring-scope/thread-lens.desktop.proposed.png" alt="Lens thread at 1280 on the branch: the nav pill on the left, the thread's own pill above the head card"></div>
     </div>
   </section>
 
   <section>
-    <div class="eyebrow">C · settings</div>
-    <h2>C. Advanced: which stops the pill offers, and whether feeds are in scope</h2>
+    <div class="eyebrow">C · signed out</div>
+    <h2>C. A guest sees the pill, locked to World</h2>
+    <p class="sub">Owner's call, and a deliberate exception to the guest-surface rule that hides
+    what a reader cannot use. The rule's own reasoning is what allows it: it exists so a control
+    does not sit there absorbing clicks, and a locked segment absorbs nothing while showing a
+    signed-out reader that scoping exists and where they stand. <b>Mutuals and Follows are drawn and
+    dimmed</b>, each with a tooltip saying they are computed from your own follow graph; World is
+    selected and live. The five rows could never have done this — five rows minus the four you
+    cannot use is a list of one, which reads as broken.</p>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Desktop · signed out · CURRENT (forage@8bc6cbd)</div>
+        <img class="shot" src="snaps/ring-scope/board-lens.desktop.current.png" alt="Signed-out board at 1280 today: no ring section at all, one line explaining why"></div>
+      <div class="device desk"><div class="device-label">Desktop · signed out · PROPOSED (forage@f52b8a6)</div>
+        <img class="shot" src="snaps/ring-scope/board-lens.desktop.proposed.png" alt="Signed-out board at 1280 on the branch: the pill is drawn with Mutuals and Follows dimmed and World selected, the note reworded beneath the nav"></div>
+    </div>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · signed out · CURRENT (forage@8bc6cbd)</div>
+        <img class="shot" src="snaps/ring-scope/board-lens.phone.current.png" alt="Signed-out board on a phone today" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · signed out · PROPOSED (forage@f52b8a6)</div>
+        <img class="shot" src="snaps/ring-scope/board-lens.phone.proposed.png" alt="Signed-out board on a phone on the branch" width="390"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">D · settings</div>
+    <h2>D. Advanced: which stops the pill offers, and whether feeds are in scope</h2>
     <p class="sub">Composability is the owner's ask — "users can remove or add entries on the
     slider" — and this is where it is spent. One checkbox per scope, World checked and disabled
     because it is the way back. Below it, the exemption: <b>Exclude feeds and hashtags from your
-    ring</b>, checked by default, on the grounds that a feed is something you went and asked for by
-    name. Uncheck it and a quiet feed can render empty, which is the setting working.</p>
+    ring</b>, checked by default, because a feed is something you went and asked for by name.
+    Uncheck it and a quiet feed can render empty, which is the setting working.</p>
     <div class="stage">
       <div class="device phone"><div class="device-label">Phone · /me Advanced · CURRENT (forage@8bc6cbd)</div>
         <img class="shot" src="snaps/ring-scope/deep-lens-prefs.phone.current.png" alt="Advanced settings on a phone today: alt text and deep threads" width="390"></div>
-      <div class="device phone"><div class="device-label">Phone · /me Advanced · PROPOSED (forage@c5281f8)</div>
+      <div class="device phone"><div class="device-label">Phone · /me Advanced · PROPOSED (forage@f52b8a6)</div>
         <img class="shot" src="snaps/ring-scope/deep-lens-prefs.phone.proposed.png" alt="Advanced settings on a phone on the branch: a Your ring section with a stop per scope and the feeds exemption" width="390"></div>
     </div>
     <div class="stage">
       <div class="device desk"><div class="device-label">Desktop · /me Advanced · CURRENT (forage@8bc6cbd)</div>
         <img class="shot" src="snaps/ring-scope/deep-lens-prefs.desktop.current.png" alt="Advanced settings at 1280 today"></div>
-      <div class="device desk"><div class="device-label">Desktop · /me Advanced · PROPOSED (forage@c5281f8)</div>
+      <div class="device desk"><div class="device-label">Desktop · /me Advanced · PROPOSED (forage@f52b8a6)</div>
         <img class="shot" src="snaps/ring-scope/deep-lens-prefs.desktop.proposed.png" alt="Advanced settings at 1280 on the branch, with Your ring"></div>
     </div>
   </section>
@@ -139,14 +166,14 @@ code{font-size:.92em}
         <td><b>Closed — 1a.</b> Mutuals · Follows · World, tightest first. <code>hop</code> stays in the registry for anyone who adds it.</td></tr>
       <tr><td>2</td><td>Does the ring reach inside a thread?</td>
         <td><b>Closed — yes,</b> against this plan's recommendation. Decision 4 is what makes that safe.</td></tr>
-      <tr><td>3</td><td>Where does the pill live, and what do the labels say on a phone?</td>
-        <td><b>Answered by the gate.</b> Not the masthead: <code>e2e/avatar-nav</code> pins it at one row at 320px and three segments at the 44px touch floor took it to 167px. Own bar, not sticky, short labels.</td></tr>
+      <tr><td>3</td><td>Where does the pill live?</td>
+        <td><b>Closed — the left nav, at the top,</b> where the section already was. An earlier build put it under the masthead; that broke a pinned 320px measurement AND drew two pills on a thread.</td></tr>
       <tr><td>4</td><td>The thread pill — global or local?</td>
         <td><b>Closed — a transient override.</b> An argument, never a write, so leaving the thread drops it by construction.</td></tr>
+      <tr><td>5</td><td>What does a signed-out reader see?</td>
+        <td><b>Closed — the pill, locked to World.</b> The one exception to the guest-surface rule, pinned three ways so it cannot rot into "five greyed rows".</td></tr>
       <tr><td class="tag">open</td><td>Do the <code>/r/&lt;rung&gt;</code> routes retire?</td>
         <td>They still resolve. Retiring them orphans the merged ring board — roughly 400 lines and fifteen tests — and that deletion is its own decision.</td></tr>
-      <tr><td class="tag">open</td><td>Should the pill be sticky?</td>
-        <td>It is not. Sticking it under a sticky masthead means two elements agreeing about a number that a skin changing the band's padding would break.</td></tr>
     </table></div>
   </section>
 
