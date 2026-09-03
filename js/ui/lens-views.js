@@ -13,7 +13,8 @@ import * as drafts from '../drafts.js';
 import { go, navKind, rerenderNow } from '../router.js';
 import { appFor } from '../auth/hosts.js';
 import { navTree } from './nav.js';
-import { LADDER, RUNG_IDS, labelFor } from '../rings.js';
+import { RUNG_IDS, labelFor, SCOPES } from '../rings.js';
+import * as ringScope from '../ring-scope.js';
 import { lastBoard, setLastBoard, landingBoard, DIRECTORY } from '../last-board.js';
 import { createLens, LENS_PERMS, RING_CAP, facetSegments, trimCardLink, slugifyFeedName, sortWindow, affordanceFor,
   feedCardModel, threadNodeStyle, feedPath, parseFeedRoute, sessionGateMessage, canDelete, sourceLabel,
@@ -352,10 +353,19 @@ async function adoptSession(s) {
   savedFeedUris.clear();
   pinnedFeedUris.clear();
   savedFeedsPromise = null;
-  // 3x: warm the ring the dial will most likely ask for, while the board is
-  // still painting. Fire-and-forget: a failure here must never break sign-in,
-  // and the dial will simply compute it the normal way.
-  lens.ringMembers('mutuals').catch(() => {});
+  // Apply the reader's ring while the board is still painting.
+  //
+  // This line used to read `lens.ringMembers('mutuals')`, and it had been dead
+  // since the rungs were renamed to me/mut/fol/hop/world: 'mutuals' is not a
+  // rung id, so the call rejected with "unknown rung" every time and the
+  // `.catch(() => {})` swallowed it. A warm-up that silently never warmed
+  // anything, kept honest-looking by its own error handler.
+  //
+  // Fire-and-forget stays right for the same reason it was before — a failure
+  // here must never break sign-in — but it now warms the scope the reader is
+  // ACTUALLY on, and repaints when it lands so the first board is not drawn
+  // unscoped and then quietly re-scoped underneath them.
+  syncRingScope().then(() => rerenderNow()).catch(() => {});
   roster.remember({ did: s.did, handle }); // 3k: this device knows this account now
   // 3f: mirror the account's moderation posture — mute a word on bsky.app and
   // it is muted here. A failure runs unfiltered WITH WORDS, never silently.
@@ -364,6 +374,16 @@ async function adoptSession(s) {
   } catch (e) {
     toast('Moderation settings could not load — the lens is running unfiltered: ' + e.message, 'err');
   }
+}
+
+// Push the reader's ring onto the lens posture. Every board, thread and search
+// result shapes through that posture, so this one call is what makes the pill
+// site-wide; nothing downstream opts in.
+export async function syncRingScope() {
+  if (!session) return null;
+  return lens.applyScope(ringScope.scope(), {
+    exemptKinds: ringScope.exemptsFeeds() ? ringScope.EXEMPT_KINDS : [],
+  });
 }
 
 // 3f: the read-only Moderation panel — we mirror and respect; the network's
@@ -2895,6 +2915,31 @@ export function lensProfileView() {
     // apply() just wrote. The fold dial does: which replies arrive folded is a
     // render decision, and a thread already on screen was drawn under the old one.
     foldSel.addEventListener('change', () => { threadShape.setFold(foldSel.value); rerenderNow(); });
+    // The ring, plan 2026-09-03. Two controls, because they answer different
+    // questions: WHICH STOPS the pill offers, and WHETHER the ring reaches
+    // feeds and hashtags. Advanced for the same reason Browse Hashtags is —
+    // the pill itself is the everyday control and most readers never need to
+    // change what is on it.
+    const exemptBox = el('input', { type: 'checkbox', id: 'pref-ringexempt', 'data-ringexempt': '1',
+      checked: ringScope.exemptsFeeds() || false });
+    exemptBox.addEventListener('change', () => { ringScope.setExemptsFeeds(exemptBox.checked); });
+    const stopBoxes = SCOPES.map((sc) => {
+      const on = ringScope.stops().includes(sc.id);
+      // World is pinned: it is the ring declining to narrow, which makes it the
+      // pill's off position, and a reader who removed it would have no way back
+      // to it from the control itself. Shown checked and disabled rather than
+      // hidden, so the pinning is visible instead of mysterious.
+      const pinned = sc.id === 'world';
+      const cb = el('input', { type: 'checkbox', id: `ringstop-${sc.id}`, 'data-ringstop': sc.id,
+        checked: on || false, disabled: pinned || false });
+      if (!pinned) {
+        cb.addEventListener('change', () => {
+          if (cb.checked) ringScope.addStop(sc.id); else ringScope.removeStop(sc.id);
+        });
+      }
+      return el('label', { class: 'seccheck', for: `ringstop-${sc.id}` },
+        cb, el('span', {}, `${sc.label} — ${sc.blurb}`));
+    });
     return el('details', { class: 'card', 'data-advanced': '1' },
       el('summary', { style: 'cursor:pointer;min-height:44px;display:flex;align-items:center' }, 'Advanced'),
       el('div', { style: 'margin-top:8px' },
@@ -2911,6 +2956,14 @@ export function lensProfileView() {
           'Replies deeper than this arrive folded behind one line saying how many there are. Press it and the whole branch opens where it stands — nothing is fetched again and you do not leave the page.'),
         el('label', { style: 'display:flex;flex-direction:column;align-items:flex-start;gap:4px', for: 'pref-threadfold' },
           el('span', { class: 'xs' }, 'Fold replies deeper than'), foldSel),
+        el('h3', { style: 'font-size:var(--t-md);margin:12px 0 4px' }, 'Your ring'),
+        el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
+          'Your ring is how close to you a post has to come from before you see it, and the pill at the top of the page sets it. These are the stops that pill offers — a tighter one shows you less, and each one includes everyone in the one before it. World is always offered: it is the ring not narrowing at all, and it is how you get everything back. Turning the ring down never turns your moderation off — blocks, mutes and muted words apply the same at every stop.'),
+        ...stopBoxes,
+        el('div', { class: 'xs muted', style: 'margin:10px 0 6px' },
+          'Feeds and hashtags are boards you went and asked for by name, so by default they arrive whole and your ring leaves them alone. Uncheck this and your ring applies to them too — a quiet feed can then look empty, and that is the setting working rather than a board failing to load.'),
+        el('label', { class: 'seccheck', for: 'pref-ringexempt' }, exemptBox,
+          el('span', {}, 'Exclude feeds and hashtags from your ring')),
         el('h3', { style: 'font-size:var(--t-md);margin:12px 0 4px' }, 'Browse Hashtags'),
         el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
           'Which sections appear on the Hashtags page. Unchecking all of them leaves it empty, which is allowed.'),

@@ -278,3 +278,67 @@ test('forgetRings drops the filter set too — a new account is a new graph', as
   await lens.scopeMembersFor('fol');
   assert.ok(calls.length > first, 're-walked rather than serving another account the last one');
 });
+
+// ---- applying a scope to the live posture ----
+//
+// The ring has to ride the SAME posture object the boards already read, or the
+// shape layer would need a second argument threaded through eleven call sites.
+// It also has to survive a moderation reload: loadPosture() replaces the
+// posture wholesale, and a reader whose mutes refreshed must not silently find
+// themselves back at World.
+
+const postSession = (pages, graph = {}) => {
+  const g = graphSession(graph);
+  const fetchHandler = async (path, init) => {
+    if (path.includes('app.bsky.graph.getFollow')) return g.session.fetchHandler(path, init);
+    const name = path.split('?')[0].split('/').pop();
+    return { ok: true, status: 200, json: async () => pages[name] ?? {} };
+  };
+  return { session: { did: ME, handle: 'me.test', fetchHandler }, calls: g.calls };
+};
+
+const MOD = {
+  'app.bsky.actor.getPreferences': { preferences: [] },
+  'app.bsky.graph.getMutes': { mutes: [{ did: 'did:plc:muted' }] },
+  'app.bsky.graph.getBlocks': { blocks: [] },
+  'app.bsky.graph.getListMutes': { lists: [] },
+  'app.bsky.graph.getListBlocks': { lists: [] },
+};
+
+test('applyScope puts the ring on the posture the boards already read', async () => {
+  const { session } = postSession(MOD, {
+    [`getFollows:${ME}`]: [['did:plc:a']], [`getFollowers:${ME}`]: [['did:plc:a']],
+  });
+  const lens = createLens({ session });
+  await lens.applyScope('fol', { exemptKinds: ['feed'] });
+  const p = lens.posture();
+  assert.ok(p.ring.members.has('did:plc:a'));
+  assert.ok(p.ring.members.has(ME), 'the ladder is cumulative from me outward');
+  assert.ok(p.ring.exemptKinds.has('feed'));
+});
+
+test('applyScope("world") un-narrows without disturbing anything else', async () => {
+  const { session } = postSession(MOD, {
+    [`getFollows:${ME}`]: [['did:plc:a']], [`getFollowers:${ME}`]: [['did:plc:a']],
+  });
+  const lens = createLens({ session });
+  await lens.loadPosture();
+  await lens.applyScope('fol');
+  await lens.applyScope('world');
+  const p = lens.posture();
+  assert.equal(p.ring.members, null);
+  assert.ok(p.mutedDids.has('did:plc:muted'), 'World is unringed, not unmoderated');
+});
+
+test('a moderation reload does NOT quietly drop the reader out of their scope', async () => {
+  const { session } = postSession(MOD, {
+    [`getFollows:${ME}`]: [['did:plc:a']], [`getFollowers:${ME}`]: [['did:plc:a']],
+  });
+  const lens = createLens({ session });
+  await lens.applyScope('fol', { exemptKinds: ['feed', 'hashtag'] });
+  await lens.loadPosture();                       // e.g. the reader muted a word on bsky.app
+  const p = lens.posture();
+  assert.ok(p.ring.members?.has('did:plc:a'), 'still scoped to follows');
+  assert.ok(p.ring.exemptKinds.has('hashtag'), 'and still exempting what it was');
+  assert.ok(p.mutedDids.has('did:plc:muted'), 'with the fresh moderation applied');
+});

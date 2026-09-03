@@ -61,6 +61,8 @@ export async function run() {
       'a guest gets NO ring section — hiding three of four rungs would leave one, which reads as broken');
     assert.equal(await guest.page.locator('[data-nav-item="mut"]').count(), 0,
       'and no rung rows at all, greyed or otherwise');
+    assert.equal(await guest.page.locator('[data-ring-bar]').count(), 0,
+      'nor the ring pill the rungs became — same rule, new surface');
     const note = await guest.page.locator('.navnote').innerText();
     assert.match(note, /follow graph/i, 'the absence is explained once, in words');
     // Feeds ARE readable signed out, so they stay.
@@ -93,18 +95,24 @@ export async function run() {
   // ---- 2. one press, one thing ----
   const s = await scenario('first-visit', { mode: 'bluesky', initScripts: [FAKE_SIGNED_IN], responses: RESPONSES });
   try {
-    await s.page.goto(`${s.origin}/r/mut`);
-    await s.page.waitForSelector('[data-nav-item="fol"]');
-    assert.equal(await s.page.locator('[data-nav-item="mut"][aria-current="page"]').count(), 1,
+    // The rung rows used to carry this. Plan 2026-09-03 took the ring off the
+    // nav — it is a scope now, not five destinations — so the property ("one
+    // press, one thing; the marker MOVES rather than accumulating") is checked
+    // on the rows that remain. It was never a fact about rings.
+    // Trending and Browse-all-feeds, because nav.js renders those two
+    // unconditionally — a feed row depends on what the fixture's account has
+    // saved, and using one made this assert on the fixture rather than on the
+    // nav.
+    await s.page.goto(`${s.origin}/trending`);
+    await s.page.waitForSelector('[data-nav-item="directory"][aria-current="page"]');
+    assert.equal(await s.page.locator('[data-nav-item="directory"][aria-current="page"]').count(), 1,
       'the nav marks where you are');
 
-    await s.page.click('[data-nav-item="hop"]');
-    await s.page.waitForSelector('[data-nav-item="hop"][aria-current="page"]');
-    assert.match(await s.page.locator('h1').first().innerText(), /one hop out/i,
-      'the board switched');
-    assert.equal(await s.page.locator('[data-nav-item="mut"][aria-current="page"]').count(), 0,
+    await s.page.click('[data-nav-item="feeds"]');
+    await s.page.waitForSelector('[data-nav-item="feeds"][aria-current="page"]');
+    assert.equal(await s.page.locator('[data-nav-item="directory"][aria-current="page"]').count(), 0,
       'and the old marker moved rather than accumulating');
-    assert.ok(s.page.url().endsWith('/r/hop'), 'a rung is a real address, so it is shareable and reloadable');
+    assert.ok(s.page.url().endsWith('/feeds'), 'a board is a real address, so it is shareable and reloadable');
 
     // The defect that killed the strip: pressing a nav row must not also open
     // something. Nothing else may appear as a side effect of navigating.
@@ -156,9 +164,9 @@ export async function run() {
     // Navigating from inside the drawer closes it behind you.
     await s.page.click('.navburger');
     await s.page.waitForSelector('[data-nav="1"]:visible');
-    await s.page.click('[data-nav-item="fol"]');
+    await s.page.click('[data-nav-item="directory"]');
     await s.page.waitForSelector('[data-nav="1"]:visible', { state: 'hidden' });
-    assert.ok(s.page.url().endsWith('/r/fol'), 'and it actually navigated');
+    assert.ok(s.page.url().endsWith('/trending'), 'and it actually navigated');
   } finally { await s.close(); }
 
   // ---- 5. v11: the centre column scrolls on its own (owner: "can we make the

@@ -1137,6 +1137,13 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
   // hiddenUris rides on the posture so the shape layer applies it like a mute;
   // the caller owns persisting it (a substrate never reaches for localStorage).
   let posture = { ...EMPTY_POSTURE, hiddenUris };
+  // The reader's ring, held apart from the posture it is composed onto.
+  // loadPosture() replaces the posture wholesale, so a ring folded INTO it
+  // would vanish every time the account's mutes refreshed — the reader would
+  // silently drop back to World mid-session with no event to explain it.
+  // Keeping the spec here means "what the reader chose" and "what their account
+  // says" are re-composed rather than one overwriting the other.
+  let ringSpec = { members: null, exemptKinds: [] };
   // 3x: rings are expensive — mutuals+1 is one getFollows per mutual, so a
   // full ring is 26+ graph reads before a single post loads, and it was paid
   // again on every visit to the dial. The follow graph changes slowly, so the
@@ -1231,10 +1238,21 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
         get('app.bsky.graph.getListMutes', { limit: 100 }),
         get('app.bsky.graph.getListBlocks', { limit: 100 }),
       ]);
-      posture = { ...buildPosture({
+      posture = withRing({ ...buildPosture({
         preferences: prefs.preferences, mutes: mutes.mutes, blocks: blocks.blocks,
         listMutes: listMutes.lists, listBlocks: listBlocks.lists,
-      }, Date.now()), hiddenUris };
+      }, Date.now()), hiddenUris }, ringSpec);
+      return posture;
+    },
+
+    // Move the reader's ring. Resolves once the graph walk behind the scope has
+    // landed, so a caller can repaint knowing the posture is the new one — the
+    // pill is a control whose effect is a re-render, and painting the old board
+    // under the new label is the one thing it must not do.
+    async applyScope(scope, { exemptKinds = [] } = {}) {
+      const { members } = await this.scopeMembersFor(scope);
+      ringSpec = { members, exemptKinds };
+      posture = withRing(posture, ringSpec);
       return posture;
     },
     posture: () => posture,

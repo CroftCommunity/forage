@@ -60,6 +60,12 @@ const seen = (page) => page.evaluate(() => ({
   ringButtons: [...document.querySelectorAll('.nav [data-nav-item]')]
     .map((b) => b.getAttribute('data-nav-item'))
     .filter((id) => ['me', 'mut', 'fol', 'hop', 'world'].includes(id)),
+  // plan 2026-09-03: the ring left the nav and became a scope pill. The
+  // guest-surface rule is unchanged and so is this test's question — is the
+  // control ABSENT for a guest, rather than present and greyed — but the thing
+  // to count moved, so both are counted rather than one replacing the other.
+  ringPillStops: [...document.querySelectorAll('[data-ring-bar] [data-scope]')]
+    .map((i) => i.getAttribute('data-scope')),
   ringCardAnywhere: document.querySelector('.navnote')?.innerText?.replace(/\n+/g, ' ')
     ?? [...document.querySelectorAll('.card')].map((c) => c.innerText.replace(/\n+/g, ' ')).find((t) => /ring/i.test(t)) ?? null,
   favorite: document.querySelectorAll('[data-feed-favorite]').length,
@@ -108,6 +114,8 @@ export async function run() {
 
     assert.deepEqual(home.ringButtons, [],
       `a guest is shown no ring buttons at all — a one-option dial is not "clean", it is broken. Saw: ${JSON.stringify(home.ringButtons)}`);
+    assert.deepEqual(home.ringPillStops, [],
+      `and no ring PILL either — a ring is computed from your own follow graph, so a guest has none to scope by. Saw: ${JSON.stringify(home.ringPillStops)}`);
     assert.ok(home.ringCardAnywhere && /account|sign in|follow graph/i.test(home.ringCardAnywhere),
       `the absence must still be EXPLAINED once, in words: ${JSON.stringify(home.ringCardAnywhere)}`);
 
@@ -206,10 +214,10 @@ export async function run() {
     mode: 'bluesky', initScripts: [FAKE_SIGNED_IN], responses: RESPONSES });
   try {
     await inn.page.goto(`${inn.origin}/`);
-    await inn.page.waitForSelector('.nav [data-nav-item="mut"]');
+    await inn.page.waitForSelector('[data-ring-bar]');
     const home = await seen(inn.page);
-    assert.ok(home.ringButtons.length >= 4,
-      `signed in the ladder is offered in full: ${JSON.stringify(home.ringButtons)}`);
+    assert.deepEqual(home.ringPillStops, ['mut', 'fol', 'world'],
+      `signed in the pill is offered, tightest-first: ${JSON.stringify(home.ringPillStops)}`);
 
     await inn.page.goto(`${inn.origin}/f/whats-hot`);
     await inn.page.waitForSelector('.postrow');

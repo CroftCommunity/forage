@@ -16,7 +16,7 @@ import assert from 'node:assert/strict';
 import {
   STOPS_KEY, SCOPE_KEY, EXEMPT_KEY, DEFAULT_STOPS, DEFAULT_SCOPE, EXEMPT_KINDS,
   stops, setStops, addStop, removeStop, scope, setScope,
-  exemptsFeeds, setExemptsFeeds, effectiveScope, onChange,
+  exemptsFeeds, setExemptsFeeds, effectiveScope, onChange, ringPill,
 } from '../js/ring-scope.js';
 
 // Each test gets its own storage: a module-level cache would make these order-
@@ -176,4 +176,92 @@ test('no storage at all reads as the defaults and never throws', () => {
   } finally {
     if (saved === undefined) delete globalThis.localStorage; else globalThis.localStorage = saved;
   }
+});
+
+// ---- the pill ----
+//
+// Built with an injected el(), the same way js/board-density.js builds its
+// dial, so the structure is testable without a DOM. What is checked here is
+// what a browser tier cannot cheaply check: that the segments come out in
+// containment order, that exactly one is selected, that an override selects
+// without writing, and that two pills on one page do not merge into one radio
+// group. The paint is the browser tier's job.
+
+const fakeEl = (tag, attrs = {}, ...kids) => ({
+  tag, attrs, kids: kids.flat().filter((k) => k != null && k !== false),
+});
+const walk = (n, out = []) => {
+  if (n && n.tag) { out.push(n); (n.kids || []).forEach((k) => walk(k, out)); }
+  return out;
+};
+const inputs = (pill) => walk(pill).filter((n) => n.tag === 'input');
+
+test('the pill renders one segment per stop, in containment order', () => {
+  withStorage({}, () => {
+    const pill = ringPill(fakeEl, { onPicked() {} });
+    assert.deepEqual(inputs(pill).map((i) => i.attrs['data-scope']), ['mut', 'fol', 'world']);
+  });
+});
+
+test('exactly one segment is checked, and it is the current scope', () => {
+  withStorage({}, () => {
+    setScope('fol');
+    const checked = inputs(ringPill(fakeEl, { onPicked() {} })).filter((i) => i.attrs.checked);
+    assert.equal(checked.length, 1);
+    assert.equal(checked[0].attrs['data-scope'], 'fol');
+  });
+});
+
+test('an override selects its own segment and never writes the stored scope', () => {
+  withStorage({}, () => {
+    setScope('mut');
+    const pill = ringPill(fakeEl, { override: 'world', onPicked() {} });
+    const checked = inputs(pill).filter((i) => i.attrs.checked);
+    assert.deepEqual(checked.map((i) => i.attrs['data-scope']), ['world']);
+    assert.equal(scope(), 'mut', 'the thread pill showed World; the site-wide scope is untouched');
+  });
+});
+
+test('a one-stop pill is not a control, and does not render', () => {
+  withStorage({}, () => {
+    setStops([]);                      // World is pinned, so this leaves exactly one
+    assert.deepEqual(stops(), ['world']);
+    assert.equal(ringPill(fakeEl, { onPicked() {} }), null);
+  });
+});
+
+test('two pills on one page are two radio groups, not one', () => {
+  withStorage({}, () => {
+    const a = inputs(ringPill(fakeEl, { onPicked() {} })).map((i) => i.attrs.name);
+    const b = inputs(ringPill(fakeEl, { onPicked() {} })).map((i) => i.attrs.name);
+    assert.equal(new Set(a).size, 1, 'one pill is one group');
+    assert.notEqual(a[0], b[0], 'the masthead pill and the thread pill do not steer each other');
+  });
+});
+
+test('the pill and every segment carry an accessible name', () => {
+  withStorage({}, () => {
+    const pill = ringPill(fakeEl, { onPicked() {} });
+    assert.ok(pill.attrs['aria-label'], 'the group is named');
+    const labels = walk(pill).filter((n) => n.tag === 'label');
+    assert.equal(labels.length, 3);
+    for (const l of labels) {
+      assert.ok(l.attrs.for, 'each label points at its input');
+      assert.ok(l.attrs.title, 'and says what the scope means on hover');
+    }
+    // The visible text is the SHORT label: "My follows, one hop out" does not
+    // fit a 390px phone beside three siblings at a 44px tap floor.
+    const text = walk(pill).flatMap((n) => n.kids).filter((k) => typeof k === 'string');
+    assert.ok(text.includes('Follows') && text.includes('World'));
+    assert.ok(!text.some((t) => t.includes('one hop out')));
+  });
+});
+
+test('picking a segment reports the scope it stands for', () => {
+  withStorage({}, () => {
+    const picked = [];
+    const pill = ringPill(fakeEl, { onPicked: (id) => picked.push(id) });
+    inputs(pill).find((i) => i.attrs['data-scope'] === 'fol').attrs.onchange();
+    assert.deepEqual(picked, ['fol']);
+  });
 });

@@ -1,6 +1,7 @@
 // Bootstrap: layout, routes, store subscription, skins, service worker.
 
 import * as store from './store.js';
+import * as ringScope from './ring-scope.js';
 import * as router from './router.js';
 import * as sel from './selectors.js';
 import * as actions from './actions.js';
@@ -65,6 +66,38 @@ function skinToggle() {
   if (sibling) btn.addEventListener('click', () => skins.setSkin(sibling));
   else { btn.disabled = true; btn.setAttribute('aria-disabled', 'true'); }
   return btn;
+}
+
+// The ring pill, in a bar of its OWN — a sibling of the masthead, never inside
+// it.
+//
+// It started inside, and e2e/avatar-nav.workflow.mjs failed the measurement
+// that made E144 a dependency in the first place: the masthead must stay ONE
+// row at 320px, and three segments at the 44px touch floor took it to 167px.
+// That budget was spent once already (113px -> 61px, by deleting a duplicate
+// "Home" link, 2776537) and the saving is not available a second time. So this
+// is not a styling preference — the masthead has no room, measured, and a
+// control that scopes the whole site is too important to render at 30px to fit.
+//
+// Not sticky, deliberately. Making it stick under a sticky masthead means
+// pinning `top` to the masthead's height, which is exactly the kind of
+// two-elements-must-agree-about-a-number arrangement that breaks the moment a
+// skin changes the band's padding. The ring is a setting you move occasionally
+// rather than a control you reach for mid-scroll, and a thread carries its own
+// pill for the case where you do.
+//
+// Signed in only — the guest-surface rule this chrome already follows: hide
+// what a reader CANNOT use rather than greying it. A ring is computed from YOUR
+// follow graph, so a guest has none.
+function ringBar() {
+  if (pmode.active() !== 'bluesky') return null;
+  const who0 = lensViews.sessionIdentity();
+  if (!who0 || who0 === 'connecting') return null;
+  const pill = ringScope.ringPill(el, {
+    ariaLabel: 'How close — what you see is scoped to this',
+    onPicked: (id) => ringScope.setScope(id),
+  });
+  return pill ? el('div', { class: 'ringbar', 'data-ring-bar': '1' }, pill) : null;
 }
 
 function masthead() {
@@ -258,6 +291,16 @@ navScrim.addEventListener('click', () => setDrawer(false));
 window.matchMedia('(max-width: 800px)').addEventListener('change', () => setDrawer(false));
 window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && drawerOpen) setDrawer(false); });
 
+// Moving the pill changes what every board contains, so the repaint waits for
+// the graph walk behind the new scope to land. Painting immediately would show
+// the OLD board under the NEW label for as long as the walk takes — the one
+// thing a control whose entire effect is a re-render must not do.
+ringScope.onChange(() => {
+  lensViews.syncRingScope().then(() => render()).catch((e) => {
+    console.warn('forage: ring scope failed to apply', e);
+  });
+});
+
 // ---------- render pipeline ----------
 let currentCleanup = null;
 // What KIND of render this is lives in the router now (router.navKind), because a
@@ -266,7 +309,7 @@ let currentCleanup = null;
 function render() {
   // dev bar (memory-only scaffolding, user 2026-08-26) + masthead always fresh
   devHost.replaceChildren(pmode.active() === 'memory' ? devBar() : '');
-  mastHost.replaceChildren(masthead());
+  mastHost.replaceChildren(masthead(), ringBar());
   if (currentCleanup) { currentCleanup(); currentCleanup = null; }
   let out;
   try { out = router.dispatch() || { main: el('div', {}), side: null }; }

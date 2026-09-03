@@ -22,7 +22,7 @@
 // fault of the caller; a caller asking to select a scope that is not on the pill
 // is a bug in the caller.
 
-import { byRank, RUNG_IDS } from './rings.js';
+import { byRank, RUNG_IDS, scopeFor } from './rings.js';
 
 export const STOPS_KEY = 'forage.ringstops';
 export const SCOPE_KEY = 'forage.ringscope';
@@ -134,4 +134,54 @@ export function onChange(fn) { listeners.add(fn); return () => listeners.delete(
 function notify() {
   const state = { scope: scope(), stops: stops(), exemptsFeeds: exemptsFeeds() };
   for (const fn of listeners) fn(state);
+}
+
+// ---- the control ----
+//
+// Built with an injected el(), the same way js/board-density.js builds its
+// density dial, so this module still needs no DOM and stays unit-testable.
+//
+// NATIVE RADIOS, not buttons with role="radio". A radio group gives arrow-key
+// navigation, roving focus and the "3 of 4" announcement for free, and every
+// hand-rolled segmented control has to reimplement all three. The inputs are
+// visually hidden and the LABELS are the segments, which is also what puts a
+// 44px tap target under each one without a min-height on a <button> fighting
+// its own line-height.
+//
+// The visible text is the SHORT label. "My follows, one hop out" beside three
+// siblings does not fit a 390px phone; the long wording lives in the title and
+// on the settings page, where there is room for it.
+let pillSeq = 0;
+
+export function ringPill(el, { override = null, onPicked, ariaLabel = 'How close' } = {}) {
+  const open = stops();
+  // A control with one value is not a control — it is a label that absorbs
+  // clicks. World is pinned, so this is what a reader who removed everything
+  // else gets, and rendering nothing is the honest answer.
+  if (open.length < 2) return null;
+
+  const current = effectiveScope(override);
+  // Two pills can be on one page at once — the masthead and a thread header —
+  // and radios sharing a `name` are ONE group, so the second would steer the
+  // first. The sequence is what keeps them apart.
+  const group = `ringpill-${++pillSeq}`;
+
+  const segs = open.flatMap((id) => {
+    const s = scopeFor(id);
+    const inputId = `${group}-${id}`;
+    return [
+      el('input', {
+        type: 'radio', name: group, id: inputId, class: 'ringpill-in',
+        'data-scope': id, checked: id === current || false,
+        onchange: () => onPicked(id),
+      }),
+      el('label', { class: 'ringseg', for: inputId, title: `${s.label} — ${s.blurb}` },
+        el('span', { class: 'ico', 'aria-hidden': 'true' }, '◍'),
+        el('span', { class: 'ringseg-t' }, s.pill)),
+    ];
+  });
+
+  return el('div', {
+    class: 'ringpill', 'data-ring-pill': '1', role: 'radiogroup', 'aria-label': ariaLabel,
+  }, ...segs);
 }

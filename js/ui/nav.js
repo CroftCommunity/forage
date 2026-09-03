@@ -14,12 +14,12 @@
 // CURATED, not two kinds of thing. So the sections group boards by SOURCE,
 // which is the only real distinction, rather than by an invented category.
 //
-// Signed out there is no ring section at all — not greyed, absent — with one
-// line saying why. That is the guest-surface rule (49cf873): a control a
-// reader cannot use is hidden, and hiding three of four settings would leave
-// one option, which reads as broken rather than clean.
+// Signed out there is one line saying why the ring is missing. That is the
+// guest-surface rule (49cf873): a control a reader cannot use is hidden rather
+// than greyed. The note stayed when the ring left this file for the masthead
+// pill (plan 2026-09-03) — the pill is hidden for a guest by the same rule, and
+// this is still the only place the absence is explained in words.
 
-import { SCOPES } from '../rings.js';
 
 export function navTree({ el, session, feeds, tags, current }) {
   const nav = el('nav', { class: 'nav', 'data-nav': '1', 'aria-label': 'Boards' });
@@ -32,10 +32,14 @@ export function navTree({ el, session, feeds, tags, current }) {
     return a;
   };
 
-  if (session) {
-    section('Your ring');
-    for (const { id, label } of SCOPES) item(id, label, '◍', `/r/${id}`);
-  }
+  // The "Your ring" section is GONE (plan 2026-09-03). Five rows here said
+  // "five places to go", and the ring stopped being a destination: it is now a
+  // scope over everything, set by the pill in the masthead. A nav row and a
+  // pill governing the same thing would be two controls with one job, which is
+  // the fault this file was written to fix — see the strip it replaced.
+  //
+  // The rungs remain addressable at /r/<rung> for now; what changed is that
+  // they are no longer how you set your ring.
 
   section('Feeds');
   for (const f of feeds || []) item(f.slug, f.title, '▦', f.href || `/f/${f.slug}`);
@@ -61,7 +65,8 @@ export function navTree({ el, session, feeds, tags, current }) {
 
   if (!session) {
     nav.append(el('div', { class: 'navnote' },
-      'Rings need your own follow graph, so they appear once you sign in.'));
+      'Your ring — how close to you a post has to come from before you see it — '
+      + 'needs your own follow graph, so it appears once you sign in.'));
   }
   return nav;
 }
