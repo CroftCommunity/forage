@@ -72,6 +72,24 @@
       "height": 900,
       "baseline": "forage@e6c5fa8",
       "population": "lens:mock-deepthread"
+    },
+    {
+      "file": "deep-lens-run.phone.current.png",
+      "route": "deep-lens-run",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@e6c5fa8",
+      "population": "lens:mock-deepthread"
+    },
+    {
+      "file": "deep-lens-run.desktop.current.png",
+      "route": "deep-lens-run",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@e6c5fa8",
+      "population": "lens:mock-deepthread"
     }
   ]
 }
