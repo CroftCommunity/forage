@@ -451,3 +451,78 @@ test('the tightest ring still hides everyone else', async () => {
   assert.ok(!JSON.stringify(t.comments).includes('from outside'),
     'me means me — the previous test is a guarantee about you, not a hole');
 });
+
+// ---- the self-thread hoist ----
+//
+// Reported by croftc-ba, 2026-09-03, against this branch alone. The hoist that
+// turns an author's replies to their own post into the post's BODY reads
+// `chain.post.record.text` off the RAW appview post — it is the one path in
+// shapeLensThread that does not go through shapeLensPost, so no policy in the
+// shape layer runs on it. build() was always fine: it shapes every node and
+// drops on p.hidden.
+//
+// So the head obeyed the ring and the words underneath it did not. The ring is
+// the first policy narrow enough to make this visible, but it is not the cause
+// — muted words and label floors leak through the same hole, which is why the
+// fix shapes the part rather than special-casing the ring.
+
+const selfChain = (rootDid, parts) => ({
+  thread: {
+    post: {
+      uri: `at://${rootDid}/app.bsky.feed.post/root`, cid: 'cr',
+      author: { did: rootDid, handle: 'op.test' },
+      record: { text: 'the head', createdAt: '2026-09-03T10:00:00Z' },
+      indexedAt: '2026-09-03T10:00:00Z',
+    },
+    replies: parts.reduceRight((kids, text, i) => [{
+      post: {
+        uri: `at://${rootDid}/app.bsky.feed.post/p${i}`, cid: `cp${i}`,
+        author: { did: rootDid, handle: 'op.test' },
+        record: { text, createdAt: `2026-09-03T1${i + 1}:00:00Z` },
+        indexedAt: `2026-09-03T1${i + 1}:00:00Z`,
+      },
+      replies: kids,
+    }], []),
+  },
+});
+
+test('a scoped-out author does not leak through the self-thread hoist', () => {
+  const shaped = shapeLensThread(selfChain(OUT, ['part one', 'part two']), SRC, { posture: ring([IN]) });
+  assert.equal(shaped.post.hidden, true, 'the head is scoped out');
+  assert.equal(shaped.post.body, '', 'and emptied');
+  const blob = JSON.stringify(shaped);
+  assert.ok(!blob.includes('part one'), 'the hoisted words go with it');
+  assert.ok(!blob.includes('part two'), 'every part, not just the first');
+});
+
+test('the hoist honours a muted word PER PART, not per author', () => {
+  // The case that makes shaping each part better than stopping the chain: the
+  // parts share an author, so an author-level policy hides all or none — but a
+  // muted word lives in one part's text and must take only that part.
+  const posture = buildPosture({ preferences: [{
+    $type: 'app.bsky.actor.defs#mutedWordsPref',
+    items: [{ value: 'spoiler', targets: ['content'] }],
+  }] }, Date.now());
+  const shaped = shapeLensThread(selfChain(IN, ['harmless', 'a spoiler', 'also fine']), SRC, { posture });
+  const texts = (shaped.selfThread || []).map((x) => x.text);
+  assert.deepEqual(texts, ['harmless', 'also fine'], 'the muted part is withheld and the rest survive');
+});
+
+test('a visible reply under a hidden part still reaches the thread', () => {
+  // Why the walk continues past a hidden part rather than breaking: replies by
+  // OTHER people hang off the chain, and they are not the hidden author's to
+  // take down with them.
+  const resp = selfChain(OUT, ['hidden part']);
+  resp.thread.replies[0].replies.push({
+    post: {
+      uri: `at://${IN}/app.bsky.feed.post/kid`, cid: 'ck',
+      author: { did: IN, handle: 'in.test' },
+      record: { text: 'a visible answer', createdAt: '2026-09-03T13:00:00Z' },
+      indexedAt: '2026-09-03T13:00:00Z',
+    },
+    replies: [],
+  });
+  const shaped = shapeLensThread(resp, SRC, { posture: ring([IN]) });
+  assert.ok(JSON.stringify(shaped.comments).includes('a visible answer'),
+    'the reply survives its hidden parent, as a reply under a blocked author already does');
+});

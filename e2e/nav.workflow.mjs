@@ -63,6 +63,16 @@ export async function run() {
       'and no rung rows at all, greyed or otherwise');
     assert.equal(await guest.page.locator('[data-ring-bar]').count(), 0,
       'nor the ring pill the rungs became — same rule, new surface');
+    // replaceChildren(null) appends the TEXT "null" rather than skipping the
+    // argument, so a chrome slot that renders conditionally can print the word
+    // to the page. That shipped for the length of one commit in 2026-09-03 and
+    // no assertion in three tiers saw it — they all check that things ARE
+    // present, never that nothing extra is.
+    const strayChrome = await guest.page.evaluate(() => [...document.getElementById('masthost').childNodes]
+      .filter((n) => n.nodeType === 3 && n.textContent.trim())
+      .map((n) => n.textContent.trim()));
+    assert.deepEqual(strayChrome, [], 'the masthead host carries no stray text nodes');
+
     const note = await guest.page.locator('.navnote').innerText();
     assert.match(note, /follow graph/i, 'the absence is explained once, in words');
     // Feeds ARE readable signed out, so they stay.

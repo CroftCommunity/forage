@@ -309,7 +309,12 @@ let currentCleanup = null;
 function render() {
   // dev bar (memory-only scaffolding, user 2026-08-26) + masthead always fresh
   devHost.replaceChildren(pmode.active() === 'memory' ? devBar() : '');
-  mastHost.replaceChildren(masthead(), ringBar());
+  // .filter(Boolean), and it is load-bearing: replaceChildren(null) does not
+  // skip the argument, it appends the TEXT "null". ringBar() returns null for a
+  // guest and for a one-stop pill, so the word rendered under the masthead on
+  // every signed-out page. Found by a mock capture (2026-09-03) — no assertion
+  // in three test tiers looks for text that should not be there.
+  mastHost.replaceChildren(...[masthead(), ringBar()].filter(Boolean));
   if (currentCleanup) { currentCleanup(); currentCleanup = null; }
   let out;
   try { out = router.dispatch() || { main: el('div', {}), side: null }; }

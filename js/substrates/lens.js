@@ -548,14 +548,31 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
     // fixed for quoted posts on 2026-09-01, arriving from the other direction.
     // `author` and `id` ride along because mediaNode builds a video's link out
     // of them; without them a hoisted clip linked to undefined/post/undefined.
-    selfThread.push({
+    // SHAPE the part before hoisting it. This was reading straight off the raw
+    // appview post, which made the hoist the one path in this function that no
+    // shape-layer policy ran on — build() shapes every node and drops on
+    // p.hidden, and this did neither. So the head could be scoped out, emptied
+    // and correct while the author's own words sat underneath it in the body.
+    // Reported by croftc-ba (2026-09-03) against the ring, but the ring is only
+    // the first policy narrow enough to make it visible: muted words and label
+    // floors leaked through the same hole. Shaping the part closes all three,
+    // which is why this is not a ring special case.
+    //
+    // Withheld PER PART, and the walk continues rather than breaking. Two
+    // reasons, and they pull the same way: parts share an author, so an
+    // author-level policy hides all or none — but a muted word lives in ONE
+    // part's text and must take only that part. And other people's replies hang
+    // off the chain; they are not the hidden author's to take down with them,
+    // exactly as a reply under a blocked author already survives.
+    const part = shapeLensPost(chain.post, src, posture);
+    if (!part.hidden) selfThread.push({
       uri: chain.post.uri,
       id: chain.post.uri,
       author: chain.post.author?.handle || '[unknown]',
-      text: chain.post.record?.text || '',
-      facets: chain.post.record?.facets || [],
-      media: mediaOf(chain.post.embed),
-      quoted: quotedIn(chain.post.embed),
+      text: part.body,
+      facets: part.facets || [],
+      media: part.media,
+      quoted: part.quoted,
     });
     const kids = chain.replies || [];
     const next = kids.find((n) => n.post?.author?.did === rootDid && n.post);
