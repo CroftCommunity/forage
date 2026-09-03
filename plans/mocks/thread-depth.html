@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forage Thread Depth v2</title>
-<meta name="mock-version" content="2">
+<title>Forage Thread Depth v3</title>
+<meta name="mock-version" content="3">
 <meta name="mock-baseline" content="forage@e6c5fa8">
-<meta name="mock-proposal" content="forage@a9e4338">
+<meta name="mock-proposal" content="forage@b493be1">
 <style>
 :root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
   --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
@@ -45,9 +45,9 @@ pre{font-size:12.5px;line-height:1.5;margin:0;overflow-x:auto;color:var(--page-m
 <body>
 <div class="wrap">
   <header>
-    <div class="eyebrow">Forage &middot; mock &middot; thread-depth <b>v2</b> &middot; Current forage@e6c5fa8 &middot; Proposed forage@a9e4338 &middot; 2026-09-03</div>
+    <div class="eyebrow">Forage &middot; mock &middot; thread-depth <b>v3</b> &middot; Current forage@e6c5fa8 &middot; Proposed forage@b493be1 &middot; 2026-09-03</div>
     <h1>A conversation is not a tree</h1>
-    <p class="sub"><b>Two proposals and four decisions &mdash; three now settled</b>, from the owner&rsquo;s report on
+    <p class="sub"><b>Three proposals and four decisions, all settled</b>, from the owner&rsquo;s report on
       2026-09-02 with a screenshot of a live thread seven levels deep:
       &ldquo;we have deep nested threads not collapsed by default &hellip; it can get a little hard to
       follow and read. can you research how reddit handled this and propose a solution? maybe collapse
@@ -57,15 +57,17 @@ pre{font-size:12.5px;line-height:1.5;margin:0;overflow-x:auto;color:var(--page-m
       <b>width</b> the indent was spending. <b>Phase&nbsp;B</b> bounds the <b>scroll</b>. Phase&nbsp;A
       hides nothing and costs the reader no taps; Phase&nbsp;B is the &ldquo;collapse at n depth&rdquo;
       the report asked about, and it is the one with a cost.</p>
-    <p class="sub"><b>v2 &mdash; three of the four decisions are answered.</b> The owner, 2026-09-03:
-      &ldquo;all look good except 3 &hellip; I'm not sure what this looks like, is it in the mock&rdquo;.
-      It was not: decision&nbsp;3&rsquo;s alternatives were described in words and never drawn, which is
-      the one thing this dimension exists to stop. <b>Both are built and captured now</b> &mdash; see
-      &ldquo;Decision&nbsp;3, drawn&rdquo; below. Decisions&nbsp;1, 2 and 4 are settled as built:
-      <b>both phases are wanted</b>, the thresholds stand, and the find-in-page cost is accepted.</p>
+    <p class="sub"><b>v3 &mdash; every decision is answered, and decision 2 grew a third phase.</b>
+      The owner, 2026-09-03: &ldquo;let's say no to the tildes and everything else looks good for A+B,
+      but I think the settings should be adjustable for the user in advanced on their profile.&rdquo;
+      So: <b>no label</b> (decision&nbsp;3 closes on A, and the two drawn alternatives stay below as the
+      record of what was compared), and <b>Phase&nbsp;C</b> &mdash; both numbers become reader settings
+      under Advanced on <code>/me</code>, which is decision&nbsp;2 answered by handing it over rather
+      than by picking. Decisions&nbsp;1 and 4 were settled in v2: both phases are wanted, and the
+      find-in-page cost is accepted.</p>
     <p class="sub"><b>Every frame here is a capture of the engine</b> (MOCKS.md&nbsp;P1). Current is
       <code>main</code> at <code>e6c5fa8</code>; Phase&nbsp;A is <code>claude/thread-depth</code> at
-      <code>bf16319</code>; Phase&nbsp;A+B is the same branch at <code>a9e4338</code>. All three come
+      <code>bf16319</code>; Phase&nbsp;A+B+C is the same branch at <code>b493be1</code>. All three come
       from <code>scripts/mock-snaps.mjs</code> against the same population, in the default skin
       (rule&nbsp;4), at 390&times;844 and 1280&times;900. Captures live in
       <code>plans/mocks/snaps/thread-depth/</code> (rule&nbsp;3). Nothing on this page is drawn.</p>
@@ -130,7 +132,7 @@ pre{font-size:12.5px;line-height:1.5;margin:0;overflow-x:auto;color:var(--page-m
 
   <section>
     <div class="eyebrow">Open decisions</div>
-    <h2>Four things the frames could not settle &mdash; three now answered</h2>
+    <h2>Four things the frames could not settle &mdash; all four now answered</h2>
     <div class="tablewrap">
       <table>
         <thead><tr><th style="width:3ch">#</th><th>Decision</th><th>What is built</th><th>The alternative</th></tr></thead>
@@ -147,10 +149,12 @@ pre{font-size:12.5px;line-height:1.5;margin:0;overflow-x:auto;color:var(--page-m
           </tr>
           <tr>
             <td><b>2</b></td>
-            <td><b>The two thresholds, and how they interact.</b><br><span class="tag">Decided 2026-09-03 &mdash; as built</span></td>
-            <td><b>As built:</b> flatten past parent depth&nbsp;2 on a phone, 4 on a desktop (a width
-              judgement, so it lives in CSS); fold past depth&nbsp;5, one number for both. The desktop
-              collision described opposite is accepted.</td>
+            <td><b>The two thresholds, and how they interact.</b><br><span class="tag">Decided 2026-09-03 &mdash; the reader picks</span></td>
+            <td><b>Both are dials under Advanced on <code>/me</code></b> (Phase&nbsp;C). The defaults are
+              what v1 shipped &mdash; flatten past parent depth&nbsp;2 on a phone and 4 on a desktop,
+              fold past 5 &mdash; and a reader can move either, including all the way off, which is
+              main&rsquo;s thread exactly. The desktop collision described opposite stops being an
+              argument: anyone it bothers moves the fold to 8.</td>
             <td>On a <b>desktop</b> these collide: flattening starts at 4 and the fold bites at 5, so
               Phase&nbsp;A barely gets to show before B cuts in (visible in the desktop frames). A
               desktop has width to spare &mdash; its fold could sit at 8 or 10, or the flatten could
@@ -158,15 +162,14 @@ pre{font-size:12.5px;line-height:1.5;margin:0;overflow-x:auto;color:var(--page-m
           </tr>
           <tr>
             <td><b>3</b></td>
-            <td><b>Whether a flattened reply says so in words.</b><br><span class="tag">Open &mdash; now drawn</span></td>
-            <td><b>A &mdash; nothing</b>, and this is what the branch is parked at. The rail runs unbroken
+            <td><b>Whether a flattened reply says so in words.</b><br><span class="tag">Decided 2026-09-03 &mdash; A, no label</span></td>
+            <td><b>A &mdash; nothing.</b> Owner: &ldquo;let's say no to the tildes&rdquo;. The rail runs unbroken
               from the parent&rsquo;s avatar into the child&rsquo;s, the same shape a phone already draws
               below a 15px indent.</td>
-            <td><b>B &mdash; Tildes&rsquo; words on every flattened reply</b>
-              (<code>085c015</code>), or <b>C &mdash; the same words once per run</b>, on the first
-              flattened reply only (<code>ce62744</code>). Both are built and captured; the frames are in
-              the next section. The wording is held identical across B and C on purpose &mdash; the
-              variable under test is the frequency.</td>
+            <b>Rejected:</b> B &mdash; Tildes&rsquo; words on every flattened reply
+              (<code>085c015</code>) &mdash; and C &mdash; the same words once per run
+              (<code>ce62744</code>). Both were built and captured; their frames stay below as the record
+              of what was compared, and neither is on the branch.</td>
           </tr>
           <tr>
             <td><b>4</b></td>
@@ -198,7 +201,7 @@ pre{font-size:12.5px;line-height:1.5;margin:0;overflow-x:auto;color:var(--page-m
         <img class="shot" src="snaps/thread-depth/phase-a/deep-lens-tail.phone.proposed.png" alt="Phone, Phase A: the same five replies at one indent with a single unbroken rail through the avatars; full display names, single-line like counts, and the continue this thread link plus the next top-level reply both fit.">
       </div>
       <div class="device phone">
-        <div class="device-label">Phase A + B <span class="tag">forage@a9e4338</span></div>
+        <div class="device-label">Phase A + B <span class="tag">forage@b493be1</span></div>
         <img class="shot" src="snaps/thread-depth/phase-ab/deep-lens-tail.phone.proposed.png" alt="Phone, Phase A plus B: the chain stops at depth five behind a line reading circled plus 6 replies, and the rest of the thread — the branch and two more top-level replies — is visible below it.">
       </div>
     </div>
@@ -219,11 +222,11 @@ pre{font-size:12.5px;line-height:1.5;margin:0;overflow-x:auto;color:var(--page-m
       depth-10 wall, and it costs a load and your scroll position. Here the replies are already in hand.</p>
     <div class="stage">
       <div class="device phone">
-        <div class="device-label">Before the press <span class="tag">forage@a9e4338</span></div>
+        <div class="device-label">Before the press <span class="tag">forage@b493be1</span></div>
         <img class="shot" src="snaps/thread-depth/phase-ab/deep-lens-tail.phone.proposed.png" alt="Phone: the folded chain behind a circled-plus 6 replies line.">
       </div>
       <div class="device phone">
-        <div class="device-label">After the press <span class="tag">forage@a9e4338</span></div>
+        <div class="device-label">After the press <span class="tag">forage@b493be1</span></div>
         <img class="shot" src="snaps/thread-depth/phase-ab/deep-lens-open.phone.proposed.png" alt="Phone: one press and the whole chain is open, five more replies at one indent, no further bars.">
       </div>
       <div class="device phone">
@@ -253,7 +256,7 @@ pre{font-size:12.5px;line-height:1.5;margin:0;overflow-x:auto;color:var(--page-m
         <img class="shot" src="snaps/thread-depth/deep-lens-spine.phone.current.png" alt="Phone, main: the quote with its brand-ink rail, then five replies stepping progressively right.">
       </div>
       <div class="device phone">
-        <div class="device-label">Phase A + B <span class="tag">forage@a9e4338</span></div>
+        <div class="device-label">Phase A + B <span class="tag">forage@b493be1</span></div>
         <img class="shot" src="snaps/thread-depth/phase-ab/deep-lens-spine.phone.proposed.png" alt="Phone, branch: the quote, then two indents, then a single column of replies under one continuous rail.">
       </div>
     </div>
@@ -271,13 +274,14 @@ pre{font-size:12.5px;line-height:1.5;margin:0;overflow-x:auto;color:var(--page-m
 
   <section>
     <div class="eyebrow">Decision 3, drawn &middot; phone &middot; 390&times;844 &middot; the run, fully open</div>
-    <h2>Does a flattened reply need to say so in words?</h2>
-    <p class="sub">All three are the same thread, every fold pressed open, anchored at
+    <h2>Does a flattened reply need to say so in words? &mdash; no</h2>
+    <p class="sub"><b>Decided 2026-09-03: A.</b> Owner: &ldquo;let's say no to the tildes&rdquo;. The
+      frames stay as the record of what was compared; neither label is on the branch. All three are the same thread, every fold pressed open, anchored at
       <b>depth&nbsp;2</b> &mdash; the rung the flattening starts under, so the whole run is in frame.
       Six replies, each the only reply to the one above it. Only the label differs.</p>
     <div class="stage">
       <div class="device phone">
-        <div class="device-label">A &mdash; nothing (as built) <span class="tag">forage@a9e4338</span></div>
+        <div class="device-label">A &mdash; nothing (as built) <span class="tag">forage@b493be1</span></div>
         <img class="shot" src="snaps/thread-depth/phase-ab/deep-lens-run.phone.proposed.png" alt="Phone: six replies in one column under a continuous rail, no label on any of them.">
       </div>
       <div class="device phone">
@@ -319,6 +323,50 @@ pre{font-size:12.5px;line-height:1.5;margin:0;overflow-x:auto;color:var(--page-m
   </section>
 
   <section>
+    <div class="eyebrow">Phase C &middot; the numbers become the reader&rsquo;s</div>
+    <h2>Two dials under Advanced, and an off switch that means it</h2>
+    <p class="sub">Decision&nbsp;2 was an argument about two numbers. Phase&nbsp;C answers it by handing
+      them over. <b>Stop indenting a chain of single replies</b> is a <b>width</b> question, which is why
+      <code>Auto</code> is a real answer and the default &mdash; a phone and a desktop each keep their own
+      threshold. <b>Fold replies deeper than</b> is a <b>scroll</b> question, the same at every width, so
+      there is nothing for auto to mean there.</p>
+    <div class="stage">
+      <div class="device phone">
+        <div class="device-label">Advanced, Proposed <span class="tag">forage@b493be1</span></div>
+        <img class="shot" src="snaps/thread-depth/phase-ab/deep-lens-prefs.phone.proposed.png" alt="Phone, the Advanced disclosure open on the account page: an Alt text section, then a Deep threads section explaining the indent, with two dials — Stop indenting a chain of single replies set to Auto by screen width, and Fold replies deeper than set to Deeper than 5 levels.">
+      </div>
+      <div class="device phone">
+        <div class="device-label">Advanced, Current <span class="tag">forage@e6c5fa8</span></div>
+        <img class="shot" src="snaps/thread-depth/deep-lens-prefs.phone.current.png" alt="Phone, main: the same Advanced disclosure with an Alt text section and Browse Hashtags, and no Deep threads section at all.">
+      </div>
+      <div class="device phone">
+        <div class="device-label">Both turned off <span class="tag">forage@b493be1</span></div>
+        <img class="shot" src="snaps/thread-depth/phase-ab/deep-lens-off.phone.proposed.png" alt="Phone, branch with both settings off: the staircase is back, every reply indented and nothing folded — the same thread main draws.">
+      </div>
+    </div>
+    <div class="callout">
+      <ul>
+        <li><b>Off is main&rsquo;s thread, exactly</b> &mdash; every indent kept, nothing folded. That is
+          the third frame, and it is what makes these settings rather than a milder version of our
+          opinion. It is a claim in the gate, not a hope: the workflow reads the depths that flatten and
+          the depths that fold off the rendered DOM and asserts both lists are empty.</li>
+        <li><b>The choices.</b> Indent: Auto &middot; after level 1 &middot; 2 &middot; 4 &middot; 6
+          &middot; never. Fold: deeper than 3 &middot; 5 &middot; 8 &middot; never.</li>
+        <li><b>Device-local, like the skin and the card size</b>, and never account state. A corrupt
+          stored value reads as no choice and says so once in the console; the default is written onto
+          the root explicitly, so no stylesheet rule has to guess what &ldquo;unset&rdquo; means.</li>
+        <li><b>Where each number lives is not arbitrary.</b> The stylesheet owns the indent thresholds
+          (one selector per choice, keyed on <code>data-flatten</code>) because indenting is a style
+          question and CSS is what knows the screen width. The renderer owns the fold, read at render
+          time, because folding is a decision about what to draw and CSS cannot count.</li>
+      </ul>
+      <p style="margin-top:10px"><b>The panel&rsquo;s first capture caught its own layout bug:</b>
+        <code>.stack</code> is a margin rule and not a column, so the short label sat beside its select
+        while the long one wrapped above its own. Fixed in <code>b493be1</code>.</p>
+    </div>
+  </section>
+
+  <section>
     <div class="eyebrow">The frames &middot; desktop &middot; 1280&times;900</div>
     <h2>At desk width the cost is the diagonal, not the column</h2>
     <div class="stage">
@@ -327,7 +375,7 @@ pre{font-size:12.5px;line-height:1.5;margin:0;overflow-x:auto;color:var(--page-m
         <img class="shot" src="snaps/thread-depth/deep-lens-tail.desktop.current.png" alt="Desktop, main: six replies stepping right across the column, the deepest starting more than half way in, with a large empty gutter down the left.">
       </div>
       <div class="device desk">
-        <div class="device-label">Phase A + B <span class="tag">forage@a9e4338</span></div>
+        <div class="device-label">Phase A + B <span class="tag">forage@b493be1</span></div>
         <img class="shot" src="snaps/thread-depth/phase-ab/deep-lens-tail.desktop.proposed.png" alt="Desktop, branch: four indents then a single column, the fold bar, and the rest of the thread including the branch and two more top-level replies.">
       </div>
     </div>
@@ -358,8 +406,12 @@ pre{font-size:12.5px;line-height:1.5;margin:0;overflow-x:auto;color:var(--page-m
           widths.</li>
         <li>Gates on the branch: <code>npm test</code> 723/723, <code>npm run workflows</code> 38 found /
           0 failed, <code>npm run conformance</code>.</li>
-        <li><code>e2e/mock-depth.workflow.mjs</code> passes unchanged against the parked branch: the
-          decision-3 variants are a label, and none of the nine claims is about words.</li>
+        <li><code>e2e/mock-depth.workflow.mjs</code> &mdash; <b>nine more claims for Phase&nbsp;C</b>,
+          red against main at the first (main writes no <code>data-flatten</code>). They read the shape
+          off the rendered DOM under four settings pairs, never off the module that wrote them: auto/5
+          flattens from level 2 and folds at 5; off/off flattens and folds <em>nothing</em>; 1/3 and 6/8
+          land where they say. The dials carry the stored choice, meet the 44px tap floor, take effect
+          with no reload, and survive one.</li>
         <li><b>Not gated:</b> the four decisions. Three are judgements about numbers or words, and
           the fourth (find-in-page) is a browser behaviour no test of ours can hold.</li>
         <li><b>Found, filed, not fixed:</b> the focus bar reads &ldquo;That comment isn&rsquo;t in this
@@ -372,11 +424,17 @@ pre{font-size:12.5px;line-height:1.5;margin:0;overflow-x:auto;color:var(--page-m
 
   <section>
     <div class="eyebrow">Revisions</div>
-    <h2>v2</h2>
+    <h2>v3</h2>
     <div class="tablewrap">
       <table>
         <thead><tr><th style="width:5ch">v</th><th>Date</th><th>Commit</th><th>What changed on this page</th></tr></thead>
         <tbody>
+          <tr><td><b>3</b></td><td>2026-09-03</td><td><code>b493be1</code></td>
+            <td>Decision&nbsp;3 closed on A (&ldquo;no to the tildes&rdquo;) &mdash; B and C are off the
+              branch and their frames stay as the record. Decision&nbsp;2 answered by handing the numbers
+              to the reader: <b>Phase&nbsp;C</b>, two dials under Advanced on <code>/me</code>, with two
+              new frames (the panel, and the thread with both turned off). Nine more claims in the gate.
+              The Proposed column re-captured at <code>b493be1</code>.</td></tr>
           <tr><td><b>2</b></td><td>2026-09-03</td><td><code>a9e4338</code></td>
             <td>Decision&nbsp;3 drawn, on the owner&rsquo;s ask (&ldquo;I'm not sure what this looks like,
               is it in the mock&rdquo;): both alternatives built and captured at <code>085c015</code> (B)

@@ -7,7 +7,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@7be6691",
+      "baseline": "forage@b493be1",
       "population": "lens:mock-deepthread"
     },
     {
@@ -16,7 +16,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@7be6691",
+      "baseline": "forage@b493be1",
       "population": "lens:mock-deepthread"
     },
     {
@@ -25,7 +25,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@7be6691",
+      "baseline": "forage@b493be1",
       "population": "lens:mock-deepthread"
     },
     {
@@ -34,7 +34,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@7be6691",
+      "baseline": "forage@b493be1",
       "population": "lens:mock-deepthread"
     },
     {
@@ -43,7 +43,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@7be6691",
+      "baseline": "forage@b493be1",
       "population": "lens:mock-deepthread"
     },
     {
@@ -52,7 +52,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@7be6691",
+      "baseline": "forage@b493be1",
       "population": "lens:mock-deepthread"
     },
     {
@@ -61,7 +61,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@7be6691",
+      "baseline": "forage@b493be1",
       "population": "lens:mock-deepthread"
     },
     {
@@ -70,7 +70,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@7be6691",
+      "baseline": "forage@b493be1",
       "population": "lens:mock-deepthread"
     },
     {
@@ -79,7 +79,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@7be6691",
+      "baseline": "forage@b493be1",
       "population": "lens:mock-deepthread"
     },
     {
@@ -88,7 +88,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@7be6691",
+      "baseline": "forage@b493be1",
       "population": "lens:mock-deepthread"
     },
     {
@@ -97,7 +97,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@7be6691",
+      "baseline": "forage@b493be1",
       "population": "lens:mock-deepthread"
     },
     {
@@ -106,7 +106,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@7be6691",
+      "baseline": "forage@b493be1",
       "population": "lens:mock-deepthread"
     },
     {
@@ -115,7 +115,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@7be6691",
+      "baseline": "forage@b493be1",
       "population": "lens:mock-deepthread"
     },
     {
@@ -124,7 +124,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@7be6691",
+      "baseline": "forage@b493be1",
       "population": "lens:mock-deepthread"
     }
   ]

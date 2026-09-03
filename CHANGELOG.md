@@ -19,8 +19,11 @@ below are the landings of that month, and everything earlier is in `git log`.
   and further now arrive folded behind one line saying how many there are ("⊕ 6 replies"); press
   it and the whole branch opens where it stands, without leaving the page or losing your place.
   Shallower conversations are untouched. Links to a single comment still work into a folded
-  branch. (owner: "we have deep nested threads not collapsed by default … it can get a little
-  hard to follow and read")
+  branch. Both numbers are yours: under **Advanced** on your account page, **Deep threads** decides
+  where the indent stops (Auto, or a level you pick, or never) and how deep replies arrive open
+  (3, 5, 8 levels, or never fold). Turn both off and threads look exactly as they did.
+  (owner: "we have deep nested threads not collapsed by default … it can get a little hard to follow
+  and read"; "I think the settings should be adjustable for the user in advanced on their profile")
 
 - 2026-09-02 **Two follow-ups to the GIF work: nothing vanishes, and Tenor got cheaper.** If you
   reply to your own post to continue a thread, Forage folds those parts into the post itself —
