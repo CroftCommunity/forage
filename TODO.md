@@ -62,13 +62,6 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
   branch and was deliberately not fixed quietly there. Frames:
   `plans/mocks/snaps/self-thread/self-lens-count.phone.*.png`.
 
-- **Where a continuation part's badge goes on a narrow byline.** If the pinned placement
-  wins (self-thread decision 2, proposal B), a long display name plus the "2/3" badge
-  crowds the byline at 390px — the badge is the thing that loses. Visible in
-  `plans/mocks/snaps/self-thread/self-lens-pin.phone.proposed.png`. Bluesky puts the
-  badge on the TEXT as a suffix rather than on the byline, which is one answer. Only
-  actionable once decision 2 is answered.
-
 - **GIF search on the reply box (feed-row O9).** The GIF button attaches a `.gif` from the
   device. bsky.app searches Tenor through its own proxy — endpoint and key unverified from
   here; probe first (CLAUDE.md § External APIs), then a picker. Mock: `plans/mocks/feed-row.html`

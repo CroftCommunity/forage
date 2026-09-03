@@ -64,10 +64,11 @@ below are the landings of that month, and everything earlier is in `git log`.
   bare words: no number, no time, no way to link to it, and no way to delete it on its own.
   So a comment you left on your own post read as something you had written into the post,
   the card claimed "1 reply" over a list saying "No replies", and the only Delete on the
-  card was the post's — press it and the post went. Now each part says which part it is
-  ("2/3"), when it was written, links to itself, and carries its own Delete; the post's
-  button says **Delete post**; and the count is the list, so it can no longer claim a reply
-  the page does not show. Two more fixes underneath: the part that continues a post is now
+  card was the post's — press it and the post went. Now a thin line and a small "2/3" open
+  each part, so the post still reads as one narrative, and that part's own menu holds when it
+  was written, a link to it, and **Delete part 2** — named for the part. The post's button
+  says **Delete post**. And the count is the list, so it can no longer claim a reply the page
+  does not show. Two more fixes underneath: the part that continues a post is now
   the **oldest** one you wrote, not whichever the server happened to rank first — a two-part
   post could render back to front — and a post in parts says so ("3 parts · 11 replies").
   (mock `plans/mocks/self-thread.html`)
