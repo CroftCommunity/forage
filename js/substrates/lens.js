@@ -554,8 +554,25 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
   topLevel = topLevel.filter((n) => n !== chain);
   const reRooted = [];
   const chainPosts = [];
+  const chainShapes = [];
   while (chain) {
+    // Through the SHAPER, always. Until 2026-09-03 the hoist read
+    // `chain.post.record.text` off the raw appview post, which made the chain
+    // the one path in a thread that skipped shapeLensPost — and every policy
+    // that hides a post lives there. A muted or label-floored part rendered
+    // its words into the post's BODY while the same post vanished from a
+    // list; found against claude/ring-scope's ring, where a scoped-out
+    // author's words survived under a head that had been emptied.
+    //
+    // A hidden part STOPS the chain rather than being skipped over, and what
+    // was below it re-roots into the comment list, where the same policy is
+    // asked about it again. Policy can only remove (see outsideRing): keeping
+    // a later part after dropping an earlier one would invent a body the
+    // author never wrote.
+    const shaped = shapeLensPost(chain.post, src, posture);
+    if (shaped.hidden) { reRooted.push(...(chain.replies || [])); break; }
     chainPosts.push(chain.post);
+    chainShapes.push(shaped);
     // A hoisted part is the post's BODY, so it renders like one: its words AND
     // whatever it carried. Until 2026-09-02 this shape was { uri, text, facets }
     // and an author who answered their own post with a picture, a clip, a link
@@ -615,8 +632,8 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
   // draws it (an ordinary post carrying a 2/3 badge). Those are two placements
   // of one thing, so they get one builder — a part-only renderer is how the
   // reply renderer drifted from the row renderer, twice.
-  const partNodes = chainPosts.map((cp, i) => ({
-    ...node(shapeLensPost(cp, src, posture), 0, { kind: 'part', part: i + 2, parts }),
+  const partNodes = chainShapes.map((shaped, i) => ({
+    ...node(shaped, 0, { kind: 'part', part: i + 2, parts }),
     children: [], deferred: 0,
   }));
   const replies = build([...topLevel, ...reRooted], 0);

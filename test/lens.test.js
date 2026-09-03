@@ -559,6 +559,45 @@ test('3i: the head can no longer claim a reply the list does not show', () => {
   assert.equal(t.parts, 2, 'the reply is accounted for as the post\'s second part');
 });
 
+test('3i: a part goes through the SHAPER, so policy can reach it', () => {
+  // The hoist read `chain.post.record.text` off the raw appview post, so it
+  // was the one path in the thread that skipped shapeLensPost — and every
+  // policy that hides a post lives there. `build()` shapes each node and drops
+  // on p.hidden; the chain did not, so a muted or label-floored part rendered
+  // its words in the post's BODY while the same post would vanish from a list.
+  // Found 2026-09-03 against the ring scope on claude/ring-scope, where a
+  // scoped-out author's words survived under a head that had been emptied.
+  const threadResponse = { thread: {
+    post: qPost('root', 'did:plc:op', '2026-09-03T08:00:00Z'),
+    replies: [{ post: qPost('p2', 'did:plc:op', '2026-09-03T08:01:00Z',
+      { record: { text: 'a part nobody asked to read', createdAt: '2026-09-03T08:01:00Z' } }), replies: [] }],
+  } };
+  const posture = { blockedDids: new Set(), mutedDids: new Set(), labelPrefs: {},
+    mutedWords: [{ value: 'nobody asked', targets: ['content'] }] };
+  const t = shapeLensThread(threadResponse, QSRC, { posture });
+  assert.deepEqual(t.selfThread, [], 'a part the reader has hidden is not the post\'s body either');
+  assert.deepEqual(t.partNodes, [], 'and it is not a node waiting to be drawn');
+  assert.equal(t.parts, 1, 'a post whose only part is hidden is a post, not a post in parts');
+});
+
+test('3i: a hidden part stops the chain, and what was under it re-roots', () => {
+  // Consistent with build(): policy can only REMOVE. What was below the hidden
+  // part is not invented into the body — it goes back to the list, where the
+  // same policy is asked about it again.
+  const threadResponse = { thread: {
+    post: qPost('root', 'did:plc:op', '2026-09-03T08:00:00Z'),
+    replies: [{ post: qPost('p2', 'did:plc:op', '2026-09-03T08:01:00Z',
+        { record: { text: 'hide me please', createdAt: '2026-09-03T08:01:00Z' } }),
+      replies: [{ post: qPost('p3', 'did:plc:op', '2026-09-03T08:02:00Z'), replies: [] }] }],
+  } };
+  const posture = { blockedDids: new Set(), mutedDids: new Set(), labelPrefs: {},
+    mutedWords: [{ value: 'hide me', targets: ['content'] }] };
+  const t = shapeLensThread(threadResponse, QSRC, { posture });
+  assert.deepEqual(t.selfThread, [], 'the chain stopped at the part that was hidden');
+  assert.deepEqual(t.comments.map((c) => c.id.split('/').pop()), ['p3'],
+    'and its continuation is a comment — removed from the body, not from the thread');
+});
+
 test('3i: the parts are also available as NODES, built by the same builder as a comment', () => {
   // The two ways to draw a chain (in the head, or pinned above the comments)
   // must not become two renderers — "a reply-only renderer is how the surfaces
