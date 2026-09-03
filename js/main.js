@@ -1,6 +1,7 @@
 // Bootstrap: layout, routes, store subscription, skins, service worker.
 
 import * as store from './store.js';
+import * as ringScope from './ring-scope.js';
 import * as router from './router.js';
 import * as sel from './selectors.js';
 import * as actions from './actions.js';
@@ -257,6 +258,16 @@ navScrim.addEventListener('click', () => setDrawer(false));
 // and a burger that says it is shut (owner, 2026-08-29, after resizing).
 window.matchMedia('(max-width: 800px)').addEventListener('change', () => setDrawer(false));
 window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && drawerOpen) setDrawer(false); });
+
+// Moving the pill changes what every board contains, so the repaint waits for
+// the graph walk behind the new scope to land. Painting immediately would show
+// the OLD board under the NEW label for as long as the walk takes — the one
+// thing a control whose entire effect is a re-render must not do.
+ringScope.onChange(() => {
+  lensViews.syncRingScope().then(() => render()).catch((e) => {
+    console.warn('forage: ring scope failed to apply', e);
+  });
+});
 
 // ---------- render pipeline ----------
 let currentCleanup = null;

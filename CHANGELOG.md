@@ -8,6 +8,21 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-03 **One control now decides how close everything you read comes from.** The left
+  nav used to carry five "Your ring" rows — Just me, My mutuals, My follows, one hop out,
+  World — and each was a place you went. They have been replaced by a single pill at the top
+  of the page, and it no longer takes you anywhere: it scopes what you are already looking at.
+  Set it to Follows and every board, thread and search result holds only people you follow.
+  Set it to Mutuals and it holds only the ones who follow you back. World is how you get
+  everything back, and it is the default, so nothing changed for anyone who does not touch it.
+  Turning your ring down never turns your moderation off — blocks, mutes and muted words apply
+  the same at every stop; the ring only ever takes more away, never gives any of it back.
+  Feeds and hashtags are left alone by default, on the grounds that you went and asked for
+  those by name; there is a switch under Advanced on your account page if you would rather your
+  ring reached them too, and a quiet feed can then look empty, which is the switch working.
+  The same page lets you choose which stops the pill offers — add "one hop out" if you want it,
+  drop Mutuals if you do not. World is always offered, because it is the way back.
+
 - 2026-09-03 **Deep threads read like conversations again.** A long back-and-forth used to walk
   right off the side of a phone: every reply stepped 14px further in, so by the tenth the words
   had 158px to live in — about twenty characters a line — and names were cut to "Thes…" with

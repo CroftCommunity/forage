@@ -9,7 +9,7 @@
 // Lens surfaces are read-only; the write gates all stay shut (frontier chips,
 // never dead buttons — the UI renders these as deferred, invariant 7).
 import { buildPost, withTag, IMAGE_LIMITS } from '../compose.js';
-import { RUNG_IDS, membersFor, labelFor } from '../rings.js';
+import { RUNG_IDS, membersFor, scopeMembers, labelFor } from '../rings.js';
 import { sortItems } from '../engines/rank.js';
 import { gifOf, parseAlt } from '../gif.js';
 
@@ -84,6 +84,44 @@ export function buildPosture({ preferences = [], mutes = [], blocks = [], listMu
     floor: null,
     listMuteCount: listMutes.length, listBlockCount: listBlocks.length,
   };
+}
+
+// The ring rides ON the posture rather than inside buildPosture, because it is
+// not one of the D10 moderation payloads: it is computed from the social graph,
+// it changes when the reader moves the pill, and it must be replaceable without
+// re-fetching mutes and blocks. Pure — a new posture comes back, the old one is
+// untouched.
+//
+// `members: null` is World: the ring does not narrow. That is NOT "unfiltered"
+// — this guard is the last of four, and blocks, mutes, muted words and label
+// prefs have all already run by the time it is consulted. An empty Set is a
+// third thing again: narrow to nobody, a legitimate (if quiet) ring that paints
+// an empty board. js/rings.js owns that distinction and this preserves it
+// rather than collapsing the two into a falsy check.
+export function withRing(posture, { members = null, exemptKinds = [] } = {}) {
+  return {
+    ...posture,
+    ring: {
+      members: members == null ? null : new Set(members),
+      exemptKinds: new Set(exemptKinds),
+    },
+  };
+}
+
+// Last policy in the order, and the weakest: it can only ever remove, and it
+// never restores. A posture with no ring, or a ring set to World, does no
+// NARROWING of its own — everything the three policies above it hid stays
+// hidden.
+//
+// The exemption tests the SOURCE, not the post. A feed or a hashtag is a board
+// the reader went and asked for by name, so by default it arrives whole; the
+// reader can turn that off, at which point a quiet feed renders empty and that
+// is the setting working (owner, 2026-09-03).
+function outsideRing(post, src, posture) {
+  const r = posture.ring;
+  if (!r || r.members === null) return false;
+  if (src?.feedKind && r.exemptKinds.has(src.feedKind)) return false;
+  return !r.members.has(post.author?.did);
 }
 
 // A muted-word entry hits this post? targets: 'content' (text) and/or 'tag';
@@ -363,6 +401,18 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
   if (posture.mutedWords.some((w) => mutedWordHits(w, post))) {
     return { ...base, title: '', body: '', url: '', author: null, authorId: null, maskedRemoved: true, hidden: true };
   }
+  // blocks -> mutes -> RING -> display (owner, 2026-09-03). Last, so that
+  // anything an earlier policy hid stays hidden whatever the ring says.
+  //
+  // Absent, not badged, for the same reason a mute is: a row reading "outside
+  // your ring" would cost the reader a line of attention and announce exactly
+  // what was withheld. `hiddenReason` is a machine token for the ONE caller
+  // that has to tell the cases apart — a thread reached by direct link whose
+  // root your ring hides needs a different empty state from a post that does
+  // not exist. It carries no wording; the view owns that.
+  if (outsideRing(post, src, posture)) {
+    return { ...base, title: '', body: '', url: '', author: null, authorId: null, hidden: true, hiddenReason: 'scope' };
+  }
   // 3e inbound: a quote post carries its quoted original in the embed — the
   // context renders for free (D7); the uri links to the original's thread.
   // 3i: media embeds surface as post.media (card mode renders them; compact
@@ -498,14 +548,31 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
     // fixed for quoted posts on 2026-09-01, arriving from the other direction.
     // `author` and `id` ride along because mediaNode builds a video's link out
     // of them; without them a hoisted clip linked to undefined/post/undefined.
-    selfThread.push({
+    // SHAPE the part before hoisting it. This was reading straight off the raw
+    // appview post, which made the hoist the one path in this function that no
+    // shape-layer policy ran on — build() shapes every node and drops on
+    // p.hidden, and this did neither. So the head could be scoped out, emptied
+    // and correct while the author's own words sat underneath it in the body.
+    // Reported by croftc-ba (2026-09-03) against the ring, but the ring is only
+    // the first policy narrow enough to make it visible: muted words and label
+    // floors leaked through the same hole. Shaping the part closes all three,
+    // which is why this is not a ring special case.
+    //
+    // Withheld PER PART, and the walk continues rather than breaking. Two
+    // reasons, and they pull the same way: parts share an author, so an
+    // author-level policy hides all or none — but a muted word lives in ONE
+    // part's text and must take only that part. And other people's replies hang
+    // off the chain; they are not the hidden author's to take down with them,
+    // exactly as a reply under a blocked author already survives.
+    const part = shapeLensPost(chain.post, src, posture);
+    if (!part.hidden) selfThread.push({
       uri: chain.post.uri,
       id: chain.post.uri,
       author: chain.post.author?.handle || '[unknown]',
-      text: chain.post.record?.text || '',
-      facets: chain.post.record?.facets || [],
-      media: mediaOf(chain.post.embed),
-      quoted: quotedIn(chain.post.embed),
+      text: part.body,
+      facets: part.facets || [],
+      media: part.media,
+      quoted: part.quoted,
     });
     const kids = chain.replies || [];
     const next = kids.find((n) => n.post?.author?.did === rootDid && n.post);
@@ -1087,6 +1154,13 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
   // hiddenUris rides on the posture so the shape layer applies it like a mute;
   // the caller owns persisting it (a substrate never reaches for localStorage).
   let posture = { ...EMPTY_POSTURE, hiddenUris };
+  // The reader's ring, held apart from the posture it is composed onto.
+  // loadPosture() replaces the posture wholesale, so a ring folded INTO it
+  // would vanish every time the account's mutes refreshed — the reader would
+  // silently drop back to World mid-session with no event to explain it.
+  // Keeping the spec here means "what the reader chose" and "what their account
+  // says" are re-composed rather than one overwriting the other.
+  let ringSpec = { members: null, exemptKinds: [] };
   // 3x: rings are expensive — mutuals+1 is one getFollows per mutual, so a
   // full ring is 26+ graph reads before a single post loads, and it was paid
   // again on every visit to the dial. The follow graph changes slowly, so the
@@ -1096,6 +1170,11 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
   // rejected promise is dropped, because a transient 502 must never be
   // remembered as an empty ring.
   const ringCache = new Map();
+  // The GRAPH is cached separately from the sets derived from it, because the
+  // same walk now answers two questions — the capped board set and the uncapped
+  // filter set — and a reader who scopes the site to their follows should not
+  // pay for getFollows twice to find that out.
+  const graphCache = new Map();
 
   async function post(path, body, verb) {
     if (!session) throw new Error(`lens: ${verb} needs a session — sign in first`);
@@ -1176,10 +1255,21 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
         get('app.bsky.graph.getListMutes', { limit: 100 }),
         get('app.bsky.graph.getListBlocks', { limit: 100 }),
       ]);
-      posture = { ...buildPosture({
+      posture = withRing({ ...buildPosture({
         preferences: prefs.preferences, mutes: mutes.mutes, blocks: blocks.blocks,
         listMutes: listMutes.lists, listBlocks: listBlocks.lists,
-      }, Date.now()), hiddenUris };
+      }, Date.now()), hiddenUris }, ringSpec);
+      return posture;
+    },
+
+    // Move the reader's ring. Resolves once the graph walk behind the scope has
+    // landed, so a caller can repaint knowing the posture is the new one — the
+    // pill is a control whose effect is a re-render, and painting the old board
+    // under the new label is the one thing it must not do.
+    async applyScope(scope, { exemptKinds = [] } = {}) {
+      const { members } = await this.scopeMembersFor(scope);
+      ringSpec = { members, exemptKinds };
+      posture = withRing(posture, ringSpec);
       return posture;
     },
     posture: () => posture,
@@ -1205,7 +1295,13 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
     // never worth waiting for. Each level costs requests, so two things bound
     // it: QUOTE_CASCADE_DEPTH, and the counts the appview already gave us —
     // a quote reporting no replies and no quotes is never asked about.
-    async thread(uri, src, { onCascade } = {}) {
+    // ringOverride widens or narrows THIS thread only (owner, 2026-09-03: the
+    // thread pill "just overrides the thread"). It composes a local posture and
+    // never touches the stored one, which is what makes it transient — leaving
+    // the thread drops the argument, so there is no state that can fail to be
+    // cleaned up. The reader's moderation and their exemptions ride along
+    // unchanged: this replaces the ring and nothing else.
+    async thread(uri, src, { onCascade, ringOverride = null } = {}) {
       const source = src || { feedId: 'lens:thread', feedSlug: 'thread', feedTitle: 'Thread' };
       let [data, quotesRes] = await Promise.all([
         get('app.bsky.feed.getPostThread', { uri, depth: 10 }),
@@ -1231,8 +1327,16 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
         focus = uri;
       }
       const entries = (quotesRes?.posts || []).map((post) => ({ post }));
+      // Resolved BEFORE shape(), because the quote cascade calls shape() again
+      // as it lands and both paints must be the same thread.
+      const shapePosture = ringOverride
+        ? withRing(posture, {
+            members: (await this.scopeMembersFor(ringOverride)).members,
+            exemptKinds: [...(posture.ring?.exemptKinds || [])],
+          })
+        : posture;
       const shape = () => {
-        const t = shapeLensThread(data, source, { quotes: entries, posture });
+        const t = shapeLensThread(data, source, { quotes: entries, posture: shapePosture });
         return quotesRes === null ? { ...t, quotesFailed: true } : t;
       };
 
@@ -1320,7 +1424,7 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
 
     // 3x: forget the remembered rings — sign-out, account switch, or an
     // explicit refresh. The graph belongs to an account, not to a device.
-    forgetRings() { ringCache.clear(); },
+    forgetRings() { ringCache.clear(); graphCache.clear(); },
 
     // The graph walk, cached by ringMembers above. This function FETCHES; it
     // does not decide what a rung means — js/rings.js does, purely, which is
@@ -1330,17 +1434,53 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
     // rung is a union over data the first two calls already returned, so 'me',
     // 'mut' and 'fol' cost exactly two requests between them.
     async computeRing(ring) {
-      const [follows, followers] = await Promise.all([
-        pagedGraph('getFollows', session.did),
-        pagedGraph('getFollowers', session.did),
-      ]);
-      const hopFollows = new Map();
-      if (ring === 'hop') {
-        for (const m of computeMutuals(follows, followers)) {
-          hopFollows.set(m, await pagedGraph('getFollows', m));
-        }
+      return membersFor(ring, await this.ringGraph(ring === 'hop'));
+    },
+
+    // The uncapped set, for the display scope (plan 2026-09-03). Same walk,
+    // different consumer: RING_CAP bounds the board's one-request-per-member
+    // fan-out, and a filter fans out nothing, so carrying the cap here would
+    // silently stop a reader with 300 follows from seeing 275 of them.
+    scopeMembersFor(scope) {
+      if (scope === 'world') return Promise.resolve({ members: null });
+      if (!RUNG_IDS.includes(scope)) {
+        return Promise.reject(new Error(`lens: unknown rung: ${scope} (known: ${RUNG_IDS.join(', ')})`));
       }
-      return membersFor(ring, { me: session.did, follows, followers, hopFollows });
+      if (!session) return Promise.reject(new Error('lens: rings are computed from YOUR graph — needs a session'));
+      const key = `scope:${scope}`;
+      const cached = ringCache.get(key);
+      if (cached) return cached;
+      const pending = this.ringGraph(scope === 'hop')
+        .then((graph) => scopeMembers(scope, graph))
+        .catch((e) => { ringCache.delete(key); throw e; }); // a failure is not an answer
+      ringCache.set(key, pending);
+      return pending;
+    },
+
+    // The walk itself, cached. The second hop is fetched only for the rung that
+    // needs it: every tighter rung is a union over data the first two calls
+    // already returned, so 'me', 'mut' and 'fol' cost exactly two requests
+    // between them. A hop graph is a superset of a base one, so a base caller
+    // arriving after a hop caller reuses it rather than re-walking.
+    ringGraph(needsHop) {
+      const key = needsHop ? 'hop' : 'base';
+      const cached = graphCache.get(key) || (needsHop ? null : graphCache.get('hop'));
+      if (cached) return cached;
+      const pending = (async () => {
+        const [follows, followers] = await Promise.all([
+          pagedGraph('getFollows', session.did),
+          pagedGraph('getFollowers', session.did),
+        ]);
+        const hopFollows = new Map();
+        if (needsHop) {
+          for (const m of computeMutuals(follows, followers)) {
+            hopFollows.set(m, await pagedGraph('getFollows', m));
+          }
+        }
+        return { me: session.did, follows, followers, hopFollows };
+      })().catch((e) => { graphCache.delete(key); throw e; });
+      graphCache.set(key, pending);
+      return pending;
     },
 
     // 3b: the merged ring board. One page = one fan-out round over the ring's
