@@ -49,8 +49,8 @@ export function navTree({ el, session, feeds, tags, current }) {
   // screen; changing your site-wide ring there means opening the drawer, which
   // is exactly what setting it cost when it was five rows.
   //
-  // The rungs remain addressable at /r/<rung>; what changed is that they are no
-  // longer how you set your ring.
+  // The rungs are not addresses at all any more: /r/<rung> and the merged board
+  // behind it were retired the same day the pill landed.
   //
   // Signed out the pill is STILL DRAWN, with World selected and the tighter
   // stops disabled (owner, 2026-09-03: "on logged out I still want the pill but

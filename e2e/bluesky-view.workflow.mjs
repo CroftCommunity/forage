@@ -98,6 +98,16 @@ export async function run() {
       'searchPosts': { posts: [post('tagged1', 'did:plc:cc', '2026-08-25T13:00:00Z').post] },
       'getAuthorFeed?actor=did%3Aplc%3Atrends': { feed: [post('trendpost', 'did:plc:cc', '2026-08-25T14:00:00Z')] },
       'getFeed': { feed: [
+        // b1 and a1 moved here from the author feeds when the merged ring board
+        // was retired (2026-09-03). They are the pair the plural assertions
+        // need — one reply beside none — and they used to arrive by /r/mut
+        // fanning out over their authors. A curated board serves them now, and
+        // needs no savedFeeds in the fixture to resolve.
+        { post: { ...post('b1', 'did:plc:bb', '2026-08-25T11:00:00Z').post, replyCount: 1,
+          record: { text: 'post b1 #camp', createdAt: '2026-08-25T11:00:00Z',
+            facets: [{ index: { byteStart: 8, byteEnd: 13 },
+              features: [{ $type: 'app.bsky.richtext.facet#tag', tag: 'camp' }] }] } } },
+        post('a1', 'did:plc:aa', '2026-08-25T10:00:00Z'),
         { post: { ...post('tp1', 'did:plc:cc', '2026-08-25T12:00:00Z').post, likeCount: 50 } },
         { post: { ...post('tp2', 'did:plc:cc', '2026-08-25T15:00:00Z').post, likeCount: 2 } },
         // 3u: a post that DECLARES a language other than the reader's
@@ -165,37 +175,23 @@ export async function run() {
   });
   const { page } = s;
 
-  // 3b segment: signed-in → open My mutuals → the merged board renders.
-  // The gesture has been a dial button, then a nav row, and is now an ADDRESS:
-  // plan 2026-09-03 took the ring off the nav and made it a scope pill, and the
-  // rungs stayed addressable at /r/<rung>. The property under test has been the
-  // BOARD throughout, which is why this keeps working across all three.
+  // The merged ring board and its cache lived here and were retired with
+  // /r/<rung> on 2026-09-03 — the ring is a display scope now, so there is no
+  // board that fans out over a rung's members and nothing to interleave. Two
+  // properties went with it: "newest first across members", which was the
+  // board's, and "dialing away and back does not re-walk the graph", which was
+  // not — that one is the scope cache and is covered in test/lens-rings.test.js
+  // § 3x, hermetically and without a browser.
   await page.goto(`${s.origin}/`);
   // E144: the masthead shows a named account control instead of the handle
   // as text. Same signal — 'this session is signed in' — new surface.
   await page.waitForSelector('[data-account="1"][aria-label*="me.test"]');
-  await page.goto(`${s.origin}/r/mut`);
-  await page.waitForSelector('text=post b1');
-  await page.waitForSelector('text=post a1');
-  const text = await page.locator('main, body').first().innerText();
-  assert.ok(text.indexOf('post b1') < text.indexOf('post a1'), 'newest first across members (11:00 before 10:00)');
 
-  // 3x: the ring is computed ONCE. Dialing away and back must not re-walk the
-  // follow graph — mutuals+1 is one getFollows per mutual, and paying that on
-  // every visit is the difference between instant and several seconds.
-  const graphCalls = () => page.evaluate(() => window.__shimHits
-    .filter((h) => /getFollows|getFollowers/.test(h.url)).length);
-  const afterFirstDial = await graphCalls();
-  assert.ok(afterFirstDial > 0, 'the first dial did read the graph');
-  await page.goto(`${s.origin}/r/world`);
-  // wait for the World dial to have SETTLED rather than sleeping at it: a fixed
-  // delay before an assertion that nothing happened can only be too short or
-  // wasteful, and under load it is the former (croftc-e2's observation).
-  await page.waitForFunction(() => !document.querySelector('.skeleton'), null, { timeout: 15000 });
-  await page.goto(`${s.origin}/r/mut`);
-  await page.waitForSelector('text=post b1');
-  assert.equal(await graphCalls(), afterFirstDial,
-    'dialing back re-used the remembered ring — no new graph reads');
+  // Onto a board explicitly. `/` redirects to the LANDING board, which since
+  // 2026-09-03 is /f/following — so the assertions below would otherwise run on
+  // whatever the landing rule chose rather than on a board this fixture serves.
+  await page.goto(`${s.origin}/f/whats-hot`);
+  await page.waitForSelector('.postrow');
 
   // Counts read as English. "1 comments" shipped and stayed because five call
   // sites each interpolated a number beside a hardcoded plural noun and no
@@ -477,7 +473,7 @@ export async function run() {
   await page.waitForSelector('text=This post was deleted');
 
   // …and the facet #tag in a board post is a doorway into /h/
-  await page.goto(`${s.origin}/r/mut`);
+  await page.goto(`${s.origin}/f/whats-hot`);
   await page.waitForSelector('a[data-tag="camp"]');
   await page.locator('a[data-tag="camp"]').first().click();
   await page.waitForSelector('h1:has-text("#camp")');

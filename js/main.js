@@ -175,7 +175,6 @@ router.route('/', byMode((p, q) => {
   }
   return lensViews.lensHomeView(p, q);
 }, (p, q) => views.boardView('popular', 'Popular', q)));
-router.route('/r/:rung', blueskyOnly(lensViews.lensRingView));
 // The directory needs an address of its own. Its row in the nav used to point
 // at '/', which the landing rule redirects away from the instant a signed-in
 // reader touches it — so the directory was unreachable for exactly the readers
@@ -286,9 +285,9 @@ function render() {
   const lensMode = pmode.active() === 'bluesky';
   // Auth boots from the RENDER PIPELINE, not as a side effect of some view
   // rendering the sign-in card. Before V4 every guest landing drew that card,
-  // so the boot happened by accident; the moment a rung became a real address
-  // (/r/mut), landing there directly meant the session never restored and the
-  // nav showed a guest their own account as signed out. Booting here makes it
+  // so the boot happened by accident; the moment a board became a real address,
+  // landing there directly meant the session never restored and the nav showed
+  // a guest their own account as signed out. Booting here makes it
   // independent of which board you arrived on. bootAuth() shares one in-flight
   // promise, so calling it every render costs nothing after the first.
   if (lensMode) lensViews.ensureAuthBoot();

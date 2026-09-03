@@ -115,15 +115,17 @@ export async function run() {
     await page.reload();
     await page.waitForSelector('.nav [data-nav-item="tag-harvest"]');
 
-    // And it is woven into World alongside the timeline — not a separate list.
-    await page.goto(`${s.origin}/r/world`);
-    await page.waitForSelector('.postrow');
-    const ids = await page.$$eval('.postrow .posttitle a, .postrow a', (as) => as.map((a) => a.textContent));
-    const text = await page.locator('body').innerText();
-    assert.ok(text.includes('post h1'), 'the subscribed hashtag contributes posts to World');
-    assert.ok(text.includes('post t1'), 'alongside the timeline');
-    assert.ok(text.indexOf('post h1') < text.indexOf('post t1'),
-      'interleaved newest-first across sources, not appended in a clump');
+    // A subscribed hashtag used to be WOVEN INTO WORLD — /r/world drew the
+    // composition, interleaving your timeline, your saved feeds and your
+    // subscribed hashtags newest-first into one stream. That board was retired
+    // with the rest of /r/<rung> on 2026-09-03, and no board replaces it: a
+    // hashtag subscription is now reachable as its own board (/h/<tag>, the nav
+    // row asserted above) and nothing merges the three sources.
+    //
+    // The assertions that stood here are DELETED rather than repointed, because
+    // there is nowhere to point them. That is a real capability leaving, not a
+    // test going stale, and it is recorded here so the next reader does not
+    // reintroduce it by accident thinking it was an oversight.
 
     // Leaving removes it everywhere, which is what deleting the record will mean.
     await page.goto(`${s.origin}/h/harvest`);

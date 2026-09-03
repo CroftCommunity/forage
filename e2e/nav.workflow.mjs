@@ -156,7 +156,7 @@ export async function run() {
       'and the burger agrees with what is on screen');
 
     // ---- 3. tap targets, at the floor the gate enforces ----
-    await s.page.goto(`${s.origin}/r/mut`);
+    await s.page.goto(`${s.origin}/f/following`);
     await s.page.waitForSelector('.navburger');
     const small = await s.page.$$eval('.navburger, [data-nav-item]', (els) => els
       .map((e) => ({ t: (e.textContent || '').trim().slice(0, 24), r: e.getBoundingClientRect() }))

@@ -16,7 +16,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   shapeLensPost, shapeLensFeed, shapeLensThread, buildPosture, withRing, EMPTY_POSTURE,
-  createLens, RING_CAP,
+  createLens,
 } from '../js/substrates/lens.js';
 
 const ME = 'did:plc:me';
@@ -225,13 +225,13 @@ test('a thread whose ROOT is outside the ring shapes as hidden rather than blank
 
 // ---- the substrate's uncapped path ----
 //
-// ringMembers() feeds a BOARD and is capped at RING_CAP, because that board
-// issues one author-feed request per member. scopeMembersFor() feeds the
-// FILTER and is not capped, because filtering issues none. Both walk the same
-// graph, so asking for one after the other must not pay for the walk twice.
+// scopeMembersFor() feeds the filter and is not capped, because filtering
+// issues no requests. It had a capped sibling, ringMembers(), which fed the
+// merged ring board's one-request-per-member fan-out; that board was retired
+// with /r/<rung> on 2026-09-03 and the cap went with it.
 
 test('scopeMembersFor returns every member — the cap is a fan-out bound, not a filter bound', async () => {
-  const many = dids(RING_CAP + 10, 'f');
+  const many = dids(35, 'f');
   const { session } = graphSession({
     [`getFollows:${ME}`]: [many],
     [`getFollowers:${ME}`]: [many],
@@ -247,18 +247,6 @@ test('scopeMembersFor: World needs no graph at all', async () => {
   const lens = createLens({ session });
   assert.deepEqual(await lens.scopeMembersFor('world'), { members: null });
   assert.equal(calls.length, 0, 'the default scope costs nothing, which is why it is the default');
-});
-
-test('the board set and the filter set share ONE graph walk', async () => {
-  const { session, calls } = graphSession({
-    [`getFollows:${ME}`]: [['did:plc:a']],
-    [`getFollowers:${ME}`]: [['did:plc:a']],
-  });
-  const lens = createLens({ session });
-  await lens.ringMembers('fol');
-  const afterBoard = calls.length;
-  await lens.scopeMembersFor('fol');
-  assert.equal(calls.length, afterBoard, 'the second answer is derived, not re-fetched');
 });
 
 test('scopeMembersFor refuses an unknown scope, and refuses without a session', async () => {
