@@ -568,11 +568,13 @@ dialog.menu::backdrop { background: transparent; }
    threads not collapsed by default … it can get a little hard to follow and
    read". Every rung of that chain was a comment with EXACTLY ONE reply, and an
    indent is the renderer saying "this branched" about something that never
-   branched. The indent is spent and nothing is bought with it: at 14px a step,
-   depth 9 costs 126px of a 390px phone, and the frame we captured off main
-   (snaps/thread-depth/deep-lens-tail.phone.current.png) shows what that buys —
-   a display name truncated to "Thes…" and a two-digit like count broken across
-   two lines.
+   branched. The indent is spent and nothing is bought with it. Measured on main
+   at 390px against e2e/harness/mock-deepthread.mjs, a reply's words get 284px at
+   depth 1 and 158px at depth 10 — about twenty characters a line — losing 14px a
+   level the whole way; the frame we captured off main
+   (snaps/thread-depth/deep-lens-tail.phone.current.png) shows what 172px buys at
+   depth 9: a display name truncated to "Thes…" and a two-digit like count broken
+   across two lines. Flattened, every rung past the second keeps 270px.
 
    So: a comment whose replies are ONE reply (js/ui/components.js marks it
    `.chain`) gives that reply no new indent, past the depth where the indent has

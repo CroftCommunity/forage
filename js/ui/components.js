@@ -419,7 +419,7 @@ export function focusComment(container, id, { threadHref }) {
     // permalink into a deep subtree scrolls to something display:none —
     // the target IS in the DOM (the bar hides, it never skips the render),
     // which is the whole reason the fold is a class and not a lazy branch.
-    if (!folded) node.querySelector(':scope > [data-deep]')?.click();
+    if (!folded) node.querySelector(':scope > .kids > [data-deep]')?.click();
     const fold = node.querySelector(':scope > .comment-body > .comment-actions > [data-fold]');
     const is = node.classList.contains('collapsed');
     if (fold && is !== folded) fold.click();      // keeps the fold's own label honest

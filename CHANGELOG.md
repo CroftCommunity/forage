@@ -8,6 +8,20 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-03 **Deep threads read like conversations again.** A long back-and-forth used to walk
+  right off the side of a phone: every reply stepped 14px further in, so by the tenth the words
+  had 158px to live in — about twenty characters a line — and names were cut to "Thes…" with
+  like counts broken across two lines. Most of those steps were saying nothing. A step in means
+  "this branched", and a two-person conversation never branches: each reply is the only reply.
+  So a comment with exactly one reply no longer indents it — the thread guide runs straight on
+  through, and past the second level on a phone (the fourth on a desktop) a reply keeps its full
+  width however deep it goes. Nothing is hidden to do it. Separately, replies five levels down
+  and further now arrive folded behind one line saying how many there are ("⊕ 6 replies"); press
+  it and the whole branch opens where it stands, without leaving the page or losing your place.
+  Shallower conversations are untouched. Links to a single comment still work into a folded
+  branch. (owner: "we have deep nested threads not collapsed by default … it can get a little
+  hard to follow and read")
+
 - 2026-09-02 **Two follow-ups to the GIF work: nothing vanishes, and Tenor got cheaper.** If you
   reply to your own post to continue a thread, Forage folds those parts into the post itself —
   but it was only keeping your words. A picture, a video, a link card or a GIF on any part after
