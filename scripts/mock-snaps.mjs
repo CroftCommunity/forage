@@ -12,7 +12,7 @@
 //        board-lens-refresh-news board-lens-refresh-pill post-lens-quote thread-lens
 //        thread-lens-quote thread-lens-sheet thread-lens-embed menu-lens focus-lens reply-lens thread-lens-reply
 //        news-lens news-lens-replies news-board news-board-nothumb
-//        deep-lens deep-lens-spine deep-lens-tail
+//        deep-lens deep-lens-spine deep-lens-tail deep-lens-open
 //        gif-lens gif-lens-paused gif-lens-alt gif-board)
 //   node scripts/mock-snaps.mjs --as current --serve ../../forage
 //       # the same script and fixtures, rendering ANOTHER checkout (main): the
@@ -423,7 +423,7 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
   //   deep-lens        the head and the ordinary replies — the control
   //   deep-lens-spine  the descent, anchored on the quote the chain hangs off
   //   deep-lens-tail   the far end: the deepest rungs and the depth-10 boundary
-  if (wanted('deep-lens') || wanted('deep-lens-spine') || wanted('deep-lens-tail')) {
+  if (wanted('deep-lens') || wanted('deep-lens-spine') || wanted('deep-lens-tail') || wanted('deep-lens-open')) {
     const dp = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: DEEP });
     await dp.page.setViewportSize({ width: vp.width, height: vp.height });
     await dp.page.goto(`${dp.origin}${DEEP_PATH}`);
@@ -440,9 +440,21 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
       await dp.page.waitForTimeout(200);
     };
     if (wanted('deep-lens-spine')) { await anchor(DEEP_QUOTE); await shoot(dp.page, 'deep-lens-spine', 'lens:mock-deepthread', name, vp); }
-    // SPINE_URIS[5] is depth 6 — far enough down that the frame carries the
-    // deepest rungs AND the "continue this thread" stub at the depth-10 wall
-    if (wanted('deep-lens-tail')) { await anchor(SPINE_URIS[5]); await shoot(dp.page, 'deep-lens-tail', 'lens:mock-deepthread', name, vp); }
+    // SPINE_URIS[4] is depth 5 — the rung Phase B folds at, so this frame is the
+    // one place all three columns can be compared: main runs on past it, Phase A
+    // runs on past it flat, Phase A+B stops there behind a bar. Anchoring DEEPER
+    // captured nothing under A+B (the anchor was inside the fold, so
+    // scrollIntoView had no box to scroll to and the frame stayed at the top —
+    // an honest capture of a useless frame).
+    if (wanted('deep-lens-tail') || wanted('deep-lens-open')) { await anchor(SPINE_URIS[4]); }
+    if (wanted('deep-lens-tail')) await shoot(dp.page, 'deep-lens-tail', 'lens:mock-deepthread', name, vp);
+    // the bar pressed. On a tree with no bar this is the same frame as the tail,
+    // which is the honest Current: there is no such control to press.
+    if (wanted('deep-lens-open')) {
+      const bar = dp.page.locator('.deep-bar').first();
+      if (await bar.count()) { await bar.click(); await anchor(SPINE_URIS[4]); }
+      await shoot(dp.page, 'deep-lens-open', 'lens:mock-deepthread', name, vp);
+    }
     dp.consoleErrors(); dp.errors();
     await dp.close();
   }
