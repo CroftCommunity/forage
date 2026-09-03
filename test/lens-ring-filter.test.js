@@ -342,3 +342,112 @@ test('a moderation reload does NOT quietly drop the reader out of their scope', 
   assert.ok(p.ring.exemptKinds.has('hashtag'), 'and still exempting what it was');
   assert.ok(p.mutedDids.has('did:plc:muted'), 'with the fresh moderation applied');
 });
+
+// ---- the thread override ----
+//
+// Owner, 2026-09-03: a pill at the top of a thread that "just overrides the
+// thread". Transient by construction — the override is an argument to one call,
+// so leaving the thread cannot fail to drop it. The site-wide scope is never
+// written, which is the whole difference between this and the masthead pill.
+
+const THREAD = (rootDid, replyDid) => ({
+  thread: {
+    post: {
+      uri: `at://${rootDid}/app.bsky.feed.post/root`, cid: 'cr',
+      author: { did: rootDid, handle: 'root.test' },
+      record: { text: 'the root', createdAt: '2026-09-03T10:00:00Z' },
+      indexedAt: '2026-09-03T10:00:00Z',
+    },
+    replies: [{
+      post: {
+        uri: `at://${replyDid}/app.bsky.feed.post/kid`, cid: 'ck',
+        author: { did: replyDid, handle: 'kid.test' },
+        record: { text: 'from outside', createdAt: '2026-09-03T11:00:00Z' },
+        indexedAt: '2026-09-03T11:00:00Z',
+      },
+      replies: [],
+    }],
+  },
+});
+
+const threadLens = async () => {
+  const { session } = postSession({
+    ...MOD,
+    'app.bsky.feed.getPostThread': THREAD(ME, OUT),
+    'app.bsky.feed.getQuotes': { posts: [] },
+  }, { [`getFollows:${ME}`]: [[]], [`getFollowers:${ME}`]: [[]] });
+  const lens = createLens({ session });
+  await lens.applyScope('fol');          // ME only: OUT is outside it
+  return lens;
+};
+
+test('without an override, a thread obeys the site-wide scope', async () => {
+  const lens = await threadLens();
+  const t = await lens.thread(`at://${ME}/app.bsky.feed.post/root`, SRC);
+  assert.deepEqual(t.comments.map((c) => c.body), [], 'the out-of-ring reply is scoped away');
+});
+
+test('an override widens THIS thread and writes nothing', async () => {
+  const lens = await threadLens();
+  const before = lens.posture().ring.members;
+  const t = await lens.thread(`at://${ME}/app.bsky.feed.post/root`, SRC, { ringOverride: 'world' });
+  assert.deepEqual(t.comments.map((c) => c.body), ['from outside'], 'World here shows the reply');
+  assert.equal(lens.posture().ring.members, before,
+    'and the site-wide scope is exactly what it was — the override never touched it');
+
+  const after = await lens.thread(`at://${ME}/app.bsky.feed.post/root`, SRC);
+  assert.deepEqual(after.comments.map((c) => c.body), [], 'the next thread is scoped again');
+});
+
+test('an override keeps the reader moderation and their exemptions', async () => {
+  const { session } = postSession({
+    ...MOD,
+    'app.bsky.graph.getMutes': { mutes: [{ did: OUT }] },
+    'app.bsky.feed.getPostThread': THREAD(ME, OUT),
+    'app.bsky.feed.getQuotes': { posts: [] },
+  }, { [`getFollows:${ME}`]: [[]], [`getFollowers:${ME}`]: [[]] });
+  const lens = createLens({ session });
+  await lens.loadPosture();
+  await lens.applyScope('fol', { exemptKinds: ['feed'] });
+  const t = await lens.thread(`at://${ME}/app.bsky.feed.post/root`, SRC, { ringOverride: 'world' });
+  assert.deepEqual(t.comments.map((c) => c.body), [],
+    'widening the ring does not un-mute anyone — World is unringed, not unmoderated');
+  assert.ok(lens.posture().ring.exemptKinds.has('feed'), 'and the exemption survived the override');
+});
+
+test('your OWN posts never vanish from your own thread, however tight the ring', async () => {
+  // Raised by croftc-ba (2026-09-03) against their signed-in-as-the-poster
+  // fixture: if the ring scopes thread replies through p.hidden, can a reader
+  // narrow themselves out of their own conversation?
+  //
+  // No — and the reason is structural rather than a special case. Every rung is
+  // a cumulative union starting at `me` (js/rings.js `chain`), so the reader's
+  // own DID is in the tightest ring there is. Pinned here because "it follows
+  // from the ladder" is exactly the kind of guarantee a later refactor of the
+  // ladder would take away silently.
+  const { session } = postSession({
+    ...MOD,
+    'app.bsky.feed.getPostThread': THREAD(ME, ME),
+    'app.bsky.feed.getQuotes': { posts: [] },
+  }, { [`getFollows:${ME}`]: [[]], [`getFollowers:${ME}`]: [[]] });
+  const lens = createLens({ session });
+  await lens.applyScope('me');                     // the tightest rung there is
+  const t = await lens.thread(`at://${ME}/app.bsky.feed.post/root`, SRC);
+  assert.equal(t.post.hidden, undefined, 'the poster can see their own post');
+  // The reply is by the root's own author, so the self-thread rule hoists it
+  // into the body rather than the comment list. Either way it must be PRESENT.
+  assert.ok(JSON.stringify(t).includes('from outside'),
+    'and their own reply survives, wherever the thread shape puts it');
+});
+
+test('the tightest ring still hides everyone else', async () => {
+  const lens = createLens({ session: postSession({
+    ...MOD,
+    'app.bsky.feed.getPostThread': THREAD(ME, OUT),
+    'app.bsky.feed.getQuotes': { posts: [] },
+  }, { [`getFollows:${ME}`]: [[]], [`getFollowers:${ME}`]: [[]] }).session });
+  await lens.applyScope('me');
+  const t = await lens.thread(`at://${ME}/app.bsky.feed.post/root`, SRC);
+  assert.ok(!JSON.stringify(t.comments).includes('from outside'),
+    'me means me — the previous test is a guarantee about you, not a hole');
+});

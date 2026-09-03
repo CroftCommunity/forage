@@ -2995,7 +2995,15 @@ export function lensThreadView(params, query) {
   // 3r: the cascade repaints in place — a quote of a quote is worth showing,
   // never worth making the thread wait.
   let onCascade = () => {};
-  lens.thread(uri, src, { onCascade: (t) => onCascade(t) }).then((t) => {
+  // The thread's own ring, which OVERRIDES the site-wide one for this page only
+  // (owner, 2026-09-03: "just overrides the thread ... so it can be adjusted in
+  // a thread without opening the whole site"). Held in this closure and passed
+  // as an argument, never written to storage: navigating away drops it, so
+  // there is no state that can fail to be cleaned up, and the pill in the
+  // masthead is exactly where the reader left it.
+  let ringOverride = null;
+  const load = () => {
+  lens.thread(uri, src, { onCascade: (t) => onCascade(t), ringOverride }).then((t) => {
     const p = t.post;
     // 3w: the thread is no longer read-only — replies are a real write now.
     // A reply's PARENT is the node you answered; its ROOT is the top of the
@@ -3159,7 +3167,21 @@ export function lensThreadView(params, query) {
     // comment AGAIN: the repaint is a fresh tree, and the first focus went with
     // the old one (mock v20 claim F, found by the shipped capture 2026-08-30)
     onCascade = (next) => { paintComments(next.comments); if (focus) focusComment(commentsCard, focus, { threadHref }); };
-    main.replaceChildren(...[bar, head, t.comments.length ? commentsCard : emptyState('No replies', 'Nothing below this post yet.')].filter(Boolean));
+    // A reply that your ring hid is a reply you cannot see the answer to, so
+    // the widening control belongs ON the thread rather than three pages away.
+    // Rebuilt on every paint, because its selected segment is the override and
+    // the override changes underneath it.
+    const threadRing = session ? (() => {
+      const pill = ringScope.ringPill(el, {
+        override: ringOverride,
+        ariaLabel: 'How close — this thread only',
+        onPicked: (id) => { ringOverride = id; main.replaceChildren(skeleton(8)); load(); },
+      });
+      return pill ? el('div', { class: 'ringbar', 'data-thread-ring': '1' }, pill) : null;
+    })() : null;
+    main.replaceChildren(...[bar, threadRing, head, t.comments.length ? commentsCard : emptyState('No replies', 'Nothing below this post yet.')].filter(Boolean));
   }).catch((e) => main.replaceChildren(emptyState('Lens fetch failed', e.message)));
+  };
+  load();
   return { main, side: el('div', { class: 'side' }, ...lensRail()) };
 }

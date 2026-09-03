@@ -1278,7 +1278,13 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
     // never worth waiting for. Each level costs requests, so two things bound
     // it: QUOTE_CASCADE_DEPTH, and the counts the appview already gave us —
     // a quote reporting no replies and no quotes is never asked about.
-    async thread(uri, src, { onCascade } = {}) {
+    // ringOverride widens or narrows THIS thread only (owner, 2026-09-03: the
+    // thread pill "just overrides the thread"). It composes a local posture and
+    // never touches the stored one, which is what makes it transient — leaving
+    // the thread drops the argument, so there is no state that can fail to be
+    // cleaned up. The reader's moderation and their exemptions ride along
+    // unchanged: this replaces the ring and nothing else.
+    async thread(uri, src, { onCascade, ringOverride = null } = {}) {
       const source = src || { feedId: 'lens:thread', feedSlug: 'thread', feedTitle: 'Thread' };
       let [data, quotesRes] = await Promise.all([
         get('app.bsky.feed.getPostThread', { uri, depth: 10 }),
@@ -1304,8 +1310,16 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
         focus = uri;
       }
       const entries = (quotesRes?.posts || []).map((post) => ({ post }));
+      // Resolved BEFORE shape(), because the quote cascade calls shape() again
+      // as it lands and both paints must be the same thread.
+      const shapePosture = ringOverride
+        ? withRing(posture, {
+            members: (await this.scopeMembersFor(ringOverride)).members,
+            exemptKinds: [...(posture.ring?.exemptKinds || [])],
+          })
+        : posture;
       const shape = () => {
-        const t = shapeLensThread(data, source, { quotes: entries, posture });
+        const t = shapeLensThread(data, source, { quotes: entries, posture: shapePosture });
         return quotesRes === null ? { ...t, quotesFailed: true } : t;
       };
 
