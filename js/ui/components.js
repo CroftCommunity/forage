@@ -606,7 +606,15 @@ export function commentNode(node, ctx) {
     deepBar = el('button', { type: 'button', class: 'deep-bar', 'data-deep': '1', 'aria-expanded': 'false' },
       el('span', { class: 'glyph', 'aria-hidden': 'true' }, '\u2295'), ` ${plural(countDesc(node), 'reply', 'replies')}`);
     deepBar.addEventListener('click', () => {
-      wrap.classList.remove('folded');
+      // The whole subtree, not one rung. The first capture of this control
+      // (snaps/thread-depth/phase-ab/deep-lens-open.phone.proposed.png, before
+      // this line) opened depth 6 and immediately drew another bar under it,
+      // because depth 6 is past the budget too — a reader answering "show me
+      // the rest of this" got one reply and another button, once per level.
+      // The budget is about what a thread ARRIVES as; once a reader has said
+      // they want this branch, they want the branch.
+      for (const el of [wrap, ...wrap.querySelectorAll('.comment.deep')]) el.classList.remove('folded');
+      for (const bar of wrap.querySelectorAll('.deep-bar')) bar.remove();
       deepBar.setAttribute('aria-expanded', 'true');
       deepBar.remove(); // the ⊖ fold on the action row folds it again — one control per job
     });
