@@ -599,7 +599,19 @@ dialog.menu::backdrop { background: transparent; }
    straight down the middle of the avatar it is pointing at — visible at a 0
    indent, and only invisible at the phone's 14px because the stroke lands on
    the avatar's outermost 2px. */
-.comment.chain:not([data-depth="0"]):not([data-depth="1"]):not([data-depth="2"]):not([data-depth="3"]) > .kids { --in: 0px; --elbow: 8px; }
+/* The reader picks the threshold (js/thread-shape.js writes `data-flatten` on the
+   root; Phase C, owner 2026-09-03). One declaration, one selector per choice —
+   `:not([data-depth=…])` reads as "not one of the shallow ones", so each line
+   states its own number. `off` has no line, which is how it is off.
+
+   `auto` is the pair below: a desktop keeps four levels of indent, a phone two,
+   because a phone runs out of column two levels sooner. It is the default and it
+   is the only choice whose answer depends on the screen. */
+[data-flatten="auto"] .comment.chain:not([data-depth="0"]):not([data-depth="1"]):not([data-depth="2"]):not([data-depth="3"]) > .kids,
+[data-flatten="1"] .comment.chain:not([data-depth="0"]) > .kids,
+[data-flatten="2"] .comment.chain:not([data-depth="0"]):not([data-depth="1"]) > .kids,
+[data-flatten="4"] .comment.chain:not([data-depth="0"]):not([data-depth="1"]):not([data-depth="2"]):not([data-depth="3"]) > .kids,
+[data-flatten="6"] .comment.chain:not([data-depth="0"]):not([data-depth="1"]):not([data-depth="2"]):not([data-depth="3"]):not([data-depth="4"]):not([data-depth="5"]) > .kids { --in: 0px; --elbow: 8px; }
 
 /* ---- thread-depth Phase B: the depth the tree arrives open to -------------
    Past `DEEP_FOLD_AT` (js/ui/components.js) a comment's replies arrive behind
@@ -912,8 +924,9 @@ hr.rule { border: none; border-top: 1px solid var(--border); margin: var(--s4) 0
 .media-strip img { max-width: 100%; height: auto; }
 @media (max-width: 480px) {
   .comment { --kids-indent: 14px; }
-  /* thread-depth Phase A: a phone runs out of column two levels sooner */
-  .comment.chain:not([data-depth="0"]):not([data-depth="1"]) > .kids { --in: 0px; --elbow: 8px; }
+  /* thread-depth Phase A: `auto` on a phone runs out of column two levels sooner.
+     The fixed choices are width-independent by definition and stay in the base rule. */
+  [data-flatten="auto"] .comment.chain:not([data-depth="0"]):not([data-depth="1"]) > .kids { --in: 0px; --elbow: 8px; }
   .shell { padding: var(--s2); }
 }
 .feed-avatar { width: 40px; height: 40px; border-radius: var(--radius-card); border: 1px solid var(--border); flex: none; }

@@ -15,6 +15,32 @@ import assert from 'node:assert/strict';
 import { scenario } from './harness/scenario.mjs';
 import { RESPONSES, FAKE_SIGNED_IN, THREAD_PATH, SPINE_URIS, BRANCH_URI } from './harness/mock-deepthread.mjs';
 
+// Phase C: the shape of the tree under a given pair of settings. Returns the
+// depths that flatten and the depths that fold, read off the rendered DOM —
+// never off the module that wrote them, or the check would be the setting
+// agreeing with itself.
+const shapeUnder = async (flatten, fold) => {
+  const seed = `try{localStorage.setItem('forage.threadflatten','${flatten}');localStorage.setItem('forage.threadfold','${fold}');}catch{}`;
+  const s = await scenario('first-visit', { mode: 'bluesky', initScripts: [FAKE_SIGNED_IN, seed], responses: RESPONSES });
+  try {
+    await s.page.setViewportSize({ width: 390, height: 900 });
+    await s.page.goto(`${s.origin}${THREAD_PATH}`);
+    await s.page.waitForSelector('.comment[data-kind="quote"]');
+    const out = await s.page.evaluate(() => ({
+      attr: document.documentElement.getAttribute('data-flatten'),
+      // a folded subtree has a zero-sized box, so only VISIBLE levels are read
+      flattens: [...document.querySelectorAll('.comment')].filter((c) => {
+        const k = c.querySelector(':scope > .kids > .comment');
+        return k && k.getBoundingClientRect().width > 0
+          && Math.round(k.getBoundingClientRect().left) === Math.round(c.getBoundingClientRect().left);
+      }).map((c) => Number(c.dataset.depth)).sort((a, b) => a - b),
+      folds: [...document.querySelectorAll('.comment.deep')].map((c) => Number(c.dataset.depth)).sort((a, b) => a - b),
+    }));
+    s.errors(); s.consoleErrors();
+    return out;
+  } finally { await s.close(); }
+};
+
 // The geometry of one comment: where its own box starts, where the box of the
 // replies under it starts, and how wide its words are allowed to be.
 const boxes = (page, id) => page.evaluate((nid) => {
@@ -120,4 +146,54 @@ export async function run() {
     assert.deepEqual(await s.shimMisses(), []);
     assert.deepEqual(s.errors(), []);
   } finally { await s.close(); }
+
+  // ---- Phase C: both numbers are the reader's ------------------------------
+  // Owner, 2026-09-03: "the settings should be adjustable for the user in
+  // advanced on their profile". Read off the DOM at 390px, so each claim is
+  // about what the reader SEES and not about what the preference module says.
+  const auto = await shapeUnder('auto', '5');
+  assert.equal(auto.attr, 'auto', 'the default is written onto the root explicitly, never left unset');
+  assert.equal(auto.flattens[0], 2, 'auto on a phone: the first two levels keep their indent');
+  assert.equal(auto.folds[0], 5, 'and the fold arrives at 5');
+
+  // The whole feature off is main's thread again. This is the claim that makes
+  // the setting a real one: a reader who dislikes both mechanisms can have the
+  // tree they had, not a milder version of ours.
+  const off = await shapeUnder('off', 'off');
+  assert.deepEqual(off.flattens, [], 'flatten off: every reply keeps its indent, at every depth');
+  assert.deepEqual(off.folds, [], 'fold never: nothing arrives folded, at any depth');
+
+  const early = await shapeUnder('1', '3');
+  assert.equal(early.flattens[0], 1, 'after level 1: the flattening starts one level in');
+  assert.equal(early.folds[0], 3, 'and the fold at 3');
+  const late = await shapeUnder('6', '8');
+  assert.equal(late.flattens[0], 6, 'after level 6: five levels of indent survive');
+  assert.equal(late.folds[0], 8, 'and the fold at 8');
+
+  // The dials exist where the owner asked for them, carry the stored choice,
+  // and meet the tap floor. Under the ADVANCED disclosure, which is closed by
+  // default — so they are opened before being measured, exactly as a reader would.
+  const seed = "try{localStorage.setItem('forage.threadfold','8');}catch{}";
+  const p = await scenario('first-visit', { mode: 'bluesky', initScripts: [FAKE_SIGNED_IN, seed], responses: RESPONSES });
+  try {
+    await p.page.setViewportSize({ width: 390, height: 900 });
+    await p.page.goto(`${p.origin}/me`);
+    await p.page.waitForSelector('[data-advanced]');
+    await p.page.locator('[data-advanced] summary').click();
+    const flat = p.page.locator('[data-threadflatten]');
+    const fold = p.page.locator('[data-threadfold]');
+    assert.equal(await flat.inputValue(), 'auto', 'the flatten dial opens on the stored choice');
+    assert.equal(await fold.inputValue(), '8', 'and so does the fold dial');
+    for (const [name, loc] of [['flatten', flat], ['fold', fold]]) {
+      assert.ok((await loc.boundingBox()).height >= 44, `the ${name} dial meets the phone tap floor`);
+    }
+    await flat.selectOption('off');
+    assert.equal(await p.page.evaluate(() => document.documentElement.getAttribute('data-flatten')), 'off',
+      'choosing writes the root attribute the stylesheet reads, with no reload');
+    await p.page.reload();
+    await p.page.waitForSelector('[data-advanced]');
+    assert.equal(await p.page.evaluate(() => document.documentElement.getAttribute('data-flatten')), 'off',
+      'and it survives a reload — applied at boot, before first paint of a thread');
+    p.errors(); p.consoleErrors();
+  } finally { await p.close(); }
 }

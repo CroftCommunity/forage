@@ -4,6 +4,7 @@ import { el, esc, mdLite, timeAgo, domainOf, fmtScore, plural } from '../util.js
 import * as actions from '../actions.js';
 import { openMenu } from './menu.js';
 import * as haptics from '../haptics.js';
+import { foldAt } from '../thread-shape.js';
 
 // ---------- toasts ----------
 export function toast(msg, kind = '') {
@@ -469,7 +470,11 @@ const CHILD_PAGE = 20; // "load N more replies" threshold
 // have that at the tree's own wall (the depth-10 continuation stub), and it
 // costs a navigation and a scroll position. At this depth the replies are
 // already in hand, so the bar opens them where they stand.
-export const DEEP_FOLD_AT = 5;
+//
+// Phase C (owner, 2026-09-03): the number is the READER's, under Advanced on
+// their account page — `foldAt()` is 5 by default and Infinity when they have
+// said never. It is read at render time rather than captured once, so a change
+// repaints correctly without a reload.
 
 export function commentNode(node, ctx) {
   const hasKids = (node.children || []).length > 0 || (node.deferred || 0) > 0;
@@ -595,11 +600,11 @@ export function commentNode(node, ctx) {
   const bodyWrap = el('div', { class: 'comment-body' }, ...[meta, text, embeds, actionsRow, replyHost].filter(Boolean));
   const childrenWrap = el('div', { class: 'kids' });
 
-  // thread-depth Phase B: past DEEP_FOLD_AT the replies arrive folded behind one
+  // thread-depth Phase B: past the reader's fold depth the replies arrive behind one
   // bar. Only where there are rendered children to fold — a node standing at the
   // tree's depth-10 wall has none, and its continuation stub says the true thing
   // already; a bar over it would be a second control saying the same thing worse.
-  const deepFold = (node.depth ?? 0) >= DEEP_FOLD_AT && (node.children || []).length > 0;
+  const deepFold = (node.depth ?? 0) >= foldAt() && (node.children || []).length > 0;
   let deepBar = null;
   if (deepFold) {
     wrap.classList.add('deep', 'folded');

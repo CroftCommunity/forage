@@ -13,6 +13,7 @@
 //        thread-lens-quote thread-lens-sheet thread-lens-embed menu-lens focus-lens reply-lens thread-lens-reply
 //        news-lens news-lens-replies news-board news-board-nothumb
 //        deep-lens deep-lens-spine deep-lens-tail deep-lens-open deep-lens-run
+//        deep-lens-prefs deep-lens-off
 //        gif-lens gif-lens-paused gif-lens-alt gif-board)
 //   node scripts/mock-snaps.mjs --as current --serve ../../forage
 //       # the same script and fixtures, rendering ANOTHER checkout (main): the
@@ -470,6 +471,40 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
     }
     dp.consoleErrors(); dp.errors();
     await dp.close();
+  }
+  // thread-depth Phase C (owner, 2026-09-03: "the settings should be adjustable
+  // for the user in advanced on their profile"). Two frames the earlier phases
+  // could not have: the dials themselves, and the thread with BOTH turned off —
+  // which is the claim that makes them real settings rather than a milder
+  // version of our opinion. On main the Advanced panel simply has no such
+  // section and the thread is main's thread, which is the honest Current.
+  if (wanted('deep-lens-prefs')) {
+    const pf = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: DEEP });
+    await pf.page.setViewportSize({ width: vp.width, height: vp.height });
+    await pf.page.goto(`${pf.origin}/me`);
+    await pf.page.waitForSelector('[data-advanced]', { timeout: 15000 });
+    await pf.page.locator('[data-advanced] summary').click();
+    await pf.page.evaluate(() => document.fonts?.ready);
+    await pf.page.evaluate(() => { document.querySelector('[data-advanced]')?.scrollIntoView({ block: 'start' }); window.scrollBy(0, -72); });
+    await pf.page.evaluate(() => document.activeElement?.blur()); // the summary press left a ring
+    await pf.page.waitForTimeout(200);
+    await shoot(pf.page, 'deep-lens-prefs', 'lens:mock-deepthread', name, vp);
+    await pf.close();
+  }
+  if (wanted('deep-lens-off')) {
+    const OFF = "try{localStorage.setItem('forage.threadflatten','off');localStorage.setItem('forage.threadfold','off');}catch{}";
+    const of = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN, OFF], responses: DEEP });
+    await of.page.setViewportSize({ width: vp.width, height: vp.height });
+    await of.page.goto(`${of.origin}${DEEP_PATH}`);
+    await of.page.waitForSelector('.comment[data-kind="quote"]', { timeout: 15000 });
+    await of.page.evaluate(() => document.fonts?.ready);
+    await of.page.evaluate((nid) => {
+      document.querySelector(`.comment[data-node-id="${CSS.escape(nid)}"]`)?.scrollIntoView({ block: 'start' });
+      window.scrollBy(0, -72);
+    }, SPINE_URIS[4]);
+    await of.page.waitForTimeout(200);
+    await shoot(of.page, 'deep-lens-off', 'lens:mock-deepthread', name, vp);
+    await of.close();
   }
   if (wanted('board-lens-in')) {
     const inn = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: BOARD });

@@ -24,6 +24,7 @@ import { heroDismissed, dismissHero, EMBLEM } from '../hero.js';
 import { stage, carousel, grid, gifStage } from './stage.js';
 import * as gifAutoplay from '../gif-autoplay.js';
 import * as altText from '../alt-text.js';
+import * as threadShape from '../thread-shape.js';
 import * as pictures from '../pictures.js';
 import * as lang from '../lang.js';
 import { density, densityDial } from '../board-density.js';
@@ -2875,6 +2876,25 @@ export function lensProfileView() {
     const altBox = el('input', { type: 'checkbox', id: 'pref-alttext', 'data-alttext': '1',
       checked: altText.shown() || false });
     altBox.addEventListener('change', () => { altText.set(altBox.checked); rerenderNow(); });
+    // thread-depth Phase C (owner, 2026-09-03: "I think the settings should be
+    // adjustable for the user in advanced on their profile"). Two dials, because
+    // they answer different questions — one is about WIDTH and one about SCROLL —
+    // and both are the numbers decision 2 on plans/mocks/thread-depth.html was
+    // arguing about. `.pillsel`, the same dressing as the sort and card-size
+    // selects, so the tap floor and the dark palette come for free.
+    const flatSel = el('select', { class: 'pillsel', id: 'pref-threadflatten', 'data-threadflatten': '1',
+      'aria-label': 'Stop indenting a chain of single replies' },
+      ...threadShape.FLATTEN_CHOICES.map(([id, label]) =>
+        el('option', { value: id, selected: threadShape.flatten() === id || false }, label)));
+    flatSel.addEventListener('change', () => { threadShape.setFlatten(flatSel.value); threadShape.apply(); });
+    const foldSel = el('select', { class: 'pillsel', id: 'pref-threadfold', 'data-threadfold': '1',
+      'aria-label': 'Fold replies deeper than' },
+      ...threadShape.FOLD_CHOICES.map(([id, label]) =>
+        el('option', { value: id, selected: threadShape.fold() === id || false }, label)));
+    // The flatten dial needs no repaint — the stylesheet reads the root attribute
+    // apply() just wrote. The fold dial does: which replies arrive folded is a
+    // render decision, and a thread already on screen was drawn under the old one.
+    foldSel.addEventListener('change', () => { threadShape.setFold(foldSel.value); rerenderNow(); });
     return el('details', { class: 'card', 'data-advanced': '1' },
       el('summary', { style: 'cursor:pointer;min-height:44px;display:flex;align-items:center' }, 'Advanced'),
       el('div', { style: 'margin-top:8px' },
@@ -2882,6 +2902,15 @@ export function lensProfileView() {
         el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
           'Alt text is the description an author writes for people who cannot see a picture. Off, it stays where screen readers read it. On, it is printed under the picture too — including on GIFs, where Bluesky often fills it in with the GIF’s own title.'),
         el('label', { class: 'seccheck', for: 'pref-alttext' }, altBox, el('span', {}, 'Show alt text under pictures')),
+        el('h3', { style: 'font-size:var(--t-md);margin:12px 0 4px' }, 'Deep threads'),
+        el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
+          'A reply is indented to show it answered the one above it. When a comment has only ONE reply nothing branched, so past a few levels that indent costs width and says nothing — a long back-and-forth walks off the side of a phone. Auto uses a shallower point on a phone than on a desktop, because a phone runs out of room sooner.'),
+        el('label', { class: 'stack', style: 'gap:4px', for: 'pref-threadflatten' },
+          el('span', { class: 'xs' }, 'Stop indenting a chain of single replies'), flatSel),
+        el('div', { class: 'xs muted', style: 'margin:10px 0 6px' },
+          'Replies deeper than this arrive folded behind one line saying how many there are. Press it and the whole branch opens where it stands — nothing is fetched again and you do not leave the page.'),
+        el('label', { class: 'stack', style: 'gap:4px', for: 'pref-threadfold' },
+          el('span', { class: 'xs' }, 'Fold replies deeper than'), foldSel),
         el('h3', { style: 'font-size:var(--t-md);margin:12px 0 4px' }, 'Browse Hashtags'),
         el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
           'Which sections appear on the Hashtags page. Unchecking all of them leaves it empty, which is allowed.'),
