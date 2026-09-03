@@ -535,7 +535,7 @@ dialog.menu::backdrop { background: transparent; }
    padding because every comment carried the same number. thread-depth Phase A
    makes them disagree on purpose (a chain gets no indent), and the elbow has
    to follow the padding, not the default. */
-.comment > .kids { grid-column: 1 / span 2; --in: var(--kids-indent); padding-left: var(--in); }
+.comment > .kids { grid-column: 1 / span 2; --in: var(--kids-indent); --elbow: 25px; padding-left: var(--in); }
 /* each child draws its own elbow: from the rail into its avatar's left edge, turning at the avatar's centre;
    a child that is not the last continues the rail below its elbow.
    The indent and the elbow are ONE number, so they are written once. The parent's
@@ -557,7 +557,7 @@ dialog.menu::backdrop { background: transparent; }
    curve — so the straight continuation is the honest shape at this width.
    e2e/mock-thread.workflow.mjs measures elbow against rail at both widths. */
 .kids > .comment::before { content: ""; position: absolute; left: calc(15px - var(--in)); top: 0;
-  width: max(0px, calc(var(--in) - 15px)); height: 25px;
+  width: max(0px, calc(var(--in) - 15px)); height: var(--elbow);
   border-left: 2px solid var(--border); border-bottom: 2px solid var(--border); border-radius: 0 0 0 10px; pointer-events: none; }
 .kids > .comment:not(:last-child)::after { content: ""; position: absolute; left: calc(15px - var(--in)); top: 25px; bottom: 0; width: 2px; background: var(--border); pointer-events: none; }
 .comment.collapsed > .kids, .comment.collapsed > .comment-body > .comment-text,
@@ -591,7 +591,13 @@ dialog.menu::backdrop { background: transparent; }
    exactly one reply) and kept it; theirs labels the flattened reply "(Reply to
    above comment)" in words. We rely on the unbroken rail instead — an open
    decision on the mock, not a settled one. */
-.comment.chain:not([data-depth="0"]):not([data-depth="1"]):not([data-depth="2"]):not([data-depth="3"]) > .kids { --in: 0px; }
+/* `--elbow` shrinks with the indent: at no indent there is no corner to turn,
+   and the connector is just the 8px of the comment's own top padding between
+   the parent's rail and this avatar. Drawing the full 25px would run the stroke
+   straight down the middle of the avatar it is pointing at — visible at a 0
+   indent, and only invisible at the phone's 14px because the stroke lands on
+   the avatar's outermost 2px. */
+.comment.chain:not([data-depth="0"]):not([data-depth="1"]):not([data-depth="2"]):not([data-depth="3"]) > .kids { --in: 0px; --elbow: 8px; }
 .fold { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 0 8px; border-radius: var(--radius-chip); border: 0;
   background: none; color: var(--muted); font: inherit; font-size: var(--t-xs); cursor: pointer; white-space: nowrap; }
 .fold .glyph { font-size: 16px; line-height: 1; }
@@ -889,7 +895,7 @@ hr.rule { border: none; border-top: 1px solid var(--border); margin: var(--s4) 0
 @media (max-width: 480px) {
   .comment { --kids-indent: 14px; }
   /* thread-depth Phase A: a phone runs out of column two levels sooner */
-  .comment.chain:not([data-depth="0"]):not([data-depth="1"]) > .kids { --in: 0px; }
+  .comment.chain:not([data-depth="0"]):not([data-depth="1"]) > .kids { --in: 0px; --elbow: 8px; }
   .shell { padding: var(--s2); }
 }
 .feed-avatar { width: 40px; height: 40px; border-radius: var(--radius-card); border: 1px solid var(--border); flex: none; }
