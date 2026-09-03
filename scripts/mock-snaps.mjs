@@ -12,6 +12,7 @@
 //        board-lens-refresh-news board-lens-refresh-pill post-lens-quote thread-lens
 //        thread-lens-quote thread-lens-sheet thread-lens-embed menu-lens focus-lens reply-lens thread-lens-reply
 //        news-lens news-lens-replies news-board news-board-nothumb
+//        deep-lens deep-lens-spine deep-lens-tail
 //        gif-lens gif-lens-paused gif-lens-alt gif-board)
 //   node scripts/mock-snaps.mjs --as current --serve ../../forage
 //       # the same script and fixtures, rendering ANOTHER checkout (main): the
@@ -35,6 +36,10 @@
 //                    portrait), a GIF with alt a person WROTE, a tenor .gif
 //                    with no verified video form, a 96-char title, and a news
 //                    card as the control the alt-text setting must not touch.
+//   lens:mock-deepthread e2e/harness/mock-deepthread.mjs — the thread-depth
+//                    load: a quote carrying a TWELVE-deep chain in which every
+//                    rung has exactly one reply, beside a two-child branch that
+//                    is not a chain. The owner's 2026-09-02 screenshot, measured.
 //   lens:mock-newspost e2e/harness/mock-newspost.mjs — the post-text load: a
 //                    verbatim news record (three blocks split by \n\n, a #link
 //                    facet over a truncated display URL, a link card), a
@@ -47,6 +52,7 @@ import { RESPONSES, FAKE_SIGNED_IN, THREAD_PATH, NODE_IDS, ROOT as THREAD_ROOT }
 import { RESPONSES as BOARD, BOARD_PATH, QUOTE_PATH } from '../e2e/harness/mock-board.mjs';
 import { RESPONSES as NEWS, BOARD_PATH as NEWS_BOARD, THREAD_PATH as NEWS_THREAD, NODE_IDS as NEWS_NODES } from '../e2e/harness/mock-newspost.mjs';
 import { RESPONSES as REFRESH } from '../e2e/harness/mock-refresh.mjs';
+import { RESPONSES as DEEP, THREAD_PATH as DEEP_PATH, QUOTE_URI as DEEP_QUOTE, SPINE_URIS } from '../e2e/harness/mock-deepthread.mjs';
 import { RESPONSES as GIF, BOARD_PATH as GIF_BOARD, THREAD_PATH as GIF_THREAD } from '../e2e/harness/mock-gif.mjs';
 import { mergeManifest } from './lib/snaps-manifest.mjs';
 import { SKINS } from '../js/skins.js';
@@ -410,6 +416,35 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
     await shoot(nb.page, 'news-board-nothumb', 'lens:mock-newspost', name, vp);
     nb.consoleErrors(); nb.errors();
     await nb.close();
+  }
+  // thread-depth (owner, 2026-09-02: "deep nested threads not collapsed by
+  // default … hard to follow and read"). Three frames off ONE population,
+  // because the three things that go wrong go wrong in three places:
+  //   deep-lens        the head and the ordinary replies — the control
+  //   deep-lens-spine  the descent, anchored on the quote the chain hangs off
+  //   deep-lens-tail   the far end: the deepest rungs and the depth-10 boundary
+  if (wanted('deep-lens') || wanted('deep-lens-spine') || wanted('deep-lens-tail')) {
+    const dp = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: DEEP });
+    await dp.page.setViewportSize({ width: vp.width, height: vp.height });
+    await dp.page.goto(`${dp.origin}${DEEP_PATH}`);
+    await dp.page.waitForSelector('.comment[data-kind="quote"]', { timeout: 15000 }); // the quote cascade landed
+    await dp.page.evaluate(() => document.fonts?.ready);
+    await shoot(dp.page, 'deep-lens', 'lens:mock-deepthread', name, vp);
+    // anchored on a NODE, never on a scroll offset: the two columns differ in
+    // height by design, so the same pixel offset would frame different rungs
+    const anchor = async (id) => {
+      await dp.page.evaluate((nid) => {
+        document.querySelector(`.comment[data-node-id="${CSS.escape(nid)}"]`)?.scrollIntoView({ block: 'start' });
+        window.scrollBy(0, -72);
+      }, id);
+      await dp.page.waitForTimeout(200);
+    };
+    if (wanted('deep-lens-spine')) { await anchor(DEEP_QUOTE); await shoot(dp.page, 'deep-lens-spine', 'lens:mock-deepthread', name, vp); }
+    // SPINE_URIS[5] is depth 6 — far enough down that the frame carries the
+    // deepest rungs AND the "continue this thread" stub at the depth-10 wall
+    if (wanted('deep-lens-tail')) { await anchor(SPINE_URIS[5]); await shoot(dp.page, 'deep-lens-tail', 'lens:mock-deepthread', name, vp); }
+    dp.consoleErrors(); dp.errors();
+    await dp.close();
   }
   if (wanted('board-lens-in')) {
     const inn = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: BOARD });
