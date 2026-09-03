@@ -153,6 +153,25 @@ export const RESPONSES = {
   'com.atproto.repo.deleteRecord': {},
 };
 
+// ---- the owner's case exactly, on its own -----------------------------------
+// One image post, one reply by its author, nothing else. This is the tree the
+// four screenshots were of, and it is the one where the two counts contradict
+// each other out loud: the appview's replyCount says 1, the list has nothing
+// to show, and main prints both. It needs its own population because the
+// contradiction is only visible when the comment list is EMPTY — under eleven
+// replies the head's wrong number hides in the crowd.
+const aloneRoot = op('alone', T(0), '',
+  { likes: 0, replies: 1, view: images(img('alone', { width: 2016, height: 2016 })) });
+const aloneReply = leaf(op('alonereply', T(197), 'comment visibility test'));
+
+export const ALONE_ROOT = aloneRoot.uri;
+export const ALONE = {
+  ...RESPONSES,
+  'getFeed?': { feed: [{ post: aloneRoot }] },
+  'getPostThread': { thread: { post: aloneRoot, replies: [aloneReply] } },
+};
+export const ALONE_PATH = `/p?uri=${encodeURIComponent(aloneRoot.uri)}`;
+
 export const THREAD_PATH = `/p?uri=${encodeURIComponent(ROOT)}`;
 export const PART_URIS = [part2.uri, part3.uri];
 export const DECOY_URI = decoy.post.uri;
