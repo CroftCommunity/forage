@@ -1,0 +1,77 @@
+{
+  "capturedAt": "2026-09-03",
+  "files": [
+    {
+      "file": "deep-lens.phone.current.png",
+      "route": "deep-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@e6c5fa8",
+      "population": "lens:mock-deepthread"
+    },
+    {
+      "file": "deep-lens-spine.phone.current.png",
+      "route": "deep-lens-spine",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@e6c5fa8",
+      "population": "lens:mock-deepthread"
+    },
+    {
+      "file": "deep-lens-tail.phone.current.png",
+      "route": "deep-lens-tail",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@e6c5fa8",
+      "population": "lens:mock-deepthread"
+    },
+    {
+      "file": "deep-lens.desktop.current.png",
+      "route": "deep-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@e6c5fa8",
+      "population": "lens:mock-deepthread"
+    },
+    {
+      "file": "deep-lens-spine.desktop.current.png",
+      "route": "deep-lens-spine",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@e6c5fa8",
+      "population": "lens:mock-deepthread"
+    },
+    {
+      "file": "deep-lens-tail.desktop.current.png",
+      "route": "deep-lens-tail",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@e6c5fa8",
+      "population": "lens:mock-deepthread"
+    },
+    {
+      "file": "deep-lens-open.phone.current.png",
+      "route": "deep-lens-open",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@e6c5fa8",
+      "population": "lens:mock-deepthread"
+    },
+    {
+      "file": "deep-lens-open.desktop.current.png",
+      "route": "deep-lens-open",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@e6c5fa8",
+      "population": "lens:mock-deepthread"
+    }
+  ]
+}

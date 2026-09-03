@@ -24,6 +24,13 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
   carries the composer's picker (`imagePicker` in `js/ui/lens-views.js`); the quick box
   stays text.
 
+- **A comment's like count wraps at four digits.** On a 390px phone the comment action row breaks
+  `▲ 1158` across two lines (and `▲ 121` on a narrow deep row). The FEED ROW was fixed for
+  four-digit counts in feed-row v9; the comment row's five equal cells were not. Surfaced 2026-09-03
+  by `e2e/harness/mock-deepthread.mjs`, which is the first population carrying a four-digit count on
+  a comment — visible in every column of `plans/mocks/thread-depth.html` v1, Current included, so
+  it is not that branch's doing. Out of scope there.
+
 - **The focus bar lies about a comment it did find.** `?focus=` into a node that arrives with the
   QUOTE CASCADE reads "That comment isn't in this thread" over a comment it has found, unfolded,
   scrolled to and highlighted. The bar is built once from the first `focusComment` call, before
