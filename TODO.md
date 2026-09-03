@@ -55,6 +55,14 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
   `--card-2` #F3E6D0 measures 4.47 (floor 4.5) — a pair `test/skins.test.js` does not grade
   (`--muted` is graded on `--bg` and `--card` only), found 2026-08-30 while authoring surf's
   `--row-hover` (feed-row 22). Darken surf's `--muted` a notch and add the pair to ROLE_PAIRS.
+- **The snaps manifest cannot see a file that is missing, or one that is spare.**
+  `test/mock-snaps-manifest.test.js` checks the manifest's SHAPE, not its
+  correspondence with the directory — so a manifest row naming a deleted PNG passes,
+  and a PNG no row names passes too. Both happened on 2026-09-03 when self-thread's
+  proposal B was withdrawn: four stale rows and two orphan captures survived a green
+  run, and were found by hand. Two assertions over `plans/mocks/snaps/*/manifest.json`
+  close it: every named file exists, and every `.png` in the directory is named.
+
 - **A comment's action row clips Delete at 390px.** On a phone a comment you wrote
   carries fold, Reply, ⟳, Delete, the like pill and share on one row, and Delete renders
   as "Delet". Found 2026-09-03 while capturing the self-thread mock; reproduced
