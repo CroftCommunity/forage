@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forage Self Thread v2</title>
-<meta name="mock-version" content="2">
-<meta name="mock-baseline" content="forage@8bc6cbd">
-<meta name="mock-proposal" content="forage@20a871f">
+<title>Forage Self Thread v3</title>
+<meta name="mock-version" content="3">
+<meta name="mock-baseline" content="forage@0d5e744">
+<meta name="mock-proposal" content="forage@20ce128">
 <style>
 :root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
   --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
@@ -45,7 +45,7 @@ pre{font-size:12.5px;line-height:1.5;margin:0;overflow-x:auto;color:var(--page-m
 <body>
 <div class="wrap">
   <header>
-    <div class="eyebrow">Forage &middot; mock &middot; self-thread <b>v2</b> &middot; Current forage@8bc6cbd &middot; Proposed forage@20a871f &middot; 2026-09-03</div>
+    <div class="eyebrow">Forage &middot; mock &middot; self-thread <b>v3</b> &middot; Current forage@0d5e744 &middot; Proposed forage@20ce128 &middot; 2026-09-03</div>
     <h1>A post in parts, and the comment that was mistaken for one</h1>
     <p class="sub"><b>One proposal, and every decision now answered</b>, from the
       owner&rsquo;s report on 2026-09-03 with four screenshots:
@@ -64,14 +64,19 @@ pre{font-size:12.5px;line-height:1.5;margin:0;overflow-x:auto;color:var(--page-m
       I want to display them as ONE POST where 1/3 is the post and when you open it they are all there
       as one narrative.&rdquo; So the chain stays in the post&rsquo;s head and <b>proposal&nbsp;B</b>
       (the parts pinned above the comments, the way Bluesky draws them) is <b>off</b>. Its frames are
-      gone from this page with it; it is recoverable from <code>5f65749</code>, where it was built and
-      captured.</p>
+      gone from this page with it; it is recoverable from the tag <code>mock/self-thread-v1</code>
+      (<code>5f65749</code>), where it was built and captured.</p>
     <p class="sub">The decision moved a second thing with it. A strip carrying a number, a time, a link
       and a Delete button is <b>three interruptions</b> in a narrative that was just asked to read as
       continuous &mdash; so the seam went <b>quiet</b>: a hairline, the number, and a
       <code>&hellip;</code> menu holding when the part landed, its link, and its own delete. It cannot
       be <em>nothing</em>, which is what it was: a part with no mark at all is exactly what made a reply
       read as the post&rsquo;s own words and put the wrong Delete under the owner&rsquo;s thumb.</p>
+    <p class="small"><b>v3:</b> both columns re-captured after <code>claude/ring-scope</code> landed
+      (main moved <code>8bc6cbd</code> &rarr; <code>0d5e744</code>), so Current is again a capture of the
+      tree the owner is running &mdash; the ring pill above the head card is that landing, not this
+      branch. Proposal&nbsp;B&rsquo;s frames were captured at <code>5f65749</code>, kept reachable as the
+      tag <code>mock/self-thread-v1</code> because the rebase rewrote that sha off the branch.</p>
     <p class="small">Frames: <b>390&times;844</b> and <b>1280&times;900</b>, default skin (warm),
       signed in <b>as the poster</b> &mdash; the delete hazard only exists for the person who can see a
       Delete button. Population: <code>e2e/harness/mock-selfthread.mjs</code>.
@@ -137,11 +142,11 @@ pre{font-size:12.5px;line-height:1.5;margin:0;overflow-x:auto;color:var(--page-m
       audible &mdash; under eleven replies a wrong count hides in the crowd; here it is the whole card.</p>
     <div class="stage">
       <figure class="device phone">
-        <figcaption class="device-label">Current &middot; phone &middot; forage@8bc6cbd</figcaption>
+        <figcaption class="device-label">Current &middot; phone &middot; forage@0d5e744</figcaption>
         <img class="shot" src="snaps/self-thread/self-lens-alone.phone.current.png" alt="The post page on main: the reply's words render as the post's body under the picture, the head reads 1 reply, and below it the page says No replies. One Delete button, which is the post's.">
       </figure>
       <figure class="device phone">
-        <figcaption class="device-label">Proposed &middot; phone &middot; forage@5f65749</figcaption>
+        <figcaption class="device-label">Proposed &middot; phone &middot; forage@20ce128</figcaption>
         <img class="shot" src="snaps/self-thread/self-lens-alone.phone.proposed.png" alt="The same page on the branch: the reply carries a 2/2 badge, a time, a link and its own Delete; the head reads 2 parts, 0 replies; the post's own button says Delete post.">
       </figure>
     </div>
@@ -168,21 +173,21 @@ pre{font-size:12.5px;line-height:1.5;margin:0;overflow-x:auto;color:var(--page-m
       and a <b>decoy</b> &mdash; a later self-reply the appview ranks first.</p>
     <div class="stage">
       <figure class="device phone">
-        <figcaption class="device-label">Current &middot; phone &middot; forage@8bc6cbd</figcaption>
+        <figcaption class="device-label">Current &middot; phone &middot; forage@0d5e744</figcaption>
         <img class="shot" src="snaps/self-thread/self-lens.phone.current.png" alt="On main the decoy self-reply about a supplier is hoisted into the post body as anonymous text; the count reads 13 replies.">
       </figure>
       <figure class="device phone">
-        <figcaption class="device-label">Proposed &middot; phone &middot; forage@20a871f</figcaption>
+        <figcaption class="device-label">Proposed &middot; phone &middot; forage@20ce128</figcaption>
         <img class="shot" src="snaps/self-thread/self-lens.phone.proposed.png" alt="On the branch parts two and three are hoisted in order, each opened by a hairline seam carrying a small 2/3 or 3/3 and a menu; the words run on as one post, and part three's picture renders below its words.">
       </figure>
     </div>
     <div class="stage">
       <figure class="device phone">
-        <figcaption class="device-label">Current &middot; the count row &middot; forage@8bc6cbd</figcaption>
+        <figcaption class="device-label">Current &middot; the count row &middot; forage@0d5e744</figcaption>
         <img class="shot" src="snaps/self-thread/self-lens-count.phone.current.png" alt="Main's count row reads 13 replies over a list of eleven, with a single Delete button.">
       </figure>
       <figure class="device phone">
-        <figcaption class="device-label">Proposed &middot; the count row &middot; forage@20a871f</figcaption>
+        <figcaption class="device-label">Proposed &middot; the count row &middot; forage@20ce128</figcaption>
         <img class="shot" src="snaps/self-thread/self-lens-count.phone.proposed.png" alt="The branch's count row reads 3 parts, 11 replies, and the button below it says Delete post.">
       </figure>
     </div>
@@ -213,13 +218,13 @@ pre{font-size:12.5px;line-height:1.5;margin:0;overflow-x:auto;color:var(--page-m
     <h2>The same two, at 1280&times;900</h2>
     <div class="stage">
       <figure class="device desk">
-        <figcaption class="device-label">Current &middot; forage@8bc6cbd</figcaption>
+        <figcaption class="device-label">Current &middot; forage@0d5e744</figcaption>
         <img class="shot" src="snaps/self-thread/self-lens.desktop.current.png" alt="The thread page on main at desktop width.">
       </figure>
     </div>
     <div class="stage">
       <figure class="device desk">
-        <figcaption class="device-label">Proposed &middot; forage@20a871f</figcaption>
+        <figcaption class="device-label">Proposed &middot; forage@20ce128</figcaption>
         <img class="shot" src="snaps/self-thread/self-lens.desktop.proposed.png" alt="The decided shape at desktop width: the parts in the head, separated by quiet seams.">
       </figure>
     </div>
@@ -315,11 +320,20 @@ pre{font-size:12.5px;line-height:1.5;margin:0;overflow-x:auto;color:var(--page-m
 
   <section>
     <div class="eyebrow">Revisions</div>
-    <h2>v2</h2>
+    <h2>v3</h2>
     <div class="tablewrap">
       <table>
         <thead><tr><th style="width:5ch">v</th><th>Date</th><th>Commit</th><th>What changed on this page</th></tr></thead>
         <tbody>
+          <tr><td><b>3</b></td><td>2026-09-03</td><td><code>20ce128</code></td>
+            <td>Rebased onto main after <code>claude/ring-scope</code> landed and deployed
+              (<code>0d5e744</code>, forage-v74 live). <b>Both columns re-captured</b> &mdash; Current
+              named a tree the owner had stopped running, which is the one thing rule&nbsp;2 exists to
+              prevent. The ring pill visible above the head card in every frame is that landing. The two
+              branches had fixed the same policy leak from different directions, so the merge chose an
+              order rather than a side: numbering before withholding, keeping the gap where a muted part
+              was. Proposal&nbsp;B&rsquo;s sha is now the tag <code>mock/self-thread-v1</code>, pushed so
+              it stays resolvable after the rebase.</td></tr>
           <tr><td><b>2</b></td><td>2026-09-03</td><td><code>20a871f</code></td>
             <td>Decision&nbsp;2 <b>closed on A</b> (&ldquo;ONE POST &hellip; one narrative&rdquo;) &mdash;
               B is off the branch and off this page, recoverable at <code>5f65749</code>. Decision&nbsp;2b

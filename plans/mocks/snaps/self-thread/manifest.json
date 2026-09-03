@@ -7,16 +7,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@20a871f",
-      "population": "lens:mock-selfthread"
-    },
-    {
-      "file": "self-lens-pin.phone.proposed.png",
-      "route": "self-lens-pin",
-      "viewport": "phone",
-      "width": 390,
-      "height": 844,
-      "baseline": "forage@5f65749",
+      "baseline": "forage@20ce128",
       "population": "lens:mock-selfthread"
     },
     {
@@ -25,16 +16,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@20a871f",
-      "population": "lens:mock-selfthread"
-    },
-    {
-      "file": "self-lens-pin.desktop.proposed.png",
-      "route": "self-lens-pin",
-      "viewport": "desktop",
-      "width": 1280,
-      "height": 900,
-      "baseline": "forage@5f65749",
+      "baseline": "forage@20ce128",
       "population": "lens:mock-selfthread"
     },
     {
@@ -43,7 +25,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@8bc6cbd",
+      "baseline": "forage@0d5e744",
       "population": "lens:mock-selfthread"
     },
     {
@@ -52,7 +34,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@8bc6cbd",
+      "baseline": "forage@0d5e744",
       "population": "lens:mock-selfthread"
     },
     {
@@ -61,16 +43,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@20a871f",
-      "population": "lens:mock-selfthread"
-    },
-    {
-      "file": "self-lens-pin-count.phone.proposed.png",
-      "route": "self-lens-pin-count",
-      "viewport": "phone",
-      "width": 390,
-      "height": 844,
-      "baseline": "forage@5f65749",
+      "baseline": "forage@20ce128",
       "population": "lens:mock-selfthread"
     },
     {
@@ -79,7 +52,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@20a871f",
+      "baseline": "forage@20ce128",
       "population": "lens:mock-selfthread"
     },
     {
@@ -88,16 +61,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@20a871f",
-      "population": "lens:mock-selfthread"
-    },
-    {
-      "file": "self-lens-pin-count.desktop.proposed.png",
-      "route": "self-lens-pin-count",
-      "viewport": "desktop",
-      "width": 1280,
-      "height": 900,
-      "baseline": "forage@5f65749",
+      "baseline": "forage@20ce128",
       "population": "lens:mock-selfthread"
     },
     {
@@ -106,7 +70,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@20a871f",
+      "baseline": "forage@20ce128",
       "population": "lens:mock-selfthread"
     },
     {
@@ -115,7 +79,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@8bc6cbd",
+      "baseline": "forage@0d5e744",
       "population": "lens:mock-selfthread"
     },
     {
@@ -124,7 +88,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@8bc6cbd",
+      "baseline": "forage@0d5e744",
       "population": "lens:mock-selfthread"
     },
     {
@@ -133,7 +97,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@8bc6cbd",
+      "baseline": "forage@0d5e744",
       "population": "lens:mock-selfthread"
     },
     {
@@ -142,7 +106,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@8bc6cbd",
+      "baseline": "forage@0d5e744",
       "population": "lens:mock-selfthread"
     }
   ]
