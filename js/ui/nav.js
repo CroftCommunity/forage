@@ -19,7 +19,7 @@
 // reader cannot use is hidden, and hiding three of four settings would leave
 // one option, which reads as broken rather than clean.
 
-import { LADDER } from '../rings.js';
+import { SCOPES } from '../rings.js';
 
 export function navTree({ el, session, feeds, tags, current }) {
   const nav = el('nav', { class: 'nav', 'data-nav': '1', 'aria-label': 'Boards' });
@@ -34,7 +34,7 @@ export function navTree({ el, session, feeds, tags, current }) {
 
   if (session) {
     section('Your ring');
-    for (const [id, label] of LADDER) item(id, label, '◍', `/r/${id}`);
+    for (const { id, label } of SCOPES) item(id, label, '◍', `/r/${id}`);
   }
 
   section('Feeds');
