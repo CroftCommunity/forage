@@ -7,7 +7,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@a773c5c",
+      "baseline": "forage@7bc0d6e",
       "population": "lens:mock-deepthread"
     },
     {
@@ -16,7 +16,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@a773c5c",
+      "baseline": "forage@7bc0d6e",
       "population": "lens:mock-deepthread"
     },
     {
@@ -25,7 +25,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@a773c5c",
+      "baseline": "forage@7bc0d6e",
       "population": "lens:mock-deepthread"
     },
     {
@@ -34,7 +34,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@a773c5c",
+      "baseline": "forage@7bc0d6e",
       "population": "lens:mock-deepthread"
     },
     {
@@ -43,7 +43,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@a773c5c",
+      "baseline": "forage@7bc0d6e",
       "population": "lens:mock-deepthread"
     },
     {
@@ -52,7 +52,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@a773c5c",
+      "baseline": "forage@7bc0d6e",
       "population": "lens:mock-deepthread"
     },
     {
@@ -61,7 +61,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@a773c5c",
+      "baseline": "forage@7bc0d6e",
       "population": "lens:mock-deepthread"
     },
     {
@@ -70,7 +70,25 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@a773c5c",
+      "baseline": "forage@7bc0d6e",
+      "population": "lens:mock-deepthread"
+    },
+    {
+      "file": "deep-lens-run.phone.proposed.png",
+      "route": "deep-lens-run",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@7bc0d6e",
+      "population": "lens:mock-deepthread"
+    },
+    {
+      "file": "deep-lens-run.desktop.proposed.png",
+      "route": "deep-lens-run",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@7bc0d6e",
       "population": "lens:mock-deepthread"
     }
   ]

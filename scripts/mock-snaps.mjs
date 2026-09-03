@@ -451,6 +451,9 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
     // frame that begins below the run's first rung cannot show that
     if (wanted('deep-lens-run')) {
       while (await dp.page.locator('.deep-bar').count()) await dp.page.locator('.deep-bar').first().click();
+      // the presses left focus on whatever followed the removed bar, and a
+      // focus ring in a frame reads as a highlight nobody put there
+      await dp.page.evaluate(() => document.activeElement?.blur());
       await anchor(SPINE_URIS[1]);
       await shoot(dp.page, 'deep-lens-run', 'lens:mock-deepthread', name, vp);
       await dp.page.reload();
