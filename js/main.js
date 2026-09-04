@@ -220,6 +220,13 @@ router.route('/settings', byMode(() => {
 router.route('/frontiers', views.frontiersView);
 router.route('/h/:tag', byMode(lensViews.lensHashtagView, views.tagStreamView));
 router.route('/p', blueskyOnly(lensViews.lensThreadView));
+// The Web Share Target's landing (manifest.webmanifest declares it). A doorway,
+// not a page: it turns whatever a share sheet handed the installed PWA into one
+// of the addresses above and replaceState's onto it, so Back leaves the app
+// instead of bouncing through here. Bluesky population only — a bsky.app link
+// is not a thing the memory sandbox can honour, so it gates with words like
+// every other cross-population route.
+router.route('/share', blueskyOnly(lensViews.lensShareView));
 router.route('/reply', blueskyOnly(lensViews.lensReplyView)); // feed-row v4: a reply is a page
 router.route('/me', blueskyOnly(lensViews.lensProfileView));
 router.route('/feeds', blueskyOnly(lensViews.lensFeedsView));

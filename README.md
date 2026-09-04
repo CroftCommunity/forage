@@ -425,6 +425,44 @@ mistaken for a route.
 Every asset reference must be absolute — a route-relative `./icons/x.png` resolves
 against `/f/` on a deep link, so `test/invariants.test.js` scans for it.
 
+## Share to Forage
+
+Install Forage as a PWA on Android and it appears in the system share sheet. Share a
+post from the Bluesky app — or Blacksky, or any client in that family — and it opens
+here as a thread: the post as one plain post, the author's own `1/2 · 3/3` chain
+hoisted into its body, the replies below it. Profiles, feeds and hashtags work the
+same way and land on `/u/`, `/f/@creator/rkey` and `/h/`.
+
+The mechanism is the W3C [Web Share Target](https://w3c.github.io/web-share-target/):
+`manifest.webmanifest` declares a `GET` target at `/share`, the browser navigates the
+installed app to `/share?text=…`, `js/share-target.js` turns the payload into an
+address, and `/share` `replaceState`s onto it — so Back from the thread leaves the app
+rather than bouncing through the doorway. You can test it without a share sheet by
+opening `/share?text=https://bsky.app/profile/<handle>/post/<rkey>` directly.
+
+Three boundaries, all of them the platform's rather than ours:
+
+- **It needs the PWA installed.** MDN, *share_target*: "Your PWA can only act as a web
+  share target if it has been installed." An installed copy from before this shipped
+  picks the target up when the browser next re-reads the manifest.
+
+- **It does not work on iPhone or iPad, and there is no version of it that will.**
+  `mdn/browser-compat-data` records `share_target` as Chrome Android 76, Chrome 89,
+  Opera Android 63, mirrored by Edge and Samsung Internet, and **false** for Safari,
+  Safari iOS, Firefox and Firefox Android. iOS gives a web app no route into the share
+  sheet at all, so there is nothing to polyfill. Copy the link and paste it.
+
+- **The Bluesky mobile *website* has no "Share via…" on its post menu** — only "Copy
+  link to post" (`social-app/src/components/PostControls/ShareMenu/ShareMenuItems.web.tsx`).
+  From a browser you reach Forage through the browser's own Share, which shares the
+  address bar: correct once you have opened the post, the feed's address if you have not.
+
+The host in a shared link is deliberately **not** checked. Blacksky, deer.social and
+every other social-app descendant inherit its route table, so the path shape is the
+identity, and the handle is resolved against the real network either way — an
+allowlist would be wrong the day someone stands up another client and no more correct
+in the meantime.
+
 ## Modes
 
 The running app has **modes** — named routing tables over the same capabilities

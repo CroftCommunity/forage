@@ -8,6 +8,28 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-04 **Share a Bluesky post straight into Forage.** Install Forage on Android and it
+  turns up in the share sheet next to everything else. Share a post from the Bluesky app —
+  Blacksky and the other clients in that family work too — and it opens here as a thread:
+  the post as one plain post, the author's own "1/2 · 2/2" continuation folded into its body
+  the way Forage already reads a numbered thread, and the replies underneath. Share any part
+  of the chain, not just the first; it opens the whole thread either way. Profiles, feeds and
+  hashtags come across as well, and land on the account, the board and the tag. If what you
+  shared is not a Bluesky link, Forage says so and hands the link straight back rather than
+  swallowing it. **Not on iPhone or iPad**: Safari has never shipped the web standard this
+  needs and there is no way around that from a web app, so on iOS it is still copy and paste.
+  If you already have Forage installed, the share option appears once your browser re-reads
+  the app's manifest. (owner: "I want to be able to share from the official Bluesky app …
+  and share with Forage as a target when it's installed as a PWA")
+
+- 2026-09-04 **A post your ring hides now says so, instead of looking deleted.** If your ring
+  is set to Mutuals or Follows and you open a link to a post from someone outside it, the page
+  used to show a byline reading "[removed]" above nothing at all — a policy working exactly as
+  asked, wearing the face of a broken app. It now names what happened, and the thread's own
+  ring pill is right there to widen it for that thread alone, leaving the rest of the site
+  where you left it. This became worth fixing the moment posts could arrive by share, since a
+  shared post is nearly always from a stranger.
+
 - 2026-09-04 **The five ring boards are gone; the ring is only a setting now.** `/r/me`,
   `/r/mut`, `/r/fol`, `/r/hop` and `/r/world` no longer exist. The day before, the ring stopped
   being five places you go and became one pill that scopes what you are already reading (see the

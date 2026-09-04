@@ -10,11 +10,12 @@ import { el, timeAgo, fmtScore, domainOf, plural } from '../util.js';
 import { postRow, commentNode, vote, focusComment, skeleton, emptyState, toast, reportSheet, whoNode, byline, providerMark as providerMarkNode } from './components.js';
 import * as providerMark from '../provider-mark.js';
 import * as drafts from '../drafts.js';
-import { go, navKind, rerenderNow } from '../router.js';
+import { go, navKind, rerenderNow, replacePath, dispatch } from '../router.js';
 import { appFor } from '../auth/hosts.js';
 import { navTree } from './nav.js';
 import { SCOPES } from '../rings.js';
 import * as ringScope from '../ring-scope.js';
+import { extractTarget, directPath, threadPath, isDid } from '../share-target.js';
 import { lastBoard, setLastBoard, landingBoard, DIRECTORY } from '../last-board.js';
 import { createLens, LENS_PERMS, facetSegments, trimCardLink, slugifyFeedName, sortWindow, affordanceFor,
   feedCardModel, threadNodeStyle, feedPath, parseFeedRoute, sessionGateMessage, canDelete, sourceLabel,
@@ -2901,9 +2902,49 @@ export function lensThreadView(params, query) {
   // there is no state that can fail to be cleaned up, and the pill in the
   // masthead is exactly where the reader left it.
   let ringOverride = null;
+  // A reply that your ring hid is a reply you cannot see the answer to, so the
+  // widening control belongs ON the thread rather than three pages away. Built
+  // by a function rather than inline because the scoped-out head below needs
+  // the same pill, and a second copy of it is how two surfaces start disagreeing
+  // about one control. Rebuilt on every paint: its selected segment IS the
+  // override, and the override changes underneath it.
+  const threadRingBar = () => {
+    if (!session) return null;
+    const pill = ringScope.ringPill(el, {
+      override: ringOverride,
+      ariaLabel: 'How close — this thread only',
+      onPicked: (id) => { ringOverride = id; main.replaceChildren(skeleton(8)); load(); },
+    });
+    return pill ? el('div', { class: 'ringbar', 'data-thread-ring': '1' }, pill) : null;
+  };
   const load = () => {
   lens.thread(uri, src, { onCascade: (t) => onCascade(t), ringOverride }).then((t) => {
     const p = t.post;
+    // The head your RING hid, said out loud. shapeLensPost has returned
+    // `hiddenReason: 'scope'` since the ring landed, and its comment says
+    // exactly why — "a thread reached by direct link whose root your ring hides
+    // needs a different empty state from a post that does not exist. It carries
+    // no wording; the view owns that." No view owned it: a grep for the token
+    // found the two lines that write it and nothing that reads one, so a reader
+    // at Follows opening a stranger's post by link got a byline reading
+    // `[removed]` over an empty heading — the app looking broken, for a policy
+    // working exactly as asked.
+    //
+    // The share target (2026-09-04) is what forced this: EVERY shared post
+    // arrives by direct link and most of them are from strangers, so the rare
+    // case became the common one. The ring is not special-cased for a share —
+    // that would make /share and a pasted /p link behave differently on the
+    // same post, and would override a choice the reader made on purpose.
+    // Say what happened, and put the control that undoes it in reach.
+    if (p.hidden && p.hiddenReason === 'scope') {
+      const bar = threadRingBar();
+      main.replaceChildren(...[bar, emptyState('Outside your ring',
+        session
+          ? 'This post is from someone your ring does not reach, so its thread is empty here. Widen the ring above to read it — this thread only; the rest of the site stays where you left it.'
+          : 'This post is from someone your ring does not reach, so its thread is empty here.',
+        bar ? null : el('a', { class: 'btn', href: '/me' }, 'Your ring'))].filter(Boolean));
+      return;
+    }
     // 3w: the thread is no longer read-only — replies are a real write now.
     // A reply's PARENT is the node you answered; its ROOT is the top of the
     // thread, which for a lens thread is always the post being read. Defined
@@ -3066,21 +3107,103 @@ export function lensThreadView(params, query) {
     // comment AGAIN: the repaint is a fresh tree, and the first focus went with
     // the old one (mock v20 claim F, found by the shipped capture 2026-08-30)
     onCascade = (next) => { paintComments(next.comments); if (focus) focusComment(commentsCard, focus, { threadHref }); };
-    // A reply that your ring hid is a reply you cannot see the answer to, so
-    // the widening control belongs ON the thread rather than three pages away.
-    // Rebuilt on every paint, because its selected segment is the override and
-    // the override changes underneath it.
-    const threadRing = session ? (() => {
-      const pill = ringScope.ringPill(el, {
-        override: ringOverride,
-        ariaLabel: 'How close — this thread only',
-        onPicked: (id) => { ringOverride = id; main.replaceChildren(skeleton(8)); load(); },
-      });
-      return pill ? el('div', { class: 'ringbar', 'data-thread-ring': '1' }, pill) : null;
-    })() : null;
+    const threadRing = threadRingBar();
     main.replaceChildren(...[bar, threadRing, head, t.comments.length ? commentsCard : emptyState('No replies', 'Nothing below this post yet.')].filter(Boolean));
   }).catch((e) => main.replaceChildren(emptyState('Lens fetch failed', e.message)));
   };
   load();
   return { main, side: el('div', { class: 'side' }, ...lensRail()) };
+}
+
+// ---------- /share — the door from the Bluesky app's share sheet ----------
+//
+// The owner, 2026-09-04, with the Bluesky app's share sheet open on a post:
+// "share with Forage as a target when it's installed as a PWA, and have that
+// same content open in Forage … if I see a comment thread that's like the
+// 1/2/3 thing, I could share the number one straight to Forage and then just
+// read it as one plain post."
+//
+// Forage already draws that page. `shapeLensThread` hoists an author's own
+// 1/3 · 2/3 · 3/3 chain into the BODY of one post, and `lens.thread()` refetches
+// from the root when handed a reply's uri — so any part of a numbered thread
+// opens the whole thing, read as one post with its replies below. What was
+// missing was the door, and this is it: manifest.webmanifest declares a
+// `share_target` (W3C Web Share Target) pointing here, the browser navigates an
+// INSTALLED Forage to /share?…, and this turns the payload into an address.
+//
+// THE PAYLOAD IS PARSED SOMEWHERE ELSE ON PURPOSE. js/share-target.js is pure —
+// no fetch, no DOM, no clock — because everything that can go wrong about a
+// shared link is decidable from a string, and a string is testable without a
+// browser. This function does the two things a string cannot: at most one
+// resolveHandle, and one navigation.
+//
+// IT REPLACES, IT NEVER PUSHES. /share is a doorway, not a page. Left in the
+// history it would be an inescapable loop: Back from the thread lands here, and
+// here immediately resolves forward again. Same reasoning, same call as the
+// landing rule at '/' (V5) — replacePath, then dispatch.
+export function lensShareView(params, query) {
+  const target = extractTarget({ title: query.title, text: query.text, url: query.url });
+
+  // Everything that needs no network lands synchronously, so there is no flash
+  // of a loading state on the way to a page we could already name.
+  const direct = directPath(target);
+  if (direct) { replacePath(direct); return dispatch(direct); }
+
+  if (target.kind === 'post') {
+    // A did in the handle position is already resolved (social-app hands one
+    // out whenever the author's handle is invalid) and must not be looked up.
+    if (isDid(target.handle)) {
+      const path = threadPath(target.handle, target.rkey);
+      replacePath(path);
+      return dispatch(path);
+    }
+    const main = el('div', { 'data-share-resolving': '1' },
+      el('div', { class: 'xs muted', style: 'padding:6px' }, `Opening @${target.handle}'s post…`),
+      skeleton(6));
+    lens.resolveDid(target.handle)
+      .then((did) => {
+        const path = threadPath(did, target.rkey);
+        replacePath(path);
+        rerenderNow();
+      })
+      .catch((e) => main.replaceChildren(shareFailed(target, e)));
+    return { main, side: null };
+  }
+
+  return { main: shareUnreadable(target), side: null };
+}
+
+// A share that named a real shape and could not be resolved. The handle is the
+// part that failed — a renamed account, a typo in a hand-pasted link, or the
+// network being down — so it is named, and the original link is offered whole.
+function shareFailed(target, e) {
+  return emptyState('Could not open that post',
+    `@${target.handle} — ${e.message}`,
+    el('a', { class: 'btn', href: '/' }, 'Go home'));
+}
+
+// A share Forage has no address for. Losing the payload here would be the worst
+// possible answer: by the time a share fails, the reader has already left the
+// app it came from, and "we could not read that" without saying what "that" was
+// leaves them with nothing at all. So the text comes back, and the link — if
+// there was one — is a real link out.
+function shareUnreadable(target) {
+  const body = target.link
+    ? 'Forage opens Bluesky posts, profiles, feeds and hashtags. That link is none of those, so it is left as it arrived.'
+    : 'Nothing in what was shared looks like a Bluesky link. Forage opens posts, profiles, feeds and hashtags.';
+  const box = el('div', { class: 'empty', 'data-share-unreadable': '1' },
+    el('h2', {}, 'Nothing to open here'),
+    el('p', { class: 'muted' }, body),
+    target.shared
+      ? el('p', { class: 'small', style: 'word-break:break-all', 'data-share-payload': '1' }, target.shared)
+      : null,
+    target.link
+      // rel is not decoration on an arbitrary shared URL: this link points
+      // wherever the payload said, and target=_blank without noopener hands
+      // that page a handle on ours.
+      ? el('a', { class: 'btn', href: target.link, target: '_blank', rel: 'noopener noreferrer' }, 'Open it anyway')
+      : null,
+    ' ',
+    el('a', { class: 'btn primary', href: '/' }, 'Go home'));
+  return box;
 }

@@ -1682,11 +1682,31 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
     // board, which is the entire point of a shareable URL. A did in the handle
     // position is already resolved and is not looked up again.
     async resolveFeed({ handle, rkey }) {
-      const did = String(handle || '').startsWith('did:')
-        ? handle
-        : (await get('com.atproto.identity.resolveHandle', { handle })).did;
-      if (!did) throw new Error(`lens: could not resolve @${handle} to an account`);
+      const did = await this.resolveDid(handle);
       return this.feedInfo(`at://${did}/app.bsky.feed.generator/${rkey}`);
+    },
+
+    // The identity half of any shared link — handle -> did. Split out of
+    // resolveFeed when the share target arrived (2026-09-04), because a shared
+    // POST needs exactly the same step and an at-uri cannot be built without
+    // it: `at://<handle>/app.bsky.feed.post/<rkey>` is legal AT-URI syntax, but
+    // whether the AppView resolves one inside getPostThread is not something
+    // this repo has measured, and the /f/ cold-resolve bug is what shipping on
+    // an unmeasured assumption looks like. resolveHandle is unauth-200 and
+    // proven here (3v).
+    //
+    // A segment that is ALREADY a did is returned untouched. That is not an
+    // optimisation: social-app's makeProfileLink falls back to the did when an
+    // account's handle is invalid (src/lib/routes/links.ts:6-18), so a share
+    // payload carrying one is ordinary, and resolving a did as if it were a
+    // handle is a guaranteed 400.
+    async resolveDid(handle) {
+      const h = String(handle || '').trim().replace(/^@/, '');
+      if (!h) throw new Error('lens: no handle to resolve');
+      if (h.startsWith('did:')) return h;
+      const { did } = await get('com.atproto.identity.resolveHandle', { handle: h });
+      if (!did) throw new Error(`lens: could not resolve @${h} to an account`);
+      return did;
     },
 
     // 3j: discovery — popular generators, optionally searched. Unauth-200
