@@ -7,7 +7,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@502fbcc",
+      "baseline": "forage@f05f128",
       "population": "lens:mock-selfthread"
     },
     {
@@ -16,7 +16,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@502fbcc",
+      "baseline": "forage@f05f128",
       "population": "lens:mock-selfthread"
     },
     {
@@ -25,7 +25,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@b2c9c41",
+      "baseline": "forage@7e82458",
       "population": "lens:mock-selfthread"
     },
     {
@@ -34,7 +34,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@b2c9c41",
+      "baseline": "forage@7e82458",
       "population": "lens:mock-selfthread"
     },
     {
@@ -43,7 +43,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@502fbcc",
+      "baseline": "forage@f05f128",
       "population": "lens:mock-selfthread"
     },
     {
@@ -52,7 +52,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@502fbcc",
+      "baseline": "forage@f05f128",
       "population": "lens:mock-selfthread"
     },
     {
@@ -61,7 +61,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@502fbcc",
+      "baseline": "forage@f05f128",
       "population": "lens:mock-selfthread"
     },
     {
@@ -70,7 +70,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@502fbcc",
+      "baseline": "forage@f05f128",
       "population": "lens:mock-selfthread"
     },
     {
@@ -79,7 +79,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@b2c9c41",
+      "baseline": "forage@7e82458",
       "population": "lens:mock-selfthread"
     },
     {
@@ -88,7 +88,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@b2c9c41",
+      "baseline": "forage@7e82458",
       "population": "lens:mock-selfthread"
     },
     {
@@ -97,7 +97,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@b2c9c41",
+      "baseline": "forage@7e82458",
       "population": "lens:mock-selfthread"
     },
     {
@@ -106,7 +106,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@b2c9c41",
+      "baseline": "forage@7e82458",
       "population": "lens:mock-selfthread"
     }
   ]
