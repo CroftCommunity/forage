@@ -9,7 +9,7 @@
 // Lens surfaces are read-only; the write gates all stay shut (frontier chips,
 // never dead buttons — the UI renders these as deferred, invariant 7).
 import { buildPost, withTag, IMAGE_LIMITS } from '../compose.js';
-import { RUNG_IDS, membersFor, scopeMembers, labelFor } from '../rings.js';
+import { RUNG_IDS, scopeMembers } from '../rings.js';
 import { sortItems } from '../engines/rank.js';
 import { gifOf, parseAlt } from '../gif.js';
 
@@ -662,9 +662,6 @@ export function shapeLensFeed(feedResponse, src, { sort = 'lens', timeframe = 'a
 
 const GUEST_APPVIEW = 'https://public.api.bsky.app';
 
-// D6-measured: warm parallel author-feed fan-out is 80–420ms at N=25; the cap
-// is a BOARD-NOISE bound, not a latency one. Beyond-cap is honest overflow.
-export const RING_CAP = 25;
 
 // 4b: a runaway guard on discovery paging, not a product cap. The corpus
 // measured 117 feeds and ended with cursor:null; this only bites if the
@@ -1401,46 +1398,16 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
           creator: creatorOf.get(i.value) || null };
       });
     },
-
-    // ring: 'world' | 'following' | 'mutuals' | 'mutuals+1'. world/following
-    // bypass the graph (their boards come from sources/timeline). mutuals =
-    // follows ∩ followers; mutuals+1 adds each mutual's follows under
-    // RING_CAP with HONEST overflow (the true pre-cap count — never silent).
-    ringMembers(ring) {
-      // World has no member list — null means "do not filter", where [] would
-      // mean "filter to nobody". js/rings.js owns that distinction.
-      if (ring === 'world') return Promise.resolve({ members: null });
-      if (!RUNG_IDS.includes(ring)) {
-        return Promise.reject(new Error(`lens: unknown rung: ${ring} (known: ${RUNG_IDS.join(', ')})`));
-      }
-      if (!session) return Promise.reject(new Error('lens: rings are computed from YOUR graph — needs a session'));
-      const cached = ringCache.get(ring);
-      if (cached) return cached;
-      const pending = this.computeRing(ring)
-        .catch((e) => { ringCache.delete(ring); throw e; }); // a failure is not an answer
-      ringCache.set(ring, pending);
-      return pending;
-    },
-
-    // 3x: forget the remembered rings — sign-out, account switch, or an
-    // explicit refresh. The graph belongs to an account, not to a device.
+    // Forget the remembered graph and the scopes derived from it — sign-out,
+    // account switch, or an explicit refresh. The graph belongs to an account,
+    // not to a device.
     forgetRings() { ringCache.clear(); graphCache.clear(); },
 
-    // The graph walk, cached by ringMembers above. This function FETCHES; it
-    // does not decide what a rung means — js/rings.js does, purely, which is
-    // what let the containment property be tested without a network.
-    //
-    // The second hop is fetched only for the rung that needs it. Every tighter
-    // rung is a union over data the first two calls already returned, so 'me',
-    // 'mut' and 'fol' cost exactly two requests between them.
-    async computeRing(ring) {
-      return membersFor(ring, await this.ringGraph(ring === 'hop'));
-    },
-
-    // The uncapped set, for the display scope (plan 2026-09-03). Same walk,
-    // different consumer: RING_CAP bounds the board's one-request-per-member
-    // fan-out, and a filter fans out nothing, so carrying the cap here would
-    // silently stop a reader with 300 follows from seeing 275 of them.
+    // The members a scope narrows to, for the display filter. Uncapped, and
+    // there is no longer a capped variant to distinguish it from: RING_CAP
+    // bounded the ring BOARD's one-request-per-member fan-out, and that board
+    // was retired with the /r/<rung> routes (2026-09-03). Filtering fans out
+    // nothing, so nothing here needs a bound.
     scopeMembersFor(scope) {
       if (scope === 'world') return Promise.resolve({ members: null });
       if (!RUNG_IDS.includes(scope)) {
@@ -1483,121 +1450,6 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
       return pending;
     },
 
-    // 3b: the merged ring board. One page = one fan-out round over the ring's
-    // members (parallel, per-member failures REPORTED, never board-fatal),
-    // time-interleaved with a deterministic tie order (indexedAt desc, then
-    // author DID, then uri). The cursor is the per-member cursor map, base64 —
-    // resuming advances each member from its own cursor, so no duplicates;
-    // exhausted members drop out.
-    // 3l: onPage fires per member as its page lands (the board paints
-    // opportunistically instead of waiting for the whole fan-out), and
-    // timeoutMs bounds each member — D6 measured a ~20s cold-start stall, and
-    // one slow member must never hold the board hostage.
-    async ringFeed(ring, { cursor, onPage, timeoutMs = 8000, tags = [] } = {}) {
-      // WHY 'fol' DELEGATES INSTEAD OF FANNING OUT, stated because it is the
-      // one place the ladder's set and the board's FETCH differ. js/rings.js
-      // defines 'fol' as me ∪ mutuals ∪ everyone I follow. Fanning out over
-      // that set would be one getAuthorFeed per follow — hundreds of requests
-      // for an ordinary account, which is the cost RING_CAP exists to bound and
-      // is why 'hop' is capped at all. `getTimeline` is the network's own answer
-      // to the same question in ONE request, so the rung is fetched that way.
-      //
-      // The honest consequence: containment is a property of the MEMBER SETS
-      // (proven in test/rings.test.js), not of the rendered boards, because the
-      // timeline is Bluesky's composed following feed rather than a literal
-      // union of author feeds. Every other rung fans out and is literal. If
-      // that difference ever matters to a reader, the fix is to say so on the
-      // board, not to make the fan-out unaffordable.
-      if (ring === 'fol') {
-        const board = await this.feed({ kind: 'timeline' }, { title: 'My follows' });
-        return { ...board, ring, failures: [] };
-      }
-      // V3: World is the widest rung, and the only one whose members are not
-      // people. It draws the COMPOSITION — your timeline plus every feed you
-      // have saved — merged and unsqueezed. That is what the owner's
-      // definition requires: "everybody's interactions on this combination of
-      // my own posts, my follows posts, my mutuals, and like feeds I follow".
-      // Not the firehose: the composition is the boundary, which is why
-      // nothing global is fetched here.
-      //
-      // Same failure discipline as the member fan-out: one dead source is
-      // NAMED and the rest of the board still paints. A composition of nothing
-      // is an empty board, not an error — a reader who has saved no feeds and
-      // follows nobody has an empty world, honestly.
-      if (ring === 'world') {
-        if (!session) throw new Error('lens: World is your composition — needs a session');
-        const saved = await this.feeds().catch(() => []);
-        // Subscribed hashtags are PASSED IN rather than read here: they live
-        // in device storage (js/tagsubs.js) and a substrate that reaches for
-        // localStorage is a substrate that cannot be replayed or tested
-        // headlessly. The caller knows them; this only knows how to weave.
-        const sources = [
-          { key: 'timeline', source: { kind: 'timeline' }, title: 'Following' },
-          ...saved.filter((f) => f.kind === 'feed')
-            .map((f) => ({ key: f.slug || f.id, source: { kind: 'feed', uri: f.id }, title: f.title })),
-          ...tags.map((t) => ({ key: `h:${t}`, stream: { kind: 'hashtag', key: t }, title: `#${t}` })),
-        ];
-        const failures = [];
-        const pages = await Promise.all(sources.map(async (s) => {
-          try {
-            const b = s.stream
-              ? await this.stream(s.stream)
-              : await this.feed(s.source, { title: s.title, slug: s.key });
-            if (onPage && b.posts.length) onPage(b.posts);
-            return b.posts;
-          } catch { failures.push(s.key); return []; }
-        }));
-        const posts = pages.flat().sort((x, y) => {
-          const t = String(y.createdTs).localeCompare(String(x.createdTs));
-          if (t) return t;
-          const a = String(x.author).localeCompare(String(y.author));
-          return a || String(x.id).localeCompare(String(y.id));
-        });
-        return { posts, ring, failures, feedTitle: 'World', feedSlug: 'ring:world', cursor: null };
-      }
-      const resumed = cursor ? JSON.parse(atob(cursor)) : null;
-      const ringInfo = resumed ? { members: Object.keys(resumed.m) } : await this.ringMembers(ring);
-      const cursors = resumed ? resumed.m : Object.fromEntries((ringInfo.members ?? []).map((d) => [d, undefined]));
-      const failures = [];
-      const src0 = { feedId: `lens:ring:${ring}`, feedSlug: `ring:${ring}`, feedTitle: labelFor(ring) };
-      const withTimeout = (p, did) => new Promise((resolve) => {
-        let settled = false;
-        const timer = setTimeout(() => { if (!settled) { settled = true; failures.push(did); resolve(null); } }, timeoutMs);
-        p.then((v) => { if (!settled) { settled = true; clearTimeout(timer); resolve(v); } })
-         .catch(() => { if (!settled) { settled = true; clearTimeout(timer); failures.push(did); resolve(null); } });
-      });
-      const pages = await Promise.all(Object.entries(cursors).map(async ([did, cur]) => {
-        const data = await withTimeout(get('app.bsky.feed.getAuthorFeed', { actor: did, limit: 10, cursor: cur }), did);
-        if (!data) return { did, items: [], next: undefined };
-        const items = data.feed || [];
-        // paint this member's posts NOW — the caller renders as they arrive
-        if (onPage && items.length) {
-          onPage(items.map((i) => ({ ...shapeLensPost(i.post, src0, posture), ...feedItemMeta(i) }))
-            .filter((p) => !p.hidden));
-        }
-        return { did, items, next: data.cursor };
-      }));
-      const items = pages.flatMap((p) => p.items);
-      // A repost merges at its REPOST time (reason.indexedAt) — the network's
-      // own author-feed order — never the original post's, which would sink a
-      // fresh repost of an old post to the bottom of the board (plan 2026-08-28-1).
-      const mergeTs = (i) => i.reason?.indexedAt || i.post.indexedAt;
-      items.sort((x, y) => {
-        const t = String(mergeTs(y)).localeCompare(String(mergeTs(x)));
-        if (t) return t;
-        const a = String(x.post.author?.did).localeCompare(String(y.post.author?.did));
-        if (a) return a;
-        return String(x.post.uri).localeCompare(String(y.post.uri));
-      });
-      const nextMap = Object.fromEntries(pages.filter((p) => p.next).map((p) => [p.did, p.next]));
-      const src = src0;
-      return {
-        ...shapeLensFeed({ feed: items }, src, {}, posture), ...src,
-        ring, failures,
-        ...(ringInfo.overflow ? { overflow: ringInfo.overflow } : {}),
-        cursor: Object.keys(nextMap).length ? btoa(JSON.stringify({ m: nextMap })) : undefined,
-      };
-    },
 
     // ---- Phase 4a: the ⋯ menu's writes (plan 2026-08-29 post-and-thread) ----
     // Save = Bluesky's private, server-side bookmark. No record, no repo write;

@@ -89,24 +89,32 @@ test('junk is refused rather than written, and never clobbers a good value', () 
 // Where `/` goes, as one pure function, because the interesting part is the
 // THREE cases and not the storage. Owner's rule (plan 2026-08-26-4, Revision
 // 2): a guest gets the directory; a returning reader gets the board they left;
-// a brand-new account gets My follows.
-import { landingBoard, DIRECTORY } from '../js/last-board.js';
+// a brand-new account gets Following.
+//
+// That last case read 'fol' — the ring rung — until 2026-09-03. It is a RENAME
+// and not a new destination: /r/fol delegated straight to the timeline in one
+// request, so a first sign-in has always landed on exactly this board. The
+// rungs stopped being addresses when the ring became a display scope, which
+// left the timeline to be named by its own slug.
+import { landingBoard, DIRECTORY, FIRST_TIME_BOARD } from '../js/last-board.js';
 
 test('a guest lands on the directory — they have no history worth remembering', () => {
   assert.equal(landingBoard({ signedIn: false, stored: null }), DIRECTORY);
-  assert.equal(landingBoard({ signedIn: false, stored: 'mut' }), DIRECTORY,
-    'even with a board remembered from a previous session: signed out, rungs do not resolve');
+  assert.equal(landingBoard({ signedIn: false, stored: 'whats-hot' }), DIRECTORY,
+    'even with a board remembered from a previous session: signed out it has none of their context');
 });
 
 test('a returning reader lands on the board they left', () => {
-  assert.equal(landingBoard({ signedIn: true, stored: 'mut' }), 'mut');
+  assert.equal(landingBoard({ signedIn: true, stored: 'following' }), 'following');
   assert.equal(landingBoard({ signedIn: true, stored: 'whats-hot' }), 'whats-hot',
     'a feed is a board too — the whole point of the taxonomy');
   assert.equal(landingBoard({ signedIn: true, stored: 'tag-harvest' }), 'tag-harvest');
 });
 
-test('a first sign-in lands on My follows, since there is no board to return to', () => {
-  assert.equal(landingBoard({ signedIn: true, stored: null }), 'fol');
+test('a first sign-in lands on Following, since there is no board to return to', () => {
+  assert.equal(landingBoard({ signedIn: true, stored: null }), 'following');
+  assert.equal(FIRST_TIME_BOARD, 'following',
+    'and it is a FEED slug — no rung is addressable any more');
 });
 
 test('the directory is a named destination, not an empty string masquerading as one', () => {

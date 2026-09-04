@@ -15,8 +15,7 @@
 // counterexample kept as an executable record of why the redefinition happened.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { RUNG_IDS, membersFor, OLD_MUTUALS_PLUS_ONE, SCOPES, byRank, scopeMembers } from '../js/rings.js';
-import { RING_CAP } from '../js/substrates/lens.js';
+import { RUNG_IDS, OLD_MUTUALS_PLUS_ONE, SCOPES, byRank, scopeMembers } from '../js/rings.js';
 
 // I follow A, B and C. Only A follows me back, so A is my only mutual.
 // A follows X — and notably follows neither B nor C.
@@ -41,7 +40,7 @@ test('the counterexample: the OLD mutuals+1 does not contain following', () => {
 
 test('every rung contains the rung inside it', () => {
   const sets = RUNG_IDS.filter((id) => id !== 'world')
-    .map((id) => ({ id, members: membersFor(id, GRAPH).members }));
+    .map((id) => ({ id, members: scopeMembers(id, GRAPH).members }));
   for (let i = 1; i < sets.length; i++) {
     const inner = sets[i - 1], outer = sets[i];
     for (const did of inner.members) {
@@ -53,37 +52,20 @@ test('every rung contains the rung inside it', () => {
 });
 
 test('the rungs are the sets the ladder claims they are', () => {
-  assert.deepEqual(membersFor('me', GRAPH).members, ['did:me']);
-  assert.deepEqual(membersFor('mut', GRAPH).members, ['did:me', 'did:A']);
-  assert.deepEqual(membersFor('fol', GRAPH).members, ['did:me', 'did:A', 'did:B', 'did:C']);
-  assert.deepEqual(membersFor('hop', GRAPH).members, ['did:me', 'did:A', 'did:B', 'did:C', 'did:X']);
+  assert.deepEqual(scopeMembers('me', GRAPH).members, ['did:me']);
+  assert.deepEqual(scopeMembers('mut', GRAPH).members, ['did:me', 'did:A']);
+  assert.deepEqual(scopeMembers('fol', GRAPH).members, ['did:me', 'did:A', 'did:B', 'did:C']);
+  assert.deepEqual(scopeMembers('hop', GRAPH).members, ['did:me', 'did:A', 'did:B', 'did:C', 'did:X']);
 });
 
 test('World is unsqueezed — it has no member list, which is not the same as an empty one', () => {
-  assert.equal(membersFor('world', GRAPH).members, null,
+  assert.equal(scopeMembers('world', GRAPH).members, null,
     'null means "do not filter"; [] would mean "filter to nobody"');
 });
 
 test('an unknown rung is refused by name rather than silently treated as world', () => {
-  assert.throws(() => membersFor('mutuals+1', GRAPH), /unknown rung/i,
+  assert.throws(() => scopeMembers('mutuals+1', GRAPH), /unknown rung/i,
     'the OLD ids are gone and asking for one is an error, not a fallback');
-});
-
-test('the hop rung caps with HONEST overflow — the true count, never silent', () => {
-  const many = Array.from({ length: RING_CAP + 12 }, (_, i) => `did:h${i}`);
-  const g = { me: 'did:me', follows: ['did:A'], followers: ['did:A'],
-    hopFollows: new Map([['did:A', many]]) };
-  const { members, overflow } = membersFor('hop', g);
-  assert.equal(members.length, RING_CAP, 'drawn set is capped');
-  assert.equal(overflow.capped, true);
-  assert.equal(overflow.total, 2 + many.length, 'the PRE-cap total is reported, not the drawn one');
-});
-
-test('a tighter rung never caps — only the expensive one does', () => {
-  const many = Array.from({ length: RING_CAP + 12 }, (_, i) => `did:f${i}`);
-  const g = { me: 'did:me', follows: many, followers: many, hopFollows: new Map() };
-  assert.equal(membersFor('fol', g).overflow, undefined, 'following is one call and is not capped');
-  assert.equal(membersFor('fol', g).members.length, many.length + 1);
 });
 
 // ---- the scope registry (plan 2026-09-03: the ring as a display scope) ----
@@ -135,23 +117,22 @@ test('byRank drops ids that are not scopes rather than throwing', () => {
   assert.deepEqual(byRank(['fol', 'mutuals+1', 'world']), ['fol', 'world']);
 });
 
-test('scopeMembers is the FILTER set and is never capped', () => {
-  const many = Array.from({ length: RING_CAP + 12 }, (_, i) => `did:h${i}`);
+// RING_CAP is GONE with the board it bounded (2026-09-03). The two tests that
+// stood here pinned its edges — cap−1, cap, cap+1 with honest overflow — and
+// they went with it rather than being rewritten against a bound nothing
+// applies. What survives is the claim that matters now: nothing is truncated.
+test('scopeMembers never truncates — a filter fans out nothing, so it needs no bound', () => {
+  const many = Array.from({ length: 37 }, (_, i) => `did:h${i}`);
   const g = { me: 'did:me', follows: ['did:A'], followers: ['did:A'],
     hopFollows: new Map([['did:A', many]]) };
   const { members, overflow } = scopeMembers('hop', g);
-  assert.equal(members.length, 2 + many.length, 'every member survives — a filter fans out nothing');
-  assert.equal(overflow, undefined, 'and there is nothing to be honest about, because nothing was hidden');
-  // The board's set is a DIFFERENT set, and still capped.
-  assert.equal(membersFor('hop', g).members.length, RING_CAP);
+  assert.equal(members.length, 2 + many.length, 'every member survives');
+  assert.equal(overflow, undefined, 'and there is no overflow to report, because nothing was withheld');
 });
 
-test('scopeMembers agrees with membersFor wherever no cap bites', () => {
-  for (const id of ['me', 'mut', 'fol', 'hop']) {
-    assert.deepEqual(scopeMembers(id, GRAPH).members, membersFor(id, GRAPH).members,
-      `${id}: the two sets differ only by the cap`);
-  }
-  assert.equal(scopeMembers('world', GRAPH).members, null, 'world does not filter');
+test('World has no member list, which is not the same as an empty one', () => {
+  assert.equal(scopeMembers('world', GRAPH).members, null,
+    'null is "the ring does not narrow"; [] would be "narrow to nobody"');
 });
 
 test('scopeMembers refuses an unknown scope by name', () => {

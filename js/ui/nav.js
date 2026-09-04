@@ -14,11 +14,12 @@
 // CURATED, not two kinds of thing. So the sections group boards by SOURCE,
 // which is the only real distinction, rather than by an invented category.
 //
-// Signed out there is one line saying why the ring is missing. That is the
-// guest-surface rule (49cf873): a control a reader cannot use is hidden rather
-// than greyed. The note stayed when the ring left this file for the masthead
-// pill (plan 2026-09-03) — the pill is hidden for a guest by the same rule, and
-// this is still the only place the absence is explained in words.
+// THE GUEST SURFACE (49cf873): a control a reader cannot use is hidden rather
+// than greyed, because hiding three of four rungs left a list of one, which
+// reads as broken. The ring pill is the standing EXCEPTION — it is drawn signed
+// out, locked to World — and the exception is spelled out at the control
+// itself, further down. The note at the bottom of this file explains in words
+// what the locked stops need.
 
 
 import * as ringScope from '../ring-scope.js';
@@ -48,8 +49,9 @@ export function navTree({ el, session, feeds, tags, current }) {
   // screen; changing your site-wide ring there means opening the drawer, which
   // is exactly what setting it cost when it was five rows.
   //
-  // The rungs remain addressable at /r/<rung>; what changed is that they are no
-  // longer how you set your ring.
+  // The rungs are not addresses at all any more: /r/<rung> and the merged board
+  // behind it were retired the same day the pill landed.
+  //
   // Signed out the pill is STILL DRAWN, with World selected and the tighter
   // stops disabled (owner, 2026-09-03: "on logged out I still want the pill but
   // only world is selectable and selected"). That is a deliberate exception to
@@ -58,7 +60,9 @@ export function navTree({ el, session, feeds, tags, current }) {
   // and a locked segment absorbs nothing while showing a signed-out reader that
   // scoping exists at all. The old five rows could not do this — five rows
   // minus the four you cannot use is a list of one, which reads as broken. One
-  // control with two quiet segments reads as a control.
+  // control with two quiet segments reads as a control. It is the ONLY
+  // exception in this file, which is why it is stated once, here, at the
+  // control rather than in the header.
   section('Your ring');
   const pill = ringScope.ringPill(el, {
     block: true,

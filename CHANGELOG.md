@@ -30,6 +30,18 @@ below are the landings of that month, and everything earlier is in `git log`.
   where you left it. This became worth fixing the moment posts could arrive by share, since a
   shared post is nearly always from a stranger.
 
+- 2026-09-04 **The five ring boards are gone; the ring is only a setting now.** `/r/me`,
+  `/r/mut`, `/r/fol`, `/r/hop` and `/r/world` no longer exist. The day before, the ring stopped
+  being five places you go and became one pill that scopes what you are already reading (see the
+  entry below), which left those five addresses as a second way to do the same job — so they
+  have been retired rather than left to drift. Two things a reader may notice. A bookmark to one of them will not
+  resolve; the board it showed is now whichever board you are on, with the pill set to that
+  stop. And **World was also a board** — the one surface that merged your timeline, your saved
+  feeds and your subscribed hashtags into a single newest-first stream — and nothing replaces
+  it: your feeds and your hashtags are still there, each on its own board, but they are no
+  longer woven together anywhere. Signing in with nothing remembered now lands you on
+  **Following**, which is the same board `/r/fol` always was underneath.
+
 - 2026-09-03 **One control now decides how close everything you read comes from.** The left
   nav used to carry five "Your ring" rows — Just me, My mutuals, My follows, one hop out,
   World — and each was a place you went. They have been replaced by a single pill at the top

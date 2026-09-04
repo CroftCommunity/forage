@@ -583,13 +583,14 @@ export async function run() {
     // …and only then is the bar cleaned, so a reload cannot replay a spent code.
     await cb.page.waitForFunction(() => !location.hash.includes('code='));
     // V5: a completed callback lands on a BOARD, not on the lens root. The
-    // landing rule sends a session with nothing remembered to My follows —
+    // landing rule sends a session with nothing remembered to Following — the
+    // same board /r/fol was, now named by its own slug (2026-09-03) —
     // signing in and being dropped back on a directory would make the sign-in
     // feel like it changed nothing. The property that matters here is that the
     // spent code is gone from the URL, which is asserted above; where the
     // reader ends up is the rule's business and is asserted in
     // test/last-board.test.js.
-    assert.equal(await cb.page.evaluate(() => location.pathname), '/r/fol',
+    assert.equal(await cb.page.evaluate(() => location.pathname), '/f/following',
       'a completed callback lands on the first-time board, per the landing rule');
   } finally {
     await cb.close();
