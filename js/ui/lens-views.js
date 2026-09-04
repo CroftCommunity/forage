@@ -3181,37 +3181,8 @@ export function lensThreadView(params, query) {
     // comment AGAIN: the repaint is a fresh tree, and the first focus went with
     // the old one (mock v20 claim F, found by the shipped capture 2026-08-30)
     onCascade = (next) => { paintComments(next.comments); if (focus) focusComment(commentsCard, focus, { threadHref }); };
-<<<<<<< HEAD
     const threadRing = threadRingBar();
     main.replaceChildren(...[bar, threadRing, head, t.comments.length ? commentsCard : emptyState('No replies', 'Nothing below this post yet.')].filter(Boolean));
-=======
-    // A reply that your ring hid is a reply you cannot see the answer to, so
-    // the widening control belongs ON the thread rather than three pages away.
-    // Rebuilt on every paint, because its selected segment is the override and
-    // the override changes underneath it.
-    const threadRing = session ? (() => {
-      const pill = ringScope.ringPill(el, {
-        override: ringOverride,
-        ariaLabel: 'How close — this thread only',
-        onPicked: (id) => { ringOverride = id; main.replaceChildren(skeleton(8)); load(); },
-      });
-      return pill ? el('div', { class: 'ringbar', 'data-thread-ring': '1' }, pill) : null;
-    })() : null;
-<<<<<<< HEAD
-    // A thread with parts pinned but no replies still has a card to draw — and
-    // the empty state below it must not say "nothing here" over three visible
-    // parts, which is the shape of the contradiction this whole change is about.
-    const anythingBelow = t.comments.length || pinnedParts.length;
-    main.replaceChildren(...[bar, threadRing, head,
-      anythingBelow ? commentsCard : null,
-      t.comments.length ? null : emptyState('No replies',
-        pinnedParts.length ? 'The parts above are the post continuing itself. Nobody has answered it yet.'
-          : 'Nothing below this post yet.'),
-    ].filter(Boolean));
->>>>>>> 121c93b (thread: a continuation part stops being anonymous body text)
-=======
-    main.replaceChildren(...[bar, threadRing, head, t.comments.length ? commentsCard : emptyState('No replies', 'Nothing below this post yet.')].filter(Boolean));
->>>>>>> 78e0eda (thread: decision 2 closes on A — one post, read as one narrative)
   }).catch((e) => main.replaceChildren(emptyState('Lens fetch failed', e.message)));
   };
   load();
