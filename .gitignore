@@ -1,3 +1,21 @@
 node_modules/
 .stryker-tmp/
 reports/
+
+# A worktree's own note about what it is for. It belongs to the feature
+# DIRECTORY beside this checkout (CroftC/worktrees/<feature>/FEATURE.md), never
+# inside it, and CroftC/.claude/COORDINATION.md § Feature workspaces says so in
+# both its diagram and the word "untracked".
+#
+# Ignored rather than merely deleted, because deleting it alone does not hold:
+# a tracked copy had landed on main SIX times before 2026-09-04 — quote posts,
+# reply embeds, logged-out board, feed position, come-back-to-your-place, share
+# to Forage — each landing overwriting the last, so main carried a rotating,
+# always-stale description of whichever branch merged most recently, and every
+# worktree cut from main inherited it.
+#
+# The rule already named the mechanism and lost to it anyway: sessions stage
+# with `git add -A`, which is legal in a private worktree and is exactly how a
+# file that should never be tracked gets swept in. This line is the part that
+# does not depend on remembering.
+FEATURE.md

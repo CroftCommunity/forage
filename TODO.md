@@ -89,7 +89,7 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
   `app.bsky.draft.createDraft/updateDraft/getDrafts/deleteDraft` (private stash) could hold
   the words too — but `defs#draft` has no reply target (lexicon read 2026-08-30), so the
   parent stays local either way. Wants a live probe with the standing test account first
-  (CLAUDE.md § External APIs), then a Settings choice. [device: none]
+  (CLAUDE.md § External APIs), then a Settings choice.
 
 
 - ~~**`fyi.forage.tagsub` has never been written to a real PDS.**~~ — DONE
