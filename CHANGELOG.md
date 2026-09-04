@@ -8,11 +8,11 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
-- 2026-09-03 **The five ring boards are gone; the ring is only a setting now.** `/r/me`,
-  `/r/mut`, `/r/fol`, `/r/hop` and `/r/world` no longer exist. Earlier today the ring stopped
-  being five places you go and became one pill that scopes what you are already reading, which
-  left those five addresses as a second way to do the same job — so they have been retired
-  rather than left to drift. Two things a reader may notice. A bookmark to one of them will not
+- 2026-09-04 **The five ring boards are gone; the ring is only a setting now.** `/r/me`,
+  `/r/mut`, `/r/fol`, `/r/hop` and `/r/world` no longer exist. The day before, the ring stopped
+  being five places you go and became one pill that scopes what you are already reading (see the
+  entry below), which left those five addresses as a second way to do the same job — so they
+  have been retired rather than left to drift. Two things a reader may notice. A bookmark to one of them will not
   resolve; the board it showed is now whichever board you are on, with the pill set to that
   stop. And **World was also a board** — the one surface that merged your timeline, your saved
   feeds and your subscribed hashtags into a single newest-first stream — and nothing replaces
