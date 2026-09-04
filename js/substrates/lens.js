@@ -534,13 +534,52 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
   // Only the unbroken same-author chain hoists; replies to hoisted parts
   // re-root as top-level comments; an author reply to someone ELSE stays a
   // comment.
+  //
+  // Which reply continues the post is NOT "the first one the appview handed
+  // us" — getPostThread ranks its replies, so on 2026-09-03 a two-part post
+  // could render back to front. The network states the rule and we follow it
+  // (atproto packages/bsky/src/data-plane/server/op-thread.ts): "the oldest
+  // contiguous line of OP replies from a thread root". Oldest, every step.
   const rootDid = root.post?.author?.did;
+  const oldestSelf = (nodes) => (nodes || [])
+    .filter((n) => n.post && n.post.author?.did === rootDid)
+    .sort((a, b) => (Date.parse(a.post.record?.createdAt || 0) - Date.parse(b.post.record?.createdAt || 0))
+      // TID rkeys sort lexically in mint order, which is what the network
+      // breaks ties on — two parts posted in the same millisecond is the
+      // COMMON case, not a rare one: a composer posts a chain in one batch.
+      || String(a.post.uri).localeCompare(String(b.post.uri)))[0];
   const selfThread = [];
   let topLevel = root.replies || [];
-  let chain = topLevel.find((n) => n.post?.author?.did === rootDid && n.post);
+  let chain = oldestSelf(topLevel);
   topLevel = topLevel.filter((n) => n !== chain);
   const reRooted = [];
   while (chain) {
+    // Through the SHAPER, always. This read straight off the raw appview post,
+    // which made the hoist the one path in this function that no shape-layer
+    // policy ran on — build() shapes every node and drops on p.hidden, and this
+    // did neither. So the head could be scoped out, emptied and correct while
+    // the author's own words sat underneath it in the body. Found against the
+    // ring on claude/ring-scope (2026-09-03), but the ring is only the first
+    // policy narrow enough to make it visible: muted words and label floors
+    // leaked through the same hole, which is why this is not a ring special
+    // case. The fields come off the shaped post too, so a part gets facet
+    // trimming and embed shaping on the same terms as every other path.
+    //
+    // A hidden part is WITHHELD and the walk goes ON, rather than the chain
+    // breaking. Two reasons pulling the same way: parts share an author, so an
+    // author-level policy (ring, mute, block) hides all of a chain or none —
+    // but a muted WORD lives in one part's text and must take only that part;
+    // and other people's replies hang off the chain, and are not the hidden
+    // author's to take down with them, exactly as a reply under a blocked
+    // author already survives. The owner's rule is that parts 1, 2 and 3 are
+    // ONE post, so a withheld paragraph is a hole in it, not an end to it.
+    //
+    // It is still PUSHED, carrying a flag, and dropped after the numbering
+    // below — so the numbers keep telling the truth. A post whose second part
+    // is muted shows 1/3 and 3/3, with the gap where the part was; renumbering
+    // the survivors to 1/2 and 2/2 would make the mute invisible to the reader
+    // who asked for it.
+    //
     // A hoisted part is the post's BODY, so it renders like one: its words AND
     // whatever it carried. Until 2026-09-02 this shape was { uri, text, facets }
     // and an author who answered their own post with a picture, a clip, a link
@@ -548,37 +587,45 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
     // fixed for quoted posts on 2026-09-01, arriving from the other direction.
     // `author` and `id` ride along because mediaNode builds a video's link out
     // of them; without them a hoisted clip linked to undefined/post/undefined.
-    // SHAPE the part before hoisting it. This was reading straight off the raw
-    // appview post, which made the hoist the one path in this function that no
-    // shape-layer policy ran on — build() shapes every node and drops on
-    // p.hidden, and this did neither. So the head could be scoped out, emptied
-    // and correct while the author's own words sat underneath it in the body.
-    // Reported by croftc-ba (2026-09-03) against the ring, but the ring is only
-    // the first policy narrow enough to make it visible: muted words and label
-    // floors leaked through the same hole. Shaping the part closes all three,
-    // which is why this is not a ring special case.
-    //
-    // Withheld PER PART, and the walk continues rather than breaking. Two
-    // reasons, and they pull the same way: parts share an author, so an
-    // author-level policy hides all or none — but a muted word lives in ONE
-    // part's text and must take only that part. And other people's replies hang
-    // off the chain; they are not the hidden author's to take down with them,
-    // exactly as a reply under a blocked author already survives.
+    // 2026-09-03: and everything a CONTROL needs. A part used to arrive as
+    // words alone, so it drew as anonymous body text — no time, no permalink,
+    // and nothing that could delete ITSELF. The owner pressed the only Delete
+    // on the card and it deleted the post.
     const part = shapeLensPost(chain.post, src, posture);
-    if (!part.hidden) selfThread.push({
+    selfThread.push({
       uri: chain.post.uri,
       id: chain.post.uri,
+      hidden: !!part.hidden,
       author: chain.post.author?.handle || '[unknown]',
-      text: part.body,
+      authorId: part.authorId || chain.post.author?.did || '',
+      cid: chain.post.cid,
+      createdTs: part.createdTs || 0,
+      text: part.body || '',
       facets: part.facets || [],
-      media: part.media,
-      quoted: part.quoted,
+      // Conditional, not a bare key: a part with no embed has no `media` KEY,
+      // which test/lens.test.js pins ("media is absent, not null-shaped").
+      ...(part.media ? { media: part.media } : {}),
+      ...(part.quoted ? { quoted: part.quoted } : {}),
     });
     const kids = chain.replies || [];
-    const next = kids.find((n) => n.post?.author?.did === rootDid && n.post);
+    const next = oldestSelf(kids);
     reRooted.push(...kids.filter((n) => n !== next));
     chain = next;
   }
+  // The badge the network renders, on our own arithmetic: the root is part 1,
+  // so a three-entry chain is a post in four parts. `parts` is 1 when there is
+  // no chain at all, and a lone part is not a chain — the same boundary
+  // opThread draws ("only threads with OP replies count").
+  //
+  // Numbered BEFORE the withheld ones are dropped, so the numbers keep telling
+  // the truth: a post whose second part is muted shows 1/3 and 3/3, with the
+  // gap where the part was. Renumbering the survivors would make the mute
+  // invisible, and a reader who muted a word is owed the knowledge that it
+  // took something out — not a seamless post that was never written.
+  const parts = selfThread.length + 1;
+  selfThread.forEach((part, i) => { part.part = i + 2; part.parts = parts; });
+  const shownParts = selfThread.filter((part) => !part.hidden);
+  shownParts.forEach((part) => { delete part.hidden; });
   const replies = build([...topLevel, ...reRooted], 0);
   // 3r: a quote cascade. A repost-with-comment collects replies of its own and
   // can itself be quoted, so a quote entry is a threadViewPost (post+replies)
@@ -613,8 +660,13 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
   };
   const quoteNodes = (quotes || []).map((q) => buildQuote(q, 0)).filter(Boolean);
   const comments = [...replies, ...quoteNodes].sort(order);
+  // The count a head may print. `post.commentCount` is the appview's
+  // replyCount, which counts a hoisted part (it IS a reply) and cannot count a
+  // re-rooted one — so a head reading it said "1 reply" over a list saying
+  // "No replies" (owner, 2026-09-03). This number is the list, by
+  // construction: what is counted is what is drawn, mutes and blocks included.
   return { post, perms: LENS_PERMS, sort: 'lens', locked: false, comments, total,
-    selfThread, quoteCount: root.post.quoteCount ?? 0 };
+    selfThread: shownParts, parts, replyCount: comments.length, quoteCount: root.post.quoteCount ?? 0 };
 }
 
 // Plan 2026-08-28-1: an author-feed/timeline item is an ENVELOPE —

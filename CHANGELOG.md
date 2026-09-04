@@ -57,6 +57,22 @@ below are the landings of that month, and everything earlier is in `git log`.
   The same page lets you choose which stops the pill offers — add "one hop out" if you want it,
   drop Mutuals if you do not. World is always offered, because it is the way back.
 
+- 2026-09-03 **Your reply to your own post is a reply again, and Delete stops being a
+  trap.** Forage reads a chain of replies you write to your own post as more of the post —
+  the 1/3, 2/3, 3/3 shape — and shows it under the post rather than as comments. That is
+  still what it does, and it is what Bluesky does too. But a part of it used to arrive as
+  bare words: no number, no time, no way to link to it, and no way to delete it on its own.
+  So a comment you left on your own post read as something you had written into the post,
+  the card claimed "1 reply" over a list saying "No replies", and the only Delete on the
+  card was the post's — press it and the post went. Now a thin line and a small "2/3" open
+  each part, so the post still reads as one narrative, and that part's own menu holds when it
+  was written, a link to it, and **Delete part 2** — named for the part. The post's button
+  says **Delete post**. And the count is the list, so it can no longer claim a reply the page
+  does not show. Two more fixes underneath: the part that continues a post is now
+  the **oldest** one you wrote, not whichever the server happened to rank first — a two-part
+  post could render back to front — and a post in parts says so ("3 parts · 11 replies").
+  (mock `plans/mocks/self-thread.html`)
+
 - 2026-09-03 **Deep threads read like conversations again.** A long back-and-forth used to walk
   right off the side of a phone: every reply stepped 14px further in, so by the tenth the words
   had 158px to live in — about twenty characters a line — and names were cut to "Thes…" with

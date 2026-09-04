@@ -14,7 +14,8 @@
 //        news-lens news-lens-replies news-board news-board-nothumb
 //        deep-lens deep-lens-spine deep-lens-tail deep-lens-open deep-lens-run
 //        deep-lens-prefs deep-lens-off
-//        gif-lens gif-lens-paused gif-lens-alt gif-board)
+//        gif-lens gif-lens-paused gif-lens-alt gif-board
+//        self-lens self-lens-count self-lens-alone)
 //   node scripts/mock-snaps.mjs --as current --serve ../../forage
 //       # the same script and fixtures, rendering ANOTHER checkout (main): the
 //       # Current frames come from the tree the owner is running, captured by
@@ -41,6 +42,13 @@
 //                    load: a quote carrying a TWELVE-deep chain in which every
 //                    rung has exactly one reply, beside a two-child branch that
 //                    is not a chain. The owner's 2026-09-02 screenshot, measured.
+//   lens:mock-selfthread e2e/harness/mock-selfthread.mjs — the self-thread load:
+//                    the poster answering their OWN image post, a chain of
+//                    three (one part tied to the root's timestamp, one 3h17m
+//                    later carrying a picture), a decoy self-reply the appview
+//                    ranks first, the OP answering someone else, and eleven
+//                    replies at the measured median. Signed in AS the poster,
+//                    because the delete hazard only exists for them.
 //   lens:mock-newspost e2e/harness/mock-newspost.mjs — the post-text load: a
 //                    verbatim news record (three blocks split by \n\n, a #link
 //                    facet over a truncated display URL, a link card), a
@@ -55,6 +63,7 @@ import { RESPONSES as NEWS, BOARD_PATH as NEWS_BOARD, THREAD_PATH as NEWS_THREAD
 import { RESPONSES as REFRESH } from '../e2e/harness/mock-refresh.mjs';
 import { RESPONSES as DEEP, THREAD_PATH as DEEP_PATH, QUOTE_URI as DEEP_QUOTE, SPINE_URIS } from '../e2e/harness/mock-deepthread.mjs';
 import { RESPONSES as GIF, BOARD_PATH as GIF_BOARD, THREAD_PATH as GIF_THREAD } from '../e2e/harness/mock-gif.mjs';
+import { RESPONSES as SELF, THREAD_PATH as SELF_PATH, ALONE as SELF_ALONE, ALONE_PATH as SELF_ALONE_PATH } from '../e2e/harness/mock-selfthread.mjs';
 import { mergeManifest } from './lib/snaps-manifest.mjs';
 import { SKINS } from '../js/skins.js';
 import { execFileSync } from 'node:child_process';
@@ -424,6 +433,39 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
   //   deep-lens        the head and the ordinary replies — the control
   //   deep-lens-spine  the descent, anchored on the quote the chain hangs off
   //   deep-lens-tail   the far end: the deepest rungs and the depth-10 boundary
+  // self-thread (2026-09-03): the poster's own continuation chain in the post's
+  // head — one post, read as one narrative (owner's decision on the v1 frames).
+  // `-count` anchors on the count row, which a phone pushes below the fold.
+  const SELF_ROUTES = [
+    ['self-lens', SELF, SELF_PATH], ['self-lens-count', SELF, SELF_PATH],
+    // the owner's own tree: one self-reply, no comments, both counts on screen
+    ['self-lens-alone', SELF_ALONE, SELF_ALONE_PATH],
+  ];
+  if (SELF_ROUTES.some(([route]) => wanted(route))) {
+    for (const [route, responses, path] of SELF_ROUTES) {
+      if (!wanted(route)) continue;
+      const sp = await scenario('first-visit', { root: SERVE, mode: 'bluesky',
+        initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses });
+      await sp.page.setViewportSize({ width: vp.width, height: vp.height });
+      await sp.page.goto(`${sp.origin}${path}`);
+      // the head's action row is the last thing the thread paints, and it is
+      // the row carrying the count this mock is about
+      await sp.page.waitForSelector('.head-actions', { timeout: 15000 });
+      await sp.page.evaluate(() => document.fonts?.ready);
+      // a `-count` frame is ANCHORED on the count row rather than shot from the
+      // top: on a phone the post's picture pushes it below 844px, and the count
+      // is the claim the frame exists to hold. Anchored on the node, never on a
+      // scroll offset — the columns differ in height by design.
+      if (route.endsWith('-count')) {
+        await sp.page.evaluate(() => {
+          document.querySelector('.head-actions')?.scrollIntoView({ block: 'center' });
+        });
+        await sp.page.waitForTimeout(200);
+      }
+      await shoot(sp.page, route, 'lens:mock-selfthread', name, vp);
+      await sp.close();
+    }
+  }
   if (wanted('deep-lens') || wanted('deep-lens-spine') || wanted('deep-lens-tail') || wanted('deep-lens-open') || wanted('deep-lens-run')) {
     const dp = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: DEEP });
     await dp.page.setViewportSize({ width: vp.width, height: vp.height });

@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forage Self Thread v5</title>
+<meta name="mock-version" content="5">
+<meta name="mock-baseline" content="forage@7e82458">
+<meta name="mock-proposal" content="forage@f05f128">
+<style>
+:root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
+  --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page-bg:#1C1813;--page-card:#262019;--page-ink:#EFE7D9;--page-muted:#B5A88F;--page-line:#3D3527;--page-accent:#A5CD98}}
+:root[data-theme="dark"]{--page-bg:#1C1813;--page-card:#262019;--page-ink:#EFE7D9;--page-muted:#B5A88F;--page-line:#3D3527;--page-accent:#A5CD98}
+*{box-sizing:border-box}
+body{background:var(--page-bg);color:var(--page-ink);font-family:var(--f-body);line-height:1.55;margin:0;padding:32px 20px 72px}
+.wrap{max-width:1280px;margin:0 auto;display:flex;flex-direction:column;gap:30px}
+h1{font-family:var(--f-display);font-size:30px;font-weight:600;margin:0;letter-spacing:-.01em}
+h2{font-family:var(--f-display);font-size:22px;font-weight:600;margin:0}
+h3{font-family:var(--f-display);font-size:17px;margin:0 0 7px;font-weight:600}
+.sub{color:var(--page-muted);font-size:15px;max-width:80ch;margin:0}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+section{display:flex;flex-direction:column;gap:14px}
+.stage{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
+.device{display:flex;flex-direction:column;gap:9px;min-width:0}
+.device-label{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+.phone{width:390px;max-width:100%}
+.desk{flex:1 1 520px;min-width:0}
+.shot{max-width:100%;display:block;border:1px solid var(--page-line);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.10),0 8px 24px rgba(0,0,0,.06)}
+.callout{background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:16px 18px}
+.callout p,.callout li{margin:0;font-size:14px;color:var(--page-muted)}
+.callout b,.callout code,td b{color:var(--page-ink);font-weight:600}
+.callout ul,.callout ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+table{border-collapse:collapse;font-size:14px;width:100%}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--page-line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page-muted)}
+.tablewrap{overflow-x:auto;background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:6px 8px}
+code{font-size:.92em}
+.small{font-size:13px;color:var(--page-muted)}
+.tag{display:inline-block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;padding:1px 8px;border-radius:999px;border:1px solid var(--page-line);color:var(--page-muted)}
+figure{margin:0}
+pre{font-size:12.5px;line-height:1.5;margin:0;overflow-x:auto;color:var(--page-muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Forage &middot; mock &middot; self-thread <b>v5</b> &middot; Current forage@7e82458 &middot; Proposed forage@f05f128 &middot; 2026-09-04</div>
+    <h1>A post in parts, and the comment that was mistaken for one</h1>
+    <p class="sub"><b>One proposal, and every decision now answered</b>, from the
+      owner&rsquo;s report on 2026-09-03 with four screenshots:
+      &ldquo;if I write a comment I don&rsquo;t see it right away &hellip; in some cases it&rsquo;s
+      actually showing up as part of the original post? but still says 1 reply? it&rsquo;s confusing and
+      wrong&rdquo; &mdash; and, a message later, &ldquo;deleting that &lsquo;comment&rsquo; did in fact
+      delete the post&rdquo;.</p>
+    <p class="sub">All three symptoms are one rule. Forage treats a top-level reply <b>by the author</b>
+      as more of the post &mdash; the 1/3, 2/3, 3/3 shape &mdash; hoists its words into the post body and
+      takes it out of the comment list. <b>That rule is right</b>, and the research below is why: it is
+      the network&rsquo;s own rule, and Bluesky shipped the matching <code>2/3</code> badge to every user
+      on <b>2026-09-02</b>. What was wrong is that a hoisted part arrived as <b>anonymous body text</b>
+      &mdash; no number, no time, no permalink, and nothing that could delete itself, so the only Delete
+      on the card was the post&rsquo;s.</p>
+    <p class="sub"><b>v2 &mdash; the owner decided, on the v1 frames:</b> &ldquo;for parts 1, 2, 3 posts
+      I want to display them as ONE POST where 1/3 is the post and when you open it they are all there
+      as one narrative.&rdquo; So the chain stays in the post&rsquo;s head and <b>proposal&nbsp;B</b>
+      (the parts pinned above the comments, the way Bluesky draws them) is <b>off</b>. Its frames are
+      gone from this page with it; it is recoverable from the tag <code>mock/self-thread-v1</code>
+      (<code>5f65749</code>), where it was built and captured.</p>
+    <p class="sub">The decision moved a second thing with it. A strip carrying a number, a time, a link
+      and a Delete button is <b>three interruptions</b> in a narrative that was just asked to read as
+      continuous &mdash; so the seam went <b>quiet</b>: a hairline, the number, and a
+      <code>&hellip;</code> menu holding when the part landed, its link, and its own delete. It cannot
+      be <em>nothing</em>, which is what it was: a part with no mark at all is exactly what made a reply
+      read as the post&rsquo;s own words and put the wrong Delete under the owner&rsquo;s thumb.</p>
+    <p class="small"><b>v5:</b> both columns re-captured again &mdash; main has moved three times under
+      this branch (<code>8bc6cbd</code> &rarr; <code>0d5e744</code> &rarr; <code>b2c9c41</code> &rarr;
+      <code>7e82458</code>), and a
+      Current column that names a tree the owner has stopped running is the one thing rule&nbsp;2 exists
+      to prevent. The ring pill above the head card in every frame is those landings, not this branch. Proposal&nbsp;B&rsquo;s frames were captured at <code>5f65749</code>, kept reachable as the
+      tag <code>mock/self-thread-v1</code> because the rebase rewrote that sha off the branch.</p>
+    <p class="small">Frames: <b>390&times;844</b> and <b>1280&times;900</b>, default skin (warm),
+      signed in <b>as the poster</b> &mdash; the delete hazard only exists for the person who can see a
+      Delete button. Population: <code>e2e/harness/mock-selfthread.mjs</code>.
+      Claims held by <code>e2e/self-thread.workflow.mjs</code>.</p>
+  </header>
+
+  <section>
+    <div class="eyebrow">The decisions</div>
+    <h2>What is open</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th style="width:4ch">#</th><th style="width:26ch">Decision</th><th>Options, and where it stands</th></tr></thead>
+        <tbody>
+          <tr><td><b>1</b></td><td>Does a self-reply mean &ldquo;more of the post&rdquo;?</td>
+            <td><b>Settled by measurement &mdash; yes, keep it.</b> 1,641 real self-replies from 246
+              authors, sampled through the appview on 2026-09-03. A clock cannot separate the two
+              readings: Bluesky&rsquo;s own appview returns <code>opThread: true</code> for self-replies
+              <b>1.3h</b> and <b>2.4h</b> after their parent, numbering them 2/2 and 3/3, and only
+              <b>3.7%</b> of chains write &ldquo;1/3&rdquo; in their words. Raise it if you disagree;
+              nothing below depends on re-opening it.</td></tr>
+          <tr><td><b>2</b></td><td>Where the chain is drawn</td>
+            <td><b>CLOSED on A (owner, 2026-09-03, v2):</b> &ldquo;display them as ONE POST where 1/3 is
+              the post and when you open it they are all there as one narrative.&rdquo; The chain is the
+              post&rsquo;s body. B is off and its frames are off this page; it lives at
+              <code>5f65749</code> if it is ever wanted.</td></tr>
+          <tr><td><b>2b</b></td><td>How loud the seam between parts is</td>
+            <td><b>CLOSED on quiet (owner, v2).</b> A hairline, <code>2/3</code>, and a
+              <code>&hellip;</code> menu carrying the part&rsquo;s time, its link and its own delete.
+              The louder alternative &mdash; all four on a visible strip &mdash; is at
+              <code>5f65749</code>. The floor is that the seam is never nothing.</td></tr>
+          <tr><td><b>3</b></td><td>What the head&rsquo;s count says</td>
+            <td><b>Proposed on both: <code>3 parts &middot; 11 replies</code></b>, and the number is the
+              list by construction. It was the appview&rsquo;s <code>replyCount</code>, which counts a
+              hoisted part and cannot count a re-rooted one &mdash; that is where &ldquo;1 reply&rdquo;
+              over &ldquo;No replies&rdquo; came from. Alternative: drop the parts number and say
+              &ldquo;11 replies&rdquo; alone.</td></tr>
+          <tr><td><b>4</b></td><td>Delete</td>
+            <td><b>Proposed on both: every part carries its own Delete, and the post&rsquo;s button says
+              &ldquo;Delete post&rdquo;.</b> Two buttons reading &ldquo;Delete&rdquo; on one card is the
+              ambiguity that cost you the post. Open only in the wording.</td></tr>
+          <tr><td><b>5</b></td><td>An escape hatch &mdash; &ldquo;post this as a separate comment&rdquo;</td>
+            <td><b>Not built.</b> Any marker forage writes is <b>invisible to every other client</b>,
+              and 76% of the chains forage renders are written elsewhere &mdash; it would work on the
+              minority and change nothing on the majority. And once a part is numbered, timed and
+              independently deletable, there is nothing left to opt out of: the confusion was the
+              anonymity, not the classification. Reopen it any time; nothing here forecloses it.</td></tr>
+          <tr><td><b>6</b></td><td>A self-QUOTE &mdash; reposting your own post with a comment</td>
+            <td><b>CLOSED (owner, 2026-09-03):</b> &ldquo;if a user reposts their own post with comments
+              it&rsquo;s now a repost style comment to be clear, not part of the post head.&rdquo;
+              Already true &mdash; the hoist only ever walks <code>replies</code> &mdash; and now pinned
+              by a test, because it is a rule rather than an accident. A quote is the author talking
+              <em>about</em> the post at a new moment, to a new audience; a reply continues it.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Proposal 1 &middot; the reported tree</div>
+    <h2>One image post, one reply by its author, nothing else</h2>
+    <p class="sub">Your own case, rebuilt: a post with <b>no words and no alt text</b>, so the only
+      sentence on the card is the one the hoist put there. This is the tree where the contradiction is
+      audible &mdash; under eleven replies a wrong count hides in the crowd; here it is the whole card.</p>
+    <div class="stage">
+      <figure class="device phone">
+        <figcaption class="device-label">Current &middot; phone &middot; forage@7e82458</figcaption>
+        <img class="shot" src="snaps/self-thread/self-lens-alone.phone.current.png" alt="The post page on main: the reply's words render as the post's body under the picture, the head reads 1 reply, and below it the page says No replies. One Delete button, which is the post's.">
+      </figure>
+      <figure class="device phone">
+        <figcaption class="device-label">Proposed &middot; phone &middot; forage@f05f128</figcaption>
+        <img class="shot" src="snaps/self-thread/self-lens-alone.phone.proposed.png" alt="The same page on the branch: the reply carries a 2/2 badge, a time, a link and its own Delete; the head reads 2 parts, 0 replies; the post's own button says Delete post.">
+      </figure>
+    </div>
+    <div class="callout">
+      <ul>
+        <li><b>Current says two things at once.</b> &ldquo;1 reply&rdquo; on the card, &ldquo;No
+          replies &middot; Nothing below this post yet&rdquo; underneath it. The first number is the
+          appview&rsquo;s; the second is the list. Neither knew about the other.</li>
+        <li><b>Current offers one button, and it takes the post.</b> The words above it are the
+          reply&rsquo;s, which is what made it read as the reply&rsquo;s button.</li>
+        <li><b>Proposed:</b> a hairline and <code>2/2</code> above the part, its time, link and
+          <b>Delete part 2</b> in the seam&rsquo;s menu, <code>2 parts &middot; 0 replies</code> on the
+          head, and <code>Delete post</code> below it. The empty state is still honest &mdash; nobody has
+          answered &mdash; it just no longer contradicts a number four lines above it.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Proposal 2 &middot; the decided shape</div>
+    <h2>The chain in the head &mdash; one post, read as one narrative</h2>
+    <p class="sub">A three-part post (the root is 1/3) under the measured load: eleven replies, one part
+      posted in the same batch as the root, one posted <b>3h17m</b> later carrying a picture of its own,
+      and a <b>decoy</b> &mdash; a later self-reply the appview ranks first.</p>
+    <div class="stage">
+      <figure class="device phone">
+        <figcaption class="device-label">Current &middot; phone &middot; forage@7e82458</figcaption>
+        <img class="shot" src="snaps/self-thread/self-lens.phone.current.png" alt="On main the decoy self-reply about a supplier is hoisted into the post body as anonymous text; the count reads 13 replies.">
+      </figure>
+      <figure class="device phone">
+        <figcaption class="device-label">Proposed &middot; phone &middot; forage@f05f128</figcaption>
+        <img class="shot" src="snaps/self-thread/self-lens.phone.proposed.png" alt="On the branch parts two and three are hoisted in order, each opened by a hairline seam carrying a small 2/3 or 3/3 and a menu; the words run on as one post, and part three's picture renders below its words.">
+      </figure>
+    </div>
+    <div class="stage">
+      <figure class="device phone">
+        <figcaption class="device-label">Current &middot; the count row &middot; forage@7e82458</figcaption>
+        <img class="shot" src="snaps/self-thread/self-lens-count.phone.current.png" alt="Main's count row reads 13 replies over a list of eleven, with a single Delete button.">
+      </figure>
+      <figure class="device phone">
+        <figcaption class="device-label">Proposed &middot; the count row &middot; forage@f05f128</figcaption>
+        <img class="shot" src="snaps/self-thread/self-lens-count.phone.proposed.png" alt="The branch's count row reads 3 parts, 11 replies, and the button below it says Delete post.">
+      </figure>
+    </div>
+    <div class="callout">
+      <ul>
+        <li><b>The decoy is the second bug these frames caught.</b> Main hoists
+          &ldquo;<i>they are called Fastenal</i>&rdquo; &mdash; a self-reply written <b>2h20m after</b>
+          part two, which the appview merely returned first. <code>getPostThread</code> <b>ranks</b> its
+          replies; it does not return them oldest-first. A two-part post could render back to front.
+          The network states the rule and the branch follows it: <i>&ldquo;the oldest contiguous line of
+          OP replies from a thread root&rdquo;</i>, with the rkey breaking ties, because <b>43%</b> of
+          real chains tie on <code>createdAt</code> &mdash; a composer posts a chain in one batch.</li>
+        <li><b>A part is the body, so it gets no second byline.</b> The author is the same person and
+          repeating the avatar and name would read as a new speaker. It gets a hairline and a number,
+          and its <code>&hellip;</code> menu carries the rest: when it landed, its link, and
+          <b>Delete part 2</b> &mdash; named for the part, because the post has a Delete of its own four
+          lines below and the two were indistinguishable once already.</li>
+        <li><b>What this costs:</b> a part cannot be replied to, liked or reposted where it stands.
+          Those are things you do to a post, and here a part is not a post &mdash; it is a paragraph.
+          That is the trade the decision makes, and it is the right one for a narrative; if a part ever
+          needs its own likes, that is the argument for reopening decision 2.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Desktop</div>
+    <h2>The same two, at 1280&times;900</h2>
+    <div class="stage">
+      <figure class="device desk">
+        <figcaption class="device-label">Current &middot; forage@7e82458</figcaption>
+        <img class="shot" src="snaps/self-thread/self-lens.desktop.current.png" alt="The thread page on main at desktop width.">
+      </figure>
+    </div>
+    <div class="stage">
+      <figure class="device desk">
+        <figcaption class="device-label">Proposed &middot; forage@f05f128</figcaption>
+        <img class="shot" src="snaps/self-thread/self-lens.desktop.proposed.png" alt="The decided shape at desktop width: the parts in the head, separated by quiet seams.">
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Why decision 1 is settled</div>
+    <h2>The research, and what it killed</h2>
+    <div class="callout">
+      <ul>
+        <li><b>There is no marker in the record, and that is deliberate.</b>
+          <code>app.bsky.feed.post</code> carries <code>text</code>, <code>facets</code>,
+          <code>reply</code> (root and parent, no kind and no ordinal), <code>embed</code>,
+          <code>langs</code>, <code>labels</code>, <code>tags</code>, <code>createdAt</code>. Explicit
+          threading was proposed in atproto discussion&nbsp;#2321 &mdash; &ldquo;x/73&rdquo; markers and
+          next-post pointers &mdash; and declined in favour of deriving it. Nothing in
+          <code>community.lexicon.*</code> covers post series, and no other client mints one; the
+          long-form clients (Whitewind, Leaflet) mint a <em>bigger record type</em> instead.</li>
+        <li><b>The concept exists, computed read-side.</b>
+          <code>app.bsky.unspecced.defs#threadItemPost</code>: <code>opThread</code> &mdash;
+          <i>&ldquo;part of a contiguous thread by the OP from the thread root&rdquo;</i> &mdash; plus
+          <code>opThreadPostIndex</code> and <code>opThreadPostCount</code>. That is the
+          <code>2/3</code> badge, and the rule behind it is the one forage already had.</li>
+        <li><b>It shipped to everyone the day before the report.</b> atproto&nbsp;#5249 added the
+          numbering on 2026-07-31; social-app&nbsp;#11639 removed its feature gate on
+          <b>2026-09-02</b>. You may start seeing <code>2/3</code> badges in the Bluesky app this week.</li>
+        <li><b>A clock cannot separate the two readings.</b> Measured, 958 top-level self-replies:
+          43% land under 10s, p50 38s, p75 4.6m, p90 1.0h, and <b>10% land more than an hour later</b>.
+          Asked directly, Bluesky&rsquo;s appview called live self-replies at 1.3h and 2.4h
+          <code>opThread: true</code>, numbering them 2/2 and 3/3. A time gate would put forage out of
+          step with the network on real threads.</li>
+        <li><b>Nor can the words.</b> Only <b>3.7%</b> of chains write &ldquo;1/3&rdquo;-style
+          numbering at all.</li>
+        <li><b>The shape is common, not an edge case.</b> <b>76%</b> of popular roots carry a self-reply
+          chain; chains run 2&ndash;3 parts; those roots carry a median of <b>11</b> replies (max 239).
+          The population above is built to those numbers.</li>
+      </ul>
+    </div>
+    <p class="small">Sampled from the public discover feed through
+      <code>public.api.bsky.app</code> on 2026-09-03: 1,641 self-replies across 246 authors, 958 of them
+      top-level replies to the author&rsquo;s own root &mdash; the case forage hoists. Sources read:
+      <code>bluesky-social/atproto</code> (<code>op-thread.ts</code>, <code>threads-v2.ts</code>,
+      <code>unspecced/defs.json</code>, <code>feed/post.json</code>) and
+      <code>bluesky-social/social-app</code> (<code>feed-manip.ts</code>,
+      <code>ThreadItemPostNumber.tsx</code>, <code>usePostThread/</code>).</p>
+  </section>
+
+  <section>
+    <div class="eyebrow">The mapping to code</div>
+    <h2>What runs, and what holds it</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th style="width:22ch">Claim</th><th style="width:30ch">Where it lives</th><th>Held by</th></tr></thead>
+        <tbody>
+          <tr><td>The oldest self-reply continues the post</td><td><code>js/substrates/lens.js</code> &mdash; <code>oldestSelf()</code></td>
+            <td><code>test/lens.test.js</code> &ldquo;the chain follows the OLDEST self-reply&rdquo;; <code>e2e/self-thread.workflow.mjs</code> (the decoy stays a comment)</td></tr>
+          <tr><td>A part is numbered 2/3, the root being 1/3</td><td><code>js/substrates/lens.js</code> &mdash; <code>parts</code>, <code>part</code></td>
+            <td><code>test/lens.test.js</code>; both workflow blocks read the badges off the DOM</td></tr>
+          <tr><td>A part carries its author, cid and time</td><td><code>js/substrates/lens.js</code> &mdash; <code>selfThread.push</code></td>
+            <td><code>test/lens.test.js</code> &ldquo;carries what a control needs&rdquo;</td></tr>
+          <tr><td>The count is the list</td><td><code>js/substrates/lens.js</code> &mdash; <code>replyCount</code>; <code>js/ui/lens-views.js</code> head</td>
+            <td><code>test/lens.test.js</code> &times;2; <code>e2e/self-thread.workflow.mjs</code> (<code>3 parts &middot; 11 replies</code>, and the reported tree)</td></tr>
+          <tr><td>Every part can delete itself; the post&rsquo;s button says post</td><td><code>js/ui/lens-views.js</code> &mdash; <code>partSeam</code>, <code>partMenuGroups</code>, <code>deleteControl({ label })</code></td>
+            <td><code>e2e/self-thread.workflow.mjs</code> (both placements)</td></tr>
+          <tr><td>A part goes through the shaper, so policy reaches it</td><td><code>js/substrates/lens.js</code> &mdash; <code>shapeLensPost</code> in the walk</td>
+            <td><code>test/lens.test.js</code> &times;3 (withheld, one muted word takes one part, a bystander&rsquo;s reply survives)</td></tr>
+          <tr><td>A self-quote is a quote, never a part</td><td><code>js/substrates/lens.js</code> &mdash; the walk reads <code>replies</code> only</td>
+            <td><code>test/lens.test.js</code> &ldquo;the author QUOTING their own post&rdquo;</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">
+      <ul>
+        <li><b>The switch is gone.</b> <code>js/self-thread-view.js</code> existed so both placements
+          could be captured from the engine rather than drawn; with decision 2 closed it is deleted,
+          along with <code>partNodes</code>, which B was the only consumer of.</li>
+        <li><b>A withheld part does not end the post.</b> Parts share an author, so a ring, a mute or a
+          block hides all of a chain or none &mdash; but a muted <em>word</em> lives in one part&rsquo;s
+          text and takes only that part. The numbers are assigned <em>before</em> the withheld ones are
+          dropped, so a post whose second part is muted shows <code>1/3</code> and <code>3/3</code> and
+          the gap stays visible. Renumbering the survivors would hide the mute from the reader who asked
+          for it. (Shape agreed with <code>claude/ring-scope</code>, which fixed the same leak on its
+          own branch at <code>c5281f8</code>.)</li>
+        <li><b>Found, filed, not fixed:</b> at 390px a comment&rsquo;s action row clips its Delete to
+          &ldquo;Delet&rdquo; when the row also carries fold, reply, repost, like and share.
+          Reproduced identically on main in the Current frames, so it is not this branch&rsquo;s and is
+          not fixed quietly here. <code>TODO.md</code>.</li>
+        <li><b>Retired with B:</b> the badge-crowds-the-byline note from v1 only applied to the pinned
+          placement, where a part carried a full byline. In the head there is no byline to crowd.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Revisions</div>
+    <h2>v5</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th style="width:5ch">v</th><th>Date</th><th>Commit</th><th>What changed on this page</th></tr></thead>
+        <tbody>
+          <tr><td><b>5</b></td><td>2026-09-04</td><td><code>f05f128</code></td>
+            <td>Rebased onto <code>7e82458</code> (the Web Share Target, <code>#59</code>) and both
+              columns re-captured. That branch <b>depends on this one</b>: its own notes quote the owner
+              asking to share &ldquo;the 1/2/3 thing&rdquo; and read it &ldquo;as one plain post&rdquo;,
+              which is the hoist this page is about &mdash; so a shared post is now a common way to
+              arrive at a surface that, on main, still renders a self-reply as anonymous body text over a
+              Delete that takes the post. Export lists still identical to main&rsquo;s.</td></tr>
+          <tr><td><b>4</b></td><td>2026-09-04</td><td><code>502fbcc</code></td>
+            <td>Rebased onto <code>b2c9c41</code> (ring boards retired, <code>#58</code>) and <b>both
+              columns re-captured</b> for the second time in two days. Nothing on this branch changed:
+              the export lists of <code>lens-views.js</code>, <code>lens.js</code> and
+              <code>rings.js</code> are identical to main&rsquo;s, which is the mechanical version of
+              &ldquo;this branch only touches the hoist&rdquo;. One thing a reader comparing v3 and v4
+              frames should know: the population uses fixed dates, so the same capture shows a later
+              relative time each day it is re-taken (&ldquo;10h&rdquo; in v3, &ldquo;1d&rdquo; here).
+              That is the clock moving, not the surface. <code>TODO.md</code>.</td></tr>
+          <tr><td><b>3</b></td><td>2026-09-03</td><td><code>20ce128</code></td>
+            <td>Rebased onto main after <code>claude/ring-scope</code> landed and deployed
+              (<code>0d5e744</code>, forage-v74 live). <b>Both columns re-captured</b> &mdash; Current
+              named a tree the owner had stopped running, which is the one thing rule&nbsp;2 exists to
+              prevent. The ring pill visible above the head card in every frame is that landing. The two
+              branches had fixed the same policy leak from different directions, so the merge chose an
+              order rather than a side: numbering before withholding, keeping the gap where a muted part
+              was. Proposal&nbsp;B&rsquo;s sha is now the tag <code>mock/self-thread-v1</code>, pushed so
+              it stays resolvable after the rebase.</td></tr>
+          <tr><td><b>2</b></td><td>2026-09-03</td><td><code>20a871f</code></td>
+            <td>Decision&nbsp;2 <b>closed on A</b> (&ldquo;ONE POST &hellip; one narrative&rdquo;) &mdash;
+              B is off the branch and off this page, recoverable at <code>5f65749</code>. Decision&nbsp;2b
+              added and closed with it: the seam goes <b>quiet</b>, its controls moving into the
+              part&rsquo;s <code>&hellip;</code> menu. Decision&nbsp;6 recorded (a self-quote is a quote,
+              not a part) and pinned by a test. Decision&nbsp;5 closed as not built. The withholding rule
+              changed shape after <code>claude/ring-scope</code> landed its own fix for the leak this
+              branch reported: a hidden part is withheld and the walk continues, rather than the chain
+              stopping. Proposed column re-captured at <code>20a871f</code>.</td></tr>
+          <tr><td><b>1</b></td><td>2026-09-03</td><td><code>5f65749</code></td>
+            <td>First. Two proposals, five decisions (one settled by measurement), three captured
+              columns (main <code>8bc6cbd</code>, and both placements at <code>5f65749</code>) over a new
+              population, <code>e2e/harness/mock-selfthread.mjs</code>, measured off 1,641 real
+              self-replies. The frames caught a second bug on their own: main hoists a decoy self-reply
+              the appview merely ranked first.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+</body>
+</html>

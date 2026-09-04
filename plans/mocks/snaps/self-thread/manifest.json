@@ -1,0 +1,113 @@
+{
+  "capturedAt": "2026-09-04",
+  "files": [
+    {
+      "file": "self-lens.phone.proposed.png",
+      "route": "self-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@f05f128",
+      "population": "lens:mock-selfthread"
+    },
+    {
+      "file": "self-lens.desktop.proposed.png",
+      "route": "self-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@f05f128",
+      "population": "lens:mock-selfthread"
+    },
+    {
+      "file": "self-lens.phone.current.png",
+      "route": "self-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@7e82458",
+      "population": "lens:mock-selfthread"
+    },
+    {
+      "file": "self-lens.desktop.current.png",
+      "route": "self-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@7e82458",
+      "population": "lens:mock-selfthread"
+    },
+    {
+      "file": "self-lens-count.phone.proposed.png",
+      "route": "self-lens-count",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@f05f128",
+      "population": "lens:mock-selfthread"
+    },
+    {
+      "file": "self-lens-alone.phone.proposed.png",
+      "route": "self-lens-alone",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@f05f128",
+      "population": "lens:mock-selfthread"
+    },
+    {
+      "file": "self-lens-count.desktop.proposed.png",
+      "route": "self-lens-count",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@f05f128",
+      "population": "lens:mock-selfthread"
+    },
+    {
+      "file": "self-lens-alone.desktop.proposed.png",
+      "route": "self-lens-alone",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@f05f128",
+      "population": "lens:mock-selfthread"
+    },
+    {
+      "file": "self-lens-count.phone.current.png",
+      "route": "self-lens-count",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@7e82458",
+      "population": "lens:mock-selfthread"
+    },
+    {
+      "file": "self-lens-alone.phone.current.png",
+      "route": "self-lens-alone",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@7e82458",
+      "population": "lens:mock-selfthread"
+    },
+    {
+      "file": "self-lens-count.desktop.current.png",
+      "route": "self-lens-count",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@7e82458",
+      "population": "lens:mock-selfthread"
+    },
+    {
+      "file": "self-lens-alone.desktop.current.png",
+      "route": "self-lens-alone",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@7e82458",
+      "population": "lens:mock-selfthread"
+    }
+  ]
+}

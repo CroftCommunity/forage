@@ -7,6 +7,7 @@
 // sign-in survives reloads. The lens consumes { did, handle, fetchHandler }.
 
 import { el, timeAgo, fmtScore, domainOf, plural } from '../util.js';
+import { openMenu } from './menu.js';
 import { postRow, commentNode, vote, focusComment, skeleton, emptyState, toast, reportSheet, whoNode, byline, providerMark as providerMarkNode } from './components.js';
 import * as providerMark from '../provider-mark.js';
 import * as drafts from '../drafts.js';
@@ -1564,21 +1565,77 @@ function affordanceStrip(stream, onPosted) {
   return host;
 }
 
+// The seam between one part of a post and the next (2026-09-03).
+//
+// Owner: "for parts 1, 2, 3 posts I want to display them as ONE POST where
+// 1/3 is the post and when you open it they are all there as one narrative."
+// So the seam is a hairline and a number, and nothing else in the reading
+// line — a part gets no second byline, because the author is the same person
+// and repeating the avatar and the name would read as a new speaker.
+//
+// It cannot be NOTHING, which is what it was until today: a part arrived as
+// bare words with no number, no time and nothing that could delete it, so the
+// owner read their own comment as text they had appended to their post and
+// pressed the only Delete on the card, which was the post's. Everything the
+// strip used to spend a line on now lives in the part's own ⋯ menu: when it
+// was written, its link, and its own delete. One tap further away, still on
+// the part rather than on the post.
+function partSeam(part, onDeleted) {
+  const menu = el('button', { class: 'kebab', type: 'button',
+    'aria-label': `More, on part ${part.part} of ${part.parts}`,
+    'aria-haspopup': 'menu', 'aria-expanded': 'false' }, '⋯');
+  menu.addEventListener('click', () => openMenu({ anchor: menu, groups: partMenuGroups(part, onDeleted) }));
+  return el('div', { class: 'part-seam', 'data-part': String(part.part) },
+    // The number is the accessible name too: "2/3" read aloud is "two three".
+    el('span', { class: 'part-badge', 'aria-label': `Part ${part.part} of ${part.parts}`,
+      title: `Part ${part.part} of ${part.parts} — the author continuing their own post` },
+      `${part.part}/${part.parts}`),
+    el('span', { class: 'part-rule', 'aria-hidden': 'true' }),
+    menu);
+}
+
+// A part's menu. Deliberately short: this is a paragraph of a post, not a post
+// in a list, so it offers what belongs to a paragraph — where it is, when it
+// landed, and the ability to take it back — and none of the thread-level items
+// (mute thread, save, hide) that would be the POST's answer, not this part's.
+function partMenuGroups(part, onDeleted) {
+  const link = `${location.origin}/p?uri=${encodeURIComponent(part.id)}`;
+  const first = [
+    { label: `Written ${timeAgo(part.createdTs)} ago`, icon: '🕘',
+      onSelect: () => toast(new Date(part.createdTs).toLocaleString(), 'ok') },
+    { label: 'Copy link to this part', icon: '🔗', onSelect: () => copyText(link, 'Link') },
+  ];
+  if (!canDelete(part, session)) return [first];
+  // Destructive last and behind its own rule, the way every other menu here
+  // ends — and it names the PART, because the post has a Delete of its own
+  // four lines below and the two were indistinguishable once already.
+  return [first, [{ label: `Delete part ${part.part}`, icon: '🗑', onSelect: async () => {
+    try {
+      await lens.deletePost(part.id);
+      toast('Part deleted — it is gone from your Bluesky account too.', 'ok');
+      onDeleted?.();
+    } catch (e) { toast('Delete failed: ' + e.message, 'err'); }
+  } }]];
+}
+
 // Phase 2: the delete control. Deleting is irreversible and federated — the
 // record leaves your repo but copies may already be elsewhere — so it takes
 // two deliberate clicks. NOT a confirm() dialog: a modal dialog freezes the
 // whole page, and this is a small enough act that arming the button in place
 // reads better than interrupting everything.
-function deleteControl(post, onDone) {
+// `label` because a post with continuation parts now shows more than one of
+// these on one card — the post's and each part's. Two buttons reading "Delete"
+// side by side is the ambiguity that cost the owner a post on 2026-09-03.
+function deleteControl(post, onDone, { label = 'Delete' } = {}) {
   if (!canDelete(post, session)) return null;
   let armed = false;
   const b = el('button', { class: 'btn sm', 'data-delete-post': '1',
-    title: 'Delete this post from your Bluesky account' }, 'Delete');
+    title: 'Delete this post from your Bluesky account' }, label);
   const disarm = () => {
     armed = false;
     b.removeAttribute('data-armed');
     b.classList.remove('danger');
-    b.replaceChildren('Delete');
+    b.replaceChildren(label);
   };
   b.addEventListener('click', async () => {
     if (!armed) {
@@ -3005,8 +3062,15 @@ export function lensThreadView(params, query) {
       // card / GIF, then what it quotes. Before this the shape had no media at
       // all and an author answering their own post with a picture had it
       // silently dropped (found while building gif-embeds).
+      // 2026-09-03: a part is no longer ANONYMOUS body text. It used to arrive
+      // as words alone — no number, no time, no permalink, nothing that could
+      // delete itself — so the owner read their own comment as something they
+      // had appended to their post, and the only Delete on the card was the
+      // POST's. Each part now says which part it is and carries its own
+      // controls; `partMeta` is the strip that does it.
       ...(t.selfThread || []).flatMap((part) => [
-        el('div', { class: 'small posttext', style: 'margin-top:8px' }, ...facetNodes(part.text, part.facets)),
+        partSeam(part, rerender),
+        el('div', { class: 'small posttext' }, ...facetNodes(part.text, part.facets)),
         part.media ? mediaNode(part) : null,
         part.quoted ? quotedContext(part.quoted) : null,
       ].filter(Boolean)),
@@ -3023,16 +3087,26 @@ export function lensThreadView(params, query) {
       // control that answers the post is on one line. (This supersedes feed-row
       // v11 decision 23, which moved Reply down here alone and left them behind.)
       el('div', { class: 'actions head-actions' },
-        el('div', { class: 'postmeta' }, plural(p.commentCount, 'reply', 'replies')), // the author and the time moved up into the byline (v6)
+        // The count is the LIST, by construction (lens.js § replyCount). It used
+        // to be the appview's replyCount, which counts a hoisted part and
+        // cannot count a re-rooted one — "1 reply" over "No replies", owner
+        // 2026-09-03. A post in parts says so, because a reader who sees three
+        // blocks of words needs to know they are one post and not three.
+        el('div', { class: 'postmeta' }, t.parts > 1
+          ? `${t.parts} parts · ${plural(t.replyCount, 'reply', 'replies')}`
+          : plural(t.replyCount, 'reply', 'replies')), // the author and the time moved up into the byline (v6)
         repostControl(p), // v12 decision 25: ⟳ on the head too
         vote('post', p.id, p, !!session, { onVote: lensVote(p), onGuest: session ? null : openAuthSheet }), // Phase 6c: the head's pill
         replyLink),
       // phase 2: only ever rendered for a post that is genuinely yours
+      // It says "Delete post" now, not "Delete". When a part was drawn as body
+      // with no control of its own, this was the only button on the card and
+      // it read as the comment's (owner, 2026-09-03 — it deleted the post).
       deleteControl(p, () => {
         main.replaceChildren(emptyState('This post was deleted',
           'It is gone from your Bluesky account. Anyone who already saw it may still have a copy — deleting removes the record, it does not un-send it.',
           el('a', { class: 'btn', href: `/f/${src.feedSlug}` }, 'Back to the board')));
-      })));
+      }, { label: 'Delete post' })));
     const ctx = { ...LENS_PERMS,
       // post-text: a reply's words, faceted — its links, #tags and @mentions are
       // as live as the head's. The node shape carries `facets` as of this change.
