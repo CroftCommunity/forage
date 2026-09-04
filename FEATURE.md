@@ -1,13 +1,19 @@
-# feed-position-restore — come back to your place in the feed
+# share-to-forage — a Bluesky post shared from the app opens here
 
-**Scope:** forage. The owner's original report, 2026-09-01:
+**Scope:** forage. The owner's report, 2026-09-04, with the Bluesky Android share sheet open
+on a post:
 
-> "I click into a post and I read it and I come hit the back button it takes me back out to
-> either a refreshed feed or all the way back out to the top. Ideally for me I want to browse
-> the feed, go into a particular post, hit back and come back to my place in the feed."
+> "I want to be able to share from the official Bluesky app or the Bluesky mobile website or
+> Blacksky mobile website or Blacksky app and share with Forage as a target when it's installed
+> as a PWA, and have that same content open in Forage. So like if I see a comment thread that's
+> like the 1/2/3 thing, I could share the number one straight to Forage and then just read it
+> as one plain post, right, and see the thread kind of in that fashion."
 
-Phase 5 (the refresh control) landed as #46 and did NOT address this. This branch is the
-other half: plan phases **0, 1, 2, 3, 4 and 6**.
+Forage already renders that page — `shapeLensThread` hoists an author's own chain into the body
+of one post, and `lens.thread()` refetches from the root when handed a reply. What was missing
+was the door. This branch is the door: a W3C Web Share Target at `GET /share`, a pure parser
+for whatever a share sheet hands over, and the empty state for a shared post your ring hides.
 
-**Branch:** `claude/feed-position-restore`
-**Plan:** `plans/2026-09-01-plan-feed-position-and-updates.md`
+**Branch:** `claude/bluesky-share-forage-pwa-1r74go`
+**Plan:** `plans/2026-09-04-plan-share-to-forage.md`
+**Ledger:** DL-038 (the door exists in the Bluesky population, and on Android alone)

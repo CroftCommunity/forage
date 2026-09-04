@@ -149,6 +149,11 @@ export const LEDGER = [
   { id: 'DL-017', kind: 'frontier', capability: 'feeds', tier: 'wide', label: 'Ring criteria beyond the follow graph',
     description: 'Rings are follow-graph-shaped (mutuals, mutuals+1). Criteria like interaction density, lists, or shared-feed affinity are deferred until a ring proves too coarse.',
     date: '2026-08-25', status: 'open' },
+  { id: 'DL-038', kind: 'tolerance', capability: 'routing', tier: 'wide', label: 'Sharing INTO Forage is a Bluesky-population door, and only Android has one',
+    description: 'The installed PWA registers a W3C Web Share Target (manifest.webmanifest -> GET /share), so a post shared from the Bluesky app — or Blacksky, or any social-app-family client, since the path shape is matched and the host is not — opens as a Forage thread. It exists in the Bluesky population ALONE: a bsky.app link has no meaning in the memory sandbox, so /share gates with words there like every other cross-population route. Two boundaries ride with it and neither is ours to close. (1) The target only registers for an INSTALLED PWA (MDN, share_target: "Your PWA can only act as a web share target if it has been installed"). (2) It does not exist on iOS at all: mdn/browser-compat-data records share_target as Chrome Android 76, Chrome 89, Opera Android 63, mirrored by Edge and Samsung Internet, and FALSE for Safari, Safari iOS, Firefox and Firefox Android. There is no polyfill — a web app cannot enter the iOS share sheet by any route — so an iPhone reader keeps copy-and-paste, and the README says so rather than letting them conclude their install is broken.',
+    reason: 'A door that only one population and one platform can open is a real divergence, not a bug to fix: the missing halves are a browser feature Apple has not shipped and a population where the payload is meaningless.',
+    tolerance: 'route present in the bluesky population only; no memory-tier analogue is expected or compared',
+    date: '2026-09-04', status: 'active' },
 ];
 
 export const frontiers = () => LEDGER.filter((e) => e.kind === 'frontier');
