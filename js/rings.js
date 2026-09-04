@@ -27,8 +27,6 @@
 // boundary at World is the composition itself (the feeds and hashtags you have
 // assembled), not a set of people, which is why it cannot be expressed as one.
 
-import { RING_CAP } from './substrates/lens.js';
-
 // ---- the registry ----
 //
 // This was a frozen array of [id, label, description] tuples. It became a
@@ -121,40 +119,19 @@ function chain(graph) {
   return out;
 }
 
-// The cumulative set for a rung, or null for World. Throws on an unknown id —
-// the two exported wrappers below differ ONLY in what they do about cost.
-function chainSet(rung, graph) {
-  if (rung === 'world') return null;
+// The members a scope narrows to. Every member, always.
+//
+// There WAS a second function here, `membersFor`, which capped this set at
+// RING_CAP because the ring BOARD issued one author-feed request per member.
+// That board and its /r/<rung> routes were retired on 2026-09-03 when the ring
+// became a display scope, and the cap went with them: filtering tests
+// authorship on posts already fetched, so it issues no requests and needs no
+// bound. The distinction mattered enough to be two functions while both callers
+// existed; keeping the capped one now would be keeping a bound for nobody.
+export function scopeMembers(rung, graph) {
+  if (rung === 'world') return { members: null };
   if (!RUNG_IDS.includes(rung)) {
     throw new Error(`lens: unknown rung: ${rung} (known: ${RUNG_IDS.join(', ')})`);
   }
-  return chain(graph).get(rung);
-}
-
-// The FILTER set: every member, always. Used by the display scope, which tests
-// authorship on posts it already has and therefore fans out nothing.
-//
-// WHY THIS IS NOT membersFor. RING_CAP bounds a FAN-OUT — the ring board issues
-// one author-feed request per member, and 25 was measured as the bound on that.
-// Filtering issues zero requests, so applying the cap here would buy nothing and
-// cost everything: a reader with 300 follows would silently stop seeing 275 of
-// them, and a silently truncated ring is indistinguishable from a small one
-// (DL-016). The two uses need two sets, which is why they are two functions
-// rather than one with a flag.
-export function scopeMembers(rung, graph) {
-  return { members: chainSet(rung, graph) };
-}
-
-// The BOARD set: capped, with honest overflow. One author-feed request per
-// member is the cost this bounds.
-export function membersFor(rung, graph) {
-  const all = chainSet(rung, graph);
-  if (all === null) return { members: null };
-  // Only the hop rung can run away: it is one getFollows per mutual. The cap
-  // reports the TRUE pre-cap total, never the drawn one — a silently truncated
-  // board is indistinguishable from a small ring (DL-016).
-  if (rung === 'hop' && all.length > RING_CAP) {
-    return { members: all.slice(0, RING_CAP), overflow: { capped: true, total: all.length } };
-  }
-  return { members: all };
+  return { members: chain(graph).get(rung) };
 }

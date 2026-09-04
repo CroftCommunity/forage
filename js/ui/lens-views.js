@@ -13,10 +13,10 @@ import * as drafts from '../drafts.js';
 import { go, navKind, rerenderNow } from '../router.js';
 import { appFor } from '../auth/hosts.js';
 import { navTree } from './nav.js';
-import { RUNG_IDS, labelFor, SCOPES } from '../rings.js';
+import { SCOPES } from '../rings.js';
 import * as ringScope from '../ring-scope.js';
 import { lastBoard, setLastBoard, landingBoard, DIRECTORY } from '../last-board.js';
-import { createLens, LENS_PERMS, RING_CAP, facetSegments, trimCardLink, slugifyFeedName, sortWindow, affordanceFor,
+import { createLens, LENS_PERMS, facetSegments, trimCardLink, slugifyFeedName, sortWindow, affordanceFor,
   feedCardModel, threadNodeStyle, feedPath, parseFeedRoute, sessionGateMessage, canDelete, sourceLabel,
   sortFeeds, filterFeeds, platforms, liveFeeds } from '../substrates/lens.js';
 import { initSession, createAccountRoster, isOAuthCallback } from '../auth/session.js';
@@ -986,104 +986,16 @@ function sessionCard() {
     el('div', { class: 'row wrap', style: 'gap:6px' }, btn, more));
 }
 
-// 3b/V4: the ring dial is GONE. It was a card on one page, holding
-// page-lifetime state that reset on reload, and the redesign moved the ladder
-// into the left nav where every rung is a link with one job. What used to be
-// `activeRing` is now the URL (/r/:rung) plus js/last-board.js, so the board
-// you are on is shareable, reloadable, and remembered.
+// The ring dial, then the five nav rows, then five addresses — all three are
+// gone. The ring is a display SCOPE now (js/ring-scope.js): one pill in the
+// left nav, and what it changes is the contents of whatever board you are
+// already on rather than which board that is. `activeRing` was page-lifetime
+// state, then a URL segment; it is a device-local preference, and the board you
+// are on is still shareable, reloadable and remembered — by its own slug.
 
-// Plan 2026-08-28-1: the ring board separates what its members WROTE from
-// what they ANSWERED and what they merely REPEATED. Per-page-load view state,
-// like boardSort: a tab is a filter over the loaded window, never a refetch —
-// the fan-out already paid for every kind.
-let ringTab = 'posts';
-const RING_TABS = [['posts', 'Posts'], ['replies', 'Replies'], ['reposts', 'Reposts']];
-const ringTabFor = (p) => p.itemKind === 'repost' ? 'reposts' : p.itemKind === 'reply' ? 'replies' : 'posts';
-
-function ringTabsRow(onChange) {
-  const row = el('div', { class: 'tabs', 'data-ring-tabs': '1' });
-  const paint = () => {
-    for (const b of row.children) {
-      const on = b.dataset.ringTab === ringTab;
-      b.classList.toggle('active', on);
-      b.setAttribute('aria-pressed', String(on));
-    }
-  };
-  for (const [id, label] of RING_TABS) {
-    const b = el('button', { type: 'button', class: 'tab', 'data-ring-tab': id }, label);
-    b.addEventListener('click', () => { if (ringTab !== id) { ringTab = id; paint(); onChange(); } });
-    row.append(b);
-  }
-  paint();
-  return row;
-}
-
-function ringBoard(ring, cursor) {
-  const holder = el('div', {}, skeleton(6));
-  // 3l: paint members as they land — a slow member no longer holds the whole
-  // board on a skeleton (owner-reported hang on mutuals+1).
-  const live = el('div', { class: 'card', 'data-ring-live': '1' });
-  // ONE tabs row serves both phases; what "repaint" means advances from the
-  // arrival window to the settled board when render() lands.
-  let repaint = () => {};
-  const tabs = ringTabsRow(() => repaint());
-  const arrived = [];
-  let painted = 0;
-  repaint = () => live.replaceChildren(
-    ...arrived.filter((p) => ringTabFor(p) === ringTab).map((p) => lensRow(p, boardView())));
-  const onPage = (posts) => {
-    if (!posts.length) return;
-    if (painted === 0) holder.replaceChildren(tabs, el('div', { class: 'xs muted', style: 'padding:4px' }, 'Loading your ring…'), live);
-    arrived.push(...posts);
-    for (const p of posts) if (ringTabFor(p) === ringTab) live.append(lensRow(p, boardView()));
-    painted += posts.length;
-  };
-  const render = (board, into) => {
-    const chips = el('div', { class: 'row wrap', style: 'gap:6px' });
-    if (board.overflow) chips.append(chip(`ring capped: ${board.overflow.total} members → first ${RING_CAP} (DL-016)`, `The ring truly has ${board.overflow.total} members; the board draws the first ${RING_CAP}. Honest overflow, never silent.`));
-    if (board.failures.length) chips.append(chip(`${board.failures.length} member feed(s) unreachable`, board.failures.join(', ')));
-    const card = el('div', { class: 'card' });
-    // Observed ONCE, on the whole board, and deliberately outside paint():
-    //
-    // - outside, because paint() re-runs on every tab switch. observeTags
-    //   de-duplicates by post id so it would be harmless, but "count when the
-    //   board loads" is the rule and running it per repaint states a different
-    //   one.
-    // - the WHOLE board, not the active tab's rows. The language filter case is
-    //   different and stays different: a post the language filter drops can
-    //   never be seen, where a post on another tab is one click away and needed
-    //   no fetch. Counting per-tab would also make the same board yield
-    //   different statistics depending on which tab you happened to land on.
-    observeTags(board.posts);
-    const paint = () => {
-      const rows = board.posts.filter((p) => ringTabFor(p) === ringTab);
-      card.replaceChildren(...rows.map((p) => lensRow(p)));
-      for (const a of card.querySelectorAll('a[href*="/p/at:"]')) {
-        const m = a.getAttribute('href').match(/\/p\/(at:.+)$/);
-        if (m) a.setAttribute('href', `/p?uri=${encodeURIComponent(m[1])}&from=${board.feedSlug}`);
-      }
-      // An empty TAB is not an empty ring — say which, and that More widens
-      // the window (same honesty rule as the board sort).
-      if (!rows.length && board.posts.length) {
-        card.replaceChildren(el('div', { class: 'xs muted', style: 'padding:10px', 'data-ring-tab-empty': ringTab },
-          `No ${ringTab} among the loaded posts${board.cursor ? ' — More may reach some' : ''}.`));
-      }
-    };
-    repaint = paint;
-    paint();
-    const more = board.cursor ? el('button', { class: 'btn sm' }, 'More') : null;
-    if (more) more.addEventListener('click', () => { into.replaceChildren(ringBoard(ring, board.cursor)); });
-    into.replaceChildren(tabs, chips, board.posts.length ? card : emptyState('A quiet ring', 'No posts from these members yet.'), more || '');
-  };
-  lens.ringFeed(ring, { cursor, onPage, tags: effectiveTags(session?.did) }).then((b) => render(b, holder))
-    .catch((e) => holder.replaceChildren(emptyState('Ring fetch failed', e.message)));
-  return holder;
-}
-
-// The left nav for the Bluesky population. Feeds arrive async, so the tree is
-// drawn immediately with what is known and the feed rows are filled in when
-// they land — the same shape the rail's Feeds card used, moved to the side of
-// the screen navigation actually belongs on.
+// The left nav. Curated rows for a guest, the reader's saved feeds once they
+// land — and it keeps the curated rows rather than emptying if that fetch
+// fails.
 export function lensNav(current) {
   const guestFeeds = CURATED.filter((c) => c.inNav !== false).map((c) => ({ slug: c.slug, title: c.title }));
   const host = el('div', { 'data-navhost': '1' },
@@ -1101,9 +1013,11 @@ export function lensNav(current) {
 
 // Which nav row is current, from the path alone — so the marker cannot drift
 // from the address bar.
+// currentBoardId / landingPath survive the ring boards; the rungs do not.
+// /r/<rung> and its merged fan-out board were retired on 2026-09-03 (the ring
+// became a display scope), so a board id is now a feed slug or a hashtag and
+// never a rung.
 export function currentBoardId(path) {
-  const m = /^\/r\/([a-z+]+)/.exec(path);
-  if (m) return m[1];
   const h = /^\/h\/([^/?]+)/.exec(path);
   if (h) return `tag-${decodeURIComponent(h[1])}`;
   const f = /^\/f\/([^/?]+)/.exec(path);
@@ -1114,21 +1028,6 @@ export function currentBoardId(path) {
   return DIRECTORY;
 }
 
-// /r/:rung — a rung is a destination now, not a mode flag.
-export function lensRingView(params) {
-  const rung = params.rung;
-  if (!RUNG_IDS.includes(rung)) {
-    return { main: emptyState('No such ring', `Known rings: ${RUNG_IDS.join(', ')}.`), side: null };
-  }
-  if (!session) {
-    return { main: el('div', {}, el('h1', {}, labelFor(rung)),
-      el('p', { class: 'muted small' },
-        'Rings are computed from your own follow graph, so they need an account.')), side: null };
-  }
-  setLastBoard(rung);
-  return { main: el('div', {}, el('h1', {}, labelFor(rung)), ringBoard(rung)), side: null };
-}
-
 // V5: where `/` lands, as a PATH, for the route handler to redirect to. It
 // lives here because it needs the session, and it returns a path rather than
 // performing the navigation because a view that redirects itself is a view
@@ -1136,7 +1035,7 @@ export function lensRingView(params) {
 export function landingPath() {
   const landing = landingBoard({ signedIn: !!session, stored: lastBoard() });
   if (landing === DIRECTORY) return null;
-  return RUNG_IDS.includes(landing) ? `/r/${landing}` : `/f/${landing}`;
+  return `/f/${landing}`;
 }
 
 export function lensHomeView() {
