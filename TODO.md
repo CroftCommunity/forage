@@ -55,6 +55,16 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
   `--card-2` #F3E6D0 measures 4.47 (floor 4.5) — a pair `test/skins.test.js` does not grade
   (`--muted` is graded on `--bg` and `--card` only), found 2026-08-30 while authoring surf's
   `--row-hover` (feed-row 22). Darken surf's `--muted` a notch and add the pair to ROLE_PAIRS.
+- **A re-captured mock frame shows a later relative time every day.** The hermetic
+  populations date their posts absolutely (`new Date(Date.UTC(2026, 8, 3, 8, mins))` in
+  `mock-selfthread.mjs`, and the same shape in `mock-deepthread.mjs`), so a byline that
+  read "10h" when the frame was first taken reads "1d" when the same frame is re-captured
+  a day later. Nothing about the surface changed, but a reader comparing two revisions of
+  a mock sees a difference and has to work out that it is the clock. Noticed 2026-09-04
+  re-capturing self-thread onto its third main. Either anchor the fixtures relative to a
+  frozen "now" the harness injects, or have the mock page say it — the first is better
+  and touches every population, so it is a decision, not a chore.
+
 - **The snaps manifest cannot see a file that is missing, or one that is spare.**
   `test/mock-snaps-manifest.test.js` checks the manifest's SHAPE, not its
   correspondence with the directory — so a manifest row naming a deleted PNG passes,
