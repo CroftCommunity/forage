@@ -27,6 +27,7 @@ import { byRank, RUNG_IDS, scopeFor } from './rings.js';
 export const STOPS_KEY = 'forage.ringstops';
 export const SCOPE_KEY = 'forage.ringscope';
 export const EXEMPT_KEY = 'forage.ringexempt';
+export const OPEN_KEY = 'forage.ringopenthreads';
 
 // Decision 1 (owner, 2026-09-03): Mutuals | Follows | World. Mutuals are a
 // SUBSET of follows, so these three are a real containment chain. `hop` — your
@@ -126,13 +127,24 @@ export function exemptsFeeds() { return read(EXEMPT_KEY) !== '0'; }
 
 export function setExemptsFeeds(on) { write(EXEMPT_KEY, on ? '1' : '0'); notify(); }
 
+// The punch-hole (owner, 2026-09-04). At Mutuals "this is the whole universe
+// — there are only mutuals and mutuals' activities", and nothing outside it is
+// so much as hinted at. The ONE exception, "just for practicality": on a post
+// from someone IN the ring, the replies from outside it show, because a post
+// you cannot see the answers to is hard to interact with. On by default; a
+// reader who wants the universe airtight turns it off. It opens THREADS, never
+// posts — a stranger's post stays hidden however it was reached.
+export function opensThreads() { return read(OPEN_KEY) !== '0'; }
+
+export function setOpensThreads(on) { write(OPEN_KEY, on ? '1' : '0'); notify(); }
+
 const listeners = new Set();
 export function onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); }
 
 // One payload for all three settings: a listener that repaints on a scope change
 // repaints on a stop change too, and the pill needs both anyway.
 function notify() {
-  const state = { scope: scope(), stops: stops(), exemptsFeeds: exemptsFeeds() };
+  const state = { scope: scope(), stops: stops(), exemptsFeeds: exemptsFeeds(), opensThreads: opensThreads() };
   for (const fn of listeners) fn(state);
 }
 

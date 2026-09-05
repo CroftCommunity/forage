@@ -385,6 +385,7 @@ export async function syncRingScope() {
   if (!session) return null;
   return lens.applyScope(ringScope.scope(), {
     exemptKinds: ringScope.exemptsFeeds() ? ringScope.EXEMPT_KINDS : [],
+    opensThreads: ringScope.opensThreads(),
   });
 }
 
@@ -2880,6 +2881,12 @@ export function lensProfileView() {
     const exemptBox = el('input', { type: 'checkbox', id: 'pref-ringexempt', 'data-ringexempt': '1',
       checked: ringScope.exemptsFeeds() || false });
     exemptBox.addEventListener('change', () => { ringScope.setExemptsFeeds(exemptBox.checked); });
+    // The punch-hole (owner, 2026-09-04): the ring is the whole universe, with
+    // one exception for practicality — replies from outside it, on a post from
+    // inside it. On by default; the airtight universe is the opt-in.
+    const openBox = el('input', { type: 'checkbox', id: 'pref-ringopen', 'data-ringopen': '1',
+      checked: ringScope.opensThreads() || false });
+    openBox.addEventListener('change', () => { ringScope.setOpensThreads(openBox.checked); });
     const stopBoxes = SCOPES.map((sc) => {
       const on = ringScope.stops().includes(sc.id);
       // World is pinned: it is the ring declining to narrow, which makes it the
@@ -2921,6 +2928,10 @@ export function lensProfileView() {
           'Feeds and hashtags are boards you went and asked for by name, so by default they arrive whole and your ring leaves them alone. Uncheck this and your ring applies to them too — a quiet feed can then look empty, and that is the setting working rather than a board failing to load.'),
         el('label', { class: 'seccheck', for: 'pref-ringexempt' }, exemptBox,
           el('span', {}, 'Exclude feeds and hashtags from your ring')),
+        el('div', { class: 'xs muted', style: 'margin:10px 0 6px' },
+          'Inside your ring there is nothing else — a post from outside it is not shown, and nothing says it was there. The one exception: on a post from someone in your ring, the replies from outside it show too, or you could not follow the conversation. Uncheck this and those replies go as well.'),
+        el('label', { class: 'seccheck', for: 'pref-ringopen' }, openBox,
+          el('span', {}, 'Show replies from outside your ring on posts from inside it')),
         el('h3', { style: 'font-size:var(--t-md);margin:12px 0 4px' }, 'Browse Hashtags'),
         el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
           'Which sections appear on the Hashtags page. Unchecking all of them leaves it empty, which is allowed.'),

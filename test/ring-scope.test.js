@@ -17,6 +17,7 @@ import {
   STOPS_KEY, SCOPE_KEY, EXEMPT_KEY, DEFAULT_STOPS, DEFAULT_SCOPE, EXEMPT_KINDS,
   stops, setStops, addStop, removeStop, scope, setScope,
   exemptsFeeds, setExemptsFeeds, effectiveScope, onChange, ringPill,
+  OPEN_KEY, opensThreads, setOpensThreads,
 } from '../js/ring-scope.js';
 
 // Each test gets its own storage: a module-level cache would make these order-
@@ -56,6 +57,21 @@ test('feeds and hashtags are exempt by default, and those are the exempt kinds',
     // request quietly return less than the rest of the app.
     assert.equal(exemptsFeeds(), true);
     assert.deepEqual([...EXEMPT_KINDS].sort(), ['feed', 'hashtag']);
+  });
+});
+
+test('a thread on a post from inside the ring is open to replies from outside it, by default', () => {
+  // Owner, 2026-09-04: the ring is the whole universe — nothing outside it is
+  // even hinted at — with ONE punch-hole, for practicality: on a post from
+  // someone in the ring, the replies from outside it show, or the post is hard
+  // to interact with. A setting, on by default.
+  withStorage({}, (store) => {
+    assert.equal(opensThreads(), true);
+    setOpensThreads(false);
+    assert.equal(opensThreads(), false);
+    assert.equal(store[OPEN_KEY], '0');
+    setOpensThreads(true);
+    assert.equal(opensThreads(), true);
   });
 });
 
@@ -155,8 +171,10 @@ test('every setter notifies, so two pills on one page cannot disagree', () => {
       setScope('fol');
       addStop('hop');
       setExemptsFeeds(false);
-      assert.equal(seen.length, 3, 'scope, stops and the exemption all notify');
+      setOpensThreads(false);
+      assert.equal(seen.length, 4, 'scope, stops, the exemption and the punch-hole all notify');
       assert.equal(seen.at(-1).exemptsFeeds, false);
+      assert.equal(seen.at(-1).opensThreads, false);
       assert.equal(seen.at(-1).scope, 'fol');
       assert.deepEqual(seen.at(-1).stops, ['mut', 'fol', 'hop', 'world']);
     } finally { off(); }
@@ -168,6 +186,7 @@ test('no storage at all reads as the defaults and never throws', () => {
   delete globalThis.localStorage;
   try {
     assert.deepEqual(stops(), [...DEFAULT_STOPS]);
+    assert.equal(opensThreads(), true);
     assert.equal(scope(), 'world');
     assert.equal(exemptsFeeds(), true);
     setScope('world');            // must not throw

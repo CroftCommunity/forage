@@ -242,6 +242,68 @@ test('a thread whose ROOT is outside the ring shapes as hidden rather than blank
   assert.equal(shaped.post.hidden, true);
 });
 
+// ---- the punch-hole: a thread on a post from inside the ring ----
+//
+// Owner, 2026-09-04: at Mutuals "this is the whole universe. Like there are
+// only mutuals and mutuals' activities" — with "this one kind of other punch
+// hole just for practicality": on a post from someone IN the ring, the replies
+// from outside it show, because a post you cannot see the answers to is hard
+// to interact with. It is a reader setting (`opensThreads`), on by default,
+// and it rides the ring spec so a thread override keeps it.
+
+const openRing = (members, opensThreads = true) => withRing(EMPTY_POSTURE, { members, opensThreads });
+const mixedThread = (rootDid) => ({
+  thread: {
+    post: mkPost(rootDid, 'the root'),
+    replies: [
+      { post: mkPost(OUT, 'a stranger answers'), replies: [{ post: mkPost(OUT, 'another stranger, deeper'), replies: [] }] },
+      { post: mkPost(IN2, 'a friend answers'), replies: [] },
+    ],
+  },
+});
+const mixedQuotes = () => [{ post: mkPost(OUT, 'a stranger quotes'), replies: [] }];
+
+test('withRing carries opensThreads, off unless asked', () => {
+  assert.equal(withRing(EMPTY_POSTURE, { members: [IN] }).ring.opensThreads, false);
+  assert.equal(openRing([IN]).ring.opensThreads, true);
+});
+
+test('a post from INSIDE the ring shows every reply and quote, whoever wrote them', () => {
+  const shaped = shapeLensThread(mixedThread(IN), SRC, { quotes: mixedQuotes(), posture: openRing([IN, IN2]) });
+  assert.deepEqual(shaped.comments.map((c) => c.body).sort(),
+    ['a friend answers', 'a stranger answers', 'a stranger quotes']);
+  assert.ok(JSON.stringify(shaped).includes('another stranger, deeper'), 'the whole thread, not just direct replies');
+});
+
+test('a post from OUTSIDE the ring stays hidden — the punch-hole opens threads, it does not admit posts', () => {
+  const shaped = shapeLensThread(mixedThread(OUT), SRC, { quotes: mixedQuotes(), posture: openRing([IN, IN2]) });
+  assert.equal(shaped.post.hidden, true);
+  assert.equal(shaped.post.hiddenReason, 'scope');
+});
+
+test('with the punch-hole off, an in-ring post shows only in-ring replies', () => {
+  const shaped = shapeLensThread(mixedThread(IN), SRC, { quotes: mixedQuotes(), posture: openRing([IN, IN2], false) });
+  assert.deepEqual(shaped.comments.map((c) => c.body), ['a friend answers']);
+});
+
+test('the punch-hole opens the RING only — a muted stranger stays muted under a friend', () => {
+  const posture = withRing(
+    { ...EMPTY_POSTURE, mutedDids: new Set([OUT]) },
+    { members: [IN, IN2], opensThreads: true });
+  const shaped = shapeLensThread(mixedThread(IN), SRC, { quotes: mixedQuotes(), posture });
+  assert.deepEqual(shaped.comments.map((c) => c.body), ['a friend answers']);
+});
+
+test('at World the punch-hole is moot, and changes nothing', () => {
+  // A third author for the root, so the self-thread hoist (a reply by the root's
+  // own author is body, not a comment) stays out of the count.
+  const on = shapeLensThread(mixedThread('did:plc:third'), SRC, { quotes: mixedQuotes(), posture: openRing(null, true) });
+  const off = shapeLensThread(mixedThread('did:plc:third'), SRC, { quotes: mixedQuotes(), posture: openRing(null, false) });
+  assert.equal(on.post.hidden, undefined);
+  assert.deepEqual(on.comments.map((c) => c.body).sort(), ['a friend answers', 'a stranger answers', 'a stranger quotes']);
+  assert.deepEqual(on.comments.map((c) => c.body).sort(), off.comments.map((c) => c.body).sort());
+});
+
 // ---- the substrate's uncapped path ----
 //
 // scopeMembersFor() feeds the filter and is not capped, because filtering
@@ -404,6 +466,24 @@ test('an override widens THIS thread and writes nothing', async () => {
 
   const after = await lens.thread(`at://${ME}/app.bsky.feed.post/root`, SRC);
   assert.deepEqual(after.comments.map((c) => c.body), [], 'the next thread is scoped again');
+});
+
+test('applyScope carries the punch-hole onto the posture, and an override keeps it', async () => {
+  const { session } = postSession({
+    ...MOD,
+    'app.bsky.feed.getPostThread': THREAD(ME, OUT),
+    'app.bsky.feed.getQuotes': { posts: [] },
+  }, { [`getFollows:${ME}`]: [[]], [`getFollowers:${ME}`]: [[]] });
+  const lens = createLens({ session });
+  await lens.loadPosture();
+  await lens.applyScope('fol', { opensThreads: true });
+  assert.equal(lens.posture().ring.opensThreads, true);
+  const t = await lens.thread(`at://${ME}/app.bsky.feed.post/root`, SRC);
+  assert.deepEqual(t.comments.map((c) => c.body), ['from outside'], 'my own post: the stranger shows');
+  const o = await lens.thread(`at://${ME}/app.bsky.feed.post/root`, SRC, { ringOverride: 'mut' });
+  assert.deepEqual(o.comments.map((c) => c.body), ['from outside'], 'and still shows under an override');
+  await lens.loadPosture();
+  assert.equal(lens.posture().ring.opensThreads, true, 'a moderation reload keeps it');
 });
 
 test('an override keeps the reader moderation and their exemptions', async () => {
