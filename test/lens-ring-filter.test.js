@@ -636,15 +636,23 @@ test('a shaped thread reports every author on it, root, replies and quotes, befo
 });
 
 test('absentStops names the stops with nobody on the thread, and never World', () => {
-  const members = { mut: new Set([IN]), fol: new Set([IN, IN2]), world: null };
+  // Member lists arrive as scopeMembersFor() hands them out — whatever the
+  // registry's chain builds, NOT a Set the caller prepared. The first draft of
+  // this test passed Sets, the view passed the real thing, and `members.has is
+  // not a function` was swallowed by the view's own catch — a muted-nothing
+  // pill that looked exactly like the feature working on a busy thread.
+  const members = { mut: [IN], fol: [IN, IN2], world: null };
   assert.deepEqual(absentStops(new Set([IN2, OUT]), members), ['mut']);
   assert.deepEqual(absentStops(new Set([OUT]), members), ['mut', 'fol']);
   assert.deepEqual(absentStops(new Set([IN]), members), []);
   assert.deepEqual(absentStops(new Set(), members), ['mut', 'fol'], 'an empty thread is empty for every stop');
 });
 
-test('the substrate thread carries its authors through', async () => {
+test('the substrate thread carries its authors through, and its member lists feed absentStops as they are', async () => {
   const lens = await threadLens();
   const t = await lens.thread(`at://${ME}/app.bsky.feed.post/root`, SRC);
   assert.deepEqual([...t.authors].sort(), [ME, OUT].sort());
+  const byStop = { mut: (await lens.scopeMembersFor('mut')).members, fol: (await lens.scopeMembersFor('fol')).members, world: null };
+  assert.deepEqual(absentStops(t.authors, byStop), [], 'I am on my own thread, so no stop is empty');
+  assert.deepEqual(absentStops(new Set([OUT]), byStop), ['mut', 'fol'], 'a thread of strangers empties both');
 });

@@ -706,12 +706,14 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
 }
 
 // The stops with nobody on this thread, in the order given. `membersByStop`
-// maps a stop id to its member Set, or null for World, which is never absent:
+// maps a stop id to its member list — any iterable of dids, as
+// scopeMembersFor() hands them out — or null for World, which is never absent:
 // it is the ring not narrowing, so everyone is on it. Pure; the view pairs it
 // with the reasons it draws.
 export function absentStops(authors, membersByStop) {
+  const on = new Set(authors);
   return Object.entries(membersByStop)
-    .filter(([, members]) => members !== null && ![...authors].some((did) => members.has(did)))
+    .filter(([, members]) => members !== null && ![...members].some((did) => on.has(did)))
     .map(([id]) => id);
 }
 
