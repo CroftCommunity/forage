@@ -133,6 +133,11 @@ export const RESPONSES = {
   'getPreferences': { preferences: [] },
   'getProfile?actor=did%3Aplc%3Ame': { did: 'did:plc:me', handle: 'me.test', avatar: AV },
   'getMutes': { mutes: [] }, 'getBlocks': { blocks: [] },
+  // ring-universe (2026-09-04): a signed-in thread page resolves the members
+  // of every stop on its pill, to mute the ones nobody on the thread belongs
+  // to. Two graph reads, cached for the session; routed here so the hermetic
+  // fixture stays hermetic (mock-depth pins zero shim misses).
+  'getFollows': { follows: [] }, 'getFollowers': { followers: [] },
   'getListMutes': { lists: [] }, 'getListBlocks': { lists: [] },
   'com.atproto.repo.createRecord': { uri: 'at://did:plc:me/app.bsky.feed.post/3lk', cid: 'lc' },
   'com.atproto.repo.deleteRecord': {},

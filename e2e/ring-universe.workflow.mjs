@@ -44,6 +44,9 @@ export async function run() {
     // 3. the pill: Mutuals muted with a reason, Follows live
     const pill = page.locator('[data-thread-ring]');
     assert.equal(await pill.count(), 1, 'the thread carries its own pill');
+    // The muting lands AFTER the paint, when the members walk resolves — the
+    // thread never waits for it (the cascade must not either).
+    await page.waitForSelector('[data-thread-ring] input[data-scope="mut"]:disabled', { timeout: 10000 });
     const mut = pill.locator('input[data-scope="mut"]');
     assert.equal(await mut.isDisabled(), true, 'nobody on this thread is a mutual, so Mutuals is muted');
     const mutTitle = await pill.locator('label[for$="-mut"]').getAttribute('title');
