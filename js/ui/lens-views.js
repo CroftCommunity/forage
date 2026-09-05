@@ -14,13 +14,13 @@ import * as drafts from '../drafts.js';
 import { go, navKind, rerenderNow, replacePath, dispatch } from '../router.js';
 import { appFor } from '../auth/hosts.js';
 import { navTree } from './nav.js';
-import { SCOPES } from '../rings.js';
+import { SCOPES, scopeFor } from '../rings.js';
 import * as ringScope from '../ring-scope.js';
 import { extractTarget, directPath, threadPath, isDid } from '../share-target.js';
 import { lastBoard, setLastBoard, landingBoard, DIRECTORY } from '../last-board.js';
 import { createLens, LENS_PERMS, facetSegments, trimCardLink, slugifyFeedName, sortWindow, affordanceFor,
   feedCardModel, threadNodeStyle, feedPath, parseFeedRoute, sessionGateMessage, canDelete, sourceLabel,
-  sortFeeds, filterFeeds, platforms, liveFeeds } from '../substrates/lens.js';
+  sortFeeds, filterFeeds, platforms, liveFeeds, absentStops } from '../substrates/lens.js';
 import { initSession, createAccountRoster, isOAuthCallback } from '../auth/session.js';
 import { hostById, featuredHosts, otherHosts, canCreateAccount } from '../auth/hosts.js';
 import { heroDismissed, dismissHero, EMBLEM } from '../hero.js';
@@ -2976,17 +2976,44 @@ export function lensThreadView(params, query) {
   // the same pill, and a second copy of it is how two surfaces start disagreeing
   // about one control. Rebuilt on every paint: its selected segment IS the
   // override, and the override changes underneath it.
-  const threadRingBar = () => {
+  const threadRingBar = (absent = {}) => {
     if (!session) return null;
     const pill = ringScope.ringPill(el, {
       override: ringOverride,
       ariaLabel: 'How close — this thread only',
       onPicked: (id) => { ringOverride = id; main.replaceChildren(skeleton(8)); load(); },
+      absent,
     });
     return pill ? el('div', { class: 'ringbar', 'data-thread-ring': '1' }, pill) : null;
   };
+  // A stop nobody on this thread belongs to is muted on the pill, with the
+  // reason on hover (owner, 2026-09-04: "otherwise what's the point?"). The
+  // members of every stop on the pill are resolved beside the thread fetch —
+  // for the default pill that is the follows and followers walk the ring
+  // already paid for, cached for the session. A walk that fails mutes nothing:
+  // the thread still paints, and a live segment that shows an empty thread is
+  // the lesser wrong.
+  const ABSENT_REASON = {
+    me: 'You are not on this thread',
+    mut: 'None of your mutuals are on this thread',
+    fol: 'No one you follow is on this thread',
+    hop: 'No one within one hop of you is on this thread',
+  };
+  const absentOn = async (authors) => {
+    if (!session || !authors) return {};
+    const ids = ringScope.stops();
+    const members = await Promise.all(ids.map((id) => lens.scopeMembersFor(id).then((r) => r.members)));
+    const byStop = Object.fromEntries(ids.map((id, i) => [id, members[i]]));
+    return Object.fromEntries(absentStops(authors, byStop)
+      .map((id) => [id, ABSENT_REASON[id] || `No one from ${scopeFor(id)?.label || id} is on this thread`]));
+  };
   const load = () => {
-  lens.thread(uri, src, { onCascade: (t) => onCascade(t), ringOverride }).then((t) => {
+  lens.thread(uri, src, { onCascade: (t) => onCascade(t), ringOverride })
+    .then(async (t) => [t, await absentOn(t.authors).catch((e) => {
+      console.warn('forage: could not tell which ring stops are empty on this thread —', e.message);
+      return {};
+    })])
+    .then(([t, absent]) => {
     const p = t.post;
     // The head your RING hid, said out loud. shapeLensPost has returned
     // `hiddenReason: 'scope'` since the ring landed, and its comment says
@@ -3005,7 +3032,7 @@ export function lensThreadView(params, query) {
     // same post, and would override a choice the reader made on purpose.
     // Say what happened, and put the control that undoes it in reach.
     if (p.hidden && p.hiddenReason === 'scope') {
-      const bar = threadRingBar();
+      const bar = threadRingBar(absent);
       main.replaceChildren(...[bar, emptyState('Outside your ring',
         session
           ? 'This post is from someone your ring does not reach, so its thread is empty here. Widen the ring above to read it — this thread only; the rest of the site stays where you left it.'
@@ -3192,7 +3219,7 @@ export function lensThreadView(params, query) {
     // comment AGAIN: the repaint is a fresh tree, and the first focus went with
     // the old one (mock v20 claim F, found by the shipped capture 2026-08-30)
     onCascade = (next) => { paintComments(next.comments); if (focus) focusComment(commentsCard, focus, { threadHref }); };
-    const threadRing = threadRingBar();
+    const threadRing = threadRingBar(absent);
     main.replaceChildren(...[bar, threadRing, head, t.comments.length ? commentsCard : emptyState('No replies', 'Nothing below this post yet.')].filter(Boolean));
   }).catch((e) => main.replaceChildren(emptyState('Lens fetch failed', e.message)));
   };

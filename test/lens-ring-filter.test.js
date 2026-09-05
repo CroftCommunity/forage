@@ -16,7 +16,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   shapeLensPost, shapeLensFeed, shapeLensThread, buildPosture, withRing, EMPTY_POSTURE,
-  createLens,
+  createLens, absentStops,
 } from '../js/substrates/lens.js';
 
 const ME = 'did:plc:me';
@@ -612,4 +612,39 @@ test('a visible reply under a hidden part still reaches the thread', () => {
   const shaped = shapeLensThread(resp, SRC, { posture: ring([IN]) });
   assert.ok(JSON.stringify(shaped.comments).includes('a visible answer'),
     'the reply survives its hidden parent, as a reply under a blocked author already does');
+});
+
+// ---- which stops have nobody on this thread ----
+//
+// The thread pill mutes a stop nobody on the thread belongs to (owner,
+// 2026-09-04: "otherwise what's the point?"). Two halves: the shaper reports
+// the authors on the thread, BEFORE any policy — a stop is "empty" when nobody
+// on the thread is in it, and a friend you muted is still on the thread — and
+// absentStops() intersects that with each stop's members.
+
+test('a shaped thread reports every author on it, root, replies and quotes, before any policy', () => {
+  const thread = {
+    thread: {
+      post: mkPost(IN, 'root'),
+      replies: [{ post: mkPost(OUT, 'stranger'), replies: [{ post: mkPost('did:plc:deep', 'deep'), replies: [] }] }],
+    },
+  };
+  const quotes = [{ post: mkPost('did:plc:quoter', 'q'), replies: [] }];
+  const shaped = shapeLensThread(thread, SRC, { quotes, posture: ring([IN]) });
+  assert.deepEqual([...shaped.authors].sort(), [IN, OUT, 'did:plc:deep', 'did:plc:quoter'].sort(),
+    'hidden authors count: the question is who is on the thread, not who is drawn');
+});
+
+test('absentStops names the stops with nobody on the thread, and never World', () => {
+  const members = { mut: new Set([IN]), fol: new Set([IN, IN2]), world: null };
+  assert.deepEqual(absentStops(new Set([IN2, OUT]), members), ['mut']);
+  assert.deepEqual(absentStops(new Set([OUT]), members), ['mut', 'fol']);
+  assert.deepEqual(absentStops(new Set([IN]), members), []);
+  assert.deepEqual(absentStops(new Set(), members), ['mut', 'fol'], 'an empty thread is empty for every stop');
+});
+
+test('the substrate thread carries its authors through', async () => {
+  const lens = await threadLens();
+  const t = await lens.thread(`at://${ME}/app.bsky.feed.post/root`, SRC);
+  assert.deepEqual([...t.authors].sort(), [ME, OUT].sort());
 });

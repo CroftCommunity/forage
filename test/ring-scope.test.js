@@ -340,3 +340,44 @@ test('locked: an unreachable stop says why, rather than being mysteriously dead'
     assert.ok(!/sign in/i.test(world.attrs.title), 'and World, which works, does not');
   });
 });
+
+// ---- a stop nobody on the thread belongs to ----
+//
+// Owner, 2026-09-04: "when we're on a thread and it has the thread slider at
+// the top, we should probably mute Mutuals and Follows if there are none on
+// that thread, because otherwise what's the point? Just a mouseover can say
+// none found." The VIEW decides which stops are empty (it has the thread's
+// authors and the lens has the members); the pill only draws the answer, the
+// same way `locked` draws the guest's.
+
+test('absent: a stop nobody on the thread belongs to is disabled, and says so on hover', () => {
+  withStorage({}, () => {
+    const pill = ringPill(fakeEl, { onPicked() {}, absent: { mut: 'No one from your mutuals is on this thread' } });
+    const disabled = inputs(pill).filter((i) => i.attrs.disabled).map((i) => i.attrs['data-scope']);
+    assert.deepEqual(disabled, ['mut']);
+    const labels = walk(pill).filter((n) => n.tag === 'label');
+    assert.equal(labels.find((l) => l.attrs.for.endsWith('-mut')).attrs.title, 'No one from your mutuals is on this thread');
+    assert.ok(!/on this thread/.test(labels.find((l) => l.attrs.for.endsWith('-fol')).attrs.title), 'a stop with someone on it keeps its own tooltip');
+  });
+});
+
+test('absent: the selected stop is never muted out from under the reader', () => {
+  // The current stop can be empty on this thread — the head is hidden and the
+  // page says "Outside your ring". Disabling the segment that is CHECKED would
+  // leave a radio group with no reachable selection, and the reader still needs
+  // to see where they are to move from it.
+  withStorage({}, () => {
+    setScope('mut');
+    const pill = ringPill(fakeEl, { onPicked() {}, absent: { mut: 'No one from your mutuals is on this thread' } });
+    const mut = inputs(pill).find((i) => i.attrs['data-scope'] === 'mut');
+    assert.equal(mut.attrs.checked, true);
+    assert.equal(mut.attrs.disabled, false);
+  });
+});
+
+test('absent: World is never absent — it is the ring not narrowing', () => {
+  withStorage({}, () => {
+    const pill = ringPill(fakeEl, { onPicked() {}, absent: { world: 'nonsense' } });
+    assert.equal(inputs(pill).find((i) => i.attrs['data-scope'] === 'world').attrs.disabled, false);
+  });
+});

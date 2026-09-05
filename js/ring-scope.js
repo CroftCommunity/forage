@@ -165,8 +165,18 @@ function notify() {
 // on the settings page, where there is room for it.
 let pillSeq = 0;
 
+//
+// `absent` is the thread pill's answer to "otherwise what's the point?" (owner,
+// 2026-09-04): a map of stop id -> reason, for the stops nobody on this thread
+// belongs to. Those segments draw disabled with the reason as their tooltip,
+// the same shape as `locked`. The VIEW computes the map — it has the thread's
+// authors and the lens has the members; this module only draws the answer.
+// Two stops are never muted: World, which is the ring not narrowing and so
+// has everyone on it; and the CURRENT stop, because disabling the checked
+// segment leaves a radio group with no reachable selection, and a reader on an
+// empty stop still has to see where they are to move from it.
 export function ringPill(el, {
-  override = null, onPicked, ariaLabel = 'How close', block = false, locked = false,
+  override = null, onPicked, ariaLabel = 'How close', block = false, locked = false, absent = {},
 } = {}) {
   const open = stops();
   // A control with one value is not a control — it is a label that absorbs
@@ -189,11 +199,12 @@ export function ringPill(el, {
   const segs = open.flatMap((id) => {
     const s = scopeFor(id);
     const inputId = `${group}-${id}`;
+    const empty = id !== 'world' && id !== current && !!absent[id];
     return [
       el('input', {
         type: 'radio', name: group, id: inputId, class: 'ringpill-in',
         'data-scope': id, checked: id === current || false,
-        disabled: (locked && id !== 'world') || false,
+        disabled: (locked && id !== 'world') || empty || false,
         onchange: () => onPicked(id),
       }),
       // The icon is dropped in the block variant: the nav column is 200px, and
@@ -206,7 +217,7 @@ export function ringPill(el, {
         // here.
         title: locked && id !== 'world'
           ? `${s.label} — computed from your own follow graph, so sign in to use it`
-          : `${s.label} — ${s.blurb}`,
+          : empty ? String(absent[id]) : `${s.label} — ${s.blurb}`,
       },
         block ? null : el('span', { class: 'ico', 'aria-hidden': 'true' }, '◍'),
         el('span', { class: 'ringseg-t' }, s.pill)),

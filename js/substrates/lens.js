@@ -682,13 +682,37 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
   };
   const quoteNodes = (quotes || []).map((q) => buildQuote(q, 0)).filter(Boolean);
   const comments = [...replies, ...quoteNodes].sort(order);
+  // Who is ON the thread, before any policy — the thread pill mutes a stop
+  // nobody here belongs to (owner, 2026-09-04: "otherwise what's the point?"),
+  // and that is a question about the thread, not about what was drawn: a
+  // friend you muted is still on it. Off the raw tree, so a hidden branch
+  // still counts, and to the same depth the appview returned.
+  const authors = new Set();
+  const collect = (n) => {
+    if (!n?.post) return;
+    if (n.post.author?.did) authors.add(n.post.author.did);
+    (n.replies || []).forEach(collect);
+    (n.quotes || []).forEach(collect);
+  };
+  collect(root);
+  (quotes || []).forEach(collect);
   // The count a head may print. `post.commentCount` is the appview's
   // replyCount, which counts a hoisted part (it IS a reply) and cannot count a
   // re-rooted one — so a head reading it said "1 reply" over a list saying
   // "No replies" (owner, 2026-09-03). This number is the list, by
   // construction: what is counted is what is drawn, mutes and blocks included.
-  return { post, perms: LENS_PERMS, sort: 'lens', locked: false, comments, total,
+  return { post, perms: LENS_PERMS, sort: 'lens', locked: false, comments, total, authors,
     selfThread: shownParts, parts, replyCount: comments.length, quoteCount: root.post.quoteCount ?? 0 };
+}
+
+// The stops with nobody on this thread, in the order given. `membersByStop`
+// maps a stop id to its member Set, or null for World, which is never absent:
+// it is the ring not narrowing, so everyone is on it. Pure; the view pairs it
+// with the reasons it draws.
+export function absentStops(authors, membersByStop) {
+  return Object.entries(membersByStop)
+    .filter(([, members]) => members !== null && ![...authors].some((did) => members.has(did)))
+    .map(([id]) => id);
 }
 
 // Plan 2026-08-28-1: an author-feed/timeline item is an ENVELOPE —
