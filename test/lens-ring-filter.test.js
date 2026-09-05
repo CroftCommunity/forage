@@ -215,6 +215,25 @@ test('the ring reaches a thread: an out-of-ring reply drops, subtree included', 
     'and its subtree with it, the same way a blocked branch already goes');
 });
 
+test('the ring reaches the quote cascade too: an out-of-ring quoter is absent, not a [removed] stub', () => {
+  // Owner, 2026-09-04, at Follows on a Bluesky Team post: "it looks like the
+  // posts were deleted". Replies from outside the ring were dropped; QUOTES
+  // from outside it were shaped, found hidden, and built into nodes anyway —
+  // so every stranger who quoted the post drew as a `[removed]` byline over an
+  // empty body. Same rule as a reply: absent, subtree included.
+  const thread = { thread: { post: mkPost(IN, 'the root'), replies: [] } };
+  const quotes = [
+    { post: mkPost(OUT, 'a stranger quoting'), replies: [{ post: mkPost(IN2, 'a friend under the stranger'), replies: [] }] },
+    { post: mkPost(IN2, 'a friend quoting'), replies: [] },
+  ];
+  const shaped = shapeLensThread(thread, SRC, { quotes, posture: ring([IN, IN2]) });
+  assert.deepEqual(shaped.comments.map((c) => c.body), ['a friend quoting']);
+  assert.ok(!shaped.comments.some((c) => c.maskedRemoved), 'no stub stands where the stranger was');
+  assert.equal(shaped.total, 1, 'and the count is what is drawn');
+  assert.ok(!JSON.stringify(shaped).includes('a friend under the stranger'),
+    'the subtree goes with it, as it does under an out-of-ring reply');
+});
+
 test('a thread whose ROOT is outside the ring shapes as hidden rather than blank', () => {
   // Reachable by direct link, search or a notification. The view needs to be
   // able to tell "your ring hid this" from "this post does not exist", so the

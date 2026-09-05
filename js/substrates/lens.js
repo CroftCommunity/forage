@@ -637,8 +637,14 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
     || String(a.id).localeCompare(String(b.id));
   const buildQuote = (entry, depth) => {
     if (posture.blockedDids.has(entry.post?.author?.did)) return null;
-    total += 1;
     const p = shapeLensPost(entry.post, src, posture);
+    // Same door as build(): a quote the posture hid — muted, label-floored, or
+    // outside the ring — is absent, subtree included. Until 2026-09-04 this
+    // branch counted and built the node without looking, so an out-of-ring
+    // quoter drew as a `[removed]` byline over nothing; on a widely quoted
+    // post that was a column of them, and the owner read it as deletions.
+    if (p.hidden) return null;
+    total += 1;
     const own = (entry.quotes || []);
     const expandable = depth < QUOTE_CASCADE_DEPTH;
     const kids = [
