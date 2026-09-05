@@ -17,6 +17,7 @@ import {
   STOPS_KEY, SCOPE_KEY, EXEMPT_KEY, DEFAULT_STOPS, DEFAULT_SCOPE, EXEMPT_KINDS,
   stops, setStops, addStop, removeStop, scope, setScope,
   exemptsFeeds, setExemptsFeeds, effectiveScope, onChange, ringPill,
+  OPEN_KEY, opensThreads, setOpensThreads,
 } from '../js/ring-scope.js';
 
 // Each test gets its own storage: a module-level cache would make these order-
@@ -56,6 +57,21 @@ test('feeds and hashtags are exempt by default, and those are the exempt kinds',
     // request quietly return less than the rest of the app.
     assert.equal(exemptsFeeds(), true);
     assert.deepEqual([...EXEMPT_KINDS].sort(), ['feed', 'hashtag']);
+  });
+});
+
+test('a thread on a post from inside the ring is open to replies from outside it, by default', () => {
+  // Owner, 2026-09-04: the ring is the whole universe — nothing outside it is
+  // even hinted at — with ONE punch-hole, for practicality: on a post from
+  // someone in the ring, the replies from outside it show, or the post is hard
+  // to interact with. A setting, on by default.
+  withStorage({}, (store) => {
+    assert.equal(opensThreads(), true);
+    setOpensThreads(false);
+    assert.equal(opensThreads(), false);
+    assert.equal(store[OPEN_KEY], '0');
+    setOpensThreads(true);
+    assert.equal(opensThreads(), true);
   });
 });
 
@@ -155,8 +171,10 @@ test('every setter notifies, so two pills on one page cannot disagree', () => {
       setScope('fol');
       addStop('hop');
       setExemptsFeeds(false);
-      assert.equal(seen.length, 3, 'scope, stops and the exemption all notify');
+      setOpensThreads(false);
+      assert.equal(seen.length, 4, 'scope, stops, the exemption and the punch-hole all notify');
       assert.equal(seen.at(-1).exemptsFeeds, false);
+      assert.equal(seen.at(-1).opensThreads, false);
       assert.equal(seen.at(-1).scope, 'fol');
       assert.deepEqual(seen.at(-1).stops, ['mut', 'fol', 'hop', 'world']);
     } finally { off(); }
@@ -168,6 +186,7 @@ test('no storage at all reads as the defaults and never throws', () => {
   delete globalThis.localStorage;
   try {
     assert.deepEqual(stops(), [...DEFAULT_STOPS]);
+    assert.equal(opensThreads(), true);
     assert.equal(scope(), 'world');
     assert.equal(exemptsFeeds(), true);
     setScope('world');            // must not throw
@@ -319,5 +338,46 @@ test('locked: an unreachable stop says why, rather than being mysteriously dead'
     assert.match(mut.attrs.title, /sign in/i, 'the tooltip names the reason');
     const world = labels.find((l) => l.attrs.for.endsWith('-world'));
     assert.ok(!/sign in/i.test(world.attrs.title), 'and World, which works, does not');
+  });
+});
+
+// ---- a stop nobody on the thread belongs to ----
+//
+// Owner, 2026-09-04: "when we're on a thread and it has the thread slider at
+// the top, we should probably mute Mutuals and Follows if there are none on
+// that thread, because otherwise what's the point? Just a mouseover can say
+// none found." The VIEW decides which stops are empty (it has the thread's
+// authors and the lens has the members); the pill only draws the answer, the
+// same way `locked` draws the guest's.
+
+test('absent: a stop nobody on the thread belongs to is disabled, and says so on hover', () => {
+  withStorage({}, () => {
+    const pill = ringPill(fakeEl, { onPicked() {}, absent: { mut: 'No one from your mutuals is on this thread' } });
+    const disabled = inputs(pill).filter((i) => i.attrs.disabled).map((i) => i.attrs['data-scope']);
+    assert.deepEqual(disabled, ['mut']);
+    const labels = walk(pill).filter((n) => n.tag === 'label');
+    assert.equal(labels.find((l) => l.attrs.for.endsWith('-mut')).attrs.title, 'No one from your mutuals is on this thread');
+    assert.ok(!/on this thread/.test(labels.find((l) => l.attrs.for.endsWith('-fol')).attrs.title), 'a stop with someone on it keeps its own tooltip');
+  });
+});
+
+test('absent: the selected stop is never muted out from under the reader', () => {
+  // The current stop can be empty on this thread — the head is hidden and the
+  // page says "Outside your ring". Disabling the segment that is CHECKED would
+  // leave a radio group with no reachable selection, and the reader still needs
+  // to see where they are to move from it.
+  withStorage({}, () => {
+    setScope('mut');
+    const pill = ringPill(fakeEl, { onPicked() {}, absent: { mut: 'No one from your mutuals is on this thread' } });
+    const mut = inputs(pill).find((i) => i.attrs['data-scope'] === 'mut');
+    assert.equal(mut.attrs.checked, true);
+    assert.equal(mut.attrs.disabled, false);
+  });
+});
+
+test('absent: World is never absent — it is the ring not narrowing', () => {
+  withStorage({}, () => {
+    const pill = ringPill(fakeEl, { onPicked() {}, absent: { world: 'nonsense' } });
+    assert.equal(inputs(pill).find((i) => i.attrs['data-scope'] === 'world').attrs.disabled, false);
   });
 });

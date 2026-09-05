@@ -98,12 +98,19 @@ export function buildPosture({ preferences = [], mutes = [], blocks = [], listMu
 // third thing again: narrow to nobody, a legitimate (if quiet) ring that paints
 // an empty board. js/rings.js owns that distinction and this preserves it
 // rather than collapsing the two into a falsy check.
-export function withRing(posture, { members = null, exemptKinds = [] } = {}) {
+//
+// `opensThreads` is the punch-hole (owner, 2026-09-04): on a thread whose root
+// is inside the ring, replies and quotes from outside it show. It is carried
+// here so a thread override — which rebuilds the ring and nothing else — keeps
+// it, and it is consulted by shapeLensThread alone: it opens threads, never
+// posts, and never a board.
+export function withRing(posture, { members = null, exemptKinds = [], opensThreads = false } = {}) {
   return {
     ...posture,
     ring: {
       members: members == null ? null : new Set(members),
       exemptKinds: new Set(exemptKinds),
+      opensThreads: !!opensThreads,
     },
   };
 }
@@ -484,6 +491,15 @@ const CASCADE_BREADTH = 10;
 export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_POSTURE } = {}) {
   const root = threadResponse.thread;
   const post = shapeLensPost(root.post, src, posture);
+  // The punch-hole. The head was shaped through the full posture above, so a
+  // root outside the ring is hidden and stays hidden — this opens THREADS, not
+  // posts. When the root is in, the ring stands down for everything under it:
+  // the same posture with `members: null`, which is World for the ring only.
+  // Blocks, mutes, muted words and label floors are untouched, so a muted
+  // stranger under a friend is still absent. Nothing to open at World, where
+  // the ring already narrows nothing.
+  const opened = !!posture.ring?.opensThreads && posture.ring.members !== null && !post.hidden;
+  const nodePosture = opened ? withRing(posture, { ...posture.ring, members: null }) : posture;
   let total = 0;
   const node = (p, depth, extra = {}) => ({
     id: p.id, postId: post.id, parentId: null,
@@ -517,7 +533,7 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
   const build = (nodes, depth) => (nodes || []).map((n) => {
     if (!n.post) return null; // blocked / notFound stubs
     if (posture.blockedDids.has(n.post.author?.did)) return null; // never renders
-    const p = shapeLensPost(n.post, src, posture);
+    const p = shapeLensPost(n.post, src, nodePosture);
     // Muted and label-floored nodes vanish here the same way a blocked author
     // already does — subtree included. Keeping a named placeholder in a thread
     // would re-announce what the mute asked us not to show.
@@ -637,8 +653,14 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
     || String(a.id).localeCompare(String(b.id));
   const buildQuote = (entry, depth) => {
     if (posture.blockedDids.has(entry.post?.author?.did)) return null;
+    const p = shapeLensPost(entry.post, src, nodePosture);
+    // Same door as build(): a quote the posture hid — muted, label-floored, or
+    // outside the ring — is absent, subtree included. Until 2026-09-04 this
+    // branch counted and built the node without looking, so an out-of-ring
+    // quoter drew as a `[removed]` byline over nothing; on a widely quoted
+    // post that was a column of them, and the owner read it as deletions.
+    if (p.hidden) return null;
     total += 1;
-    const p = shapeLensPost(entry.post, src, posture);
     const own = (entry.quotes || []);
     const expandable = depth < QUOTE_CASCADE_DEPTH;
     const kids = [
@@ -660,13 +682,39 @@ export function shapeLensThread(threadResponse, src, { quotes, posture = EMPTY_P
   };
   const quoteNodes = (quotes || []).map((q) => buildQuote(q, 0)).filter(Boolean);
   const comments = [...replies, ...quoteNodes].sort(order);
+  // Who is ON the thread, before any policy — the thread pill mutes a stop
+  // nobody here belongs to (owner, 2026-09-04: "otherwise what's the point?"),
+  // and that is a question about the thread, not about what was drawn: a
+  // friend you muted is still on it. Off the raw tree, so a hidden branch
+  // still counts, and to the same depth the appview returned.
+  const authors = new Set();
+  const collect = (n) => {
+    if (!n?.post) return;
+    if (n.post.author?.did) authors.add(n.post.author.did);
+    (n.replies || []).forEach(collect);
+    (n.quotes || []).forEach(collect);
+  };
+  collect(root);
+  (quotes || []).forEach(collect);
   // The count a head may print. `post.commentCount` is the appview's
   // replyCount, which counts a hoisted part (it IS a reply) and cannot count a
   // re-rooted one — so a head reading it said "1 reply" over a list saying
   // "No replies" (owner, 2026-09-03). This number is the list, by
   // construction: what is counted is what is drawn, mutes and blocks included.
-  return { post, perms: LENS_PERMS, sort: 'lens', locked: false, comments, total,
+  return { post, perms: LENS_PERMS, sort: 'lens', locked: false, comments, total, authors,
     selfThread: shownParts, parts, replyCount: comments.length, quoteCount: root.post.quoteCount ?? 0 };
+}
+
+// The stops with nobody on this thread, in the order given. `membersByStop`
+// maps a stop id to its member list — any iterable of dids, as
+// scopeMembersFor() hands them out — or null for World, which is never absent:
+// it is the ring not narrowing, so everyone is on it. Pure; the view pairs it
+// with the reasons it draws.
+export function absentStops(authors, membersByStop) {
+  const on = new Set(authors);
+  return Object.entries(membersByStop)
+    .filter(([, members]) => members !== null && ![...members].some((did) => on.has(did)))
+    .map(([id]) => id);
 }
 
 // Plan 2026-08-28-1: an author-feed/timeline item is an ENVELOPE —
@@ -1209,7 +1257,7 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
   // silently drop back to World mid-session with no event to explain it.
   // Keeping the spec here means "what the reader chose" and "what their account
   // says" are re-composed rather than one overwriting the other.
-  let ringSpec = { members: null, exemptKinds: [] };
+  let ringSpec = { members: null, exemptKinds: [], opensThreads: false };
   // 3x: rings are expensive — mutuals+1 is one getFollows per mutual, so a
   // full ring is 26+ graph reads before a single post loads, and it was paid
   // again on every visit to the dial. The follow graph changes slowly, so the
@@ -1315,9 +1363,9 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
     // landed, so a caller can repaint knowing the posture is the new one — the
     // pill is a control whose effect is a re-render, and painting the old board
     // under the new label is the one thing it must not do.
-    async applyScope(scope, { exemptKinds = [] } = {}) {
+    async applyScope(scope, { exemptKinds = [], opensThreads = false } = {}) {
       const { members } = await this.scopeMembersFor(scope);
-      ringSpec = { members, exemptKinds };
+      ringSpec = { members, exemptKinds, opensThreads };
       posture = withRing(posture, ringSpec);
       return posture;
     },
@@ -1382,6 +1430,7 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
         ? withRing(posture, {
             members: (await this.scopeMembersFor(ringOverride)).members,
             exemptKinds: [...(posture.ring?.exemptKinds || [])],
+            opensThreads: !!posture.ring?.opensThreads,
           })
         : posture;
       const shape = () => {

@@ -27,6 +27,7 @@ import { byRank, RUNG_IDS, scopeFor } from './rings.js';
 export const STOPS_KEY = 'forage.ringstops';
 export const SCOPE_KEY = 'forage.ringscope';
 export const EXEMPT_KEY = 'forage.ringexempt';
+export const OPEN_KEY = 'forage.ringopenthreads';
 
 // Decision 1 (owner, 2026-09-03): Mutuals | Follows | World. Mutuals are a
 // SUBSET of follows, so these three are a real containment chain. `hop` — your
@@ -126,13 +127,24 @@ export function exemptsFeeds() { return read(EXEMPT_KEY) !== '0'; }
 
 export function setExemptsFeeds(on) { write(EXEMPT_KEY, on ? '1' : '0'); notify(); }
 
+// The punch-hole (owner, 2026-09-04). At Mutuals "this is the whole universe
+// — there are only mutuals and mutuals' activities", and nothing outside it is
+// so much as hinted at. The ONE exception, "just for practicality": on a post
+// from someone IN the ring, the replies from outside it show, because a post
+// you cannot see the answers to is hard to interact with. On by default; a
+// reader who wants the universe airtight turns it off. It opens THREADS, never
+// posts — a stranger's post stays hidden however it was reached.
+export function opensThreads() { return read(OPEN_KEY) !== '0'; }
+
+export function setOpensThreads(on) { write(OPEN_KEY, on ? '1' : '0'); notify(); }
+
 const listeners = new Set();
 export function onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); }
 
 // One payload for all three settings: a listener that repaints on a scope change
 // repaints on a stop change too, and the pill needs both anyway.
 function notify() {
-  const state = { scope: scope(), stops: stops(), exemptsFeeds: exemptsFeeds() };
+  const state = { scope: scope(), stops: stops(), exemptsFeeds: exemptsFeeds(), opensThreads: opensThreads() };
   for (const fn of listeners) fn(state);
 }
 
@@ -153,8 +165,18 @@ function notify() {
 // on the settings page, where there is room for it.
 let pillSeq = 0;
 
+//
+// `absent` is the thread pill's answer to "otherwise what's the point?" (owner,
+// 2026-09-04): a map of stop id -> reason, for the stops nobody on this thread
+// belongs to. Those segments draw disabled with the reason as their tooltip,
+// the same shape as `locked`. The VIEW computes the map — it has the thread's
+// authors and the lens has the members; this module only draws the answer.
+// Two stops are never muted: World, which is the ring not narrowing and so
+// has everyone on it; and the CURRENT stop, because disabling the checked
+// segment leaves a radio group with no reachable selection, and a reader on an
+// empty stop still has to see where they are to move from it.
 export function ringPill(el, {
-  override = null, onPicked, ariaLabel = 'How close', block = false, locked = false,
+  override = null, onPicked, ariaLabel = 'How close', block = false, locked = false, absent = {},
 } = {}) {
   const open = stops();
   // A control with one value is not a control — it is a label that absorbs
@@ -177,11 +199,12 @@ export function ringPill(el, {
   const segs = open.flatMap((id) => {
     const s = scopeFor(id);
     const inputId = `${group}-${id}`;
+    const empty = id !== 'world' && id !== current && !!absent[id];
     return [
       el('input', {
         type: 'radio', name: group, id: inputId, class: 'ringpill-in',
         'data-scope': id, checked: id === current || false,
-        disabled: (locked && id !== 'world') || false,
+        disabled: (locked && id !== 'world') || empty || false,
         onchange: () => onPicked(id),
       }),
       // The icon is dropped in the block variant: the nav column is 200px, and
@@ -194,7 +217,7 @@ export function ringPill(el, {
         // here.
         title: locked && id !== 'world'
           ? `${s.label} — computed from your own follow graph, so sign in to use it`
-          : `${s.label} — ${s.blurb}`,
+          : empty ? String(absent[id]) : `${s.label} — ${s.blurb}`,
       },
         block ? null : el('span', { class: 'ico', 'aria-hidden': 'true' }, '◍'),
         el('span', { class: 'ringseg-t' }, s.pill)),

@@ -6,7 +6,7 @@
 <title>Forage Ring Scope</title>
 <meta name="mock-version" content="15">
 <meta name="mock-baseline" content="forage@fc50517">
-<meta name="mock-proposal" content="forage@20e9a0e">
+<meta name="mock-proposal" content="forage@016b1d8">
 <style>
 :root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
   --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
@@ -45,12 +45,15 @@ code{font-size:.92em}
   <header>
     <div class="eyebrow">Forage · mock · ring-scope</div>
     <h1>The ring becomes a scope, and one pill sets it</h1>
-    <p class="sub"><b>Eight frames, four surfaces, phone and desktop.</b> Captures of the engine,
-    not drawings: <b>Current</b> is <code>forage@8bc6cbd</code> (main), <b>Proposed</b> is
-    <code>forage@f52b8a6</code> (<code>claude/ring-scope</code>), both taken by
-    <code>scripts/mock-snaps.mjs</code> at 390×844 and 1280×900 against the same population.
-    What this mock is for: the ring stops being five places you go and becomes one control over
-    what every surface shows you.</p>
+    <p class="sub"><b>Sixteen frames, six surfaces, phone and desktop.</b> Captures of the engine,
+    not drawings: sections A–D are <b>Current</b> <code>forage@8bc6cbd</code> (main) beside
+    <b>Proposed</b> <code>forage@f52b8a6</code> (<code>claude/ring-scope</code>, landed #55);
+    section E, added 2026-09-04, is <b>Current</b> <code>forage@8b249bf</code> (main, the ring
+    already landed) beside <b>Proposed</b> <code>forage@016b1d8</code>
+    (<code>claude/ring-universe</code>). All by <code>scripts/mock-snaps.mjs</code> at 390×844
+    and 1280×900 against the same population. What this mock is for: the ring stops being five
+    places you go and becomes one control over what every surface shows you — and, in E, what
+    "inside the ring" means on a thread.</p>
   </header>
 
   <section>
@@ -158,6 +161,52 @@ code{font-size:.92em}
   </section>
 
   <section>
+    <div class="eyebrow">E · the thread, inside the ring (2026-09-04)</div>
+    <h2>E. The ring is the whole universe on a thread, with one hole, and the pill says which stops are empty</h2>
+    <p class="sub">Owner, on forage.fyi at Follows over a Bluesky Team post, the day after A–D landed:
+    the thread looked <i>"like the posts were deleted"</i>. It was the quote cascade — a reply from
+    outside the ring was dropped, a <b>quote</b> from outside it was drawn as a <code>[removed]</code>
+    stub, once per stranger. The Current frame below is that bug under the mock's load: the reader
+    follows the root's author and nobody else, and the one quoter is a stranger. Three things change
+    on the branch. <b>The stub is gone</b> (absent, like a reply). <b>The punch-hole</b>: a post from
+    someone in your ring shows every reply and quote, whoever wrote them — so the head reads
+    <i>5 replies</i> where main read <i>1 reply</i> — because <i>"there are only mutuals and mutuals'
+    activities … with this one kind of other punch hole just for practicality"</i>; it is a setting, on
+    by default, and off it the head stands alone. <b>Mutuals is greyed on the pill</b>: nobody on this
+    thread is one (<i>"otherwise what's the point?"</i>), with the reason on hover; Follows stays live
+    because the root's author is one, and World is never muted. The feeds-and-hashtags exemption is
+    <b>unchanged and re-affirmed</b> — <i>"if I go directly to a feed I'm looking to see that feed
+    unedited"</i>; the surface that scopes by default is a future one (mixes, roadmap E159).</p>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · thread at Follows · CURRENT (forage@8b249bf)</div>
+        <img class="shot" src="snaps/ring-scope/thread-lens-ring.phone.current.png" alt="Lens thread on a phone on main, ring at Follows: the pill with Mutuals live, the head reading 1 reply, and under it a single comment whose byline is [removed] · quoted this over an empty body" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · thread at Follows · PROPOSED (forage@016b1d8)</div>
+        <img class="shot" src="snaps/ring-scope/thread-lens-ring.phone.proposed.png" alt="The same thread on the branch: Mutuals greyed on the pill, Follows selected, the head reading 5 replies, and real comments from the strangers underneath" width="390"></div>
+    </div>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Desktop · thread at Follows · CURRENT (forage@8b249bf)</div>
+        <img class="shot" src="snaps/ring-scope/thread-lens-ring.desktop.current.png" alt="Lens thread at 1280 on main at Follows, with the [removed] quote stub"></div>
+      <div class="device desk"><div class="device-label">Desktop · thread at Follows · PROPOSED (forage@016b1d8)</div>
+        <img class="shot" src="snaps/ring-scope/thread-lens-ring.desktop.proposed.png" alt="Lens thread at 1280 on the branch: Mutuals greyed, every reply and quote drawn"></div>
+    </div>
+    <p class="sub">And the setting, on the same Advanced card as the stops — scrolled to the ring's
+    own controls, because the plain Advanced frame in D ends above them at 900px and is
+    byte-identical on either tree (measured: it cannot be evidence of a change here).</p>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · /me Advanced, the ring · CURRENT (forage@8b249bf)</div>
+        <img class="shot" src="snaps/ring-scope/deep-lens-prefs-ring.phone.current.png" alt="Advanced settings on a phone on main, scrolled to Your ring: the stop checkboxes and the feeds-and-hashtags exemption, checked" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · /me Advanced, the ring · PROPOSED (forage@016b1d8)</div>
+        <img class="shot" src="snaps/ring-scope/deep-lens-prefs-ring.phone.proposed.png" alt="The same on the branch: under the exemption, a new paragraph and a checked box reading Show replies from outside your ring on posts from inside it" width="390"></div>
+    </div>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Desktop · /me Advanced, the ring · CURRENT (forage@8b249bf)</div>
+        <img class="shot" src="snaps/ring-scope/deep-lens-prefs-ring.desktop.current.png" alt="Advanced settings at 1280 on main, scrolled to Your ring"></div>
+      <div class="device desk"><div class="device-label">Desktop · /me Advanced, the ring · PROPOSED (forage@016b1d8)</div>
+        <img class="shot" src="snaps/ring-scope/deep-lens-prefs-ring.desktop.proposed.png" alt="Advanced settings at 1280 on the branch, with the punch-hole setting under the exemption"></div>
+    </div>
+  </section>
+
+  <section>
     <div class="eyebrow">Decisions</div>
     <h2>What was decided, and what is still open</h2>
     <div class="tablewrap"><table>
@@ -172,8 +221,14 @@ code{font-size:.92em}
         <td><b>Closed — a transient override.</b> An argument, never a write, so leaving the thread drops it by construction.</td></tr>
       <tr><td>5</td><td>What does a signed-out reader see?</td>
         <td><b>Closed — the pill, locked to World.</b> The one exception to the guest-surface rule, pinned three ways so it cannot rot into "five greyed rows".</td></tr>
-      <tr><td class="tag">open</td><td>Do the <code>/r/&lt;rung&gt;</code> routes retire?</td>
-        <td>They still resolve. Retiring them orphans the merged ring board — roughly 400 lines and fifteen tests — and that deletion is its own decision.</td></tr>
+      <tr><td>6</td><td>Do the <code>/r/&lt;rung&gt;</code> routes retire?</td>
+        <td><b>Closed — retired,</b> with the merged board behind them (#58, 2026-09-03).</td></tr>
+      <tr><td>7</td><td>(2026-09-04) Inside the ring, does a post from someone in it show its strangers' replies?</td>
+        <td><b>Closed — yes, by default, as a setting.</b> The punch-hole opens the whole thread under an in-ring root; a root outside the ring stays hidden; blocks and mutes still apply. Whole thread, not direct replies only: a stranger shown while the stranger they answer is absent is the deleted-post look again.</td></tr>
+      <tr><td>8</td><td>(2026-09-04) Does the feeds-and-hashtags exemption survive "there is nothing outside the ring"?</td>
+        <td><b>Closed — yes, unchanged.</b> A feed opened by name is that feed, unedited. The surface that scopes by default is a future one: mixes (roadmap E159).</td></tr>
+      <tr><td>9</td><td>(2026-09-04) Does the thread pill offer a stop nobody on the thread belongs to?</td>
+        <td><b>Closed — greyed, reason on hover.</b> Never World, never the current stop. The members walk lands after the paint and swaps the bar, so the thread and its cascade never wait for it.</td></tr>
     </table></div>
   </section>
 

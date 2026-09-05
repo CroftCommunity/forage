@@ -14,13 +14,13 @@ import * as drafts from '../drafts.js';
 import { go, navKind, rerenderNow, replacePath, dispatch } from '../router.js';
 import { appFor } from '../auth/hosts.js';
 import { navTree } from './nav.js';
-import { SCOPES } from '../rings.js';
+import { SCOPES, scopeFor } from '../rings.js';
 import * as ringScope from '../ring-scope.js';
 import { extractTarget, directPath, threadPath, isDid } from '../share-target.js';
 import { lastBoard, setLastBoard, landingBoard, DIRECTORY } from '../last-board.js';
 import { createLens, LENS_PERMS, facetSegments, trimCardLink, slugifyFeedName, sortWindow, affordanceFor,
   feedCardModel, threadNodeStyle, feedPath, parseFeedRoute, sessionGateMessage, canDelete, sourceLabel,
-  sortFeeds, filterFeeds, platforms, liveFeeds } from '../substrates/lens.js';
+  sortFeeds, filterFeeds, platforms, liveFeeds, absentStops } from '../substrates/lens.js';
 import { initSession, createAccountRoster, isOAuthCallback } from '../auth/session.js';
 import { hostById, featuredHosts, otherHosts, canCreateAccount } from '../auth/hosts.js';
 import { heroDismissed, dismissHero, EMBLEM } from '../hero.js';
@@ -385,6 +385,7 @@ export async function syncRingScope() {
   if (!session) return null;
   return lens.applyScope(ringScope.scope(), {
     exemptKinds: ringScope.exemptsFeeds() ? ringScope.EXEMPT_KINDS : [],
+    opensThreads: ringScope.opensThreads(),
   });
 }
 
@@ -2880,6 +2881,12 @@ export function lensProfileView() {
     const exemptBox = el('input', { type: 'checkbox', id: 'pref-ringexempt', 'data-ringexempt': '1',
       checked: ringScope.exemptsFeeds() || false });
     exemptBox.addEventListener('change', () => { ringScope.setExemptsFeeds(exemptBox.checked); });
+    // The punch-hole (owner, 2026-09-04): the ring is the whole universe, with
+    // one exception for practicality — replies from outside it, on a post from
+    // inside it. On by default; the airtight universe is the opt-in.
+    const openBox = el('input', { type: 'checkbox', id: 'pref-ringopen', 'data-ringopen': '1',
+      checked: ringScope.opensThreads() || false });
+    openBox.addEventListener('change', () => { ringScope.setOpensThreads(openBox.checked); });
     const stopBoxes = SCOPES.map((sc) => {
       const on = ringScope.stops().includes(sc.id);
       // World is pinned: it is the ring declining to narrow, which makes it the
@@ -2921,6 +2928,10 @@ export function lensProfileView() {
           'Feeds and hashtags are boards you went and asked for by name, so by default they arrive whole and your ring leaves them alone. Uncheck this and your ring applies to them too — a quiet feed can then look empty, and that is the setting working rather than a board failing to load.'),
         el('label', { class: 'seccheck', for: 'pref-ringexempt' }, exemptBox,
           el('span', {}, 'Exclude feeds and hashtags from your ring')),
+        el('div', { class: 'xs muted', style: 'margin:10px 0 6px' },
+          'Inside your ring there is nothing else — a post from outside it is not shown, and nothing says it was there. The one exception: on a post from someone in your ring, the replies from outside it show too, or you could not follow the conversation. Uncheck this and those replies go as well.'),
+        el('label', { class: 'seccheck', for: 'pref-ringopen' }, openBox,
+          el('span', {}, 'Show replies from outside your ring on posts from inside it')),
         el('h3', { style: 'font-size:var(--t-md);margin:12px 0 4px' }, 'Browse Hashtags'),
         el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
           'Which sections appear on the Hashtags page. Unchecking all of them leaves it empty, which is allowed.'),
@@ -2965,16 +2976,52 @@ export function lensThreadView(params, query) {
   // the same pill, and a second copy of it is how two surfaces start disagreeing
   // about one control. Rebuilt on every paint: its selected segment IS the
   // override, and the override changes underneath it.
-  const threadRingBar = () => {
+  const threadRingBar = (absent = {}) => {
     if (!session) return null;
     const pill = ringScope.ringPill(el, {
       override: ringOverride,
       ariaLabel: 'How close — this thread only',
       onPicked: (id) => { ringOverride = id; main.replaceChildren(skeleton(8)); load(); },
+      absent,
     });
     return pill ? el('div', { class: 'ringbar', 'data-thread-ring': '1' }, pill) : null;
   };
+  // A stop nobody on this thread belongs to is muted on the pill, with the
+  // reason on hover (owner, 2026-09-04: "otherwise what's the point?"). The
+  // members of every stop on the pill resolve BESIDE the thread fetch, never
+  // ahead of the paint: the first build awaited them and the quote cascade —
+  // which lands after the thread and finds `onCascade` wherever the paint left
+  // it — arrived at the no-op and was lost (bluesky-view workflow, 2026-09-04).
+  // So the thread paints exactly as before, and the bar is swapped in place when
+  // the walk lands. For the default pill that walk is the follows and followers
+  // the ring already pays for, cached for the session. A walk that fails mutes
+  // nothing: a live segment that shows an empty thread is the lesser wrong.
+  const ABSENT_REASON = {
+    me: 'You are not on this thread',
+    mut: 'None of your mutuals are on this thread',
+    fol: 'No one you follow is on this thread',
+    hop: 'No one within one hop of you is on this thread',
+  };
+  const stopMembers = () => {
+    if (!session) return Promise.resolve(null);
+    const ids = ringScope.stops();
+    return Promise.all(ids.map((id) => lens.scopeMembersFor(id).then((r) => r.members)))
+      .then((members) => Object.fromEntries(ids.map((id, i) => [id, members[i]])))
+      .catch((e) => {
+        console.warn('forage: could not tell which ring stops are empty on this thread —', e.message);
+        return null;
+      });
+  };
+  const muteEmptyStops = (membersP, authors) => membersP.then((byStop) => {
+    if (!byStop || !authors) return;
+    const absent = Object.fromEntries(absentStops(authors, byStop)
+      .map((id) => [id, ABSENT_REASON[id] || `No one from ${scopeFor(id)?.label || id} is on this thread`]));
+    const old = main.querySelector('[data-thread-ring]');
+    const bar = threadRingBar(absent);
+    if (old && bar) old.replaceWith(bar);
+  });
   const load = () => {
+  const membersP = stopMembers();
   lens.thread(uri, src, { onCascade: (t) => onCascade(t), ringOverride }).then((t) => {
     const p = t.post;
     // The head your RING hid, said out loud. shapeLensPost has returned
@@ -3000,6 +3047,7 @@ export function lensThreadView(params, query) {
           ? 'This post is from someone your ring does not reach, so its thread is empty here. Widen the ring above to read it — this thread only; the rest of the site stays where you left it.'
           : 'This post is from someone your ring does not reach, so its thread is empty here.',
         bar ? null : el('a', { class: 'btn', href: '/me' }, 'Your ring'))].filter(Boolean));
+      muteEmptyStops(membersP, t.authors);
       return;
     }
     // 3w: the thread is no longer read-only — replies are a real write now.
@@ -3183,6 +3231,7 @@ export function lensThreadView(params, query) {
     onCascade = (next) => { paintComments(next.comments); if (focus) focusComment(commentsCard, focus, { threadHref }); };
     const threadRing = threadRingBar();
     main.replaceChildren(...[bar, threadRing, head, t.comments.length ? commentsCard : emptyState('No replies', 'Nothing below this post yet.')].filter(Boolean));
+    muteEmptyStops(membersP, t.authors);
   }).catch((e) => main.replaceChildren(emptyState('Lens fetch failed', e.message)));
   };
   load();
