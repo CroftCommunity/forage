@@ -8,6 +8,17 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-04 **Inside your ring there is nothing else, with one hole for practicality.** At
+  Mutuals or Follows, a thread used to show every stranger who quoted the post as a blank
+  "[removed]" row, which read as a pile of deletions. They are simply absent now, the same as a
+  stranger's reply. The one exception is new and on by default: on a post from someone in your
+  ring, the replies and quotes from outside it show, or you could not follow the conversation.
+  Turn it off under Advanced on your page and the ring is airtight. And the ring pill at the top
+  of a thread now greys out a stop nobody on that thread belongs to, with the reason on hover,
+  instead of offering a Mutuals you would press only to see an empty page. Feeds and hashtags
+  keep their own setting and stay out of the ring by default: a feed you open by name is that
+  feed, whole.
+
 - 2026-09-04 **Share a Bluesky post straight into Forage.** Install Forage on Android and it
   turns up in the share sheet next to everything else. Share a post from the Bluesky app —
   Blacksky and the other clients in that family work too — and it opens here as a thread:

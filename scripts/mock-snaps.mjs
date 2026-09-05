@@ -15,7 +15,8 @@
 //        deep-lens deep-lens-spine deep-lens-tail deep-lens-open deep-lens-run
 //        deep-lens-prefs deep-lens-off
 //        gif-lens gif-lens-paused gif-lens-alt gif-board
-//        self-lens self-lens-count self-lens-alone)
+//        self-lens self-lens-count self-lens-alone
+//        thread-lens-ring deep-lens-prefs-ring)
 //   node scripts/mock-snaps.mjs --as current --serve ../../forage
 //       # the same script and fixtures, rendering ANOTHER checkout (main): the
 //       # Current frames come from the tree the owner is running, captured by
@@ -520,6 +521,29 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
   // which is the claim that makes them real settings rather than a milder
   // version of our opinion. On main the Advanced panel simply has no such
   // section and the thread is main's thread, which is the honest Current.
+  // ---- lens:mock-thread, RINGED — the reader at Follows, following the root's author ----
+  // ring-universe (owner, 2026-09-04): the frame that shows the punch-hole (a post
+  // from inside the ring shows its strangers' replies and quotes) and the thread
+  // pill muting Mutuals, whom nobody on this thread is. On main the same load
+  // drew every stranger's quote as a [removed] stub, which is what the owner saw.
+  if (wanted('thread-lens-ring')) {
+    const RINGED = { ...RESPONSES,
+      'getFollows': { follows: [{ did: 'did:plc:root', handle: 'quietcartographer.bsky.social' }] },
+      'getFollowers': { followers: [] } };
+    const AT_FOLLOWS = "try { localStorage.setItem('forage.ringscope', 'fol'); } catch {}";
+    const rg = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN, AT_FOLLOWS], responses: RINGED });
+    await rg.page.setViewportSize({ width: vp.width, height: vp.height });
+    await rg.page.goto(`${rg.origin}${THREAD_PATH}`);
+    await rg.page.waitForSelector('[data-thread-ring]', { timeout: 15000 });
+    await rg.page.waitForSelector('.comment, .empty', { timeout: 15000 });
+    // the members walk lands after the paint and swaps the bar; on main there is
+    // no such swap, so this is a bounded wait rather than a selector
+    await rg.page.waitForSelector('[data-thread-ring] input:disabled', { timeout: 3000 }).catch(() => {});
+    await rg.page.waitForTimeout(400); // and the cascade
+    await rg.page.evaluate(() => document.fonts?.ready);
+    await shoot(rg.page, 'thread-lens-ring', 'lens:mock-thread', name, vp);
+    await rg.close();
+  }
   if (wanted('deep-lens-prefs')) {
     const pf = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: DEEP });
     await pf.page.setViewportSize({ width: vp.width, height: vp.height });
@@ -532,6 +556,23 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
     await pf.page.waitForTimeout(200);
     await shoot(pf.page, 'deep-lens-prefs', 'lens:mock-deepthread', name, vp);
     await pf.close();
+  }
+  // The same page scrolled to the ring's own settings — the exemption and, on
+  // the branch, the punch-hole under it. The plain prefs frame ends above both
+  // at 900px, so a capture of it is byte-identical on either tree and cannot be
+  // evidence of a change there (ring-universe, 2026-09-04: measured, 143318 B twice).
+  if (wanted('deep-lens-prefs-ring')) {
+    const pr = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: DEEP });
+    await pr.page.setViewportSize({ width: vp.width, height: vp.height });
+    await pr.page.goto(`${pr.origin}/me`);
+    await pr.page.waitForSelector('[data-advanced]', { timeout: 15000 });
+    await pr.page.locator('[data-advanced] summary').click();
+    await pr.page.evaluate(() => document.fonts?.ready);
+    await pr.page.evaluate(() => { document.querySelector('#pref-ringexempt')?.closest('label')?.scrollIntoView({ block: 'center' }); });
+    await pr.page.evaluate(() => document.activeElement?.blur());
+    await pr.page.waitForTimeout(200);
+    await shoot(pr.page, 'deep-lens-prefs-ring', 'lens:mock-deepthread', name, vp);
+    await pr.close();
   }
   if (wanted('deep-lens-off')) {
     const OFF = "try{localStorage.setItem('forage.threadflatten','off');localStorage.setItem('forage.threadfold','off');}catch{}";

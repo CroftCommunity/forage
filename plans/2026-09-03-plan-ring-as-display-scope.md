@@ -304,3 +304,40 @@ self-thread walk in the same file. Divided by claim before either branch moved: 
 went first, `sw.js` cache versions split v74/v75, and their question — *can a reader
 narrow themselves out of their own thread?* — became two tests here. The answer is no,
 structurally: every rung is a cumulative union starting at `me`.
+
+**2026-09-04 — the universe, the punch-hole, and a day-old decision re-affirmed** (owner,
+on forage.fyi at Follows over a Bluesky Team post; `claude/ring-universe`).
+
+1. **"It looks like the posts were deleted."** The quote cascade never checked `p.hidden`:
+   `build()` dropped an out-of-ring reply, `buildQuote()` shaped the quote, found it hidden,
+   and built the node anyway — a `[removed]` byline over nothing, once per stranger who
+   quoted the post. Phase C's test covered replies and not quotes. Fixed at the same door.
+2. **The ring is the whole universe, with one hole.** Owner: *"there are only mutuals and
+   mutuals' activities … with this one kind of other punch hole just for practicality."* A
+   thread whose ROOT is in the ring shows every reply and quote; a root outside it stays
+   hidden. `opensThreads` on the ring spec, a reader setting on by default, consulted by
+   `shapeLensThread` alone — it opens threads, never posts, and never a board. Whole thread
+   rather than direct replies only: a stranger shown while the stranger they answer is
+   absent is the deleted-post look back through a different door.
+3. **The thread pill mutes a stop nobody on the thread belongs to** (*"otherwise what's
+   the point?"*), reason on hover. The shaper reports `authors` off the raw tree — before
+   any policy, because a muted friend is still ON the thread — and `absentStops()` intersects.
+   World and the current stop are never muted. Cost: the members of every stop on the pill
+   resolve beside the thread fetch; for the default pill that is the walk the ring already
+   paid for, cached. A reader who adds `hop` pays its walk on their first thread instead of
+   their first selection.
+4. **Decision 2's exemption stands — re-affirmed, not reversed.** This session proposed
+   retiring it, reading the owner's *"if it's not from someone inside my ring, don't show it"*
+   as reaching feeds. The owner's answer draws the line precisely: *"if I go directly to a
+   feed I'm looking to see that feed unedited."* The thing that scopes by default is a future
+   surface — **mixes**, a reader-composed board interpolating several feeds and hashtags the
+   way a Reddit home does, *"like funny and followers … within this radius"* — recorded as
+   roadmap E159. So an exempt feed can still hand a reader a thread that says "Outside your
+   ring" — that empty state stays, and the thread pill beside it is the way in.
+5. **A swallowed error, again.** The first green unit run of `absentStops` passed Sets; the
+   substrate hands out arrays; the view's own `catch` turned `members.has is not a function`
+   into a pill that muted nothing — indistinguishable from the feature working on a busy
+   thread. Caught by the workflow (`e2e/ring-universe.workflow.mjs`, written RED against
+   main), not the unit tier. The unit test now passes the real shape through the real lens.
+   Same lesson as the dead warm-up above: a `.catch` that degrades gracefully is where a
+   type error goes to live.
