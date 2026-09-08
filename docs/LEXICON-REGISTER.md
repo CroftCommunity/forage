@@ -286,7 +286,9 @@ pattern they share is the actual justification:
 searched the field.** It named four official types and never looked at
 `community.lexicon.*`, the ecosystem's shared namespace, in a workspace whose `discovery`
 repo had been contributing `community.lexicon.attest.*` drafts for weeks. Re-run against
-`lexicon-community/lexicon@main`, whose **nine** record types are:
+`lexicon-community/lexicon@main` (**that GitHub repo was archived on 2026-07-27; the schemas
+live at `tangled.org/lexicon.community/lexicons` now — re-checked there 2026-09-08 for the
+mixes plan, same seven namespaces, same conclusion**), whose **nine** record types were:
 
 `app.entry` · `app.profile` · `app.profileLocalization` · `bookmarks.bookmark` ·
 `calendar.event` · `calendar.rsvp` · `interaction.like` · `payments.webMonetization` ·

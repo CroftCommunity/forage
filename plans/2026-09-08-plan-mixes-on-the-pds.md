@@ -57,11 +57,13 @@ the shared namespace is worth raising (act 3) but is exactly the nuance the owne
 at Bluesky-specific source kinds. So: **own namespace, `fyi.forage.mix`, with this table as its
 register entry.**
 
-**A finding for the workspace, not this repo:** `CroftC/.claude/LEXICONS.md` § 1 names
-`lexicon-community/lexicon@main` as the place to search. That repo is archived and read-only;
-the schemas live on Tangled now. The pointer should move (PATTERN.md: a cross-repo rule change
-is its own landing), and the `tagsub` register entry's *"re-run against
-`lexicon-community/lexicon@main`"* line is now a historical citation rather than a live one.
+**A finding for this repo's register, corrected once already:** the first draft of this
+paragraph said the workspace's `LEXICONS.md` pointed at the archived GitHub repo. It does not —
+it names the local `discovery/alpha/experiments/lexicon-community/` work and no URL. The stale
+citations are in **`docs/LEXICON-REGISTER.md`** (its corpus note and the `tagsub` entry's
+*"re-run against `lexicon-community/lexicon@main`"*), which now say the corpus moved to Tangled
+on 2026-07-27 and the archived repo is a historical citation. (Checked by grep before
+claiming it; the first claim was written from memory of the register, not the doc.)
 
 ## Approach
 
@@ -174,8 +176,7 @@ through `listRecords`, validate it, unpublish, read-back-empty as the last asser
 The forum post (Act 3), and its outcome in the register entry.
 
 ### Phase 7 — the documents
-Register entry; `AGENTS.md` write table; CHANGELOG; the first plan's D4 closed as done;
-`CroftC/.claude/LEXICONS.md`'s stale repo pointer raised as its own landing.
+Register entry; `AGENTS.md` write table; CHANGELOG; the first plan's D4 closed as done.
 
 ## Not doing
 
@@ -210,5 +211,5 @@ thing only opening it produces.
 
 - **2026-09-08 — drafted; act 1 done.** Six candidates opened across the three corpora
   (table above). Found in passing: `lexicon-community/lexicon` on GitHub archived 2026-07-27,
-  schemas now on Tangled — the workspace's LEXICONS.md still points at the archived repo.
-  Awaiting D1–D4.
+  schemas now on Tangled — this repo's register cited the archived repo; amended the same
+  day. Awaiting D1–D4.
