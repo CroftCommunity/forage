@@ -10,7 +10,7 @@
 // never dead buttons — the UI renders these as deferred, invariant 7).
 import { buildPost, withTag, IMAGE_LIMITS } from '../compose.js';
 import { RUNG_IDS, scopeMembers } from '../rings.js';
-import { sortItems } from '../engines/rank.js';
+import { sortItems, mixWeight } from '../engines/rank.js';
 import { gifOf, parseAlt } from '../gif.js';
 
 export const LENS_PERMS = Object.freeze({
@@ -807,7 +807,10 @@ export function sortWindow(posts, sort, timeframe, nowMs) {
     const items = window.map((p) => (p.createdSec != null ? p : { ...p, createdSec: Math.floor(p.createdTs / 1000) }));
     return sortItems(items, 'hot', Math.floor(nowMs / 1000));
   }
-  return [...window].sort((a, b) => (sort === 'new' ? b.createdTs - a.createdTs : b.likes - a.likes));
+  // top reads a mix row's weight the way rank.js does; new does not (D1)
+  return [...window].sort((a, b) => (sort === 'new'
+    ? b.createdTs - a.createdTs
+    : b.likes * mixWeight(b) - a.likes * mixWeight(a)));
 }
 
 // 4e: /h/ boards ride searchPosts, which takes sort=top|latest plus since/until
