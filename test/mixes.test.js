@@ -197,6 +197,9 @@ test('a row for a subscription the reader has since dropped is kept, marked, and
       assert.ok(!enabledRows(s, fewer).some((r) => r.id === 'hashtag:foraging'), `${s}: but it is not fetched`);
     }
     assert.equal(mix(slug, fewer).rows.at(-1).id, 'hashtag:foraging', 'unsubscribed rows list last');
+    assert.equal(mix(slug, fewer).rows.at(-1).title, '#foraging', 'and keep a readable name, not the raw id');
+    setRow(HOME, 'feed:at://did:plc:z/app.bsky.feed.generator/gone-feed', { weight: 2 });
+    assert.equal(mix(HOME, fewer).rows.at(-1).title, 'gone-feed');
   });
 });
 

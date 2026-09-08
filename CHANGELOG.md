@@ -8,6 +8,19 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-08 **Mixes: one board from everything you subscribed to.** Signed in, you now land
+  on **Home**: the accounts you follow, every feed you saved and every hashtag you subscribed
+  to, dealt into one list a few at a time from each. It is a new **Mixes** section at the top
+  of the sidebar, and **Your mixes** below it is where you tune one: every subscription is a
+  row with an on/off switch and a weight — Less, Normal or More of that source. The weight is
+  a share of the deal on the default sort, and under Top and Hot it lifts a small feed's posts
+  against a big one's; New stays strictly by time and says so. Switch a row off and it is not
+  fetched at all; switch it back on and it comes back at the weight you had. Make your own
+  mix — it starts empty and takes only what you pick — and it appears in the sidebar too.
+  Home stays complete on its own: a feed you save tomorrow is in it tomorrow. A mix is inside
+  your ring (a feed opened by name still is not); a source that fails to answer is named
+  under the toolbar rather than sinking the board. Mixes live on this device for now.
+
 - 2026-09-04 **Inside your ring there is nothing else, with one hole for practicality.** At
   Mutuals or Follows, a thread used to show every stranger who quoted the post as a blank
   "[removed]" row, which read as a pile of deletions. They are simply absent now, the same as a

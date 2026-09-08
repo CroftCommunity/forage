@@ -41,6 +41,10 @@ export const RESPONSES = {
   'getTimeline': { feed: run('following', 'did:plc:friend', 'friend.test', 6, (i) => 3 + i), cursor: 'tl2' },
   [`getFeed?feed=${encodeURIComponent(FUNNY)}`]: { feed: run('funny', 'did:plc:comic', 'comic.test', 8, (i) => 900 - i * 10), cursor: 'funny2' },
   [`getFeed?feed=${encodeURIComponent(SCIENCE)}`]: { feed: run('science', 'did:plc:lab', 'lab.test', 6, (i) => 10 - i) },
+  // any OTHER feed (the curated Discover board a Current capture opens on main):
+  // the funny run again, so the frame has rows. Declared AFTER the two named
+  // feeds — routing is first-match by substring.
+  'getFeed': { feed: run('discover', 'did:plc:comic', 'comic.test', 8, (i) => 900 - i * 10) },
   'searchPosts': { posts: run('harvest', 'did:plc:farm', 'farm.test', 4, (i) => 10 + i).map((e) => e.post) },
   'getTrendingTopics': { topics: [] },
   'describeRepo': { handle: 'me.test' },

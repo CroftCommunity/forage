@@ -143,7 +143,12 @@ export function mix(slug, subs = []) {
   const known = new Set(subs.map((sub) => sub.id));
   const orphans = Object.entries(s.rows)
     .filter(([id]) => !known.has(id))
-    .map(([id, r]) => ({ id, kind: sourceFromId(id).kind, source: sourceFromId(id), title: id, ...r, subscribed: false }));
+    .map(([id, r]) => {
+      const source = sourceFromId(id);
+      const title = source.kind === 'hashtag' ? `#${source.tag}`
+        : source.kind === 'timeline' ? 'Following' : String(source.uri).split('/').pop();
+      return { id, kind: source.kind, source, title, ...r, subscribed: false };
+    });
   return { slug: s.slug, name: s.name, home: s.home, rows: [...live, ...orphans] };
 }
 

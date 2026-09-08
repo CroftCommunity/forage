@@ -16,7 +16,8 @@
 //        deep-lens-prefs deep-lens-off
 //        gif-lens gif-lens-paused gif-lens-alt gif-board
 //        self-lens self-lens-count self-lens-alone
-//        thread-lens-ring deep-lens-prefs-ring)
+//        thread-lens-ring deep-lens-prefs-ring
+//        mix-board mix-tune mix-board-current mix-tune-current)
 //   node scripts/mock-snaps.mjs --as current --serve ../../forage
 //       # the same script and fixtures, rendering ANOTHER checkout (main): the
 //       # Current frames come from the tree the owner is running, captured by
@@ -65,6 +66,7 @@ import { RESPONSES as REFRESH } from '../e2e/harness/mock-refresh.mjs';
 import { RESPONSES as DEEP, THREAD_PATH as DEEP_PATH, QUOTE_URI as DEEP_QUOTE, SPINE_URIS } from '../e2e/harness/mock-deepthread.mjs';
 import { RESPONSES as GIF, BOARD_PATH as GIF_BOARD, THREAD_PATH as GIF_THREAD } from '../e2e/harness/mock-gif.mjs';
 import { RESPONSES as SELF, THREAD_PATH as SELF_PATH, ALONE as SELF_ALONE, ALONE_PATH as SELF_ALONE_PATH } from '../e2e/harness/mock-selfthread.mjs';
+import { RESPONSES as MIX, FAKE_SIGNED_IN as MIX_SIGNED_IN, SCIENCE as MIX_SCIENCE } from '../e2e/harness/mock-mix.mjs';
 import { mergeManifest } from './lib/snaps-manifest.mjs';
 import { SKINS } from '../js/skins.js';
 import { execFileSync } from 'node:child_process';
@@ -543,6 +545,34 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
     await rg.page.evaluate(() => document.fonts?.ready);
     await shoot(rg.page, 'thread-lens-ring', 'lens:mock-thread', name, vp);
     await rg.close();
+  }
+  // ---- lens:mock-mix — the mixes population (plan 2026-09-08) ----
+  // Proposed: /m/home (the Home board, dealt) and /mixes/home (the rows).
+  // Current is captured from main, where neither address exists: the nearest
+  // surfaces are /f/following (where the door lands today, with the Feeds-only
+  // sidebar) and /me (where subscriptions are managed today) — the -current
+  // routes, so a run against main captures those under their own names.
+  // Science is set to More before the board frame, so the deal's share and
+  // the greyed rows are both visible.
+  for (const [route, path, setup] of [
+    ['mix-board', '/m/home', "try { localStorage.setItem('forage.mixes', JSON.stringify({ home: { name: 'Home', overrides: { ['feed:" + MIX_SCIENCE + "']: { on: true, weight: 2 } } }, mixes: [{ slug: 'weekend-reads', name: 'Weekend reads', rows: {} }] })); } catch {}"],
+    ['mix-tune', '/mixes/home', "try { localStorage.setItem('forage.mixes', JSON.stringify({ home: { name: 'Home', overrides: { ['feed:" + MIX_SCIENCE + "']: { on: true, weight: 2 }, 'hashtag:foraging': { on: false, weight: 1 } } }, mixes: [{ slug: 'weekend-reads', name: 'Weekend reads', rows: {} }] })); } catch {}"],
+    // not /f/following: on main, under this fixture, the door lands there before
+    // the saved feeds have registered and paints "Unknown feed" (a race the mix
+    // board does not have — it awaits the subscriptions). Discover is curated
+    // and registered at load, so it is the honest "a board on main" frame.
+    ['mix-board-current', '/f/whats-hot', ''],
+    ['mix-tune-current', '/me', ''],
+  ]) {
+    if (!wanted(route)) continue;
+    const mx = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, MIX_SIGNED_IN, setup].filter(Boolean), responses: MIX });
+    await mx.page.setViewportSize({ width: vp.width, height: vp.height });
+    await mx.page.goto(`${mx.origin}${path}`);
+    await mx.page.waitForSelector(path.startsWith('/mixes') ? '[data-mix-row]' : path === '/me' ? '[data-advanced]' : '.postrow', { timeout: 15000 });
+    await mx.page.evaluate(() => document.fonts?.ready);
+    await mx.page.waitForTimeout(300);
+    await shoot(mx.page, route, 'lens:mock-mix', name, vp);
+    await mx.close();
   }
   if (wanted('deep-lens-prefs')) {
     const pf = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: DEEP });

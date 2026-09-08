@@ -114,6 +114,32 @@ export async function run() {
     await page.waitForSelector('.empty');
     assert.match(await page.locator('.empty').innerText(), /Nothing is in this mix yet/);
     assert.equal(await page.locator('.empty a[href="/mixes/empty"]').count(), 1, 'with the next step');
+
+    // 8. the phone: no horizontal overflow, every control at the 44px floor
+    // (croft-pwa MOBILE-FIRST; the same check e2e/mobile-fit.workflow.mjs runs
+    // on the boards it knows — this page has controls that one never sees)
+    for (const width of [320, 360, 390]) {
+      await page.setViewportSize({ width, height: 800 });
+      for (const path of ['/mixes/home', '/m/home', '/mixes']) {
+        await page.goto(`${origin}${path}`);
+        await page.waitForSelector(path === '/m/home' ? '.postrow' : path === '/mixes' ? '[data-new-mix]' : '[data-mix-row]');
+        const { scrollW, innerW, small } = await page.evaluate((floor) => {
+          const sel = 'button, select, input[type="checkbox"], input[type="radio"], .ringseg, a.btn, .switch';
+          const out = [];
+          for (const el of document.querySelectorAll(sel)) {
+            if (el.closest('.devbar')) continue;
+            const r = el.getBoundingClientRect();
+            if (r.width === 0 && r.height === 0) continue;
+            // a visually hidden radio is driven by its label — the label is the target
+            if (el.matches('input[type="radio"].ringpill-in')) continue;
+            if (r.width < floor || r.height < floor) out.push(`${el.tagName.toLowerCase()}.${String(el.className).trim().split(/\s+/).join('.')} ${Math.round(r.width)}x${Math.round(r.height)}`);
+          }
+          return { scrollW: document.documentElement.scrollWidth, innerW: window.innerWidth, small: [...new Set(out)] };
+        }, 44);
+        assert.ok(scrollW <= innerW + 1, `${path} @${width}: horizontal overflow (${scrollW} > ${innerW})`);
+        assert.deepEqual(small, [], `${path} @${width}: tap targets under 44px: ${small.join(', ')}`);
+      }
+    }
   } finally {
     await broken.close();
   }

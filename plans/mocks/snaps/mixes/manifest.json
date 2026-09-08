@@ -1,0 +1,77 @@
+{
+  "capturedAt": "2026-09-08",
+  "files": [
+    {
+      "file": "mix-board.phone.proposed.png",
+      "route": "mix-board",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@616c866",
+      "population": "lens:mock-mix"
+    },
+    {
+      "file": "mix-tune.phone.proposed.png",
+      "route": "mix-tune",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@616c866",
+      "population": "lens:mock-mix"
+    },
+    {
+      "file": "mix-board.desktop.proposed.png",
+      "route": "mix-board",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@616c866",
+      "population": "lens:mock-mix"
+    },
+    {
+      "file": "mix-tune.desktop.proposed.png",
+      "route": "mix-tune",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@616c866",
+      "population": "lens:mock-mix"
+    },
+    {
+      "file": "mix-board-current.phone.current.png",
+      "route": "mix-board-current",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@68ab504",
+      "population": "lens:mock-mix"
+    },
+    {
+      "file": "mix-tune-current.phone.current.png",
+      "route": "mix-tune-current",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@68ab504",
+      "population": "lens:mock-mix"
+    },
+    {
+      "file": "mix-board-current.desktop.current.png",
+      "route": "mix-board-current",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@68ab504",
+      "population": "lens:mock-mix"
+    },
+    {
+      "file": "mix-tune-current.desktop.current.png",
+      "route": "mix-tune-current",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@68ab504",
+      "population": "lens:mock-mix"
+    }
+  ]
+}

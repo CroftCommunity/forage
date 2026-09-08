@@ -1,10 +1,11 @@
 # Plan: Mixes — a Home board made of everything you subscribed to, and the page that tunes it
 
 date: 2026-09-08
-**Status:** PHASES 0–1 DONE (2026-09-08; Phase 0 measured live, Phase 1 the model, 15 tests);
-ALL NINE DECISIONS CLOSED by the owner the same day (D1 reshaped what a weight is — see
-*Decisions* and the Review Log). Phases 2–9 not started. On `claude/mixes`, PR #62 open on
-the branch by the owner's choice; retires roadmap E159 when the branch lands.
+**Status:** PHASES 0–9 BUILT (2026-09-08, one day; owner: "do full plan") on `claude/mixes`,
+PR #62 open by the owner's choice. ALL NINE DECISIONS CLOSED by the owner (D1 reshaped what a
+weight is — see *Decisions* and the Review Log). Owed: the phone-on-cellular timing run
+`[device: android]` before D6 is final; the mixes-to-PDS plan (D4's second half). E159 marked
+done in `discovery/alpha/ROADMAP_TODO.md`.
 repo: `CroftCommunity/forage`
 baseline: `main` @ `68ab504` (the ring as the whole universe, #61)
 branch: `claude/mixes` · worktree `worktrees/mixes/forage`
@@ -204,7 +205,7 @@ clamp; unknown source ids survive as *no longer subscribed*; Home cannot be dele
 renamed to nothing; slugs collide → refused by name; corrupt storage → Home alone;
 `onChange` fires on every write.
 
-### Phase 2 — the deal and the weighted sorts · `js/mix-deal.js`, `js/engines/rank.js` · `test/mix-deal.test.js`, `test/engines.test.js`
+### Phase 2 — DONE 2026-09-08 — the deal and the weighted sorts · `js/mix-deal.js`, `js/engines/rank.js` · `test/mix-deal.test.js`, `test/engines.test.js`
 ×2 contributes 4 per round beside ×1's 2 and ×½'s 1; weight 0 contributes nothing and is never
 a queue; `sortWindow` reads `mixWeight` when present — Top orders by `likes × w`, Hot by
 `hot(engagement × w)`, New ignores it; a post absent a weight sorts exactly as today
@@ -213,7 +214,7 @@ ties a ×1 post under Top; a dry queue is skipped and resumes when refilled; dup
 source wins; order within a source is preserved; the deal is deterministic for one input;
 `length ≤ sum of inputs`. A property test over random queues for the last three.
 
-### Phase 3 — the substrate · `js/substrates/lens.js` `mix()` · `test/lens-mix.test.js`
+### Phase 3 — DONE 2026-09-08 — the substrate · `js/substrates/lens.js` `mix()` · `test/lens-mix.test.js`
 Fake session with one route per source: all answer → one deal; one 502 → `failures`
 carries it with words and the rest paint; one hangs → the timeout fails it and the rest
 paint; cursors returned per source and *More* pages only the sources that had a cursor; a
@@ -221,34 +222,34 @@ timeline envelope keeps its `itemKind` (repost, reply) through the re-shape; eve
 carries `feedKind:'mix'`, and at Follows a stranger's post from a hashtag row is **hidden** —
 the exemption never sees the constituent (the sentence E159 exists for).
 
-### Phase 4 — the board and route · `/m/:slug` in `js/main.js`, `mixBoardView` in `js/ui/lens-views.js`
+### Phase 4 — DONE 2026-09-08 — the board and route · `/m/:slug` in `js/main.js`, `mixBoardView` in `js/ui/lens-views.js`
 `test/routes.test.js` sees the route; board-cache key `mix:<slug>`; info line with sources
 and failures; the empty-mix invitation; *More*; `currentBoardId`. `e2e/mixes.workflow.mjs`
 (hermetic; timeline + 2 feeds + 1 hashtag): the board paints, the deal is visible (a
 weight-3 feed shows 3 of the first 6), a failed source is named, *More* extends.
 
-### Phase 5 — the sidebar · `js/ui/nav.js`
+### Phase 5 — DONE 2026-09-08 — the sidebar · `js/ui/nav.js`
 Mixes section above Feeds, Home first; guest sees none; `aria-current` on the open mix.
 Journey extends `e2e/mixes.workflow.mjs` and `e2e/guest-surface.workflow.mjs`.
 
-### Phase 6 — the Mixes page · `/mixes`, `/mixes/:slug`
+### Phase 6 — DONE 2026-09-08 — the Mixes page · `/mixes`, `/mixes/:slug`
 Rows per subscription grouped by kind; switch + three-notch dial at 44px; New mix; rename;
 delete (not Home); *no longer subscribed* rows. Journey: turn `#foraging` to *Less*, open
 Home, it deals 1 per round; switch it off, it is gone and not fetched (the fixture counts
 requests); make *Weekend* from two rows, it appears in the sidebar and paints those two.
 `e2e/mobile-fit.workflow.mjs` covers the page at 320/360/390.
 
-### Phase 7 — Home as the door (D5) · `js/last-board.js`
+### Phase 7 — DONE 2026-09-08 — Home as the door (D5) · `js/last-board.js`
 `FIRST_TIME_BOARD` → Home; a returning reader's last board still wins; `test/last-board.test.js`.
 
-### Phase 8 — the mock · `plans/mocks/mixes.html` + `snaps/mixes/`
+### Phase 8 — DONE 2026-09-08 — the mock · `plans/mocks/mixes.html` + `snaps/mixes/`
 Per MOCKS.md: captures of the engine, Current (main: `/f/following`, the Feeds sidebar)
 beside Proposed (`/m/home`, the Mixes page, the sidebar), phone and desktop, in one skin,
 against a population that STRESSES it — twelve sources, a 60-character feed name, a
 hashtag row that failed, a mix with everything off. Captured in the same landing as any
 decision that changes in code.
 
-### Phase 9 — the documents
+### Phase 9 — DONE 2026-09-08 — the documents
 CHANGELOG under `[Unreleased]`/the month; `AGENTS.md` (sources, the `mix` kind, the write
 count unchanged — no PDS write in this plan); `docs/LEXICON-REGISTER.md` untouched (D4);
 E159 retired in `discovery/alpha/ROADMAP_TODO.md` with this plan as the reason; this plan's
@@ -371,3 +372,26 @@ Declared gate for every landing: `npm test && npm run conformance`, `npm run ref
   half for the same reason (the heavier weight wins under a score). What this changes in the
   phases: Phase 2 now touches `js/engines/rank.js`, and its literal pins are the guard that
   unweighted boards do not move.
+- **2026-09-08 — Phases 2–9 built** ("do full plan"). What the building found, in the order
+  it bit:
+  1. **The weight rode the dealt list and not the queues.** `lens.mix()` stamped `mixWeight`
+     on the posts it dealt, and the board keeps the per-source queues and re-deals them after
+     More — so on the board, Top sorted unweighted while the unit test (which read the dealt
+     list) was green. Caught by the journey's Top claim; the substrate now stamps the sources
+     themselves and the unit test pins that they agree.
+  2. **Nothing wrote the last-board memory.** `setLastBoard` had one caller, the ring board,
+     and it left with `/r/<rung>` on 2026-09-03; `/` has landed every returning reader on
+     Following since. Feed boards and mix boards now write it (D5's "a returning reader keeps
+     their last board" was not true before this).
+  3. **On main, the door races its own registry.** Under the mixes fixture, `/` →
+     `/f/following` paints "Unknown feed": the slug is registered by `ensureSavedFeeds()`,
+     which the feed view does not await. The mix board awaits its subscriptions and has no
+     such race. Not fixed here (a `/f/` view concern); the mock's Current frame is Discover
+     for that reason, and the review log is where the finding lives until someone owns it.
+  4. **`New` is the honest exception, and the board says so** — the info line reads
+     *"New ignores weights"* when New is picked, per D1.
+  5. The shim learned a declared failing route (`{ __status: 502 }`) so a journey can show a
+     source that did not answer without a miss.
+  6. The mock's Current frames are Discover (`/f/whats-hot`) and `/me` — the nearest surfaces
+     on main to a board and to subscription management; neither address in this plan exists
+     there.
