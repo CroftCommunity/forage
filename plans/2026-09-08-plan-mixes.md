@@ -1,9 +1,9 @@
 # Plan: Mixes — a Home board made of everything you subscribed to, and the page that tunes it
 
 date: 2026-09-08
-**Status:** PHASE 0 DONE (2026-09-08, measured live — see Review Log); nothing else built.
-Nine decisions below need the owner; D1, D4 and D5 change what gets built; D6 is now a
-measured recommendation. Retires roadmap E159 when Phase 1 lands.
+**Status:** PHASE 0 DONE (2026-09-08, measured live); ALL NINE DECISIONS CLOSED by the owner
+the same day (D1 reshaped what a weight is — see *Decisions* and the Review Log). Phases 1–9
+not started. Retires roadmap E159 when Phase 1 lands.
 repo: `CroftCommunity/forage`
 baseline: `main` @ `68ab504` (the ring as the whole universe, #61)
 branch: `claude/mixes` · worktree `worktrees/mixes/forage`
@@ -81,10 +81,12 @@ tag }`. Sources are identified by a stable **source id** (`timeline`, `feed:<uri
 - **A custom mix stores its rows in full**, and starts **empty** — every subscription listed,
   every switch off — because a mix is something you pick into, and a copy of Home is one
   click from being Home.
-- **Weights are notches, not a slider.** `Less · Normal · More` = 1 · 2 · 3 (see D1). Off is
-  the switch, not a fourth notch: the switch remembers the weight, so turning a row back on
-  restores *More* rather than *Normal*. The owner's *"deweighted to 0 effectively"* is what
-  the substrate sees; the reader sees a switch.
+- **Weights are notches, not a slider.** `Less · Normal · More` = ×½ · ×1 · ×2 — ONE number
+  per row, a multiplier, and it means *"more of this in this mix"* under every sort (D1; the
+  table in § D says what it does under each). Off is the switch, not a fourth notch: the
+  switch remembers the weight, so turning a row back on restores *More* rather than
+  *Normal*. The owner's *"deweighted to 0 effectively"* is what the substrate sees; the
+  reader sees a switch.
 - Storage key `forage.mixes`, one JSON document, read through on every render (the
   `board-density` / `ring-scope` pattern: every read is a repair — an unknown source id is
   kept but rendered as *no longer subscribed*, an unknown weight is clamped, a corrupt
@@ -97,8 +99,9 @@ tag }`. Sources are identified by a stable **source id** (`timeline`, `feed:<uri
 ### B. The interleave — `js/mix-deal.js` (pure)
 
 `deal(queues, { weights })` takes one ordered queue of shaped posts per source and returns
-one list. **Weighted round-robin:** in each round, source *i* contributes up to `weight_i`
-posts, sources ordered by weight descending then source id; a queue that runs dry is skipped
+one list. **Weighted round-robin:** in each round, source *i* contributes up to `2 × weight_i`
+posts — ×½ deals 1, ×1 deals 2, ×2 deals 4 — sources ordered by weight descending then
+source id; a queue that runs dry is skipped
 until it is refilled; a post already dealt (same `uri`) is dropped so a post that is both in
 your timeline and in a feed appears once, credited to the first source that dealt it. Order
 *within* a source is the source's own — the feed generator's for a feed, reverse-chron for
@@ -124,7 +127,22 @@ sources, so a dozen requests on open. The old per-member fan-out measured 80–4
 ### D. The board — `/m/:slug`, `mixBoardView`
 
 Reuses `feedBoardView`'s toolbar, *More*, language filter and `renderBoard`; *Default* sort
-is the deal, *New/Hot/Top* are the existing client-side sorts over the loaded window. The
+is the deal, *New/Hot/Top* are the existing client-side sorts over the loaded window — with
+the weight riding along, because the owner's rule (D1) is that a weight *"has to play nice
+with top etc sort."* Every post a mix deals carries its row's weight (`mixWeight`), and the
+window sorts read it:
+
+| Sort | What orders the board today (`js/engines/rank.js`) | With a weight *w* on the post's source |
+|---|---|---|
+| Default | the deal | share of each round: 2·*w* posts |
+| Top | `likes` | `likes × w` |
+| Hot | `log10(engagement) + age/45000 s` | `log10(engagement × w) + …` — ×2 is worth 3¾ hours of youth, ×½ costs the same |
+| New | `createdTs` | **unweighted.** The reader asked for time; the switch still applies |
+
+So a small feed's posts, which lose every raw-likes contest to a big feed's, surface under
+Top and Hot when the reader says *More* of that feed — which is the owner's stated point of
+weighting. Under New a weight does nothing, and the info line says so when New is picked
+(*"New ignores weights"*). The
 info line under the toolbar names what the board is made of (*"Home · 11 sources"*) and,
 when it applies, what did not answer (*"2 of 11 did not answer — Trending, #foraging"*).
 A mix with every row off is an empty state with a next step (*"Nothing is in this mix yet —
@@ -157,15 +175,15 @@ board becomes `m/home` (D5); the last-board memory still wins for a returning re
 
 | # | Question | Options | Recommendation |
 |---|---|---|---|
-| **D1** | What is a weight? | (a) share of the deal — *More* is 3 posts per round beside *Normal*'s 2; (b) a multiplier on recency so a heavy source's older posts float up; (c) a per-page cap | **(a).** Explainable in one sentence, order inside a source untouched, and the number on the dial is the number you see. (b) reorders across sources, which is the flood again with extra steps. Notches 1·2·3 named *Less · Normal · More*; a fourth notch is a later ask, not a design change. |
-| **D2** | Where does the Off switch live? | (a) a switch per row that remembers the weight; (b) Off as the dial's zero | **(a).** The owner named a "disable slider" and a weight as two things; a row turned back on should come back where it was. |
-| **D3** | A new custom mix starts as? | (a) empty — everything listed, everything off; (b) a copy of Home | **(a).** A mix is picked into. A copy of Home is one tap from being Home and hides the difference. |
-| **D4** | Where does a mix live? | (a) device-local `forage.mixes`; (b) a `fyi.forage.mix` PDS record from day one; (c) local now, publish later on the tagsub pattern | **(c).** Minting a record type is cheap and permanent (LEXICONS.md) and needs the four acts; a device-local Home ships the board this month. The model in A is written so (c)'s second half is an addition. |
-| **D5** | Does Home become the first-time landing board? | (a) yes — `FIRST_TIME_BOARD` becomes Home; (b) no — Home is a sidebar row like any other | **(a).** "Default Home mix" reads as the door, not a row. Returning readers keep their last board either way. |
+| **D1** | What is a weight? | (a) share of the deal only; (b) a multiplier on the post's score, so it also plays under Top and Hot; (c) a multiplier on recency | **CLOSED (owner, 2026-09-08) — (b), with (a) as its Default-sort face.** *"I was kind of thinking of it as weighting upvotes so smaller feeds and such still surface; for me the point of weighting is I want more of this in this mix, but it has to play nice with top etc sort."* One multiplier per row — ×½ · ×1 · ×2, *Less · Normal · More* — read by every sort (§ D table): the deal's share under Default, `likes × w` under Top, `engagement × w` inside Hot's log, nothing under New. This plan's first draft had (a) alone, which could not say anything under Top; (c) is still rejected — it reorders across sources by age, the old flood. |
+| **D2** | Where does the Off switch live? | (a) a switch per row that remembers the weight; (b) Off as the dial's zero | **CLOSED — (a)** (owner: "yes to your smaller ones"). The owner named a "disable slider" and a weight as two things; a row turned back on should come back where it was. |
+| **D3** | A new custom mix starts as? | (a) empty — everything listed, everything off; (b) a copy of Home | **CLOSED — (a).** A mix is picked into. A copy of Home is one tap from being Home and hides the difference. |
+| **D4** | Where does a mix live? | (a) device-local `forage.mixes`; (b) a `fyi.forage.mix` PDS record from day one; (c) local now, publish later on the tagsub pattern | **CLOSED — (c)** (owner: "device local for now, yes, pds later, yes"). Minting a record type is cheap and permanent (LEXICONS.md) and needs the four acts. The model in A is written so (c)'s second half is an addition. |
+| **D5** | Does Home become the first-time landing board? | (a) yes — `FIRST_TIME_BOARD` becomes Home; (b) no — Home is a sidebar row like any other | **CLOSED — (a)** (owner: "yes"). Returning readers keep their last board either way. |
 | **D6** | Fan-out bound | (a) none — every enabled source; (b) a cap with honest overflow like the old `RING_CAP`; (c) no cap, but a **per-source page size** (10–15 instead of 30) and a **per-source timeout** with the board painting what answered | **(c), from the measurement** (Review Log, 2026-09-08). Twelve sources in parallel cost ~0.7 s warm and 2.3 s cold — the sequential equivalent was 5.1 s — and nothing failed; twenty-five cost 3.1 s because of ONE straggler, not the count. The cost that grew with N was payload: 277 posts for one page at N=12, 569 at N=25, of which a screen shows a dozen. So the bound is on what each source is asked for, not on how many are asked. |
-| **D7** | Does the mix board keep the sort toolbar? | (a) yes, Default = the deal; (b) no toolbar, the deal only | **(a).** The toolbar's other sorts are client-side over the loaded window and cost nothing; a reader who wants newest-first across everything has *New*. |
-| **D8** | Dedupe credit | (a) the first source to deal a post keeps it; (b) the heavier source | **(a).** Deterministic and cheap; (b) requires knowing every source's membership before dealing. |
-| **D9** | Lists (`savedFeeds` kind `list`) | (a) rows in a mix like feeds; (b) out of scope | **(a).** They are already subscriptions and `feed()` already fetches them. |
+| **D7** | Does the mix board keep the sort toolbar? | (a) yes, Default = the deal; (b) no toolbar, the deal only | **CLOSED — (a).** And D1 makes the toolbar load-bearing: Top and Hot are where a weight lifts a small feed. |
+| **D8** | Dedupe credit | (a) the first source to deal a post keeps it; (b) the heavier source | **CLOSED — (a)** for the deal. Under Top/Hot a post in two sources takes the **heavier** weight, because there the weight is a score and the higher one is what the reader asked for; that is a lookup, not a membership walk. |
+| **D9** | Lists (`savedFeeds` kind `list`) | (a) rows in a mix like feeds; (b) out of scope | **CLOSED — (a).** They are already subscriptions and `feed()` already fetches them. |
 
 ## Phases
 
@@ -185,9 +203,12 @@ clamp; unknown source ids survive as *no longer subscribed*; Home cannot be dele
 renamed to nothing; slugs collide → refused by name; corrupt storage → Home alone;
 `onChange` fires on every write.
 
-### Phase 2 — the deal · `js/mix-deal.js` · `test/mix-deal.test.js`
-Weight 3 contributes 3 per round beside 2 and 1; weight 0 contributes nothing and is never
-a queue; a dry queue is skipped and resumes when refilled; duplicates by uri drop, first
+### Phase 2 — the deal and the weighted sorts · `js/mix-deal.js`, `js/engines/rank.js` · `test/mix-deal.test.js`, `test/engines.test.js`
+×2 contributes 4 per round beside ×1's 2 and ×½'s 1; weight 0 contributes nothing and is never
+a queue; `sortWindow` reads `mixWeight` when present — Top orders by `likes × w`, Hot by
+`hot(engagement × w)`, New ignores it; a post absent a weight sorts exactly as today
+(the literal pins in `test/engines.test.js` must not move); a ×2 post with half the likes
+ties a ×1 post under Top; a dry queue is skipped and resumes when refilled; duplicates by uri drop, first
 source wins; order within a source is preserved; the deal is deterministic for one input;
 `length ≤ sum of inputs`. A property test over random queues for the last three.
 
@@ -245,12 +266,20 @@ Status and Review Log.
 
 ## Reasoning
 
-**Why a deal and not a sort.** The retired World board was the sort: every source's posts
-into one pile, newest first. That makes weights impossible to express — a weight has to say
-*how often*, and a timestamp order has no "how often" in it. Weighted round-robin is the
-oldest fair-share algorithm there is and it explains itself on the dial: *More* is three of
-every six. It also keeps each source's own order, which for a feed is the generator's
-ranking — the thing the reader subscribed to the feed *for*.
+**Why one multiplier and not one number per sort.** The owner's sentence has two halves —
+*"I want more of this in this mix"* and *"it has to play nice with top etc sort"* — and a
+weight that meant one thing under Default and had no meaning under Top would break the
+second half the moment a reader touched the toolbar. A multiplier is the one shape that
+reads the same everywhere: it is a share of the deal, it is a factor on likes, it is a
+factor inside Hot's log (where ×2 is exactly 3¾ hours of youth, a number a reader can be
+told). New is the deliberate exception, because time is the one order a weight cannot
+touch without becoming the old flood.
+
+**Why a deal for Default and not the newest-first pile.** The retired World board was the
+pile: every source's posts, newest first, so it belonged to whichever source posted most.
+Weighted round-robin is the oldest fair-share algorithm there is, it explains itself on the
+dial, and it keeps each source's own order — which for a feed is the generator's ranking,
+the thing the reader subscribed to the feed *for*.
 
 **Why Home stores overrides and a custom mix stores rows.** The owner's rule is that Home is
 *"by default all subscribed types."* If Home stored a full row list, a feed saved tomorrow
@@ -289,7 +318,9 @@ decided by that number and nothing else.
 
 | Claim | Held by |
 |---|---|
-| A weight is a share of the deal | `test/mix-deal.test.js` counts per round; the journey counts the first six rows |
+| A weight is a share of the deal under Default | `test/mix-deal.test.js` counts per round; the journey counts the first six rows |
+| A weight lifts a small feed under Top and Hot, and does nothing under New | `test/engines.test.js` (×2 with half the likes ties); the journey switches to Top and finds the weighted row's post first |
+| Unweighted posts sort exactly as before | the existing literal pins in `test/engines.test.js`, unmoved |
 | Off is not fetched | the hermetic fixture counts requests per source |
 | Home includes a subscription made later | `test/mixes.test.js` |
 | A failed source is named, not fatal | `test/lens-mix.test.js` + the journey's info line |
@@ -329,3 +360,13 @@ Declared gate for every landing: `npm test && npm run conformance`, `npm run ref
   5.1 s. So D6 → (c): no cap; a per-source page size and a per-source timeout, and the board
   paints what answered, naming what did not. Open: the cold first run (2.3 s) is what the
   first open of the day feels like, and it is the phone number that matters.
+- **2026-09-08 — all nine decisions closed by the owner.** D2–D9 as recommended ("yes to
+  your smaller ones"; D4 "device local for now, yes, pds later, yes"; D5 "yes"). **D1 was
+  reshaped**, not confirmed: the draft's weight was a share of the deal and nothing else,
+  and the owner's model is a score — *"weighting upvotes so smaller feeds and such still
+  surface … it has to play nice with top etc sort."* The draft could not have honoured that:
+  under Top a deal-share weight is invisible. Resolved as one multiplier per row (×½ · ×1 ·
+  ×2) read by every sort — § D's table — with New the stated exception. D8 grew a second
+  half for the same reason (the heavier weight wins under a score). What this changes in the
+  phases: Phase 2 now touches `js/engines/rank.js`, and its literal pins are the guard that
+  unweighted boards do not move.
