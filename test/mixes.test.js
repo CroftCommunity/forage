@@ -16,6 +16,7 @@ import {
   MIXES_KEY, HOME, WEIGHTS, DEFAULT_WEIGHT, weightLabel,
   sourceId, sourceFromId, subscriptions,
   mixes, mix, enabledRows, setRow, removeRow, createMix, renameMix, deleteMix, onChange,
+  toRecord, fromRecord, MIX_COLLECTION,
 } from '../js/mixes.js';
 
 function withStorage(seed = {}, fn) {
@@ -249,5 +250,60 @@ test('every write notifies, with the list of mixes', () => {
       assert.equal(seen.length, 5);
       assert.deepEqual(seen.at(-1).mixes.map((m) => m.slug), [HOME]);
     } finally { off(); }
+  });
+});
+
+// ---- the record codec (plan 2026-09-08 mixes-on-the-pds, Phase 1) ----
+//
+// toRecord() is what publishMix sends; fromRecord() is what a published mix
+// becomes on read — validated against lexicons/fyi.forage.mix.json first,
+// because a PDS accepts anything (W17). Weights are words on the wire (D4).
+
+test('the collection is pinned by name', () => {
+  assert.equal(MIX_COLLECTION, 'fyi.forage.mix');
+});
+
+test('a custom mix round-trips through its record, weights as words', () => {
+  withStorage({}, () => {
+    const slug = createMix('Weekend Reads');
+    setRow(slug, FUNNY, { on: true, weight: 2 });
+    setRow(slug, 'hashtag:harvest', { on: true, weight: 0.5 });
+    const rec = toRecord(slug, '2026-09-08T12:00:00.000Z');
+    assert.equal(rec.$type, 'fyi.forage.mix');
+    assert.deepEqual({ name: rec.name, home: rec.home }, { name: 'Weekend Reads', home: false });
+    assert.deepEqual(rec.rows, [
+      { kind: 'feed', uri: FUNNY.slice('feed:'.length), on: true, weight: 'more' },
+      { kind: 'hashtag', tag: 'harvest', on: true, weight: 'less' },
+    ], 'only STORED rows travel — a custom mix is its rows');
+    assert.equal(rec.updatedAt, '2026-09-08T12:00:00.000Z');
+    const back = fromRecord(rec, { rkey: slug });
+    assert.deepEqual(back, { slug, name: 'Weekend Reads', home: false,
+      rows: { [FUNNY]: { on: true, weight: 2 }, 'hashtag:harvest': { on: true, weight: 0.5 } } });
+  });
+});
+
+test('Home travels as its overrides only, flagged home', () => {
+  withStorage({}, () => {
+    setRow(HOME, 'timeline', { on: false });
+    const rec = toRecord(HOME, '2026-09-08T12:00:00.000Z');
+    assert.equal(rec.home, true);
+    assert.deepEqual(rec.rows, [{ kind: 'timeline', on: false, weight: 'normal' }]);
+    assert.deepEqual(fromRecord(rec, { rkey: HOME }).rows, { timeline: { on: false, weight: 1 } });
+  });
+});
+
+test('a record that fails the schema is refused with words, never repaired', () => {
+  assert.throws(() => fromRecord({ $type: 'fyi.forage.mix', name: 'x', home: false, rows: [{ kind: 'author', on: true, weight: 'normal' }], createdAt: '2026-09-08T00:00:00.000Z', updatedAt: '2026-09-08T00:00:00.000Z' }, { rkey: 'x' }), /kind/);
+  assert.throws(() => fromRecord({ name: 'x' }, { rkey: 'x' }), /rows/);
+  assert.throws(() => toRecord('nope'), /nope/);
+});
+
+test('createdAt is kept across an update; a first record gets it from the clock', () => {
+  withStorage({}, () => {
+    const slug = createMix('W');
+    const first = toRecord(slug, '2026-09-08T12:00:00.000Z');
+    assert.equal(first.createdAt, '2026-09-08T12:00:00.000Z');
+    const second = toRecord(slug, '2026-09-09T12:00:00.000Z', { createdAt: first.createdAt });
+    assert.deepEqual([second.createdAt, second.updatedAt], ['2026-09-08T12:00:00.000Z', '2026-09-09T12:00:00.000Z']);
   });
 });

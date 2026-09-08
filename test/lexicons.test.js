@@ -30,6 +30,11 @@ const COLLECTIONS = [
   // it lives in a browser is an edit. test/tagsubs.test.js reads THIS FILE to
   // assert the local store already satisfies it.
   'fyi.forage.tagsub',     // a subscribed hashtag; unsubscribe = record delete
+  // Plan 2026-09-08 mixes-on-the-pds: how one reader arranges their own
+  // subscriptions into a board. Declared with the device-local implementation
+  // for the same reason tagsub was — an edit now, a migration later. The
+  // record key is the mix's SLUG (D1), so publishing twice is one record.
+  'fyi.forage.mix',        // one composed board; delete = the mix forgotten
 ];
 
 // Event types that DELIBERATELY have no wire collection at this tier.
@@ -145,9 +150,12 @@ test('an ecosystem check may only be owed by a type that predates the register',
 // schema unless something holds them together; this is that something.
 test('every runtime schema copy in js/lexicons.js is identical to its file', async () => {
   const runtime = await import('../js/lexicons.js');
-  const pairs = [['TAGSUB_RECORD', 'fyi.forage.tagsub']];
-  for (const [exportName, id] of pairs) {
-    const fromFile = JSON.parse(readFileSync(join(root, 'lexicons', `${id}.json`), 'utf8')).defs.main.record;
+  // A pin is defs.main.record, or — when the record refs a sibling def — the
+  // whole defs block, because a ref without its target is half a schema.
+  const pairs = [['TAGSUB_RECORD', 'fyi.forage.tagsub', 'record'], ['MIX_DEFS', 'fyi.forage.mix', 'defs']];
+  for (const [exportName, id, scope] of pairs) {
+    const doc = JSON.parse(readFileSync(join(root, 'lexicons', `${id}.json`), 'utf8'));
+    const fromFile = scope === 'defs' ? doc.defs : doc.defs.main.record;
     assert.deepStrictEqual(JSON.parse(JSON.stringify(runtime[exportName])), fromFile,
       `js/lexicons.js ${exportName} has drifted from lexicons/${id}.json`);
   }

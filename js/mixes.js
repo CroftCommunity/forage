@@ -34,7 +34,11 @@
 // kept and marked rather than lost, a corrupt document reads as Home alone.
 // Writes refuse by name.
 
+import { validateRecord } from './lexicon.js';
+import { MIX_DEFS } from './lexicons.js';
+
 export const MIXES_KEY = 'forage.mixes';
+export const MIX_COLLECTION = 'fyi.forage.mix';
 export const HOME = 'home';
 export const WEIGHTS = Object.freeze([0.5, 1, 2]);
 export const DEFAULT_WEIGHT = 1;
@@ -222,3 +226,54 @@ export function deleteMix(slug) {
 const listeners = new Set();
 export function onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); }
 function notify() { const state = { mixes: mixes() }; for (const fn of listeners) fn(state); }
+
+// ---- the record (plan 2026-09-08 mixes-on-the-pds, Phase 1) ----
+//
+// The wire shape is lexicons/fyi.forage.mix.json. Weights travel as WORDS
+// (D4): a schema enum survives a fourth notch and cannot be written as 1.5 by
+// another client; the multiplier is this client's business. Home travels as
+// its overrides, flagged `home` (D2). The record key is the slug (D1), which is
+// why neither function carries one inside the record.
+const WORD_OF = { 0.5: 'less', 1: 'normal', 2: 'more' };
+const WEIGHT_OF = { less: 0.5, normal: 1, more: 2 };
+
+const rowToWire = (id, r) => {
+  const source = sourceFromId(id);
+  return {
+    kind: source.kind,
+    ...(source.uri ? { uri: source.uri } : {}),
+    ...(source.tag ? { tag: source.tag } : {}),
+    on: r.on, weight: WORD_OF[r.weight],
+  };
+};
+
+export function toRecord(slug, now = new Date().toISOString(), { createdAt } = {}) {
+  const s = stored(doc(), slug);
+  return {
+    $type: MIX_COLLECTION,
+    name: s.name, home: s.home,
+    rows: Object.entries(s.rows).map(([id, r]) => rowToWire(id, r)),
+    createdAt: createdAt || now, updatedAt: now,
+  };
+}
+
+// Validated on the way IN, against the schema file's pinned copy — a PDS
+// accepts anything (W17), so a malformed record is an ordinary thing to read.
+// Refuses with words; never repairs. What comes back is the stored shape
+// js/mixes.js keeps: { slug, name, home, rows: { id: { on, weight } } }.
+export function fromRecord(record, { rkey } = {}) {
+  const v = validateRecord(MIX_DEFS.main.record, record, { defs: MIX_DEFS });
+  if (!v.ok) {
+    throw new Error(`mixes: record ${rkey || ''} is not a fyi.forage.mix — ${v.errors.map((e) => `${e.field}: ${e.message}`).join('; ')}`);
+  }
+  const rows = {};
+  for (const r of record.rows) {
+    const source = r.kind === 'timeline' ? { kind: 'timeline' }
+      : r.kind === 'hashtag' ? { kind: 'hashtag', tag: r.tag } : { kind: r.kind, uri: r.uri };
+    if ((r.kind === 'hashtag' && !r.tag) || ((r.kind === 'feed' || r.kind === 'list') && !r.uri)) {
+      throw new Error(`mixes: record ${rkey || ''} has a ${r.kind} row with no ${r.kind === 'hashtag' ? 'tag' : 'uri'}`);
+    }
+    rows[sourceId(source)] = { on: r.on, weight: WEIGHT_OF[r.weight] };
+  }
+  return { slug: rkey, name: record.name, home: record.home, rows };
+}

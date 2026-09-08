@@ -21,10 +21,10 @@ import { graphemes, byteLength } from './compose.js';
 // What this validator knows how to check. The test reads this and compares it
 // against what the lexicon tree actually declares.
 export const ENFORCED = Object.freeze({
-  types: new Set(['string', 'integer', 'boolean', 'array', 'object', 'unknown']),
+  types: new Set(['string', 'integer', 'boolean', 'array', 'object', 'unknown', 'ref']),
   formats: new Set(['datetime', 'did', 'at-uri', 'uri']),
   keywords: new Set(['type', 'required', 'properties', 'items', 'enum',
-    'minLength', 'maxLength', 'maxGraphemes', 'format']),
+    'minLength', 'maxLength', 'maxGraphemes', 'format', 'ref']),
   // Keywords that carry no constraint, named rather than skipped so the set
   // above stays honest about what it is silent on.
   ignored: new Set([
@@ -46,7 +46,7 @@ const FORMAT = {
 
 const typeName = (v) => (v === null ? 'null' : Array.isArray(v) ? 'array' : typeof v);
 
-function checkValue(prop, value, field, errors) {
+function checkValue(prop, value, field, errors, ctx = {}) {
   const fail = (message) => errors.push({ field, message });
   // `unknown` is an arbitrary OBJECT, not an arbitrary value. Caught 2026-08-29 by the
   // reference gate (test/lexicon-reference-gate.test.js): this mirror accepted a bare
@@ -77,12 +77,27 @@ function checkValue(prop, value, field, errors) {
       break;
     case 'array':
       if (!Array.isArray(value)) return fail(`expected array, got ${typeName(value)}`);
-      if (prop.items) value.forEach((item, i) => checkValue(prop.items, item, `${field}[${i}]`, errors));
+      if (prop.items) value.forEach((item, i) => checkValue(prop.items, item, `${field}[${i}]`, errors, ctx));
       break;
     case 'object':
       if (typeName(value) !== 'object') return fail(`expected object, got ${typeName(value)}`);
-      if (prop.properties || prop.required) collect(prop, value, `${field}.`, errors);
+      if (prop.properties || prop.required) collect(prop, value, `${field}.`, errors, ctx);
       break;
+    case 'ref': {
+      // A ref to a SIBLING def in the same document (`#row`). The lexicon spec
+      // does not allow an inline object as an array's items — the reference
+      // validator refused fyi.forage.mix until its row moved to `defs.row`
+      // (2026-09-08) — so a ref is how any nested shape is declared. Resolved
+      // against the defs the caller passed; an external ref (another NSID) is
+      // refused rather than skipped, because skipping is the silent kind of
+      // blindness this validator exists to avoid, and no lexicon of ours
+      // refs another document.
+      const ref = String(prop.ref || '');
+      if (!ref.startsWith('#')) throw new Error(`lexicon: external ref ${ref} is not supported — only a sibling def (#name) is`);
+      const target = ctx.defs?.[ref.slice(1)];
+      if (!target) throw new Error(`lexicon: ref ${ref} names no def in this document`);
+      return checkValue(target, value, field, errors, ctx);
+    }
     default:
       // Unreachable while the ENFORCED-vs-declared test passes, and loud rather
       // than silent if that test is ever weakened.
@@ -110,13 +125,13 @@ function checkValue(prop, value, field, errors) {
   }
 }
 
-function collect(def, value, prefix, errors) {
+function collect(def, value, prefix, errors, ctx = {}) {
   for (const req of def.required || []) {
     if (value[req] === undefined) errors.push({ field: `${prefix}${req}`, message: 'required field is missing' });
   }
   for (const [name, prop] of Object.entries(def.properties || {})) {
     if (value[name] === undefined) continue;   // absent and not required: fine
-    checkValue(prop, value[name], `${prefix}${name}`, errors);
+    checkValue(prop, value[name], `${prefix}${name}`, errors, ctx);
   }
   // UNKNOWN FIELDS ARE IGNORED, not rejected. atproto records are open: a newer
   // client may add a field this schema has never heard of, and refusing it would
@@ -128,11 +143,11 @@ function collect(def, value, prefix, errors) {
  * Returns { ok: true } or { ok: false, errors: [{ field, message }] }.
  * Never throws — a malformed record is an expected input here, not a bug.
  */
-export function validateRecord(recordDef, value) {
+export function validateRecord(recordDef, value, { defs = {} } = {}) {
   if (typeName(value) !== 'object') {
     return { ok: false, errors: [{ field: '', message: `expected an object, got ${typeName(value)}` }] };
   }
   const errors = [];
-  collect(recordDef || {}, value, '', errors);
+  collect(recordDef || {}, value, '', errors, { defs });
   return errors.length ? { ok: false, errors } : { ok: true, errors: [] };
 }

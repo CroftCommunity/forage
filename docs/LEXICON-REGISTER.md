@@ -307,3 +307,37 @@ entry written under the rule.*
 **First write under the rule.** This is the type that took Forage's lens write
 count from seven to eight, which `AGENTS.md` and `test/invariants.test.js` make
 an argued step rather than an incidental one.
+
+## fyi.forage.mix
+
+**Holds:** one composed board — how this reader arranges their own subscriptions into one
+list: a name, whether it is Home, and one row per subscription touched, each `{ kind, uri |
+tag, on, weight }` with the weight as a word (`less` · `normal` · `more`). Keyed by the mix's
+slug, so publishing twice is one record; deleting it forgets the mix. Plan
+`plans/2026-09-08-plan-mixes-on-the-pds.md`. **Stage: unpublished** — `fyi.forage.*` has no
+`_lexicon` TXT record yet (that act is owed for the namespace, not per type), and on the day
+this entry was written no code sent the record over a network (Phase 2 of its plan does).
+
+**Why ours:** the ecosystem models *what you subscribed to* (`savedFeedsPrefV2`, lists,
+follows, our `tagsub`) and *what a feed is* (`app.bsky.feed.generator`). Nothing models *how
+one reader arranges their own subscriptions into a board*. That object exists only in the
+reader's client — and it must be a **record**, not a preference: `savedFeedsPrefV2` is a
+private server-side blob the official client rewrites whole on every save, so anything
+stored beside it is overwritten the next time the Bluesky app saves a feed.
+
+**Ecosystem check (2026-09-08):** six candidates opened across the three corpora
+LEXICONS.md names.
+
+| Candidate | What it holds | Why it does not fit |
+|---|---|---|
+| `app.bsky.actor.defs#savedFeedsPrefV2` | `items[]` of `{ id, type: feed \| list \| timeline, value, pinned }` | the subscription list itself, one flat set, no hashtag type, no weight, no switch, no second list — and a preference blob, not a record |
+| `app.bsky.actor.defs#feedViewPref` | per-feed `hideReplies` / `hideReposts` / `hideQuotePosts` / `hideRepliesByLikeCount` | what to hide *inside* one feed; no composition, no weight, same blob |
+| `app.bsky.feed.generator` | a feed **service**: `did`, `displayName`, `description`, `avatar`, `contentMode` | a generator is a server answering `getFeedSkeleton`; a mix has no server. Skyfeed's builder stores `skyfeedBuilder.blocks[]` on this record and still resolves every feed to `did:web:skyfeed.me` — riding the record without a server would declare a feed nobody can fetch |
+| `app.bsky.graph.list` + `listitem` | curated **people** | one *source kind* a mix can hold, not the mix |
+| `community.lexicon.*` at its current home, `tangled.org/lexicon.community/lexicons` (the GitHub repo was archived 2026-07-27): `app`, `bookmarks`, `calendar`, `interaction`, `location`, `payments`, `preference` | app listings; bookmarks; events/RSVPs; likes; places; web-monetization; the AI-use preference | nothing composes feeds and nothing subscribes to anything; `preference.ai` is about data use, not reading |
+| `exchange.recipe.*` (consumed by arecipe) | recipes | not this domain |
+
+Preference order applied: not `app.bsky.*` (a mix is never shown in an official client);
+`community.lexicon.*` holds nothing that fits, and a shared "how one client composes
+Bluesky-specific subscription kinds" type is exactly the nuance the owner named — raised as
+act 3 of the plan, outcome to be recorded here.
