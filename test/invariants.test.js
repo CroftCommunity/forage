@@ -50,7 +50,14 @@ test('the UI layer never imports a substrate or the routing config (lens read-on
 test('the lens exception holds: writes are records-none, likes-one-pair, preferences-only (DL-013, 3j, 3s)', () => {
   const src = readFileSync(join(root, 'js/substrates/lens.js'), 'utf8');
   assert.ok(!/\bcommit\s*\(/.test(src), 'lens.js never touches the memory fold');
-  assert.ok(!/putRecord/.test(src), 'no putRecord — the lens edits no records');
+  // The lens edits no BLUESKY record. The one putRecord is fyi.forage.mix
+  // (plan 2026-09-08 mixes-on-the-pds, D1): the record's key is the mix's
+  // slug, so a second publish IS an edit of our own record, and create-or-
+  // replace at a known rkey is what that means. Bound to its constant so a
+  // second caller cannot borrow it.
+  assert.equal((src.match(/putRecord/g) || []).length, 1, 'exactly one putRecord — the mix, our own record, keyed by slug');
+  assert.match(src, /MIX_COLLECTION = 'fyi\.forage\.mix'/, 'the mix collection is a named constant');
+  assert.equal((src.match(/collection: MIX_COLLECTION/g) || []).length, 3, 'list, save and remove bind to it');
   // the SECOND write (3j/3s): preferences, not records. Two callers now —
   // join/leave and favorite/unfavorite — because Bluesky models saved and
   // pinned separately and Forage must not conflate them. Both live under the
@@ -87,7 +94,7 @@ test('the lens exception holds: writes are records-none, likes-one-pair, prefere
   // The count alone is weak, so every occurrence is inspected: the OLD version
   // of this check read src.indexOf('deleteRecord'), which with two deletes
   // would have silently examined only the first (caught in Pass 2 review).
-  assert.equal((src.match(/deleteRecord/g) || []).length, 6, 'exactly six deleteRecord (the unlike, the post delete, the tagsub delete, the unblock, the unrepost, the unfollow)');
+  assert.equal((src.match(/deleteRecord/g) || []).length, 7, 'exactly seven deleteRecord (the unlike, the post delete, the tagsub delete, the unblock, the unrepost, the unfollow, the mix delete)');
   assert.match(src, /FOLLOW_COLLECTION = 'app\.bsky\.graph\.follow'/, 'the follow collection is a named constant');
   assert.equal((src.match(/collection: FOLLOW_COLLECTION/g) || []).length, 2, 'follow and unfollow bind to it');
   assert.match(src, /BLOCK_COLLECTION = 'app\.bsky\.graph\.block'/, 'the block collection is a named constant');

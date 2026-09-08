@@ -141,7 +141,13 @@ function stored(d, slug) {
 // stored row whose subscription the reader has since dropped, last and marked
 // `subscribed: false` so it can be seen and removed rather than silently lost.
 export function mix(slug, subs = []) {
-  const s = stored(doc(), slug);
+  return composeMix(stored(doc(), slug), subs);
+}
+
+// The page shape from a STORED shape — pure, so the published half
+// (js/mixes-pds.js) can compose a record's rows the same way without this
+// module ever reading the cache.
+export function composeMix(s, subs = []) {
   const dflt = s.home ? { on: true, weight: DEFAULT_WEIGHT } : { on: false, weight: DEFAULT_WEIGHT };
   const live = subs.map((sub) => ({ ...sub, ...(s.rows[sub.id] || dflt), subscribed: true }));
   const known = new Set(subs.map((sub) => sub.id));
@@ -173,6 +179,31 @@ export function setRow(slug, id, { on, weight } = {}) {
   }
   const prev = target[id] || (slug === HOME ? { on: true, weight: DEFAULT_WEIGHT } : { on: false, weight: DEFAULT_WEIGHT });
   target[id] = { on: on === undefined ? prev.on : !!on, weight: weight === undefined ? prev.weight : weight };
+  save(d);
+}
+
+// Write a stored shape onto this device — a record coming back from the repo
+// (unpublish), or one being restored. Home's shape replaces Home's overrides
+// and name; a custom shape is upserted by slug.
+export function importMix({ slug, name, home, rows }) {
+  const d = doc();
+  if (slug === HOME || home) {
+    if (slug !== HOME || !home) throw new Error('mixes: the home slug is the Home record, and only it');
+    d.home = { name: name || d.home.name, overrides: repairRows(rows) };
+  } else {
+    const clean = { slug, name: name || slug, rows: repairRows(rows) };
+    const i = d.mixes.findIndex((m) => m.slug === slug);
+    if (i >= 0) d.mixes[i] = clean; else d.mixes.push(clean);
+  }
+  save(d);
+}
+
+// Take a mix off this device because it now lives in the repo. Home keeps its
+// name and loses its overrides; a custom mix is removed.
+export function clearLocal(slug) {
+  const d = doc();
+  if (slug === HOME) d.home.overrides = {};
+  else d.mixes = d.mixes.filter((m) => m.slug !== slug);
   save(d);
 }
 

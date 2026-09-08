@@ -12,6 +12,8 @@ import { buildPost, withTag, IMAGE_LIMITS } from '../compose.js';
 import { RUNG_IDS, scopeMembers } from '../rings.js';
 import { sortItems, mixWeight } from '../engines/rank.js';
 import { deal } from '../mix-deal.js';
+import { validateRecord } from '../lexicon.js';
+import { MIX_DEFS } from '../lexicons.js';
 import { gifOf, parseAlt } from '../gif.js';
 
 export const LENS_PERMS = Object.freeze({
@@ -1214,6 +1216,7 @@ const POST_COLLECTION = 'app.bsky.feed.post';
 // neither, it is a query. Deliberately narrow, like the two above it: our own
 // repo, this one collection, create and delete only — it edits nothing.
 const TAGSUB_COLLECTION = 'fyi.forage.tagsub';
+const MIX_COLLECTION = 'fyi.forage.mix';
 // Phase 4a (plan 2026-08-29 post-and-thread, decision 3): the ⋯ menu's writes.
 // A block is a RECORD — public, visible to the blocked account, which is why
 // the menu item's copy says so — where a mute is a private procedure.
@@ -1797,6 +1800,44 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
       return post('com.atproto.repo.deleteRecord', {
         repo: session.did, collection: TAGSUB_COLLECTION, rkey,
       }, 'remove hashtag');
+    },
+
+    // ---- fyi.forage.mix (plan 2026-09-08 mixes-on-the-pds, Phase 2) ----
+    //
+    // The mix is the one record the lens EDITS IN PLACE. Its key is the mix's
+    // slug (D1), so a second publish of Weekend is the same record, and
+    // create-or-replace at a known rkey is the one put the lens makes —
+    // admitted exactly once by test/invariants.test.js, bound to this
+    // constant. Validated against the
+    // lexicon BEFORE the request: a PDS accepts anything (W17), and a malformed
+    // record of ours in someone's repo is our bug.
+    async mixRecords() {
+      if (!session) throw new Error('lens: reading your saved mixes needs a session — sign in first');
+      const out = [];
+      let cursor;
+      do {
+        const data = await get('com.atproto.repo.listRecords', {
+          repo: session.did, collection: MIX_COLLECTION, limit: 100, cursor,
+        });
+        for (const r of data.records || []) out.push({ rkey: String(r.uri || '').split('/').pop(), value: r.value });
+        cursor = data.cursor;
+      } while (cursor);
+      return out;
+    },
+    async saveMix(rkey, record) {
+      if (!session) throw new Error('lens: saving a mix needs a session — sign in first');
+      if (!/^[a-z0-9-]{1,64}$/.test(String(rkey))) throw new Error(`lens: ${JSON.stringify(rkey)} is not a mix slug`);
+      const v = validateRecord(MIX_DEFS.main.record, record, { defs: MIX_DEFS });
+      if (!v.ok) throw new Error(`lens: refusing to write a mix that fails its own lexicon — ${v.errors.map((e) => `${e.field}: ${e.message}`).join('; ')}`);
+      return post('com.atproto.repo.putRecord', {
+        repo: session.did, collection: MIX_COLLECTION, rkey, record: { ...record, $type: MIX_COLLECTION },
+      }, 'save mix');
+    },
+    async removeMix(rkey) {
+      if (!session) throw new Error('lens: removing a mix needs a session — sign in first');
+      return post('com.atproto.repo.deleteRecord', {
+        repo: session.did, collection: MIX_COLLECTION, rkey,
+      }, 'remove mix');
     },
 
     // 3g: content streams — one abstraction, two keys. 'feed' opens any

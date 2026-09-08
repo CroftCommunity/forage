@@ -16,7 +16,7 @@ import {
   MIXES_KEY, HOME, WEIGHTS, DEFAULT_WEIGHT, weightLabel,
   sourceId, sourceFromId, subscriptions,
   mixes, mix, enabledRows, setRow, removeRow, createMix, renameMix, deleteMix, onChange,
-  toRecord, fromRecord, MIX_COLLECTION,
+  toRecord, fromRecord, MIX_COLLECTION, composeMix, importMix, clearLocal,
 } from '../js/mixes.js';
 
 function withStorage(seed = {}, fn) {
@@ -305,5 +305,33 @@ test('createdAt is kept across an update; a first record gets it from the clock'
     assert.equal(first.createdAt, '2026-09-08T12:00:00.000Z');
     const second = toRecord(slug, '2026-09-09T12:00:00.000Z', { createdAt: first.createdAt });
     assert.deepEqual([second.createdAt, second.updatedAt], ['2026-09-08T12:00:00.000Z', '2026-09-09T12:00:00.000Z']);
+  });
+});
+
+// ---- the halves (mixes-on-the-pds Phase 3 needs these) ----
+
+test('composeMix builds the page shape from a STORED shape without touching storage', () => {
+  const view = composeMix({ slug: 'w', name: 'W', home: false, rows: { [FUNNY]: { on: true, weight: 2 } } }, SUBS);
+  assert.equal(view.rows.length, SUBS.length);
+  assert.deepEqual(view.rows.find((r) => r.id === FUNNY), { ...SUBS.find((s) => s.id === FUNNY), on: true, weight: 2, subscribed: true });
+  assert.ok(view.rows.filter((r) => r.id !== FUNNY).every((r) => !r.on));
+  const home = composeMix({ slug: HOME, name: 'Home', home: true, rows: {} }, SUBS);
+  assert.ok(home.rows.every((r) => r.on && r.weight === DEFAULT_WEIGHT));
+});
+
+test('importMix writes a stored shape into this device; clearLocal takes it back out', () => {
+  withStorage({}, () => {
+    importMix({ slug: 'weekend', name: 'Weekend', home: false, rows: { [FUNNY]: { on: true, weight: 2 } } });
+    assert.deepEqual(mixes().map((m) => m.slug), [HOME, 'weekend']);
+    assert.equal(mix('weekend', SUBS).rows.find((r) => r.id === FUNNY).weight, 2);
+    importMix({ slug: HOME, name: 'Front', home: true, rows: { timeline: { on: false, weight: 1 } } });
+    assert.equal(mix(HOME, SUBS).name, 'Front');
+    assert.equal(mix(HOME, SUBS).rows.find((r) => r.id === 'timeline').on, false);
+    clearLocal('weekend');
+    assert.deepEqual(mixes().map((m) => m.slug), [HOME]);
+    clearLocal(HOME);
+    assert.ok(mix(HOME, SUBS).rows.every((r) => r.on), 'Home cleared = every override gone, the name kept');
+    assert.equal(mix(HOME, SUBS).name, 'Front');
+    assert.throws(() => importMix({ slug: 'home', home: false, name: 'x', rows: {} }), /home/i, 'the home slug is the home record');
   });
 });
