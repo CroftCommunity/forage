@@ -1401,10 +1401,11 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
       }));
       const heaviest = new Map();
       for (const s of sources) for (const p of s.posts) heaviest.set(p.id, Math.max(heaviest.get(p.id) || 0, s.weight));
-      const queues = sources.map((s) => ({
-        id: s.id, weight: s.weight,
-        posts: s.posts.map((p) => ({ ...p, mixWeight: heaviest.get(p.id), mixSource: s.id })),
-      }));
+      // Stamped ON THE SOURCES, not only on the dealt list: the board keeps the
+      // per-source queues and re-deals them after More, and a queue that lost
+      // its weights sorted Top unweighted (mixes journey, 2026-09-08).
+      for (const s of sources) s.posts = s.posts.map((p) => ({ ...p, mixWeight: heaviest.get(p.id), mixSource: s.id }));
+      const queues = sources.map((s) => ({ id: s.id, weight: s.weight, posts: s.posts }));
       const nextCursors = Object.fromEntries(sources.filter((s) => s.ok && s.cursor).map((s) => [s.id, s.cursor]));
       return {
         ...src, scope: `lens:m:${slug}`, sort: 'lens', timeframe: 'all', perms: LENS_PERMS,

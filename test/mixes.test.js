@@ -15,7 +15,7 @@ import assert from 'node:assert/strict';
 import {
   MIXES_KEY, HOME, WEIGHTS, DEFAULT_WEIGHT, weightLabel,
   sourceId, sourceFromId, subscriptions,
-  mixes, mix, enabledRows, setRow, createMix, renameMix, deleteMix, onChange,
+  mixes, mix, enabledRows, setRow, removeRow, createMix, renameMix, deleteMix, onChange,
 } from '../js/mixes.js';
 
 function withStorage(seed = {}, fn) {
@@ -197,6 +197,22 @@ test('a row for a subscription the reader has since dropped is kept, marked, and
       assert.ok(!enabledRows(s, fewer).some((r) => r.id === 'hashtag:foraging'), `${s}: but it is not fetched`);
     }
     assert.equal(mix(slug, fewer).rows.at(-1).id, 'hashtag:foraging', 'unsubscribed rows list last');
+  });
+});
+
+test('removeRow forgets a stored row — the way to clear an unsubscribed one from the page', () => {
+  withStorage({}, () => {
+    setRow(HOME, 'hashtag:foraging', { weight: 2 });
+    const fewer = subscriptions({ feeds: FEEDS, tags: ['harvest'] });
+    assert.equal(mix(HOME, fewer).rows.some((r) => r.id === 'hashtag:foraging'), true);
+    removeRow(HOME, 'hashtag:foraging');
+    assert.equal(mix(HOME, fewer).rows.some((r) => r.id === 'hashtag:foraging'), false);
+    // on a LIVE subscription it is a reset to the mix's default, not a hole
+    setRow(HOME, FUNNY, { on: false, weight: 0.5 });
+    removeRow(HOME, FUNNY);
+    const row = mix(HOME, SUBS).rows.find((r) => r.id === FUNNY);
+    assert.deepEqual({ on: row.on, weight: row.weight }, { on: true, weight: DEFAULT_WEIGHT });
+    assert.throws(() => removeRow('nope', FUNNY), /nope/);
   });
 });
 

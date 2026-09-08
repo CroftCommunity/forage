@@ -90,6 +90,9 @@ test('every dealt post is a MIX post: feedKind mix, the slug, its row weight and
   const f = r.posts.find((p) => p.body === 'f1');
   assert.deepEqual({ w: f.mixWeight, src: f.mixSource }, { w: 2, src: 'feed:at://f/funny' });
   assert.equal(r.posts.find((p) => p.body === 'h1').mixWeight, 0.5);
+  // and on the per-source queues too — the board re-deals from those after More
+  assert.ok(r.sources.every((s) => s.posts.every((p) => p.mixWeight === s.weight && p.mixSource === s.id)),
+    'the sources carry the same stamps as the dealt list');
   assert.equal(r.feedSlug, 'm:home');
   assert.equal(r.feedTitle, 'Home');
 });

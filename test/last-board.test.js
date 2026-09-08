@@ -96,7 +96,7 @@ test('junk is refused rather than written, and never clobbers a good value', () 
 // request, so a first sign-in has always landed on exactly this board. The
 // rungs stopped being addresses when the ring became a display scope, which
 // left the timeline to be named by its own slug.
-import { landingBoard, DIRECTORY, FIRST_TIME_BOARD } from '../js/last-board.js';
+import { landingBoard, boardPath, DIRECTORY, FIRST_TIME_BOARD } from '../js/last-board.js';
 
 test('a guest lands on the directory — they have no history worth remembering', () => {
   assert.equal(landingBoard({ signedIn: false, stored: null }), DIRECTORY);
@@ -111,10 +111,18 @@ test('a returning reader lands on the board they left', () => {
   assert.equal(landingBoard({ signedIn: true, stored: 'tag-harvest' }), 'tag-harvest');
 });
 
-test('a first sign-in lands on Following, since there is no board to return to', () => {
-  assert.equal(landingBoard({ signedIn: true, stored: null }), 'following');
-  assert.equal(FIRST_TIME_BOARD, 'following',
-    'and it is a FEED slug — no rung is addressable any more');
+test('a first sign-in lands on Home — the mix of everything you subscribed to (plan 2026-09-08, D5)', () => {
+  assert.equal(landingBoard({ signedIn: true, stored: null }), 'm/home');
+  assert.equal(FIRST_TIME_BOARD, 'm/home', 'a MIX id; no rung is addressable any more');
+  assert.equal(landingBoard({ signedIn: true, stored: 'following' }), 'following',
+    'and a returning reader still lands on the board they left');
+});
+
+test('a board id knows its path: a mix under /m/, anything else under /f/', () => {
+  assert.equal(boardPath('m/home'), '/m/home');
+  assert.equal(boardPath('m/weekend-reads'), '/m/weekend-reads');
+  assert.equal(boardPath('following'), '/f/following');
+  assert.equal(boardPath('whats-hot'), '/f/whats-hot');
 });
 
 test('the directory is a named destination, not an empty string masquerading as one', () => {

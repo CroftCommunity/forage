@@ -56,6 +56,13 @@ export function fetchShim({ responses = {} } = {}) {
           if (declared && declared.__sequence) {
             payload = declared.__sequence[Math.min(window.__shimGeneration, declared.__sequence.length - 1)];
           }
+          // { __status: 502 } declares a FAILING route — a fixture for "this
+          // source did not answer" (mixes, 2026-09-08), distinct from a miss.
+          if (payload && payload.__status) {
+            return Promise.resolve(new Response(JSON.stringify({ error: 'Declared', message: 'fixture declares HTTP ' + payload.__status }), {
+              status: payload.__status, headers: { 'content-type': 'application/json' },
+            }));
+          }
           return Promise.resolve(new Response(JSON.stringify(payload), {
             status: 200, headers: { 'content-type': 'application/json' },
           }));

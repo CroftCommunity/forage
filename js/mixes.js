@@ -167,6 +167,17 @@ export function setRow(slug, id, { on, weight } = {}) {
   save(d);
 }
 
+// Forget a stored row. On a subscription the reader has since dropped this is
+// how the greyed row leaves the page; on a live one it is a reset to the mix's
+// default (on at Normal in Home, off in a custom mix), never a hole.
+export function removeRow(slug, id) {
+  const d = doc();
+  const target = slug === HOME ? d.home.overrides : d.mixes.find((m) => m.slug === slug)?.rows;
+  if (!target) throw new Error(`mixes: no mix named ${slug}`);
+  delete target[id];
+  save(d);
+}
+
 export const slugOf = (name) => String(name || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
 export function createMix(name) {
