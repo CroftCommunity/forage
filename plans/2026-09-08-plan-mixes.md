@@ -1,9 +1,10 @@
 # Plan: Mixes — a Home board made of everything you subscribed to, and the page that tunes it
 
 date: 2026-09-08
-**Status:** PHASE 0 DONE (2026-09-08, measured live); ALL NINE DECISIONS CLOSED by the owner
-the same day (D1 reshaped what a weight is — see *Decisions* and the Review Log). Phases 1–9
-not started. Retires roadmap E159 when Phase 1 lands.
+**Status:** PHASES 0–1 DONE (2026-09-08; Phase 0 measured live, Phase 1 the model, 15 tests);
+ALL NINE DECISIONS CLOSED by the owner the same day (D1 reshaped what a weight is — see
+*Decisions* and the Review Log). Phases 2–9 not started. On `claude/mixes`, PR #62 open on
+the branch by the owner's choice; retires roadmap E159 when the branch lands.
 repo: `CroftCommunity/forage`
 baseline: `main` @ `68ab504` (the ring as the whole universe, #61)
 branch: `claude/mixes` · worktree `worktrees/mixes/forage`
@@ -196,7 +197,7 @@ lens's own `feed()`/`stream()` so shaping is inside the number — per-source ti
 three runs at N=12, one at N=25, one sequential for contrast. Result in the Review Log;
 D6 is now recommendation (c).
 
-### Phase 1 — the model · `js/mixes.js` · `test/mixes.test.js`
+### Phase 1 — the model · `js/mixes.js` · `test/mixes.test.js` — **DONE 2026-09-08** (15 tests, RED first; sw cache v77)
 Home from a subscription list (timeline + feeds + tags → rows, all on, Normal); overrides
 persist and apply; a new subscription appears in Home on; a custom mix starts empty; weights
 clamp; unknown source ids survive as *no longer subscribed*; Home cannot be deleted or
