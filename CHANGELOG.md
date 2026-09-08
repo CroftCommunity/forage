@@ -8,6 +8,15 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-08 **A mix can follow you.** On a mix's page under Your mixes, **Save to PDS** moves
+  it into your account — Home's tuning included — so every Forage you sign into deals the same
+  board, and **Remove from PDS** brings it back to this device. A saved mix is readable by
+  anyone, like your follows, though it only means something to a client holding your own
+  subscriptions. Switches, weights and renames on a saved mix write straight through; if the
+  write fails, the switch goes back and says so. Two Forages disagreeing about Home resolve to
+  whichever saved last, and the page says a second record was set aside. The record type,
+  `fyi.forage.mix`, is new and unpublished as a namespace for now, like hashtag subscriptions.
+
 - 2026-09-08 **Mixes: one board from everything you subscribed to.** Signed in, you now land
   on **Home**: the accounts you follow, every feed you saved and every hashtag you subscribed
   to, dealt into one list a few at a time from each. It is a new **Mixes** section at the top

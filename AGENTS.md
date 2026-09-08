@@ -194,6 +194,8 @@ adding another means arguing for it there first:
 | `deleteRecord` → `app.bsky.graph.block` | Unblock | post-and-thread 4a |
 | `createRecord` → `app.bsky.feed.repost` | Repost (O6) | post-and-thread 4a |
 | `deleteRecord` → `app.bsky.feed.repost` | Un-repost | post-and-thread 4a |
+| `putRecord` → `fyi.forage.mix` | save a mix to your repo, or edit one already there — the ONE put the lens makes; the record's key is the mix's slug, so a second save is the same record | mixes-on-the-pds |
+| `deleteRecord` → `fyi.forage.mix` | remove a mix from your repo (it comes back to the device) | mixes-on-the-pds |
 
 The eighth and ninth are the first records **Forage defined for itself** that
 reach a repo. That step is argued for in `docs/LEXICON-REGISTER.md`, which every

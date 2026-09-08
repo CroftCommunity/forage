@@ -1,13 +1,15 @@
 # Plan: mixes on the PDS — a mix follows the reader, not the device
 
 date: 2026-09-08
-**Status:** DRAFTED, NOT STARTED. Act 1 (investigate) DONE below; three decisions need the
-owner (D1 the record's key, D2 whether Home is a record, D3 what publication means for a
-namespace that is not yet published). Follows `plans/2026-09-08-plan-mixes.md`, whose D4 was
-*"device local for now, yes, pds later, yes"* — this is the "later".
+**Status:** PHASES 0–5 and 7 BUILT (2026-09-08; owner: "agreed to all 4"); the live proof
+passed against the real PDS. **Phase 6 (socialize) is the owner's to post** — the draft is
+in § F below. Acts: investigate DONE · validate DONE · publish is the namespace's owed act,
+unchanged (D3) · socialize DRAFTED. On `claude/mixes`, PR #62. Follows
+`plans/2026-09-08-plan-mixes.md`, whose D4 was *"device local for now, yes, pds later, yes"* —
+this is the "later".
 repo: `CroftCommunity/forage`
 baseline: `claude/mixes` @ `f1fc180` (Phases 0–9 of the mixes plan)
-branch: `claude/mixes` (this doc); the work itself on `claude/mixes-pds` when started
+branch: `claude/mixes` (the doc and the work — the owner kept PR #62 open on the branch)
 
 ## Problem Statement
 
@@ -127,12 +129,32 @@ it is in: `mix` joins `tagsub` as a type that carries user data in a namespace w
 Publishing the namespace is one act for all of `fyi.forage.*`, and it is owed by the
 register's own TODO, not by this plan.
 
-### F. Socialize — act 3
+### F. Socialize — act 3 (the owner's to post; draft below)
 
 Before the record carries a second reader's data: a post on the lexicon.community forum
-(the repo's stated home for discussion) describing *a per-reader composition over
-Bluesky-specific subscription kinds* and asking whether a shared shape is wanted. The answer
-is recorded in the register entry either way.
+(`discourse.atmosphere.community/c/lexicon-community/31`, the repo's stated home for
+discussion). The answer is recorded in the register entry either way. Draft, to post as-is
+or reword:
+
+> **A per-reader "mix" of subscriptions — is a shared shape wanted?**
+>
+> Forage (forage.fyi, a forum-shaped Bluesky reader) is adding a record for how one reader
+> arranges their own subscriptions into a single board: the Following timeline, saved feeds
+> and lists, and hashtag subscriptions, each as a row with an on/off switch and a weight
+> (`less | normal | more`). One record per mix, keyed by the mix's slug. It is meaningful
+> only to a client holding the writer's subscriptions — nobody else can open it and see the
+> same board — so it is not a feed and not a share; it is closer to a preference that
+> happens to need to follow the reader between devices, which `savedFeedsPrefV2` (a
+> server-side preference blob the official client rewrites whole) cannot do.
+>
+> We looked at `savedFeedsPrefV2`, `feedViewPref`, `app.bsky.feed.generator` (and Skyfeed's
+> builder-on-the-record pattern), `graph.list`, and the seven `community.lexicon.*`
+> namespaces at their new home, and found nothing that composes subscriptions. We are
+> minting `fyi.forage.mix` for now. If a shared shape for "one client's composition over
+> Bluesky subscription kinds" is something this community would want under
+> `community.lexicon.*`, we would rather contribute it there than keep it ours — with the
+> caveat that its rows name Bluesky-specific kinds. Schema:
+> `github.com/CroftCommunity/forage/blob/main/lexicons/fyi.forage.mix.json`.
 
 ## Decisions
 
@@ -145,37 +167,37 @@ is recorded in the register entry either way.
 
 ## Phases
 
-### Phase 0 — the schema · `lexicons/fyi.forage.mix.json` · `test/lexicons.test.js`, `test/lexicon-validate.test.js`
+### Phase 0 — DONE 2026-09-08 — the schema · `lexicons/fyi.forage.mix.json` · `test/lexicons.test.js`, `test/lexicon-validate.test.js`
 Pinned in `js/lexicons.js`; the register gains its entry (Act 1's table); the pinned
 collection set and the register are the same list (the existing test); validation accepts a
 full record, rejects a missing `rows`, a fifth source kind, a weight outside the enum, two
 `home: true` records.
 
-### Phase 1 — the codec · `js/mixes.js` · `test/mixes.test.js`
+### Phase 1 — DONE 2026-09-08 — the codec · `js/mixes.js` · `test/mixes.test.js`
 `toRecord(mix)` / `fromRecord(record)`: round-trips Home (overrides only) and a custom mix;
 maps weights to and from the enum; refuses a record that fails validation with words.
 
-### Phase 2 — the lens writes · `lens.js` · `test/invariants.test.js`, `test/lens-writes.test.js`
+### Phase 2 — DONE 2026-09-08 — the lens writes · `lens.js` · `test/invariants.test.js`, `test/lens-writes.test.js`
 `saveMix`, `removeMix`, `mixRecords`; the invariant count moves and the argument is recorded.
 
-### Phase 3 — the two halves · `js/mixes-pds.js` · `test/mixes-pds.test.js`
+### Phase 3 — DONE 2026-09-08 — the two halves · `js/mixes-pds.js` · `test/mixes-pds.test.js`
 Mirrors `test/tagsubs-pds.test.js`: cache per DID, refresh, publish (write then drop local),
 unpublish, `effectiveMixes`, a failed refresh never remembered as "no mixes", a write failure
 leaves the local copy in place.
 
-### Phase 4 — the Mixes page · `lensMixesView`, `lensMixEditView`
+### Phase 4 — DONE 2026-09-08 — the Mixes page · `lensMixesView`, `lensMixEditView`
 A *Save to PDS* / *Remove from PDS* control per mix and on Home; the *where* chip the hashtag
 rows have; a published mix's edits write through.
 
-### Phase 5 — the live proof · `e2e/mixes-pds-live.workflow.mjs` (`LIVE=1`)
+### Phase 5 — DONE 2026-09-08 (passed against bsky.social) — the live proof · `e2e/mixes-pds-live.workflow.mjs` (`LIVE=1`)
 The tagsub-pds-live shape: publish Weekend to the standing test account, read it back
 through `listRecords`, validate it, unpublish, read-back-empty as the last assertion. Claim
 `testbed--forage-test-account` first.
 
-### Phase 6 — socialize
+### Phase 6 — OWNER — socialize
 The forum post (Act 3), and its outcome in the register entry.
 
-### Phase 7 — the documents
+### Phase 7 — DONE 2026-09-08 — the documents
 Register entry; `AGENTS.md` write table; CHANGELOG; the first plan's D4 closed as done.
 
 ## Not doing
@@ -213,3 +235,18 @@ thing only opening it produces.
   (table above). Found in passing: `lexicon-community/lexicon` on GitHub archived 2026-07-27,
   schemas now on Tangled — this repo's register cited the archived repo; amended the same
   day. Awaiting D1–D4.
+- **2026-09-08 — Phases 0–5 and 7 built** ("agreed to all 4"). What the building found:
+  1. **The Lexicon spec does not allow an inline object as an array's items.** The
+     reference validator (`@atproto/lexicon`, via `tools/lexicon-reference-gate.mjs`)
+     refused the first draft of `fyi.forage.mix`; the row moved to `defs.row` and the record
+     refs it. Our mirror validator had never needed `ref` and learned it — sibling refs only,
+     an external ref refused rather than skipped — with the pinned runtime copy becoming the
+     whole `defs` block, because a ref without its target is half a schema.
+  2. **`putRecord` was forbidden by the write invariant** ("the lens edits no records").
+     The invariant meant Bluesky's records; a slug-keyed record of our own is the case it
+     did not foresee. It now admits exactly one, bound to `MIX_COLLECTION`, and the argument
+     is in the test beside the count.
+  3. **Live, the PDS did what D1 assumed:** a put at a slug key created, a second put at the
+     same key replaced (one record listed, `createdAt` kept), delete read back empty.
+  4. A global text replace in a test rewrote a helper as a call to itself; five red tests,
+     one line. Recorded because it is the kind of red that looks like the code's fault.

@@ -4,7 +4,8 @@ date: 2026-09-08
 **Status:** PHASES 0–9 BUILT (2026-09-08, one day; owner: "do full plan") on `claude/mixes`,
 PR #62 open by the owner's choice. ALL NINE DECISIONS CLOSED by the owner (D1 reshaped what a
 weight is — see *Decisions* and the Review Log). Owed: the phone-on-cellular timing run
-`[device: android]` before D6 is final; the mixes-to-PDS plan (D4's second half). E159 marked
+`[device: android]` before D6 is final. D4's second half — mixes as a PDS record — is
+BUILT the same day (`plans/2026-09-08-plan-mixes-on-the-pds.md`, live-proven). E159 marked
 done in `discovery/alpha/ROADMAP_TODO.md`.
 repo: `CroftCommunity/forage`
 baseline: `main` @ `68ab504` (the ring as the whole universe, #61)

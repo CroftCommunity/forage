@@ -315,8 +315,11 @@ list: a name, whether it is Home, and one row per subscription touched, each `{ 
 tag, on, weight }` with the weight as a word (`less` · `normal` · `more`). Keyed by the mix's
 slug, so publishing twice is one record; deleting it forgets the mix. Plan
 `plans/2026-09-08-plan-mixes-on-the-pds.md`. **Stage: unpublished** — `fyi.forage.*` has no
-`_lexicon` TXT record yet (that act is owed for the namespace, not per type), and on the day
-this entry was written no code sent the record over a network (Phase 2 of its plan does).
+`_lexicon` TXT record yet (that act is owed for the namespace, not per type). **Written to a
+real PDS 2026-09-08** (`e2e/mixes-pds-live.workflow.mjs`, the standing test account): a
+putRecord at a slug key accepted, a second put at the same key replaced the one record,
+delete read back empty — the second of our types any code sends over a network, after
+`tagsub`.
 
 **Why ours:** the ecosystem models *what you subscribed to* (`savedFeedsPrefV2`, lists,
 follows, our `tagsub`) and *what a feed is* (`app.bsky.feed.generator`). Nothing models *how
