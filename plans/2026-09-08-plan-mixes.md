@@ -1,8 +1,9 @@
 # Plan: Mixes — a Home board made of everything you subscribed to, and the page that tunes it
 
 date: 2026-09-08
-**Status:** DRAFTED, NOT STARTED. Nine decisions below need the owner; D1, D4 and D5 change
-what gets built. Retires roadmap E159 when the first phase lands.
+**Status:** PHASE 0 DONE (2026-09-08, measured live — see Review Log); nothing else built.
+Nine decisions below need the owner; D1, D4 and D5 change what gets built; D6 is now a
+measured recommendation. Retires roadmap E159 when Phase 1 lands.
 repo: `CroftCommunity/forage`
 baseline: `main` @ `68ab504` (the ring as the whole universe, #61)
 branch: `claude/mixes` · worktree `worktrees/mixes/forage`
@@ -161,7 +162,7 @@ board becomes `m/home` (D5); the last-board memory still wins for a returning re
 | **D3** | A new custom mix starts as? | (a) empty — everything listed, everything off; (b) a copy of Home | **(a).** A mix is picked into. A copy of Home is one tap from being Home and hides the difference. |
 | **D4** | Where does a mix live? | (a) device-local `forage.mixes`; (b) a `fyi.forage.mix` PDS record from day one; (c) local now, publish later on the tagsub pattern | **(c).** Minting a record type is cheap and permanent (LEXICONS.md) and needs the four acts; a device-local Home ships the board this month. The model in A is written so (c)'s second half is an addition. |
 | **D5** | Does Home become the first-time landing board? | (a) yes — `FIRST_TIME_BOARD` becomes Home; (b) no — Home is a sidebar row like any other | **(a).** "Default Home mix" reads as the door, not a row. Returning readers keep their last board either way. |
-| **D6** | Fan-out bound | (a) none — every enabled source, measured live on the owner's account before deciding; (b) a cap with honest overflow like the old `RING_CAP` | **(a) first, then decide.** A dozen parallel reads is what the old World board already did. The measurement is a phase, not a guess. |
+| **D6** | Fan-out bound | (a) none — every enabled source; (b) a cap with honest overflow like the old `RING_CAP`; (c) no cap, but a **per-source page size** (10–15 instead of 30) and a **per-source timeout** with the board painting what answered | **(c), from the measurement** (Review Log, 2026-09-08). Twelve sources in parallel cost ~0.7 s warm and 2.3 s cold — the sequential equivalent was 5.1 s — and nothing failed; twenty-five cost 3.1 s because of ONE straggler, not the count. The cost that grew with N was payload: 277 posts for one page at N=12, 569 at N=25, of which a screen shows a dozen. So the bound is on what each source is asked for, not on how many are asked. |
 | **D7** | Does the mix board keep the sort toolbar? | (a) yes, Default = the deal; (b) no toolbar, the deal only | **(a).** The toolbar's other sorts are client-side over the loaded window and cost nothing; a reader who wants newest-first across everything has *New*. |
 | **D8** | Dedupe credit | (a) the first source to deal a post keeps it; (b) the heavier source | **(a).** Deterministic and cheap; (b) requires knowing every source's membership before dealing. |
 | **D9** | Lists (`savedFeeds` kind `list`) | (a) rows in a mix like feeds; (b) out of scope | **(a).** They are already subscriptions and `feed()` already fetches them. |
@@ -170,10 +171,12 @@ board becomes `m/home` (D5); the last-board memory still wins for a returning re
 
 Each phase is RED first and leaves the tree green. Files named where they are known.
 
-### Phase 0 — measurement (no code) · a `LIVE=1` probe
-`e2e/mixes-fanout-live.workflow.mjs`: signed in as the test account with the owner's source
-count seeded, time a Home page open (N requests in parallel, per-source timeout 8 s), record
-wall time and the slowest source, three runs. Result goes in the Review Log and settles D6.
+### Phase 0 — measurement (no code) · a `LIVE=1` probe — **DONE 2026-09-08**
+`e2e/mixes-fanout-live.workflow.mjs`: signed in as the test account, fan out over the
+Following timeline, popular feed generators found live, and two hashtags — through the
+lens's own `feed()`/`stream()` so shaping is inside the number — per-source timeout 8 s,
+three runs at N=12, one at N=25, one sequential for contrast. Result in the Review Log;
+D6 is now recommendation (c).
 
 ### Phase 1 — the model · `js/mixes.js` · `test/mixes.test.js`
 Home from a subscription list (timeline + feeds + tags → rows, all on, Normal); overrides
@@ -302,3 +305,27 @@ Declared gate for every landing: `npm test && npm run conformance`, `npm run ref
 - **2026-09-08 — drafted** from the owner's two statements (2026-09-04, 2026-09-08) and a
   survey of the subscription, board, route and sidebar plumbing. Nothing built. Awaiting D1,
   D4, D5 in particular.
+- **2026-09-08 — Phase 0 measured** (`LIVE=1`, the standing test account, a laptop on
+  wi-fi against `bsky.social` — NOT a phone on cellular; that run is still owed
+  `[device: android]` before D6 is final). Sources = Following + popular generators found
+  live + `#harvest` + `#foraging`, per-source timeout 8 s, through `lens.feed()`/`stream()`:
+
+  | run | sources | wall | median per source | slowest | failed | posts loaded |
+  |---|---|---|---|---|---|---|
+  | 1 (cold) | 12 | 2341 ms | 696 ms | Mutuals 2339 ms | 0 | 276 |
+  | 2 | 12 | 673 ms | 479 ms | Mutuals 673 ms | 0 | 277 |
+  | 3 | 12 | 685 ms | 469 ms | Blacksky 684 ms | 0 | 277 |
+  | 4 | 25 | 3119 ms | 578 ms | OnlyPosts 3116 ms | 0 | 569 |
+  | 12 sequential | 12 | 5137 ms | — | — | — | — |
+
+  Three readings. (1) **The count is not the cost.** Wall time is the slowest source, and
+  the slowest source at N=25 was one straggler at 3.1 s while the median sat at 0.6 s; N=12
+  warm was under a second. A cap on N would not have helped run 4. (2) **The payload is the
+  cost that scales.** Each source answered with its full page (`limit: 30`), so one Home
+  open loaded 277 posts and one at N=25 loaded 569 — twenty screens' worth, into a board
+  cache budgeted at 3000. A mix should ask each source for a small page (10–15) and page
+  the sources that run dry on *More*; the deal needs `weight` posts per round per source,
+  not thirty. (3) **Parallel is the whole point:** the same twelve, one after another, took
+  5.1 s. So D6 → (c): no cap; a per-source page size and a per-source timeout, and the board
+  paints what answered, naming what did not. Open: the cold first run (2.3 s) is what the
+  first open of the day feels like, and it is the phone number that matters.
