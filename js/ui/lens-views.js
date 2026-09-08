@@ -1006,14 +1006,17 @@ function sessionCard() {
 // fails.
 export function lensNav(current) {
   const guestFeeds = CURATED.filter((c) => c.inNav !== false).map((c) => ({ slug: c.slug, title: c.title }));
+  // The nav reads the published mixes from the CACHE and never fetches them:
+  // every hermetic journey pins zero unrouted reads, and a sidebar that opens
+  // a network read on every page is exactly the thing they exist to catch
+  // (six workflows went red the first time this fetched here, 2026-09-08).
+  // The read happens once per session on the first mix surface — and the
+  // door is /m/home, so for a signed-in reader that is the first page.
   const mixesNow = () => (session ? mixesPds.effectiveMixes(session?.did) : []);
   const host = el('div', { 'data-navhost': '1' },
     navTree({ el, session, feeds: guestFeeds, tags: effectiveTags(session?.did), current, mixes: mixesNow() }));
   if (session) {
-    // the published mixes are read once per session, beside the saved feeds;
-    // the nav repaints when either lands (a mix you saved from another device
-    // is a row here, the same as a tag you saved there)
-    Promise.all([ensureSavedFeeds(), ensurePublishedMixes()]).then(([feeds]) => {
+    ensureSavedFeeds().then((feeds) => {
       if (!session) return;
       host.replaceChildren(navTree({ el, session, current, tags: effectiveTags(session?.did), mixes: mixesNow(),
         feeds: feeds.map((f) => ({ slug: f.slug, title: f.title,
