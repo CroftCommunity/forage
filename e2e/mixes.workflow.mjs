@@ -143,4 +143,64 @@ export async function run() {
   } finally {
     await broken.close();
   }
+
+  // 9. mixes on the PDS (plan 2026-09-08 mixes-on-the-pds, Phase 4): Save to
+  // PDS puts the record at the slug and the mix stays in the sidebar; a switch
+  // on a published mix writes through; Remove from PDS deletes the record and
+  // the mix is local again. The repo starts holding one published mix
+  // (Weekend) so the page shows both halves at once.
+  const REPO = { weekend: {
+    $type: 'fyi.forage.mix', name: 'Weekend', home: false,
+    rows: [{ kind: 'feed', uri: SCIENCE, on: true, weight: 'more' }],
+    createdAt: '2026-09-01T00:00:00.000Z', updatedAt: '2026-09-01T00:00:00.000Z' } };
+  // the mix listing is declared BEFORE the fixture's generic listRecords:
+  // routing is first-match by substring, in declaration order
+  const pds = await scenario('first-visit', { mode: 'bluesky', initScripts: [FAKE_SIGNED_IN], responses: {
+    'listRecords?repo=did%3Aplc%3Ame&collection=fyi.forage.mix': { records: [{ uri: 'at://did:plc:me/fyi.forage.mix/weekend', value: REPO.weekend }] },
+    ...RESPONSES,
+    'com.atproto.repo.putRecord': { uri: 'at://did:plc:me/fyi.forage.mix/x', cid: 'c' },
+    'com.atproto.repo.deleteRecord': {},
+  } });
+  try {
+    const { page, origin } = pds;
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(`${origin}/mixes`);
+    await page.waitForSelector('[data-mix-list] [data-mix-where="pds"]');
+    const listed = await page.$$eval('[data-mix-list] [data-mix-entry]', (ns) => ns.map((n) => [n.dataset.mixEntry, n.querySelector('[data-mix-where]')?.dataset.mixWhere]));
+    assert.deepEqual(listed, [['home', 'local'], ['weekend', 'pds']], 'the published mix is listed beside the local Home, and says where it lives');
+    assert.equal(await page.locator('.nav [data-nav-item="mix-weekend"]').count(), 1, 'a published mix is a sidebar row');
+    // the published mix's board deals its rows
+    await page.goto(`${origin}/m/weekend`);
+    await page.waitForSelector('.postrow');
+    assert.deepEqual([...new Set((await texts(page)).map(sourceOf))], ['science']);
+    // a switch on the published mix writes through
+    await page.goto(`${origin}/mixes/weekend`);
+    await page.waitForSelector('[data-mix-row]');
+    assert.equal(await page.locator('[data-mix-pds="remove"]').count(), 1, 'a published mix offers Remove from PDS');
+    await page.evaluate(() => { window.__shimHits.length = 0; });
+    await page.locator('[data-mix-row="timeline"] [data-mix-on]').click();
+    await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('putRecord')));
+    const put = await page.evaluate(() => JSON.parse(window.__shimHits.find((h) => h.url.includes('putRecord')).body));
+    assert.equal(put.rkey, 'weekend');
+    assert.ok(put.record.rows.some((r) => r.kind === 'timeline' && r.on === true), 'the switched-on row is in the record');
+    assert.ok(put.record.rows.some((r) => r.kind === 'feed' && r.weight === 'more'), 'and the existing row survived');
+    // Save Home to the PDS
+    await page.goto(`${origin}/mixes/home`);
+    await page.waitForSelector('[data-mix-pds="save"]');
+    await page.evaluate(() => { window.__shimHits.length = 0; });
+    await page.locator('[data-mix-pds="save"]').click();
+    await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('putRecord')));
+    const home = await page.evaluate(() => JSON.parse(window.__shimHits.find((h) => h.url.includes('putRecord')).body));
+    assert.deepEqual([home.rkey, home.record.home], ['home', true]);
+    // Remove Weekend from the PDS: the record is deleted and the mix is local
+    await page.goto(`${origin}/mixes/weekend`);
+    await page.waitForSelector('[data-mix-pds="remove"]');
+    await page.evaluate(() => { window.__shimHits.length = 0; });
+    await page.locator('[data-mix-pds="remove"]').click();
+    await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('deleteRecord')));
+    const del = await page.evaluate(() => JSON.parse(window.__shimHits.find((h) => h.url.includes('deleteRecord')).body));
+    assert.deepEqual([del.collection, del.rkey], ['fyi.forage.mix', 'weekend']);
+  } finally {
+    await pds.close();
+  }
 }
