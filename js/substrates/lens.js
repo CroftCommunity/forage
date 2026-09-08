@@ -11,6 +11,7 @@
 import { buildPost, withTag, IMAGE_LIMITS } from '../compose.js';
 import { RUNG_IDS, scopeMembers } from '../rings.js';
 import { sortItems, mixWeight } from '../engines/rank.js';
+import { deal } from '../mix-deal.js';
 import { gifOf, parseAlt } from '../gif.js';
 
 export const LENS_PERMS = Object.freeze({
@@ -1307,6 +1308,28 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
     return res.json();
   }
 
+  // One RAW page from a source, in feed-page shape ({ feed: [envelope], cursor })
+  // whatever the kind — a hashtag's searchPosts answer is wrapped to match.
+  // Raw, so a caller can shape it under a src of its own: feed() shapes under
+  // the source's kind; mix() shapes every constituent under the mix's.
+  async function fetchSource(source, { cursor, limit = 30, sort = 'feed', timeframe = 'all', nowMs = Date.now() } = {}) {
+    switch (source.kind) {
+      case 'author': return get('app.bsky.feed.getAuthorFeed', { actor: source.actor, limit, cursor });
+      case 'list': return get('app.bsky.feed.getListFeed', { list: source.uri, limit, cursor });
+      case 'timeline':
+        if (!session) throw new Error('lens: the Following timeline needs a session');
+        return get('app.bsky.feed.getTimeline', { limit, cursor });
+      case 'feed': return get('app.bsky.feed.getFeed', { feed: source.uri, limit, cursor });
+      case 'hashtag': {
+        if (!session) throw new Error('lens: hashtag streams need a session (search is 403 unauthenticated) — sign in first');
+        const win = searchWindow(sort, timeframe, nowMs);
+        const data = await get('app.bsky.feed.searchPosts', { q: `#${source.tag}`, tag: source.tag, limit, cursor, ...win });
+        return { feed: (data.posts || []).map((p) => ({ post: p })), cursor: data.cursor };
+      }
+      default: throw new Error(`lens: not a source a mix or a board can fetch: ${JSON.stringify(source)}`);
+    }
+  }
+
   // ---- 3a: ring membership (aperture over the social graph) ----
 
   async function pagedGraph(method, actor) {
@@ -1331,16 +1354,63 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
   return {
     // source: {kind:'feed'|'list', uri} | {kind:'author', actor} | {kind:'timeline'}
     async feed(source, { cursor, title, slug } = {}) {
-      let data;
-      if (source.kind === 'author') data = await get('app.bsky.feed.getAuthorFeed', { actor: source.actor, limit: 30, cursor });
-      else if (source.kind === 'list') data = await get('app.bsky.feed.getListFeed', { list: source.uri, limit: 30, cursor });
-      else if (source.kind === 'timeline') {
-        if (!session) throw new Error('lens: the Following timeline needs a session');
-        data = await get('app.bsky.feed.getTimeline', { limit: 30, cursor });
-      } else data = await get('app.bsky.feed.getFeed', { feed: source.uri, limit: 30, cursor });
+      const data = await fetchSource(source, { cursor, limit: 30 });
       const src = srcCtx(source, title);
       if (slug) { src.feedSlug = slug; src.feedId = `lens:${slug}`; } // 3i: display slug override
       return { ...shapeLensFeed(data, src, {}, posture), ...src };
+    },
+
+    // A MIX (plan 2026-09-08, § C): one request per enabled row, in parallel,
+    // each behind a per-source timeout, each for a SMALL page — Phase 0 measured
+    // that the count is not the cost, the payload is (277 posts loaded for one
+    // screen at N=12 with limit 30). A source that fails or hangs is reported in
+    // `failures` with words and the board paints what answered.
+    //
+    // Every constituent is re-shaped under the MIX's src — feedKind 'mix' — so
+    // the ring's feed/hashtag exemption never sees a constituent's kind: a feed
+    // opened by name is that feed, unedited; a mix is "these things but within
+    // this radius" (owner, 2026-09-04; E159). Rows are what js/mixes.js
+    // enabledRows() returns: { id, source, title, weight }. An off row is not
+    // handed over at all; a row of weight 0 is dropped here as well.
+    //
+    // Duplicates: a post in two rows appears once. The deal credits it to the
+    // first row that dealt it; its WEIGHT is the heavier row's (D8), because
+    // under Top and Hot the weight is a score and the higher one is what the
+    // reader asked for.
+    async mix(rows, { slug, name, cursors = {}, pageSize = 12, timeoutMs = 8000 } = {}) {
+      if (!slug) throw new Error('lens: a mix needs a slug');
+      for (const r of rows) {
+        if (!['timeline', 'feed', 'list', 'hashtag'].includes(r.source?.kind)) {
+          throw new Error(`lens: a mix cannot fetch a ${r.source?.kind || 'kindless'} row (${r.id})`);
+        }
+      }
+      const src = { feedId: `lens:m:${slug}`, feedSlug: `m:${slug}`, feedTitle: name || slug, feedKind: 'mix' };
+      // "More" is a cursor map: when one is handed over, only the rows that
+      // still have a cursor are asked again — a source that answered without
+      // one is exhausted, and asking it again would replay its first page.
+      const paging = Object.keys(cursors).length > 0;
+      const live = rows.filter((r) => r.weight > 0 && (!paging || cursors[r.id]));
+      const sources = await Promise.all(live.map(async (row) => {
+        try {
+          const data = await withTimeout(fetchSource(row.source, { cursor: cursors[row.id], limit: pageSize, sort: 'new' }), timeoutMs);
+          const shaped = shapeLensFeed(data, src, {}, posture);
+          return { id: row.id, title: row.title, weight: row.weight, ok: true, posts: shaped.posts, cursor: data.cursor };
+        } catch (e) {
+          return { id: row.id, title: row.title, weight: row.weight, ok: false, error: e.message, posts: [] };
+        }
+      }));
+      const heaviest = new Map();
+      for (const s of sources) for (const p of s.posts) heaviest.set(p.id, Math.max(heaviest.get(p.id) || 0, s.weight));
+      const queues = sources.map((s) => ({
+        id: s.id, weight: s.weight,
+        posts: s.posts.map((p) => ({ ...p, mixWeight: heaviest.get(p.id), mixSource: s.id })),
+      }));
+      const nextCursors = Object.fromEntries(sources.filter((s) => s.ok && s.cursor).map((s) => [s.id, s.cursor]));
+      return {
+        ...src, scope: `lens:m:${slug}`, sort: 'lens', timeframe: 'all', perms: LENS_PERMS,
+        posts: deal(queues), sources, cursors: nextCursors,
+        failures: sources.filter((s) => !s.ok).map((s) => ({ id: s.id, title: s.title, error: s.error })),
+      };
     },
 
     // 3f: pull the account's whole moderation posture (one round per session
@@ -1735,13 +1805,12 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
       if (kind === 'feed') return this.feed({ kind: 'feed', uri: key });
       if (kind === 'hashtag') {
         if (!session) throw new Error('lens: hashtag streams need a session (search is 403 unauthenticated) — sign in first');
-        const win = searchWindow(sort, timeframe, nowMs);
-        const data = await get('app.bsky.feed.searchPosts', { q: `#${key}`, tag: key, limit: 30, ...win });
+        const data = await fetchSource({ kind: 'hashtag', tag: key }, { limit: 30, sort, timeframe, nowMs });
         const src = { feedId: `lens:h:${key}`, feedSlug: `h:${key}`, feedTitle: `#${key}` };
         // wholeCorpus: this ordering came from the server over EVERYTHING that
         // matched, so the board must not print the "sorted within the loaded
         // posts" caveat — it would be a lie here.
-        return { ...shapeLensFeed({ feed: (data.posts || []).map((p) => ({ post: p })), cursor: data.cursor }, src, {}, posture), ...src, wholeCorpus: true };
+        return { ...shapeLensFeed(data, src, {}, posture), ...src, wholeCorpus: true };
       }
       throw new Error(`lens: unknown stream kind: ${kind} (known: feed, hashtag)`);
     },
