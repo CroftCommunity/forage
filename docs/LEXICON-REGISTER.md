@@ -286,7 +286,9 @@ pattern they share is the actual justification:
 searched the field.** It named four official types and never looked at
 `community.lexicon.*`, the ecosystem's shared namespace, in a workspace whose `discovery`
 repo had been contributing `community.lexicon.attest.*` drafts for weeks. Re-run against
-`lexicon-community/lexicon@main`, whose **nine** record types are:
+`lexicon-community/lexicon@main` (**that GitHub repo was archived on 2026-07-27; the schemas
+live at `tangled.org/lexicon.community/lexicons` now — re-checked there 2026-09-08 for the
+mixes plan, same seven namespaces, same conclusion**), whose **nine** record types were:
 
 `app.entry` · `app.profile` · `app.profileLocalization` · `bookmarks.bookmark` ·
 `calendar.event` · `calendar.rsvp` · `interaction.like` · `payments.webMonetization` ·
@@ -305,3 +307,45 @@ entry written under the rule.*
 **First write under the rule.** This is the type that took Forage's lens write
 count from seven to eight, which `AGENTS.md` and `test/invariants.test.js` make
 an argued step rather than an incidental one.
+
+## fyi.forage.mix
+
+**Holds:** one composed board — how this reader arranges their own subscriptions into one
+list: a name, whether it is Home, and one row per subscription touched, each `{ kind, uri |
+tag, on, weight }` with the weight as a word (`less` · `normal` · `more`). Keyed by the mix's
+slug, so publishing twice is one record; deleting it forgets the mix. Plan
+`plans/2026-09-08-plan-mixes-on-the-pds.md`. **Stage: unpublished** — `fyi.forage.*` has no
+`_lexicon` TXT record yet (that act is owed for the namespace, not per type). **Written to a
+real PDS 2026-09-08** (`e2e/mixes-pds-live.workflow.mjs`, the standing test account): a
+putRecord at a slug key accepted, a second put at the same key replaced the one record,
+delete read back empty — the second of our types any code sends over a network, after
+`tagsub`.
+
+**Why ours:** the ecosystem models *what you subscribed to* (`savedFeedsPrefV2`, lists,
+follows, our `tagsub`) and *what a feed is* (`app.bsky.feed.generator`). Nothing models *how
+one reader arranges their own subscriptions into a board*. That object exists only in the
+reader's client — and it must be a **record**, not a preference: `savedFeedsPrefV2` is a
+private server-side blob the official client rewrites whole on every save, so anything
+stored beside it is overwritten the next time the Bluesky app saves a feed.
+
+**Ecosystem check (2026-09-08):** six candidates opened across the three corpora
+LEXICONS.md names.
+
+| Candidate | What it holds | Why it does not fit |
+|---|---|---|
+| `app.bsky.actor.defs#savedFeedsPrefV2` | `items[]` of `{ id, type: feed \| list \| timeline, value, pinned }` | the subscription list itself, one flat set, no hashtag type, no weight, no switch, no second list — and a preference blob, not a record |
+| `app.bsky.actor.defs#feedViewPref` | per-feed `hideReplies` / `hideReposts` / `hideQuotePosts` / `hideRepliesByLikeCount` | what to hide *inside* one feed; no composition, no weight, same blob |
+| `app.bsky.feed.generator` | a feed **service**: `did`, `displayName`, `description`, `avatar`, `contentMode` | a generator is a server answering `getFeedSkeleton`; a mix has no server. Skyfeed's builder stores `skyfeedBuilder.blocks[]` on this record and still resolves every feed to `did:web:skyfeed.me` — riding the record without a server would declare a feed nobody can fetch |
+| `app.bsky.graph.list` + `listitem` | curated **people** | one *source kind* a mix can hold, not the mix |
+| `community.lexicon.*` at its current home, `tangled.org/lexicon.community/lexicons` (the GitHub repo was archived 2026-07-27): `app`, `bookmarks`, `calendar`, `interaction`, `location`, `payments`, `preference` | app listings; bookmarks; events/RSVPs; likes; places; web-monetization; the AI-use preference | nothing composes feeds and nothing subscribes to anything; `preference.ai` is about data use, not reading |
+| `exchange.recipe.*` (consumed by arecipe) | recipes | not this domain |
+
+Preference order applied: not `app.bsky.*` (a mix is never shown in an official client);
+`community.lexicon.*` holds nothing that fits, and a shared "how one client composes
+Bluesky-specific subscription kinds" type is exactly the nuance the owner named.
+
+**Socialized (2026-09-08) at the scope the owner set — across our own projects, not the
+ecosystem** (*"socialize is relative, for now we socialize across our own projects until we
+work on socializing the whole project widely"*): raised in `CroftC/.claude/LEXICONS.md` § 3
+with one question to arecipe and croft. Outcome so far: none — record it here when one
+arrives. The wide post is drafted in the plan (§ F) for when the project goes wide.

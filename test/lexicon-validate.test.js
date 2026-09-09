@@ -107,7 +107,7 @@ test('every record in our own lexicon tree validates its own example shape', () 
     const rec = doc.defs.main.record;
     const sample = {};
     for (const req of rec.required) sample[req] = exampleFor(rec.properties[req]);
-    const res = validateRecord(rec, sample);
+    const res = validateRecord(rec, sample, { defs: doc.defs });
     assert.equal(res.ok, true, `${doc.id}: a minimal record built from its own schema fails it: ${JSON.stringify(res.errors)}`);
   }
 });
@@ -154,7 +154,10 @@ test('the validator enforces every constraint our lexicons actually declare', ()
     }
   };
   for (const file of readdirSync(join(root, 'lexicons'))) {
-    walk(JSON.parse(readFileSync(join(root, 'lexicons', file), 'utf8')).defs.main.record);
+    // every def, not only main.record: a ref'd sibling (fyi.forage.mix#row)
+    // declares constraints the validator must enforce just the same
+    const { defs } = JSON.parse(readFileSync(join(root, 'lexicons', file), 'utf8'));
+    for (const [name, def] of Object.entries(defs)) walk(name === 'main' ? def.record : def);
   }
   const missed = (declaredSet, kind) => [...declaredSet]
     .filter((x) => !ENFORCED[kind].has(x) && !ENFORCED.ignored.has(x));
@@ -173,4 +176,58 @@ test('minLength keeps an empty string out where the schema says it may not be em
   const res = validateRecord(TAGSUB, { tag: '', createdAt: '2026-08-29T00:00:00.000Z' });
   assert.equal(res.ok, false);
   assert.equal(res.errors[0].field, 'tag');
+});
+
+// ── fyi.forage.mix (plan 2026-09-08 mixes-on-the-pds, Phase 0) ─────────────
+// The row's source is a `kind` enum with an optional uri/tag rather than a
+// union — this validator enforces exactly what our lexicons declare, and a
+// union is not among those. The weight is WORDS (D4): a schema enum survives a
+// fourth notch and cannot be written as 1.5 by another client.
+const MIX_DOC = JSON.parse(readFileSync(join(root, 'lexicons', 'fyi.forage.mix.json'), 'utf8'));
+const MIX = MIX_DOC.defs.main.record;
+// the record refs `#row`; the validator resolves it against the doc's defs
+const validateMix = (value) => validateRecord(MIX, value, { defs: MIX_DOC.defs });
+const mixRecord = (over = {}) => ({
+  name: 'Weekend reads', home: false,
+  rows: [
+    { kind: 'timeline', on: true, weight: 'normal' },
+    { kind: 'feed', uri: 'at://did:plc:a/app.bsky.feed.generator/funny', on: false, weight: 'more' },
+    { kind: 'hashtag', tag: 'harvest', on: true, weight: 'less' },
+  ],
+  createdAt: '2026-09-08T00:00:00.000Z', updatedAt: '2026-09-08T00:00:00.000Z',
+  ...over,
+});
+
+test('fyi.forage.mix: a full record passes, and the key is the slug', () => {
+  assert.deepEqual(validateMix(mixRecord()), { ok: true, errors: [] });
+  const doc = JSON.parse(readFileSync(join(root, 'lexicons', 'fyi.forage.mix.json'), 'utf8'));
+  assert.equal(doc.defs.main.key, 'any', 'the rkey is the slug (D1), which tid could not express');
+});
+
+test('fyi.forage.mix: rows are required, and a row needs its kind, switch and weight', () => {
+  const { rows, ...noRows } = mixRecord();
+  assert.equal(validateMix(noRows).ok, false);
+  const r = validateMix(mixRecord({ rows: [{ kind: 'timeline', weight: 'normal' }] }));
+  assert.equal(r.ok, false);
+  assert.ok(r.errors.some((e) => /on/.test(e.field)), `the missing switch is named (${JSON.stringify(r.errors)})`);
+});
+
+test('fyi.forage.mix: a fifth source kind and a weight outside the three words are refused', () => {
+  assert.equal(validateMix(mixRecord({ rows: [{ kind: 'author', on: true, weight: 'normal' }] })).ok, false);
+  assert.equal(validateMix(mixRecord({ rows: [{ kind: 'timeline', on: true, weight: 'most' }] })).ok, false);
+  assert.equal(validateMix(mixRecord({ rows: [{ kind: 'timeline', on: true, weight: 2 }] })).ok, false, 'a number is not a word');
+});
+
+test('fyi.forage.mix: a feed row carries an at-uri, a hashtag row a bare tag; the name is bounded', () => {
+  assert.equal(validateMix(mixRecord({ rows: [{ kind: 'feed', uri: 'not a uri', on: true, weight: 'normal' }] })).ok, false);
+  assert.equal(validateMix(mixRecord({ rows: [{ kind: 'hashtag', tag: '', on: true, weight: 'normal' }] })).ok, false, 'an empty tag is not a tag');
+  assert.equal(validateMix(mixRecord({ name: '' })).ok, false);
+  assert.equal(validateMix(mixRecord({ name: 'x'.repeat(61) })).ok, false);
+});
+
+test('a ref to a sibling def is followed, and an external ref is refused rather than skipped', () => {
+  const r = validateMix(mixRecord({ rows: [{ kind: 'timeline', weight: 'normal' }] }));
+  assert.equal(r.ok, false, 'the row def\'s `required` reached the item');
+  assert.throws(() => validateRecord({ type: 'object', properties: { x: { type: 'ref', ref: 'com.example.other#thing' } } }, { x: {} }, { defs: {} }), /external|com\.example\.other/);
+  assert.throws(() => validateRecord({ type: 'object', properties: { x: { type: 'ref', ref: '#missing' } } }, { x: {} }, { defs: {} }), /#missing/);
 });

@@ -17,7 +17,10 @@ import { navTree } from './nav.js';
 import { SCOPES, scopeFor } from '../rings.js';
 import * as ringScope from '../ring-scope.js';
 import { extractTarget, directPath, threadPath, isDid } from '../share-target.js';
-import { lastBoard, setLastBoard, landingBoard, DIRECTORY } from '../last-board.js';
+import { lastBoard, setLastBoard, landingBoard, boardPath, DIRECTORY } from '../last-board.js';
+import * as mixesModel from '../mixes.js';
+import * as mixesPds from '../mixes-pds.js';
+import { deal } from '../mix-deal.js';
 import { createLens, LENS_PERMS, facetSegments, trimCardLink, slugifyFeedName, sortWindow, affordanceFor,
   feedCardModel, threadNodeStyle, feedPath, parseFeedRoute, sessionGateMessage, canDelete, sourceLabel,
   sortFeeds, filterFeeds, platforms, liveFeeds, absentStops } from '../substrates/lens.js';
@@ -71,6 +74,8 @@ const savedFeedUris = new Set();
 // used to force both at once, quietly rearranging that top row.
 const pinnedFeedUris = new Set();
 let savedFeedsPromise = null;
+// the published mixes, read once per session (mixes-on-the-pds); reset with the feeds
+let publishedMixesPromise = null;
 const roster = createAccountRoster();
 function ensureSavedFeeds() {
   if (!session) return Promise.resolve(savedFeedUris);
@@ -354,7 +359,7 @@ async function adoptSession(s) {
     .catch((e) => console.warn('forage: could not load your profile picture', e));
   savedFeedUris.clear();
   pinnedFeedUris.clear();
-  savedFeedsPromise = null;
+  savedFeedsPromise = null; publishedMixesPromise = null;
   // Apply the reader's ring while the board is still painting.
   //
   // This line used to read `lens.ringMembers('mutuals')`, and it had been dead
@@ -948,7 +953,7 @@ function sessionCard() {
       lens = createLens({ hiddenUris });
       savedFeedUris.clear();
       pinnedFeedUris.clear();
-      savedFeedsPromise = null;
+      savedFeedsPromise = null; publishedMixesPromise = null;
       // (the new lens above has no ring memory — the graph belongs to the
       // account that just left)
       toast('Signed out.', 'ok');
@@ -1001,12 +1006,19 @@ function sessionCard() {
 // fails.
 export function lensNav(current) {
   const guestFeeds = CURATED.filter((c) => c.inNav !== false).map((c) => ({ slug: c.slug, title: c.title }));
+  // The nav reads the published mixes from the CACHE and never fetches them:
+  // every hermetic journey pins zero unrouted reads, and a sidebar that opens
+  // a network read on every page is exactly the thing they exist to catch
+  // (six workflows went red the first time this fetched here, 2026-09-08).
+  // The read happens once per session on the first mix surface — and the
+  // door is /m/home, so for a signed-in reader that is the first page.
+  const mixesNow = () => (session ? mixesPds.effectiveMixes(session?.did) : []);
   const host = el('div', { 'data-navhost': '1' },
-    navTree({ el, session, feeds: guestFeeds, tags: effectiveTags(session?.did), current }));
+    navTree({ el, session, feeds: guestFeeds, tags: effectiveTags(session?.did), current, mixes: mixesNow() }));
   if (session) {
     ensureSavedFeeds().then((feeds) => {
       if (!session) return;
-      host.replaceChildren(navTree({ el, session, current, tags: effectiveTags(session?.did),
+      host.replaceChildren(navTree({ el, session, current, tags: effectiveTags(session?.did), mixes: mixesNow(),
         feeds: feeds.map((f) => ({ slug: f.slug, title: f.title,
           href: feedPath({ creator: f.creator, rkey: f.slug }) || `/f/${f.slug}` })) }));
     }).catch(() => { /* the nav keeps the curated rows rather than emptying */ });
@@ -1021,6 +1033,9 @@ export function lensNav(current) {
 // became a display scope), so a board id is now a feed slug or a hashtag and
 // never a rung.
 export function currentBoardId(path) {
+  const m = /^\/m\/([^/?]+)/.exec(path);
+  if (m) return `mix-${decodeURIComponent(m[1])}`;
+  if (path === '/mixes' || path.startsWith('/mixes/')) return 'mixes';
   const h = /^\/h\/([^/?]+)/.exec(path);
   if (h) return `tag-${decodeURIComponent(h[1])}`;
   const f = /^\/f\/([^/?]+)/.exec(path);
@@ -1038,7 +1053,7 @@ export function currentBoardId(path) {
 export function landingPath() {
   const landing = landingBoard({ signedIn: !!session, stored: lastBoard() });
   if (landing === DIRECTORY) return null;
-  return `/f/${landing}`;
+  return boardPath(landing);
 }
 
 export function lensHomeView() {
@@ -1101,6 +1116,11 @@ export function lensFeedView(params) {
 
 function feedBoardView(entry, preInfo) {
   const main = el('div', {});
+  // Remember this board as the one to come back to. The only writer of the
+  // last-board memory left with the ring boards on 2026-09-03, so `/` has
+  // landed on Following for everyone since; a mix board remembers itself the
+  // same way (plan 2026-09-08, D5: a returning reader keeps their last board).
+  setLastBoard(entry.slug);
   const allPosts = [];
   let nextCursor = null;
   // phases 0/2/4: what this board was showing when you left it. Read BEFORE
@@ -1306,6 +1326,275 @@ function feedBoardView(entry, preInfo) {
 // action row — with a wall on its outer edge and two additions: the byline
 // says "⟳ quoted this", and the action row carries a Repost glyph (O6: a real
 // write, 4a-iii). No tint, no "open its thread" (the ⋯ has Open on bsky.app).
+// ---- Mixes (plan 2026-09-08) ----
+//
+// The published half is read once per session (mixes-on-the-pds, Phase 4):
+// a mix saved to the PDS from another device is a row here without a visit
+// to the Mixes page. A failed read leaves the cache's last set in force.
+function ensurePublishedMixes() {
+  if (!session?.did) return Promise.resolve(null);
+  if (!publishedMixesPromise) publishedMixesPromise = mixesPds.refreshPublished(lens, session.did).catch(() => null);
+  return publishedMixesPromise;
+}
+export function forgetPublishedMixes() { publishedMixesPromise = null; }
+//
+// The reader's subscriptions, in the shape js/mixes.js takes: the saved feeds
+// as lens.feeds() returns them (timeline included) and the effective tags.
+// Resolved here, in the view, so the model never reaches for a session.
+function readerSubscriptions() {
+  if (!session) return Promise.resolve([]);
+  return ensureSavedFeeds().then((feeds) => mixesModel.subscriptions({
+    feeds: feeds.map((f) => ({ kind: f.kind, uri: f.id, title: f.title, slug: f.slug })),
+    tags: effectiveTags(session?.did),
+  }));
+}
+
+const mixInfoLine = ({ sourceCount, failures, sort }) => {
+  const parts = [`${sourceCount} source${sourceCount === 1 ? '' : 's'}`];
+  if (failures.length) parts.push(`${failures.length} of ${sourceCount} did not answer — ${failures.map((f) => f.title).join(', ')}`);
+  if (sort === 'new') parts.push('New ignores weights');
+  return el('div', { class: 'xs muted', style: 'padding:0 6px 6px', 'data-mix-info': '1' }, parts.join(' · '));
+};
+
+// /m/<slug> — the board. One request per enabled row, dealt; the toolbar's
+// other sorts read the row weight (D1). "More" pages only the rows that still
+// have a cursor and re-deals the whole set, so the top of the board never
+// moves under the reader.
+export function lensMixView(params) {
+  const slug = decodeURIComponent(params.slug || '');
+  const meta = mixesPds.effectiveMixes(session?.did).find((m) => m.slug === slug);
+  if (!session) {
+    return { main: emptyState('Mixes need an account', 'A mix is made of the feeds and hashtags you subscribed to, so it needs you signed in.'), side: null };
+  }
+  if (!meta) {
+    return { main: emptyState('No such mix', `There is no mix called “${slug}” on this device.`,
+      el('a', { class: 'btn primary', href: '/mixes' }, 'Your mixes')), side: null };
+  }
+  setLastBoard(`m/${slug}`);
+  const main = el('div', {});
+  const cacheKey = `mix:${slug}`;
+  const cached = boardCache.read(cacheKey);
+  // per-source queues, so More can refill one and the deal re-runs over all
+  const queues = new Map();
+  let cursors = {};
+  let failures = [];
+  let rows = [];
+  let allPosts = [];
+  const remember = () => boardCache.write(cacheKey, {
+    posts: allPosts.slice(), cursor: cursors, at: Date.now(),
+    info: { queues: [...queues.values()], failures, rowCount: rows.length },
+  });
+  const absorb = (r) => {
+    for (const src of r.sources) {
+      const q = queues.get(src.id) || { id: src.id, weight: src.weight, posts: [] };
+      q.posts = [...q.posts, ...src.posts];
+      queues.set(src.id, q);
+    }
+    cursors = r.cursors;
+    failures = r.failures;
+    allPosts = deal([...queues.values()]);
+  };
+  const card = el('div', { class: 'card' });
+  const moreHost = el('div', {});
+  const infoHost = el('div', {});
+  const repaint = () => {
+    renderBoard(card, allPosts);
+    infoHost.replaceChildren(mixInfoLine({ sourceCount: rows.length, failures, sort: boardSort }));
+    moreHost.replaceChildren();
+    if (Object.keys(cursors).length) {
+      const more = el('button', { class: 'btn sm', style: 'margin:8px' }, 'More');
+      more.addEventListener('click', () => {
+        lens.mix(rows, { slug, name: meta.name, cursors })
+          .then((next) => { absorb(next); repaint(); remember(); })
+          .catch((e) => toast('More failed: ' + e.message, 'err'));
+      });
+      moreHost.append(more);
+    }
+  };
+  const paint = () => {
+    main.replaceChildren(
+      el('div', { class: 'row spread wrap' }, el('h1', {}, meta.name),
+        el('a', { class: 'btn sm', href: `/mixes/${encodeURIComponent(slug)}` }, 'Tune this mix')),
+      boardToolbar(() => repaint()),
+      infoHost,
+      allPosts.length ? card : emptyState('Nothing came back', 'Every source in this mix answered with nothing, or did not answer.'),
+      moreHost);
+    repaint();
+  };
+  const load = () => Promise.all([readerSubscriptions(), ensurePublishedMixes()]).then(([subs]) => {
+    rows = mixesPds.effectiveEnabledRows(session?.did, slug, subs);
+    if (!rows.length) {
+      main.replaceChildren(emptyState('Nothing is in this mix yet',
+        meta.home ? 'Every subscription in Home is switched off. Turn some back on and this board fills.'
+          : 'A new mix starts empty — pick the feeds and hashtags that belong in it.',
+        el('a', { class: 'btn primary', href: `/mixes/${encodeURIComponent(slug)}` }, 'Open Mixes')));
+      return;
+    }
+    return lens.mix(rows, { slug, name: meta.name }).then((r) => { absorb(r); paint(); remember(); });
+  }).catch((e) => main.replaceChildren(emptyState('Could not build this mix', e.message)));
+  if (cached && navKind() === 'pop') {
+    for (const q of cached.info?.queues || []) queues.set(q.id, q);
+    cursors = cached.cursor || {};
+    failures = cached.info?.failures || [];
+    rows = { length: cached.info?.rowCount || queues.size };
+    allPosts = cached.posts;
+    paint();
+    // the rows are needed for More; resolve them quietly
+    readerSubscriptions().then((subs) => { rows = mixesPds.effectiveEnabledRows(session?.did, slug, subs); });
+  } else {
+    main.append(el('div', { class: 'row spread wrap' }, el('h1', {}, meta.name)), skeleton(6));
+    load();
+  }
+  return { main, side: el('div', { class: 'side' }, ...lensRail()), boardKey: cacheKey };
+}
+
+// /mixes — the reader's mixes, and New mix.
+export function lensMixesView() {
+  if (!session) return { main: emptyState('Mixes need an account', 'A mix is made of the feeds and hashtags you subscribed to, so it needs you signed in.'), side: null };
+  const list = el('div', { class: 'card', 'data-mix-list': '1' });
+  const paintList = () => list.replaceChildren(
+    ...mixesPds.effectiveMixes(session?.did).map((m) => el('div', { class: 'row spread', style: 'padding:6px 0;align-items:center;gap:8px', 'data-mix-entry': m.slug },
+      el('div', { class: 'row', style: 'gap:8px;align-items:center' },
+        el('a', { href: `/m/${encodeURIComponent(m.slug)}` }, m.name),
+        el('span', { class: 'chip', 'data-mix-where': m.published ? 'pds' : 'local' }, m.published ? 'Saved to PDS' : 'Local only')),
+      el('a', { class: 'btn sm', href: `/mixes/${encodeURIComponent(m.slug)}` }, 'Tune'))));
+  paintList();
+  ensurePublishedMixes().then(() => { if (session) paintList(); });
+  const nameBox = el('input', { type: 'text', placeholder: 'Weekend reads', 'aria-label': 'New mix name', maxlength: '60' });
+  const make = el('button', { class: 'btn primary', type: 'button' }, 'New mix');
+  const form = el('form', { class: 'row', style: 'gap:8px;align-items:center;margin-top:10px', 'data-new-mix': '1' }, nameBox, make);
+  form.addEventListener('submit', (e) => { e.preventDefault(); make.click(); });
+  make.addEventListener('click', () => {
+    try { go(`/mixes/${encodeURIComponent(mixesModel.createMix(nameBox.value))}`); } catch (e) { toast(e.message, 'err'); }
+  });
+  const main = el('div', {},
+    el('h1', {}, 'Your mixes'),
+    el('p', { class: 'muted small' },
+      'A mix is one board dealt from several of your subscriptions — the accounts you follow, feeds and hashtags — a few from each in turn. Home holds everything you subscribed to; a mix you make starts empty and takes what you pick. Each row has a switch and a weight: Less, Normal or More of that source, under every sort but New. A mix saved to your PDS follows you to every Forage you sign into and is readable by anyone, like your follows; one kept local stays on this device.'),
+    list, form);
+  return { main, side: el('div', { class: 'side' }, ...lensRail()) };
+}
+
+// /mixes/<slug> — one row per subscription: a switch and a three-notch weight.
+// Pages, not modals; every control at the 44px floor (.switch, .ringseg).
+export function lensMixEditView(params) {
+  const slug = decodeURIComponent(params.slug || '');
+  if (!session) return { main: emptyState('Mixes need an account', 'Sign in to tune a mix.'), side: null };
+  const did = session.did;
+  const meta = mixesPds.effectiveMixes(did).find((m) => m.slug === slug);
+  if (!meta) {
+    return { main: emptyState('No such mix', `There is no mix called “${slug}” on this device.`,
+      el('a', { class: 'btn primary', href: '/mixes' }, 'Your mixes')), side: null };
+  }
+  const main = el('div', {}, el('h1', {}, meta.name), skeleton(4));
+  let dialSeq = 0;
+  // One door for every edit: a published mix writes through to the record, a
+  // local one to this device. Errors are said, never swallowed.
+  const setRow = (id, patch) => (meta.published
+    ? mixesPds.setPublishedRow(lens, did, slug, id, patch)
+    : Promise.resolve(mixesModel.setRow(slug, id, patch)));
+  const weightDial = (row) => {
+    const group = `mixw-${++dialSeq}`;
+    const segs = mixesModel.WEIGHTS.flatMap((w) => {
+      const id = `${group}-w${String(w).replace('.', '')}`;
+      return [
+        el('input', { type: 'radio', name: group, id, class: 'ringpill-in', 'data-weight': String(w),
+          checked: row.weight === w || false,
+          onchange: () => { setRow(row.id, { weight: w }).catch((e) => toast(e.message, 'err')); } }),
+        el('label', { class: 'ringseg', for: id, title: `${mixesModel.weightLabel(w)} — ×${w} of this in the mix` },
+          mixesModel.weightLabel(w)),
+      ];
+    });
+    return el('div', { class: 'ringpill', role: 'radiogroup', 'aria-label': `Weight of ${row.title}` }, ...segs);
+  };
+  const boardHref = (row) => (row.kind === 'hashtag' ? `/h/${encodeURIComponent(row.source.tag)}`
+    : row.kind === 'timeline' ? '/f/following' : null);
+  const rowEl = (row) => {
+    const sw = el('button', { type: 'button', class: 'switch', role: 'switch', 'aria-checked': String(row.on),
+      'data-mix-on': '1', 'aria-label': `${row.on ? 'On' : 'Off'}: ${row.title}` }, row.on ? 'On' : 'Off');
+    sw.addEventListener('click', () => {
+      const on = sw.getAttribute('aria-checked') !== 'true';
+      sw.setAttribute('aria-checked', String(on));
+      sw.setAttribute('aria-label', `${on ? 'On' : 'Off'}: ${row.title}`);
+      sw.textContent = on ? 'On' : 'Off';
+      setRow(row.id, { on }).catch((e) => {
+        // the write failed: the switch goes back to what the record says
+        sw.setAttribute('aria-checked', String(!on));
+        sw.textContent = !on ? 'On' : 'Off';
+        toast(e.message, 'err');
+      });
+    });
+    const href = boardHref(row);
+    const name = href ? el('a', { href }, row.title) : el('span', {}, row.title);
+    const gone = row.subscribed ? null : el('span', { class: 'chip', title: 'You unsubscribed from this; the row is kept so you can see it was here' }, 'no longer subscribed');
+    const remove = row.subscribed ? null : el('button', { type: 'button', class: 'btn sm', 'aria-label': `Remove ${row.title} from this mix` }, 'Remove');
+    if (remove) remove.addEventListener('click', () => {
+      (meta.published ? mixesPds.removePublishedRow(lens, did, slug, row.id) : Promise.resolve(mixesModel.removeRow(slug, row.id)))
+        .then(() => rerenderNow()).catch((e) => toast(e.message, 'err'));
+    });
+    return el('div', { class: 'row spread wrap', style: 'padding:8px 0;gap:8px;align-items:center', 'data-mix-row': row.id,
+      ...(row.subscribed ? {} : { 'data-unsubscribed': '1' }) },
+      el('div', { class: 'row', style: 'gap:8px;align-items:center;min-width:0' }, name, gone),
+      el('div', { class: 'row', style: 'gap:8px;align-items:center' }, sw, row.subscribed ? weightDial(row) : remove));
+  };
+  const KINDS = [['timeline', 'Following'], ['feed', 'Feeds'], ['list', 'Lists'], ['hashtag', 'Hashtags']];
+  const nameBox = el('input', { type: 'text', value: meta.name, 'aria-label': 'Mix name', maxlength: '60' });
+  const save = el('button', { class: 'btn sm', type: 'button' }, 'Rename');
+  save.addEventListener('click', () => {
+    (meta.published ? mixesPds.renamePublished(lens, did, slug, nameBox.value) : Promise.resolve(mixesModel.renameMix(slug, nameBox.value)))
+      .then(() => rerenderNow()).catch((e) => toast(e.message, 'err'));
+  });
+  const del = meta.home ? null : el('button', { class: 'btn sm', type: 'button', 'data-delete-mix': '1' }, 'Delete this mix');
+  if (del) {
+    // two presses, no dialog: the first arms, the second deletes. A published
+    // mix comes back to the device first, then goes — one door for delete.
+    del.addEventListener('click', () => {
+      if (!del.dataset.armed) { del.dataset.armed = '1'; del.textContent = 'Press again to delete'; return; }
+      (meta.published ? mixesPds.unpublishMix(lens, did, slug) : Promise.resolve())
+        .then(() => { mixesModel.deleteMix(slug); go('/mixes'); })
+        .catch((e) => toast(e.message, 'err'));
+    });
+  }
+  // Save to PDS / Remove from PDS — the tagsub control, per mix. Publishing
+  // moves the mix into the repo (readable by anyone, like your follows) and off
+  // this device; removing brings it back. Disabled with a reason while the
+  // account cannot be reached, because a delete aimed at a cache is a delete
+  // aimed at nothing.
+  const pdsBtn = el('button', { class: 'btn sm', type: 'button', 'data-mix-pds': meta.published ? 'remove' : 'save' },
+    meta.published ? 'Remove from PDS' : 'Save to PDS');
+  pdsBtn.addEventListener('click', () => {
+    pdsBtn.disabled = true;
+    (meta.published ? mixesPds.unpublishMix(lens, did, slug) : mixesPds.publishMix(lens, did, slug))
+      .then(() => rerenderNow())
+      .catch((e) => { pdsBtn.disabled = false; toast(e.message, 'err'); });
+  });
+  Promise.all([readerSubscriptions(), ensurePublishedMixes()]).then(([subs]) => {
+    const m = mixesPds.effectiveMix(did, slug, subs);
+    const groups = KINDS.map(([kind, label]) => {
+      const rs = m.rows.filter((r) => r.kind === kind && r.subscribed);
+      return rs.length ? el('div', {}, el('h3', { style: 'font-size:var(--t-md);margin:12px 0 2px' }, label), ...rs.map(rowEl)) : null;
+    }).filter(Boolean);
+    const orphans = m.rows.filter((r) => !r.subscribed);
+    main.replaceChildren(
+      el('div', { class: 'row spread wrap' }, el('h1', {}, m.name),
+        el('a', { class: 'btn sm primary', href: `/m/${encodeURIComponent(slug)}` }, 'Open the board')),
+      el('p', { class: 'muted small' }, m.home
+        ? 'Home is everything you subscribed to. A subscription you add later joins it on its own, at Normal. Switch a row off and it is not fetched; the weight is remembered for when you switch it back on.'
+        : 'This mix takes only the rows you switch on. A subscription you add later is listed here, off, until you choose it.'),
+      el('div', { class: 'card', 'data-mix-rows': '1' }, ...groups,
+        orphans.length ? el('div', {}, el('h3', { style: 'font-size:var(--t-md);margin:12px 0 2px' }, 'No longer subscribed'), ...orphans.map(rowEl)) : null),
+      el('div', { class: 'card' },
+        el('div', { class: 'row wrap', style: 'gap:8px;align-items:center' }, nameBox, save, del),
+        el('div', { class: 'row wrap', style: 'gap:8px;align-items:center;margin-top:10px' },
+          el('span', { class: 'chip', 'data-mix-where': m.published ? 'pds' : 'local' }, m.published ? 'Saved to PDS' : 'Local only'),
+          pdsBtn,
+          el('span', { class: 'xs muted' }, m.published
+            ? 'This mix lives in your account: every Forage you sign into sees it, and so can anyone who reads your repo.'
+            : 'This mix lives on this device. Save it to your account and it follows you.'))));
+  }).catch((e) => main.replaceChildren(emptyState('Could not read your subscriptions', e.message)));
+  return { main, side: el('div', { class: 'side' }, ...lensRail()) };
+}
+
 function quoteNode(node, ctx) {
   return commentNode(node, {
     ...ctx,
@@ -2007,7 +2296,7 @@ export function accountMenu() {
     const did = session?.did;
     try { await manager.signOut(); } catch (e) { toast(e.message, 'err'); }
     if (did) roster.forget(did);
-    session = null; lens = createLens({ hiddenUris }); savedFeedUris.clear(); pinnedFeedUris.clear(); savedFeedsPromise = null;
+    session = null; lens = createLens({ hiddenUris }); savedFeedUris.clear(); pinnedFeedUris.clear(); savedFeedsPromise = null; publishedMixesPromise = null;
     toast('Signed out.', 'ok');
     rerender();
   });

@@ -78,7 +78,14 @@ export function setLastBoard(id) {
 // Ignoring is reversible on the next sign-in; clearing is not.
 
 export const DIRECTORY = 'directory';
-export const FIRST_TIME_BOARD = 'following';
+// Home — the mix of everything you subscribed to (plan 2026-09-08, D5: "default
+// Home mix" reads as the door, not a row). A returning reader still lands on
+// the board they left; this is only where a reader with no history goes.
+export const FIRST_TIME_BOARD = 'm/home';
+
+// A board id's address. A mix id is `m/<slug>` and lives under /m/; every
+// other id is a feed slug (or a tag id) under /f/, as before.
+export const boardPath = (id) => (String(id).startsWith('m/') ? `/${id}` : `/f/${id}`);
 
 export function landingBoard({ signedIn, stored } = {}) {
   if (!signedIn) return DIRECTORY;

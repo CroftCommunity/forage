@@ -67,14 +67,22 @@ function round7(n) { return Math.round(n * 1e7) / 1e7; }
 // or, since 2026-08-29, `?sort=best` (O7) — link, or a stored preference
 // written before the change, landing on a working board instead of stranding
 // someone on a sort that no longer exists.
+// A mix's row weight (plan 2026-09-08, D1: ×½ · ×1 · ×2, "it has to play nice
+// with top etc sort"). Top multiplies likes by it, Hot multiplies engagement
+// inside the log — so ×2 is exactly log10(2) × 45000 s ≈ 3¾ hours of youth —
+// and New ignores it: time is the one order a weight cannot touch. An item
+// with no weight is ×1, which is why every literal pin in test/engines.test.js
+// still holds unchanged.
+export const mixWeight = (item) => (typeof item.mixWeight === 'number' && item.mixWeight > 0 ? item.mixWeight : 1);
+
 export function sortItems(items, sort, nowSec) {
   const arr = items.slice();
   const by = (fn) => arr.sort((a, b) => fn(b) - fn(a));
   switch (sort) {
     case 'new':    return arr.sort((a, b) => b.createdSec - a.createdSec);
-    case 'top':    return by((i) => i.likes);
+    case 'top':    return by((i) => i.likes * mixWeight(i));
     case 'rising': return by((i) => rising(i.likes, i.createdSec, nowSec));
     case 'hot':
-    default:       return by((i) => hot(engagement(i), i.createdSec));
+    default:       return by((i) => hot(engagement(i) * mixWeight(i), i.createdSec));
   }
 }

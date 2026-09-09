@@ -514,3 +514,57 @@ test('4b: hide(uri, on) is LOCAL — no request — and the shape layer hides th
   assert.equal(shapeLensPost(post('x'), SRC, lens.posture()).hidden, undefined);
   assert.equal(calls.length, 0, 'hiding never reaches the network');
 });
+
+// ---- fyi.forage.mix (plan 2026-09-08 mixes-on-the-pds, Phase 2) ----
+//
+// The mix is the one record the lens EDITS IN PLACE: its key is the slug (D1),
+// so a second publish of Weekend is the same record, and that is putRecord
+// (create or replace at a known rkey), which test/invariants.test.js now
+// admits exactly once, bound to MIX_COLLECTION.
+const MIX_RECORD_SAMPLE = {
+  $type: 'fyi.forage.mix', name: 'Weekend', home: false,
+  rows: [{ kind: 'feed', uri: 'at://did:plc:a/app.bsky.feed.generator/funny', on: true, weight: 'more' }],
+  createdAt: '2026-09-08T00:00:00.000Z', updatedAt: '2026-09-08T00:00:00.000Z',
+};
+
+test('saveMix puts the record at the slug, into MY repo', async () => {
+  const { session, calls } = repoSession();
+  await createLens({ session }).saveMix('weekend', MIX_RECORD_SAMPLE);
+  assert.equal(calls.length, 1);
+  assert.ok(calls[0].path.startsWith('/xrpc/com.atproto.repo.putRecord'), 'create-or-replace, because the key is the slug');
+  const b = calls[0].body;
+  assert.deepEqual([b.repo, b.collection, b.rkey], ['did:plc:me', 'fyi.forage.mix', 'weekend']);
+  assert.equal(b.record.$type, 'fyi.forage.mix');
+  assert.deepEqual(b.record.rows, MIX_RECORD_SAMPLE.rows);
+});
+
+test('saveMix refuses a record that fails the lexicon BEFORE any request — a PDS would accept it', async () => {
+  const { session, calls } = repoSession();
+  await assert.rejects(() => createLens({ session }).saveMix('weekend', { ...MIX_RECORD_SAMPLE, rows: [{ kind: 'author', on: true, weight: 'normal' }] }), /kind/);
+  await assert.rejects(() => createLens({ session }).saveMix('Bad Slug!', MIX_RECORD_SAMPLE), /slug/);
+  assert.equal(calls.length, 0);
+});
+
+test('mixRecords lists MY repo and returns the record with its rkey', async () => {
+  const { session, calls } = repoSession({ records: [
+    { uri: 'at://did:plc:me/fyi.forage.mix/weekend', value: MIX_RECORD_SAMPLE },
+    { uri: 'at://did:plc:me/fyi.forage.mix/home', value: { ...MIX_RECORD_SAMPLE, name: 'Home', home: true, rows: [] } },
+  ] });
+  const out = await createLens({ session }).mixRecords();
+  assert.ok(calls[0].path.includes('collection=fyi.forage.mix'));
+  assert.deepEqual(out.map((r) => [r.rkey, r.value.name]), [['weekend', 'Weekend'], ['home', 'Home']]);
+});
+
+test('removeMix deletes the EXACT rkey from my mix collection', async () => {
+  const { session, calls } = repoSession();
+  await createLens({ session }).removeMix('weekend');
+  assert.ok(calls[0].path.startsWith('/xrpc/com.atproto.repo.deleteRecord'));
+  assert.deepEqual([calls[0].body.collection, calls[0].body.rkey], ['fyi.forage.mix', 'weekend']);
+});
+
+test('mix writes and reads need a session, in words', async () => {
+  const lens = createLens({ session: null });
+  await assert.rejects(() => lens.saveMix('weekend', MIX_RECORD_SAMPLE), /sign in/i);
+  await assert.rejects(() => lens.removeMix('weekend'), /sign in/i);
+  await assert.rejects(() => lens.mixRecords(), /sign in/i);
+});

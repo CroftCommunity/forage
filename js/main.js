@@ -229,6 +229,12 @@ router.route('/p', blueskyOnly(lensViews.lensThreadView));
 router.route('/share', blueskyOnly(lensViews.lensShareView));
 router.route('/reply', blueskyOnly(lensViews.lensReplyView)); // feed-row v4: a reply is a page
 router.route('/me', blueskyOnly(lensViews.lensProfileView));
+// Mixes (plan 2026-09-08): the board, the list, and one mix's rows. /mixes is
+// registered before /mixes/:slug only for reading order — neither shadows the
+// other (a param is one segment), and test/routes.test.js proves it.
+router.route('/m/:slug', blueskyOnly(lensViews.lensMixView));
+router.route('/mixes', blueskyOnly(lensViews.lensMixesView));
+router.route('/mixes/:slug', blueskyOnly(lensViews.lensMixEditView));
 router.route('/feeds', blueskyOnly(lensViews.lensFeedsView));
 router.route('/hashtags', blueskyOnly(lensViews.lensHashtagsView));
 router.route('/hashtags/:section', blueskyOnly(lensViews.lensHashtagsView));

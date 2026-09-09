@@ -24,7 +24,7 @@
 
 import * as ringScope from '../ring-scope.js';
 
-export function navTree({ el, session, feeds, tags, current }) {
+export function navTree({ el, session, feeds, tags, current, mixes = [] }) {
   const nav = el('nav', { class: 'nav', 'data-nav': '1', 'aria-label': 'Boards' });
   const section = (label) => nav.append(el('div', { class: 'navsec' }, label));
   const item = (id, label, ico, href) => {
@@ -72,6 +72,15 @@ export function navTree({ el, session, feeds, tags, current }) {
   });
   if (pill) nav.append(el('div', { class: 'navring' }, pill));
 
+  // Mixes (plan 2026-09-08, § E): the reader's composed boards, Home first,
+  // then in the order made — ABOVE the feeds they are made of. Every mix is a
+  // row; hiding one from here is deliberately not offered until someone has
+  // more mixes than fit. Signed out there are no subscriptions, so no mixes.
+  if (session && (mixes || []).length) {
+    section('Mixes');
+    for (const m of mixes) item(`mix-${m.slug}`, m.name, '◍', `/m/${m.slug}`);
+  }
+
   section('Feeds');
   for (const f of feeds || []) item(f.slug, f.title, '▦', f.href || `/f/${f.slug}`);
   // v11 (owner, 2026-09-01: "remove Bluesky from the default feed on the left
@@ -91,6 +100,7 @@ export function navTree({ el, session, feeds, tags, current }) {
   }
 
   nav.append(el('hr', { class: 'navrule' }));
+  if (session) item('mixes', 'Your mixes', '◍', '/mixes');
   item('feeds', 'Browse all feeds', '☷', '/feeds');
   item('hashtags', 'Browse hashtags', '#', '/hashtags');
 

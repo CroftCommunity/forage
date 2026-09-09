@@ -129,10 +129,16 @@ deep links and the service worker upgrades them to 200s. One route namespace,
 resolved by the active presentation mode (`js/mode.js`):
 `/` **the landing rule, not a page** — a logged-out reader falls through to the
 directory; a returning one is `replaceState`d onto the board they left; a first
-sign-in lands on `/r/fol` (`js/last-board.js`, plan 2026-08-26-4 V5) ·
+sign-in lands on `/m/home` (`js/last-board.js`; plan 2026-09-08 D5 — it was
+`/r/fol`, then `/f/following` when the rungs retired) ·
 `/trending` the directory itself, which needs its own address precisely BECAUSE
-`/` redirects away from it · `/r/:rung` a ring board, one address per rung
-(`js/rings.js`) · `/f/@creator/:rkey` feed board (the SHAREABLE form) ·
+`/` redirects away from it · `/m/:slug` a **mix** — one board dealt from several
+of your subscriptions, weighted per row (`js/mixes.js`, `js/mix-deal.js`,
+`lens.mix()`; plan 2026-09-08); `/mixes` your mixes and New mix; `/mixes/:slug`
+one mix's rows — a switch and a three-notch weight per subscription. A mix is
+NEVER exempt from the ring (E159): every constituent is re-shaped under the
+mix's own src. Rungs are not addresses (`/r/:rung` retired 2026-09-03) ·
+`/f/@creator/:rkey` feed board (the SHAREABLE form) ·
 `/f/:slug` the same board in-session · `/h/:tag` hashtag board · `/hashtags`
 browse hashtags · `/p?uri=` thread · `/u/:handle` profile · `/me` your session,
 accounts, moderation mirror **and Preferences** (E144 — `/settings` redirects
@@ -150,7 +156,8 @@ the account's own picture, initials underneath as the not-yet-loaded state (plan
 320px only just.
 
 **Everything in the nav is a BOARD**, and boards differ only in where the posts
-come from: a feed generator, a hashtag, or your own graph at some reach. There
+come from: a feed generator, a hashtag, your own graph, or a MIX of those (the
+Mixes section sits above Feeds; Home is the mix of everything you subscribed to). There
 is no views-vs-feeds axis — `CURATED[0]` is `{slug:'whats-hot', title:'Discover'}`,
 one object, so "Discover" is a feed with a good name rather than a category. One MODAL surface rides the
 signed-out lens: the host sheet (`<dialog>`, opened from the sidebar sign-in card), which
@@ -187,6 +194,8 @@ adding another means arguing for it there first:
 | `deleteRecord` → `app.bsky.graph.block` | Unblock | post-and-thread 4a |
 | `createRecord` → `app.bsky.feed.repost` | Repost (O6) | post-and-thread 4a |
 | `deleteRecord` → `app.bsky.feed.repost` | Un-repost | post-and-thread 4a |
+| `putRecord` → `fyi.forage.mix` | save a mix to your repo, or edit one already there — the ONE put the lens makes; the record's key is the mix's slug, so a second save is the same record | mixes-on-the-pds |
+| `deleteRecord` → `fyi.forage.mix` | remove a mix from your repo (it comes back to the device) | mixes-on-the-pds |
 
 The eighth and ninth are the first records **Forage defined for itself** that
 reach a repo. That step is argued for in `docs/LEXICON-REGISTER.md`, which every

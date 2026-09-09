@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forage Mixes</title>
+<meta name="mock-version" content="1">
+<meta name="mock-baseline" content="forage@68ab504">
+<meta name="mock-proposal" content="forage@eae83dc">
+<style>
+:root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
+  --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page-bg:#1C1813;--page-card:#262019;--page-ink:#EFE7D9;--page-muted:#B5A88F;--page-line:#3D3527;--page-accent:#A5CD98}}
+:root[data-theme="dark"]{--page-bg:#1C1813;--page-card:#262019;--page-ink:#EFE7D9;--page-muted:#B5A88F;--page-line:#3D3527;--page-accent:#A5CD98}
+*{box-sizing:border-box}
+body{background:var(--page-bg);color:var(--page-ink);font-family:var(--f-body);line-height:1.55;margin:0;padding:32px 20px 72px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:30px}
+h1{font-family:var(--f-display);font-size:30px;font-weight:600;margin:0;letter-spacing:-.01em}
+h2{font-family:var(--f-display);font-size:22px;font-weight:600;margin:0}
+h3{font-family:var(--f-display);font-size:17px;margin:0 0 7px;font-weight:600}
+.sub{color:var(--page-muted);font-size:15px;max-width:78ch;margin:0}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+section{display:flex;flex-direction:column;gap:14px}
+.stage{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap}
+.device{display:flex;flex-direction:column;gap:9px;min-width:0}
+.device-label{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+.phone{width:390px;max-width:100%}
+.desk{flex:1 1 460px;min-width:0}
+.shot{max-width:100%;display:block;border:1px solid var(--page-line);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.10),0 8px 24px rgba(0,0,0,.06)}
+.callout{background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:16px 18px}
+.callout p,.callout li{margin:0;font-size:14px;color:var(--page-muted)}
+.callout b,.callout code,td b{color:var(--page-ink);font-weight:600}
+.callout ul,.callout ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+table{border-collapse:collapse;font-size:14px;width:100%}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--page-line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page-muted)}
+.tablewrap{overflow-x:auto;background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:6px 8px}
+code{font-size:.92em}
+.small{font-size:13px;color:var(--page-muted)}
+.tag{display:inline-block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;padding:1px 8px;border-radius:999px;border:1px solid var(--page-line);color:var(--page-muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Forage · mock · mixes</div>
+    <h1>Home is one board of everything you subscribed to, and Mixes is where you tune it</h1>
+    <p class="sub"><b>Eight frames, two surfaces, phone and desktop.</b> Captures of the engine, not
+    drawings: <b>Current</b> is <code>forage@68ab504</code> (main), <b>Proposed</b> is
+    <code>forage@eae83dc</code> (<code>claude/mixes</code>), both by <code>scripts/mock-snaps.mjs</code>
+    at 390×844 and 1280×900 against <code>e2e/harness/mock-mix.mjs</code>: a reader following
+    accounts, with two saved feeds (Funny, posts in the hundreds of likes; Science, posts with ten)
+    and one hashtag, every source answering with its own posts. Neither Proposed address exists on
+    main, so Current is the nearest surface there: Discover for a board, <code>/me</code> for where
+    subscriptions are managed. Plan: <code>plans/2026-09-08-plan-mixes.md</code>.</p>
+  </header>
+
+  <section>
+    <div class="callout">
+      <p><b>Read a weight as one number that every sort reads.</b> Less · Normal · More is ×½ · ×1 ·
+      ×2. On the default sort it is a share of the deal — Science at More deals four posts per
+      round beside Following's two — and under Top and Hot it multiplies the score, so a small
+      feed's posts can outrank a big feed's when the reader says More. New is by time and says so.
+      The switch is not a fourth notch: off is not fetched, and the weight waits for the row to
+      come back.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">A · the board</div>
+    <h2>A. Home: four sources dealt into one list</h2>
+    <p class="sub">The door for a signed-in reader with nothing remembered (D5). The info line under
+    the toolbar counts the sources and, when one did not answer, names it. Science is at More in
+    this capture, so its four posts open the board before Funny's two — the deal made visible. The
+    sidebar (desktop frame) gains a <b>Mixes</b> section above Feeds, Home first, then the mixes the
+    reader made, and <i>Your mixes</i> in the browse cluster below the rule.</p>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · a board · CURRENT (forage@68ab504)</div>
+        <img class="shot" src="snaps/mixes/mix-board-current.phone.current.png" alt="Discover on a phone on main: one feed's posts, the toolbar, no source count" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · Home · PROPOSED (forage@eae83dc)</div>
+        <img class="shot" src="snaps/mixes/mix-board.phone.proposed.png" alt="Home on a phone on the branch: the heading with a Tune this mix button, the toolbar, an info line reading 4 sources, then four science posts followed by a funny post" width="390"></div>
+    </div>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Desktop · a board · CURRENT (forage@68ab504)</div>
+        <img class="shot" src="snaps/mixes/mix-board-current.desktop.current.png" alt="Discover at 1280 on main: the sidebar opens with Your ring and then Feeds"></div>
+      <div class="device desk"><div class="device-label">Desktop · Home · PROPOSED (forage@eae83dc)</div>
+        <img class="shot" src="snaps/mixes/mix-board.desktop.proposed.png" alt="Home at 1280 on the branch: the sidebar has a Mixes section above Feeds with Home and Weekend reads, and the board is dealt from four sources"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">B · the Mixes page</div>
+    <h2>B. One row per subscription: a switch and a three-notch weight</h2>
+    <p class="sub">Grouped by kind — Following, Feeds, Hashtags — label left, controls right, every
+    control at the 44px floor. A subscription the reader has since dropped keeps its row, greyed and
+    marked <i>no longer subscribed</i>, with Remove where the dial was: seen, not silently lost.
+    Below the rows, rename; a mix that is not Home also has a two-press delete. Pages, not modals.</p>
+    <div class="stage">
+      <div class="device phone"><div class="device-label">Phone · /me · CURRENT (forage@68ab504)</div>
+        <img class="shot" src="snaps/mixes/mix-tune-current.phone.current.png" alt="The reader's page on a phone on main: profile, accounts, the hashtag subscriptions panel — the only place subscriptions are managed today" width="390"></div>
+      <div class="device phone"><div class="device-label">Phone · /mixes/home · PROPOSED (forage@eae83dc)</div>
+        <img class="shot" src="snaps/mixes/mix-tune.phone.proposed.png" alt="The Home mix's rows on a phone: Following, Funny and Science under Feeds, #harvest under Hashtags, each with an On switch and a Less Normal More dial, Science at More; a greyed #foraging row marked no longer subscribed with an Off switch and Remove; the rename field below" width="390"></div>
+    </div>
+    <div class="stage">
+      <div class="device desk"><div class="device-label">Desktop · /me · CURRENT (forage@68ab504)</div>
+        <img class="shot" src="snaps/mixes/mix-tune-current.desktop.current.png" alt="The reader's page at 1280 on main"></div>
+      <div class="device desk"><div class="device-label">Desktop · /mixes/home · PROPOSED (forage@eae83dc)</div>
+        <img class="shot" src="snaps/mixes/mix-tune.desktop.proposed.png" alt="The Home mix's rows at 1280 on the branch, the same rows with room to spare"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Decisions</div>
+    <h2>What was decided (all nine closed by the owner, 2026-09-08)</h2>
+    <div class="tablewrap"><table>
+      <tr><th>#</th><th>Question</th><th>Answer</th></tr>
+      <tr><td>1</td><td>What is a weight?</td><td><b>One multiplier, ×½ · ×1 · ×2, that every sort reads</b> — a share of the deal on Default, a factor on likes under Top and on engagement inside Hot's log, nothing under New. Owner: "weighting upvotes so smaller feeds still surface … it has to play nice with top etc sort."</td></tr>
+      <tr><td>2</td><td>Where is Off?</td><td><b>A switch that remembers the weight.</b> Off is not fetched.</td></tr>
+      <tr><td>3</td><td>A new mix starts as?</td><td><b>Empty</b> — everything listed, everything off. Home starts with everything on.</td></tr>
+      <tr><td>4</td><td>Where does a mix live?</td><td><b>This device, for now;</b> a <code>fyi.forage.mix</code> record later, on the tag-subscription pattern.</td></tr>
+      <tr><td>5</td><td>Is Home the door?</td><td><b>Yes</b> for a first-time reader; a returning reader keeps the board they left.</td></tr>
+      <tr><td>6</td><td>A bound on the fan-out?</td><td><b>No cap.</b> Measured live: twelve sources cost 0.7 s warm and 2.3 s cold; what scaled was payload, so each source is asked for a small page (12) behind a per-source timeout, and the board names what did not answer.</td></tr>
+      <tr><td>7</td><td>Keep the sort toolbar?</td><td><b>Yes</b> — Top and Hot are where a weight lifts a small feed.</td></tr>
+      <tr><td>8</td><td>A post in two sources?</td><td><b>Once</b>: the first dealer's under Default, the heavier weight under a score.</td></tr>
+      <tr><td>9</td><td>Lists?</td><td><b>Rows like feeds.</b></td></tr>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">What the frames cannot show</div>
+    <div class="callout">
+      <ul>
+        <li><b>A mix is inside your ring.</b> Every constituent is re-shaped under the mix's own source, so the feeds-and-hashtags exemption never sees it; a feed opened by name is still whole (E159).</li>
+        <li><b>Off is not fetched.</b> The journey counts requests per source: a switched-off feed's board request never fires.</li>
+        <li><b>More pages only the sources that still have a cursor</b> and re-deals the whole set, so the top of the board never moves under the reader.</li>
+        <li><b>Home stays complete on its own.</b> It stores only what you changed; a feed you save tomorrow is in it tomorrow at Normal. A custom mix stores its rows, so a new subscription is listed there off.</li>
+        <li><b>Owed:</b> the phone-on-cellular timing of the fan-out, and the plan for mixes as a PDS record.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+</body>
+</html>
