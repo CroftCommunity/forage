@@ -12,7 +12,7 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 
 ## Needs the owner
 
-- **Beta: rings from the data servers (2026-09-08)** — the switch is live on `/me` › Beta
+- **Beta: Direct social tree PDS query (2026-09-08)** — the switch is live on `/me` › Beta
   features (`plans/2026-09-08-plan-beta-pds-walker.md`). Owner-experiment notes for later:
   the walker knows who follows you BACK, not every follower, so Mutuals is the same set either
   way and nothing here shows follower counts; snapshots persist in IndexedDB

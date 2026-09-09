@@ -8,11 +8,11 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
-- 2026-09-08 **Beta features, and the first one: your ring walked from the data servers.**
-  Your account page gains a Beta features section beside Advanced. Its first switch, off by
-  default, computes your ring — Mutuals and Follows — by walking the data servers that hold
-  the follow records themselves (the pds-walker library, vendored and pinned) instead of
-  asking Bluesky's worldwide view. It keeps working when that view is down and remembers
+- 2026-09-08 **Beta features, and the first one: Direct social tree PDS query.** Your
+  account page gains a Beta features section beside Advanced. Its first switch, off by
+  default, reads your social tree — the Mutuals and Follows your ring is built from — by
+  querying the PDSs that hold the follow records directly (the pds-walker library, vendored
+  and pinned) instead of asking Bluesky's worldwide view. It keeps working when that view is down and remembers
   what it learned on this device. It changes how the ring is computed and nothing else:
   boards still come from the worldwide view, and World is that view by definition.
 - 2026-09-08 **A mix can follow you.** On a mix's page under Your mixes, **Save to PDS** moves
