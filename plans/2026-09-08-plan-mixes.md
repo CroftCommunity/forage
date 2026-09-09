@@ -4,7 +4,7 @@ date: 2026-09-08
 **Status:** PHASES 0–9 BUILT (2026-09-08, one day; owner: "do full plan") on `claude/mixes`,
 PR #62 open by the owner's choice. ALL NINE DECISIONS CLOSED by the owner (D1 reshaped what a
 weight is — see *Decisions* and the Review Log). Owed: the phone-on-cellular timing run
-`[device: android]` before D6 is final. D4's second half — mixes as a PDS record — is
+before D6 is final — in the device queue (the tagged bullet in the Review Log). D4's second half — mixes as a PDS record — is
 BUILT the same day (`plans/2026-09-08-plan-mixes-on-the-pds.md`, live-proven). E159 marked
 done in `discovery/alpha/ROADMAP_TODO.md`.
 repo: `CroftCommunity/forage`
@@ -340,8 +340,8 @@ Declared gate for every landing: `npm test && npm run conformance`, `npm run ref
   survey of the subscription, board, route and sidebar plumbing. Nothing built. Awaiting D1,
   D4, D5 in particular.
 - **2026-09-08 — Phase 0 measured** (`LIVE=1`, the standing test account, a laptop on
-  wi-fi against `bsky.social` — NOT a phone on cellular; that run is still owed
-  `[device: android]` before D6 is final). Sources = Following + popular generators found
+  wi-fi against `bsky.social` — NOT a phone on cellular; that run is the tagged bullet at
+  the end of this log). Sources = Following + popular generators found
   live + `#harvest` + `#foraging`, per-source timeout 8 s, through `lens.feed()`/`stream()`:
 
   | run | sources | wall | median per source | slowest | failed | posts loaded |
@@ -396,3 +396,16 @@ Declared gate for every landing: `npm test && npm run conformance`, `npm run ref
   6. The mock's Current frames are Discover (`/f/whats-hot`) and `/me` — the nearest surfaces
      on main to a board and to subscription management; neither address in this plan exists
      there.
+- **2026-09-08 — OWED: the fan-out timed on a phone on cellular, before D6 is final. [device: android]**
+  Phase 0's numbers are a laptop on wi-fi; the number that decides whether "no cap, page
+  size 12, per-source timeout" holds is a cold open of Home on a phone on cellular with a
+  real-sized subscription set. What it takes, in order: (1) an instrument the phone can
+  show — the mix board's info line gains the wall time and the slowest source (*"12 sources
+  · 0.8 s · slowest Funny 0.8 s"*), a small change with a test, not yet made; (2) the branch
+  on the device — merged and deployed to forage.fyi, or served to the phone from a preview;
+  (3) an account with a dozen-ish sources — the owner's own is the honest population, the
+  test account has almost nothing saved; (4) wi-fi OFF, kill the app, open it, land on
+  Home, read the line — three cold opens and one warm reopen for contrast (the laptop's
+  cold run was 3× its warm one); (5) the numbers in this log, this tag edited to
+  `[device done …]`, and D6 confirmed or revised (a slow cold open argues for a smaller
+  first page, never for a cap on sources). Any Android; the Samsung or the Pixel both do.
