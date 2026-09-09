@@ -2,6 +2,8 @@
 
 import * as store from './store.js';
 import * as ringScope from './ring-scope.js';
+import * as beta from './beta.js';
+import { createPdsGraphSource } from './substrates/pds-graph.js';
 import * as router from './router.js';
 import * as sel from './selectors.js';
 import * as actions from './actions.js';
@@ -278,6 +280,18 @@ window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && drawerOpen
 ringScope.onChange(() => {
   lensViews.syncRingScope().then(() => render()).catch((e) => {
     console.warn('forage: ring scope failed to apply', e);
+  });
+});
+// Beta features: rings from the data servers. The source consults the switch at call
+// time (off → null → the AppView path); composed here because the UI layer imports no
+// substrate. The switch changes where the ring's graph comes from; the graph is cached
+// per lens, so forget it and re-walk under the same scope before repainting.
+const pdsGraph = createPdsGraphSource();
+lensViews.setGraphSource((args) => (beta.pdsWalker() ? pdsGraph(args) : null));
+beta.onChange(() => {
+  lensViews.forgetRings();
+  lensViews.syncRingScope().then(() => render()).catch((e) => {
+    console.warn('forage: ring scope failed to apply after the beta switch', e);
   });
 });
 

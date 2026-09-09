@@ -23,7 +23,9 @@
 
 // 4g: constellation.microcosm.blue is fenced too — an unfenced host would let a
 // workflow reach the real network and quietly stop being hermetic.
-const FENCED = ['bsky.social', 'public.api.bsky.app', 'bsky.network', 'constellation.microcosm.blue'];
+// plc.directory joined 2026-09-08: the pds-walker beta resolves identities there (an
+// unfenced host would let a workflow reach the real directory and stop being hermetic).
+const FENCED = ['bsky.social', 'public.api.bsky.app', 'bsky.network', 'constellation.microcosm.blue', 'plc.directory'];
 
 export function fetchShim({ responses = {} } = {}) {
   return `(() => {
