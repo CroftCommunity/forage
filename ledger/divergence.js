@@ -154,6 +154,18 @@ export const LEDGER = [
     reason: 'A door that only one population and one platform can open is a real divergence, not a bug to fix: the missing halves are a browser feature Apple has not shipped and a population where the payload is meaningless.',
     tolerance: 'route present in the bluesky population only; no memory-tier analogue is expected or compared',
     date: '2026-09-04', status: 'active' },
+
+  // ---- the feed index (plan 2026-09-08-plan-feed-index-and-jumpstarts) ----
+  { id: 'DL-039', kind: 'tolerance', capability: 'feeds', tier: 'wide', label: 'Discovery in the Bluesky population starts from a prepopulated index the forager can replace',
+    description: 'Browse feeds is the AppView\'s popular list (117) UNION a file that ships with the app (data/feed-index.json: ~1,500 feeds and ~1,300 jumpstarts, built weekly by CI and committed to main). Every row says whose it is. The memory population has no analogue: its feeds are the scenario library\'s. The index is an editorial act, so it is the forager\'s to dump — add theirs over ours, replace ours, or off (Advanced → Discovery index) — through the same validator. Device-local today; the PDS record is the named follow-up (TODO.md).',
+    reason: 'Owner, 2026-09-08: prepopulated discovery must be user-manageable — "the only way this stays equitable … and independence from a central authority".',
+    tolerance: 'the Bluesky browse corpus is larger than the AppView lists and includes rows the AppView never returns; not compared against memory',
+    date: '2026-09-09', status: 'active' },
+  { id: 'DL-040', kind: 'tolerance', capability: 'moderation', tier: 'wide', label: 'An index row\'s labels are a hint; the live view\'s labels are the authority, and the two can disagree',
+    description: 'The index carries the labels a feed or jumpstart had at harvest time (0.5% of feeds carry any on the network; adult feeds visibly exceed that). The app applies posture to the hint on first paint, then AGAIN to the live view when a row hydrates or a jumpstart opens — a row the file showed can disappear once its live labels arrive, and a row the file hid stays hidden even if the network has since dropped the label (it is not hydrated). The age of the file is shown on every count line so the disagreement has a visible cause.',
+    reason: 'A week-old hint that saves a round-trip is worth having; pretending it is current is not.',
+    tolerance: 'a row may vanish on hydration; a file-hidden row is not re-checked live until the next harvest',
+    date: '2026-09-09', status: 'active' },
 ];
 
 export const frontiers = () => LEDGER.filter((e) => e.kind === 'frontier');

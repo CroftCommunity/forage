@@ -62,3 +62,21 @@ Already taken by others: `fora.ge`, `forage.app`.
 Registrar and renewal details are operator-local and deliberately not in this repo; the
 one thing worth stating publicly is that **forage.fyi is a premium registration and
 premium lapses get sniped**, so the renewal is not a routine one to let slide.
+
+## "Jumpstart" — Forage's word for a starter pack (2026-09-04)
+
+The network's object is `app.bsky.graph.starterpack`: one person's list of accounts
+worth following, plus up to three feeds, made to get someone started. The official
+client calls it a **starter pack**. Forage calls it a **jumpstart** (owner, 2026-09-04:
+"trending 'jumpstarts' which is what we'll call starterpacks for now").
+
+Why a word of our own: a starter pack is the network's onboarding device — you join
+Bluesky and follow forty people at once. In Forage it is a **door to boards**: the feeds
+it names are what a forager opens, and the people are context for them. Same object, a
+different use, and the name says which use this is. "For now" is recorded: the owner
+reserved the right to rename it.
+
+Where it is glossed: every page that says the word says once what the network calls it
+(`JUMPSTART_GLOSS` in `js/ui/lens-views.js`), so a reader who knows the network's word
+is never lost. Routes: `/jumpstarts` (browse), `/j/<handle>/<rkey>` (one). The index's
+table is `jumpstarts` (`docs/FEED-INDEX.md`). The lexicon id stays the network's.

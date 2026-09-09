@@ -158,8 +158,11 @@ export async function run() {
     // lists, beside it, and pointed its "browse ›" where the nav's "Browse all
     // feeds" points. The rail is now the door and trending, and the curated
     // boards are named ONCE, in the nav.
+    // feed-index Phase 4 (plan 2026-09-08): the rail is the reader's ordered
+    // panels — the door still first for a guest, then Popular jumpstarts
+    // (the owner's default, 2026-09-04), then Trending.
     assert.deepEqual(await out.page.$$eval('#side .card', (cs) => cs.map((c) => c.hasAttribute('data-signin-card') ? 'sign-in' : c.querySelector('h2')?.textContent.trim())),
-      ['sign-in', 'Trending'], 'the rail\'s order: the door, then trending');
+      ['sign-in', 'Popular jumpstarts', 'Trending'], 'the rail\'s order: the door, then jumpstarts, then trending');
     assert.equal(await out.page.locator('#side .card a[href^="/f/"]').count(), 0,
       'no feed list in the rail — the nav is where a guest\'s boards are named');
     const navHrefs = await out.page.$$eval('.nav a[href^="/f/"], .nav a[href="/trending"]', (as) => as.map((a) => a.getAttribute('href')));

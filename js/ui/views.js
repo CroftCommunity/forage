@@ -683,7 +683,28 @@ export function settingsView() {
     rail.set(on); rail.apply();
     railBox.setAttribute('aria-checked', String(on));
     railBox.querySelector('.switch-state').textContent = on ? 'On' : 'Off';
+    for (const b of panelBoxes) paintSwitch(b, on && rail.has(b.dataset.railPanel));
   });
+  // feed-index Phase 4: which panels, in the rail's own order — one .switch
+  // per panel (the 44px control the rail switch above already is; a bare
+  // checkbox is 13px and fails the tap floor). Turning the last one off is
+  // the switch above going off — one state, two controls.
+  const paintSwitch = (b, on) => { b.setAttribute('aria-checked', String(on)); b.querySelector('.switch-state').textContent = on ? 'On' : 'Off'; };
+  const panelBoxes = rail.PANELS.map((p) => {
+    const b = el('button', { type: 'button', class: 'switch', id: `rail-${p.id}`, role: 'switch', 'data-rail-panel': p.id,
+      'aria-checked': String(rail.has(p.id)) }, el('span', { class: 'switch-state' }, rail.has(p.id) ? 'On' : 'Off'));
+    b.addEventListener('click', () => {
+      paintSwitch(b, b.getAttribute('aria-checked') !== 'true');
+      rail.setPanels(rail.PANELS.map((q) => q.id).filter((id) => panelBoxes.find((x) => x.dataset.railPanel === id).getAttribute('aria-checked') === 'true'));
+      rail.apply();
+      const on = rail.enabled();
+      railBox.setAttribute('aria-checked', String(on));
+      railBox.querySelector('.switch-state').textContent = on ? 'On' : 'Off';
+    });
+    return b;
+  });
+  const panelRows = rail.PANELS.map((p, i) => el('div', { class: 'field-row' }, el('label', { for: `rail-${p.id}` }, p.label),
+    el('span', {}, panelBoxes[i], el('span', { class: 'xs muted', style: 'margin-left:8px' }, p.blurb))));
   // feed-row v2: the provider mark beside a name is the reader's to switch off
   const markBox = el('button', { type: 'button', class: 'switch', id: 'pref-providermark', role: 'switch',
     'aria-checked': String(providerMark.enabled()) }, el('span', { class: 'switch-state' }, providerMark.enabled() ? 'On' : 'Off'));
@@ -718,7 +739,8 @@ export function settingsView() {
     notchRow('pref-cardsize', 'Card size', sizeNotches, 'how much room a post takes — 1 is small, 4 is the full picture'),
     notchRow('pref-pictures', 'Pictures shown at once', picNotches, 'up to this many side by side; more become a carousel'),
     el('div', { class: 'field-row' }, el('label', { for: 'pref-rail' }, 'Side panel'),
-      el('span', {}, railBox, el('span', { class: 'xs muted', style: 'margin-left:8px' }, 'the right-hand column — suggestions, and sign-in when you are signed out; off, the posts take the middle'))),
+      el('span', {}, railBox, el('span', { class: 'xs muted', style: 'margin-left:8px' }, 'the right-hand column; off, the posts take the middle'))),
+    el('div', { style: 'margin:-4px 0 8px 0' }, ...panelRows),
     el('div', { class: 'field-row' }, el('label', { for: 'pref-gifautoplay' }, 'Play GIFs automatically'),
       el('span', {}, gifBox, gifWhy)),
     el('div', { class: 'field-row' }, el('label', { for: 'pref-providermark' }, 'Provider mark'),

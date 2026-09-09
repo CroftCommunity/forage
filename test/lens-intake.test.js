@@ -1082,3 +1082,143 @@ test('11c (plan 2026-08-29 post-and-thread): sortWindow knows hot — engagement
   assert.deepEqual(sortWindow(posts, 'hot', 'day', NOW).map((p) => p.id), ['talked', 'shared', 'liked'], 'From: Today drops the 30h post');
   assert.deepEqual(sortWindow(posts, 'top', 'all', NOW).map((p) => p.id), ['old', 'liked', 'shared', 'talked'], 'top stays likes-only');
 });
+
+// ---- the feed index (plan 2026-09-08-plan-feed-index-and-jumpstarts) ----
+// Phase 2: discovery is the browse corpus ∪ the index, and every row says
+// whose it is. An index row carries a BAND and no count until it is hydrated
+// (D2); posture applies to it in the shape layer exactly as to a browse row
+// (4a). Phase 3: a jumpstart is one getStarterPack, shaped.
+
+const IX_FEED = (n, extra = {}) => ({ uri: `at://did:plc:ix${n}/app.bsky.feed.generator/i${n}`, name: `Index ${n}`,
+  desc: 'from the index', creator: `ix${n}.test`, platform: 'skyfeed.me', band: 3, tags: ['topic:art'], ...extra });
+const fakeStore = (rows, packs = {}) => ({ feeds: () => rows, packsWithFeed: (u) => packs[u] || [] });
+const BROWSE_URI = 'at://did:plc:a/app.bsky.feed.generator/x1';
+const browseOnly = async (url) => ({ ok: true, status: 200, json: async () => (
+  /getPopularFeedGenerators/.test(url)
+    ? { feeds: [{ uri: BROWSE_URI, displayName: 'Garden Talk', likeCount: 9, creator: { handle: 'grower.test' }, did: 'did:web:skyfeed.me' }] }
+    : { feeds: [] }) });
+
+test('feed-index P2: discoverFeeds unions the index over browse; provenance says whose; an index-only row has a band and no count', async () => {
+  const { createLens } = await import('../js/substrates/lens.js');
+  const lens = createLens({ transport: browseOnly });
+  const rows = await lens.discoverFeeds({ index: fakeStore([IX_FEED(1), { ...IX_FEED(2), uri: BROWSE_URI, name: 'Garden Talk' }],
+    { [IX_FEED(1).uri]: ['at://did:plc:p/app.bsky.graph.starterpack/p1', 'at://did:plc:p/app.bsky.graph.starterpack/p2'] }) });
+  const byUri = Object.fromEntries(rows.map((r) => [r.uri, r]));
+  assert.equal(rows.length, 2, 'the browse row and the index row that is not in browse; the overlap is one row');
+  assert.equal(byUri[BROWSE_URI].source, 'both');
+  assert.equal(byUri[BROWSE_URI].likeCount, 9, 'a browse row keeps its live count');
+  const ix = byUri[IX_FEED(1).uri];
+  assert.equal(ix.source, 'index');
+  assert.equal(ix.likeCount, null, 'unknown until hydrated — never a silent zero');
+  assert.equal(ix.band, 3);
+  assert.deepEqual(ix.tags, ['topic:art']);
+  assert.equal(ix.inPacks, 2, 'the edges, offline');
+  assert.equal(ix.title, 'Index 1');
+  assert.equal(ix.platform, 'skyfeed.me');
+});
+
+test('feed-index P2: a query does not consult the index — the view searches it itself, and search keeps the server’s order', async () => {
+  const { createLens } = await import('../js/substrates/lens.js');
+  const lens = createLens({ transport: browseOnly });
+  const rows = await lens.discoverFeeds({ query: 'garden', index: fakeStore([IX_FEED(1)]) });
+  assert.deepEqual(rows.map((r) => r.source), ['popular']);
+});
+
+test('feed-index P2: an index row with an adult label is hidden for a guest, as a browse row would be', async () => {
+  const { createLens } = await import('../js/substrates/lens.js');
+  const lens = createLens({ transport: browseOnly });
+  const rows = await lens.discoverFeeds({ index: fakeStore([IX_FEED(1, { labels: ['porn'] }), IX_FEED(3)]) });
+  assert.deepEqual(rows.map((r) => r.uri).sort(), [BROWSE_URI, IX_FEED(3).uri].sort());
+});
+
+test('feed-index P2: hydrateFeeds fills counts in batches of 25 via getFeedGenerators, announcing each; a hidden one announces null', async () => {
+  const { createLens } = await import('../js/substrates/lens.js');
+  const calls = [];
+  const transport = async (url) => {
+    calls.push(url);
+    const uris = [...url.matchAll(/feeds%5B\d+%5D=([^&]+)/g)].map((m) => decodeURIComponent(m[1]));
+    return { ok: true, status: 200, json: async () => ({ feeds: uris.map((u, i) => ({ uri: u, displayName: `H${i}`, likeCount: 100 + i,
+      creator: { handle: 'h.test' }, labels: u.endsWith('/i30') ? [{ val: 'porn' }] : [] })) }) };
+  };
+  const lens = createLens({ transport });
+  const uris = Array.from({ length: 31 }, (_, i) => `at://did:plc:h/app.bsky.feed.generator/i${i}`);
+  const seen = [];
+  const out = await lens.hydrateFeeds(uris, { onFeed: (u, row) => seen.push([u, row && row.likeCount]) });
+  assert.equal(calls.length, 2, '31 uris → two getFeedGenerators calls');
+  assert.ok(calls.every((u) => /getFeedGenerators/.test(u)));
+  assert.equal(seen.length, 31);
+  assert.equal(out.get(uris[0]).likeCount, 100);
+  assert.equal(out.get(uris[30]), null, 'hidden by posture: announced as null so the view drops it');
+});
+
+test('feed-index P3: jumpstart(uri) shapes getStarterPack — the record, the creator, joins, members, feeds, and a sample', async () => {
+  const { createLens } = await import('../js/substrates/lens.js');
+  const URI = 'at://did:plc:p/app.bsky.graph.starterpack/p1';
+  const transport = async (url) => {
+    assert.ok(/getStarterPack\?/.test(url) && url.includes(encodeURIComponent(URI)));
+    return { ok: true, status: 200, json: async () => ({ starterPack: { uri: URI, record: { name: 'Gardeners', description: 'people who grow', feeds: [] },
+      creator: { did: 'did:plc:p', handle: 'p.test', displayName: 'Pat' }, joinedAllTimeCount: 120, joinedWeekCount: 3,
+      list: { uri: 'at://did:plc:p/app.bsky.graph.list/l1', listItemCount: 44 }, labels: [],
+      feeds: [{ uri: BROWSE_URI, displayName: 'Garden Talk', likeCount: 9, creator: { handle: 'grower.test' } }],
+      listItemsSample: [{ subject: { did: 'did:plc:m', handle: 'm.test', displayName: 'Mo', avatar: 'a.png' } }] } }) };
+  };
+  const j = await createLens({ transport }).jumpstart(URI);
+  assert.equal(j.name, 'Gardeners');
+  assert.equal(j.description, 'people who grow');
+  assert.equal(j.creator, 'p.test');
+  assert.equal(j.creatorName, 'Pat');
+  assert.equal(j.joinedAllTime, 120);
+  assert.equal(j.joinedWeek, 3);
+  assert.equal(j.members, 44);
+  assert.deepEqual(j.feeds.map((f) => f.title), ['Garden Talk']);
+  assert.deepEqual(j.sample.map((m) => m.handle), ['m.test']);
+  assert.equal(j.hidden, undefined);
+});
+
+test('feed-index P3: a labelled jumpstart is hidden for a guest', async () => {
+  const { createLens } = await import('../js/substrates/lens.js');
+  const URI = 'at://did:plc:p/app.bsky.graph.starterpack/p2';
+  const transport = async () => ({ ok: true, status: 200, json: async () => ({ starterPack: { uri: URI, record: { name: 'x', feeds: [] },
+    creator: { handle: 'p.test' }, labels: [{ val: 'porn' }], list: { listItemCount: 1 }, feeds: [], listItemsSample: [] } }) });
+  const j = await createLens({ transport }).jumpstart(URI);
+  assert.equal(j.hidden, true);
+});
+
+test('feed-index P2: indexRows shapes index rows for the view with posture and the edges; sortFeeds by likes puts an unhydrated row by its band', async () => {
+  const { createLens, sortFeeds } = await import('../js/substrates/lens.js');
+  const lens = createLens({ transport: browseOnly });
+  const rows = lens.indexRows([IX_FEED(1, { labels: ['porn'] }), IX_FEED(2)], fakeStore([], { [IX_FEED(2).uri]: ['p'] }));
+  assert.deepEqual(rows.map((r) => [r.uri, r.source, r.inPacks, r.likeCount]), [[IX_FEED(2).uri, 'index', 1, null]]);
+  // likes: a hydrated 150 beats an unhydrated band 2 (100–999 → reads as 100), which beats a hydrated 40
+  const sorted = sortFeeds([{ uri: 'a', likeCount: 40 }, { uri: 'b', likeCount: null, band: 2 }, { uri: 'c', likeCount: 150 }], 'likes');
+  assert.deepEqual(sorted.map((f) => f.uri), ['c', 'b', 'a']);
+});
+
+test('feed-index P3: resolveJumpstart goes handle → did → jumpstart, cold, with no session; a did in the handle position is not looked up', async () => {
+  const { createLens } = await import('../js/substrates/lens.js');
+  const calls = [];
+  const transport = async (url) => {
+    calls.push(url);
+    if (/resolveHandle/.test(url)) return { ok: true, status: 200, json: async () => ({ did: 'did:plc:p' }) };
+    return { ok: true, status: 200, json: async () => ({ starterPack: { uri: 'at://did:plc:p/app.bsky.graph.starterpack/p1',
+      record: { name: 'Gardeners', feeds: [] }, creator: { handle: 'p.test' }, list: { listItemCount: 3 }, labels: [], feeds: [], listItemsSample: [] } }) };
+  };
+  const lens = createLens({ transport });
+  const j = await lens.resolveJumpstart({ handle: 'p.test', rkey: 'p1' });
+  assert.equal(j.name, 'Gardeners');
+  assert.ok(calls[0].includes('resolveHandle') && calls[1].includes('getStarterPack'));
+  calls.length = 0;
+  await lens.resolveJumpstart({ handle: 'did:plc:p', rkey: 'p1' });
+  assert.equal(calls.length, 1, 'a did is already resolved');
+});
+
+test('feed-index P3: indexJumpstarts shapes index jumpstart rows with posture and the feed count from the edges', async () => {
+  const { createLens } = await import('../js/substrates/lens.js');
+  const lens = createLens({ transport: browseOnly });
+  const P1 = 'at://did:plc:p/app.bsky.graph.starterpack/p1';
+  const P2 = 'at://did:plc:p/app.bsky.graph.starterpack/p2';
+  const rows = [{ uri: P1, name: 'A', desc: '', creator: 'p.test', members: 3, band: 1, tags: [], labels: ['porn'] },
+    { uri: P2, name: 'B', desc: '', creator: 'p.test', members: 3, band: 1, tags: [] }];
+  const store = { feedsInPack: (u) => (u === P2 ? ['f1', 'f2'] : []) };
+  assert.deepEqual(lens.indexJumpstarts(rows, store).map((r) => [r.uri, r.feedCount]), [[P2, 2]]);
+});

@@ -1,0 +1,810 @@
+{
+ "_": "Hand-maintained (plan 2026-09-08-plan-feed-index-and-jumpstarts, Phase 1). providers: accounts the harvest expands with getActorFeeds (D3: 1.51x what search knows), plus builder platforms for the record; kind is curator | community | official | platform; tags use topic:* (Bluesky's own 23), lang:*, community:*. pins: feed at-uris kept regardless of likes, for feeds search cannot find (the harvest already keeps the AppView's browse list on its own, so this is for hand additions). Seeded 2026-09-08 from a sweep: the top curators by total likes, minus deleted and machine accounts.",
+ "providers": [
+  {
+   "handle": "bsky.app",
+   "kind": "official",
+   "tags": [
+    "official"
+   ]
+  },
+  {
+   "handle": "rude1.blacksky.team",
+   "kind": "community",
+   "tags": [
+    "community:blacksky"
+   ]
+  },
+  {
+   "handle": "eurosky.social",
+   "kind": "community",
+   "tags": [
+    "community:eurosky"
+   ]
+  },
+  {
+   "handle": "furryli.st",
+   "kind": "community",
+   "tags": [
+    "community:furry"
+   ]
+  },
+  {
+   "handle": "bsky.art",
+   "kind": "community",
+   "tags": [
+    "community:artists",
+    "topic:art"
+   ]
+  },
+  {
+   "handle": "skyfeed.eu",
+   "kind": "community",
+   "tags": [
+    "community:skyfeed"
+   ]
+  },
+  {
+   "handle": "jnascim.info",
+   "kind": "community",
+   "tags": [
+    "lang:pt",
+    "community:brasil"
+   ]
+  },
+  {
+   "handle": "spacecowboy17.bsky.social",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "clarabelle.xyz",
+   "kind": "curator",
+   "tags": [
+    "topic:books",
+    "topic:science"
+   ]
+  },
+  {
+   "handle": "aendra.com",
+   "kind": "curator",
+   "tags": [
+    "topic:news"
+   ]
+  },
+  {
+   "handle": "bossett.social",
+   "kind": "curator",
+   "tags": [
+    "topic:pets",
+    "topic:science"
+   ]
+  },
+  {
+   "handle": "wanderlingworld.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:art"
+   ]
+  },
+  {
+   "handle": "daryllmarie.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:nature"
+   ]
+  },
+  {
+   "handle": "why.bsky.world",
+   "kind": "curator",
+   "tags": [
+    "topic:dev"
+   ]
+  },
+  {
+   "handle": "eepy.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:nature",
+    "topic:pets"
+   ]
+  },
+  {
+   "handle": "emily.space",
+   "kind": "curator",
+   "tags": [
+    "topic:art",
+    "topic:photography",
+    "topic:science"
+   ]
+  },
+  {
+   "handle": "davidsacerdote.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:art",
+    "topic:pets"
+   ]
+  },
+  {
+   "handle": "anianimals.moe",
+   "kind": "curator",
+   "tags": [
+    "topic:comics"
+   ]
+  },
+  {
+   "handle": "parkermolloy.com",
+   "kind": "curator",
+   "tags": [
+    "topic:sports"
+   ]
+  },
+  {
+   "handle": "francesmeh.reviews",
+   "kind": "curator",
+   "tags": [
+    "topic:movies",
+    "topic:news"
+   ]
+  },
+  {
+   "handle": "trezy.codes",
+   "kind": "curator",
+   "tags": [
+    "topic:dev",
+    "topic:gaming"
+   ]
+  },
+  {
+   "handle": "allyann.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:art",
+    "topic:news"
+   ]
+  },
+  {
+   "handle": "markrubin.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:pets",
+    "topic:science"
+   ]
+  },
+  {
+   "handle": "crumblsucks.wyattswickedgoods.com",
+   "kind": "curator",
+   "tags": [
+    "topic:gaming",
+    "topic:sports"
+   ]
+  },
+  {
+   "handle": "retr0.id",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "davis.social",
+   "kind": "curator",
+   "tags": [
+    "topic:art"
+   ]
+  },
+  {
+   "handle": "flyingtrilobite.com",
+   "kind": "curator",
+   "tags": [
+    "topic:art",
+    "topic:pets",
+    "topic:science"
+   ]
+  },
+  {
+   "handle": "brunoruchiga.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:dev"
+   ]
+  },
+  {
+   "handle": "sammyouatts.bsky.social",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "afreeparticle.com",
+   "kind": "curator",
+   "tags": [
+    "topic:art",
+    "topic:pets"
+   ]
+  },
+  {
+   "handle": "joshuajfriedman.com",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "jaz.sh",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "fema.monster",
+   "kind": "curator",
+   "tags": [
+    "topic:pets"
+   ]
+  },
+  {
+   "handle": "davelevitan.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:sports"
+   ]
+  },
+  {
+   "handle": "whistberry.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:books",
+    "topic:writers"
+   ]
+  },
+  {
+   "handle": "l-tan.dolciss.net",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "cookieduh.xyz",
+   "kind": "curator",
+   "tags": [
+    "topic:music",
+    "topic:sports"
+   ]
+  },
+  {
+   "handle": "jakei.bsky.social",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "bsky.one",
+   "kind": "curator",
+   "tags": [
+    "topic:art"
+   ]
+  },
+  {
+   "handle": "ketanjoshi.co",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "farofa.com.br",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "steinmakesgames.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:dev",
+    "topic:gaming"
+   ]
+  },
+  {
+   "handle": "bee.babesky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:gaming"
+   ]
+  },
+  {
+   "handle": "rauchway.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:education"
+   ]
+  },
+  {
+   "handle": "hockeyhotline.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:sports"
+   ]
+  },
+  {
+   "handle": "ealmuina.xyz",
+   "kind": "curator",
+   "tags": [
+    "topic:pets"
+   ]
+  },
+  {
+   "handle": "heheviolet.bsky.social",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "moderation.medsky.network",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "jaybaesun.bsky.social",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "track.goodfeeds.co",
+   "kind": "curator",
+   "tags": [
+    "topic:education",
+    "topic:science",
+    "topic:tech"
+   ]
+  },
+  {
+   "handle": "wangdora.jp",
+   "kind": "curator",
+   "tags": [
+    "topic:food"
+   ]
+  },
+  {
+   "handle": "numb.comfortab.ly",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "mackuba.eu",
+   "kind": "curator",
+   "tags": [
+    "topic:movies"
+   ]
+  },
+  {
+   "handle": "rodrigobarrero.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:photography"
+   ]
+  },
+  {
+   "handle": "nahuel.bsky.social",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "bartorchard.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:dev",
+    "topic:news",
+    "topic:politics"
+   ]
+  },
+  {
+   "handle": "flicknow.xyz",
+   "kind": "curator",
+   "tags": [
+    "topic:art",
+    "topic:news"
+   ]
+  },
+  {
+   "handle": "mintyconey.bsky.social",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "goose.art",
+   "kind": "curator",
+   "tags": [
+    "topic:art",
+    "topic:nature"
+   ]
+  },
+  {
+   "handle": "robpc.com",
+   "kind": "curator",
+   "tags": [
+    "topic:gaming"
+   ]
+  },
+  {
+   "handle": "itokonn.bsky.social",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "witchsky.com",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "feeds.hilarybaumann.com",
+   "kind": "curator",
+   "tags": [
+    "topic:art",
+    "topic:nature",
+    "topic:photography"
+   ]
+  },
+  {
+   "handle": "cyaneyed.lol",
+   "kind": "curator",
+   "tags": [
+    "topic:food"
+   ]
+  },
+  {
+   "handle": "valdevia.art",
+   "kind": "curator",
+   "tags": [
+    "topic:art"
+   ]
+  },
+  {
+   "handle": "hipstersmoothie.com",
+   "kind": "curator",
+   "tags": [
+    "topic:dev"
+   ]
+  },
+  {
+   "handle": "snowfloe.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:animals"
+   ]
+  },
+  {
+   "handle": "gabriellanonino.com",
+   "kind": "curator",
+   "tags": [
+    "topic:photography"
+   ]
+  },
+  {
+   "handle": "mayawest.online",
+   "kind": "curator",
+   "tags": [
+    "topic:art",
+    "topic:photography",
+    "topic:sports"
+   ]
+  },
+  {
+   "handle": "hikatamika.com",
+   "kind": "curator",
+   "tags": [
+    "topic:comics",
+    "topic:writers"
+   ]
+  },
+  {
+   "handle": "bonnicula.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:art"
+   ]
+  },
+  {
+   "handle": "gayslay.com",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "oops.wtf",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "byarielm.fyi",
+   "kind": "curator",
+   "tags": [
+    "topic:pets"
+   ]
+  },
+  {
+   "handle": "skyhub.bsky.social",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "bergsbites.bsky.social",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "jennifercharlee.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:animals",
+    "topic:art"
+   ]
+  },
+  {
+   "handle": "gchoule.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:art",
+    "topic:comics"
+   ]
+  },
+  {
+   "handle": "trollhamels.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:sports"
+   ]
+  },
+  {
+   "handle": "gvellav.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:art"
+   ]
+  },
+  {
+   "handle": "davidho.bsky.social",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "prurientpeddler.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:art"
+   ]
+  },
+  {
+   "handle": "shigepon.net",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "paulgp.com",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "jcsalterego.bsky.social",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "poorlydrawnarsenal.com",
+   "kind": "curator",
+   "tags": [
+    "topic:pets"
+   ]
+  },
+  {
+   "handle": "renewableenergy.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:pets"
+   ]
+  },
+  {
+   "handle": "crevier.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:news",
+    "topic:pets",
+    "topic:sports"
+   ]
+  },
+  {
+   "handle": "emlowz.com",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "jilly.ca",
+   "kind": "curator",
+   "tags": [
+    "topic:education",
+    "topic:writers"
+   ]
+  },
+  {
+   "handle": "andy.wrestlejoy.com",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "ethanpfreedman.com",
+   "kind": "curator",
+   "tags": [
+    "topic:news",
+    "topic:science"
+   ]
+  },
+  {
+   "handle": "micahgallen.com",
+   "kind": "curator",
+   "tags": [
+    "topic:science"
+   ]
+  },
+  {
+   "handle": "johnlf.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:politics"
+   ]
+  },
+  {
+   "handle": "retired-librarian.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:books"
+   ]
+  },
+  {
+   "handle": "surlygabe.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:sports"
+   ]
+  },
+  {
+   "handle": "ruby-soho.com",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "debbieohi.com",
+   "kind": "curator",
+   "tags": [
+    "topic:art",
+    "topic:books",
+    "topic:writers"
+   ]
+  },
+  {
+   "handle": "blopeep.bsky.social",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "852dude.bsky.social",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "daanis.ca",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "everythinggoes1.bsky.social",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "pseudelight.ink",
+   "kind": "curator",
+   "tags": [
+    "topic:pets"
+   ]
+  },
+  {
+   "handle": "abmuse.net",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "hillingsama.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:art",
+    "topic:pets"
+   ]
+  },
+  {
+   "handle": "friel.bsky.social",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "floofart.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:animals",
+    "topic:art"
+   ]
+  },
+  {
+   "handle": "harkthorn.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:nature"
+   ]
+  },
+  {
+   "handle": "just-some-feeds.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:pets",
+    "topic:photography"
+   ]
+  },
+  {
+   "handle": "rabbitholer.bsky.social",
+   "kind": "curator",
+   "tags": []
+  },
+  {
+   "handle": "biblioqueer.bsky.social",
+   "kind": "curator",
+   "tags": [
+    "topic:books",
+    "topic:photography"
+   ]
+  },
+  {
+   "handle": "skyfeed.me",
+   "kind": "platform",
+   "tags": []
+  },
+  {
+   "handle": "api.graze.social",
+   "kind": "platform",
+   "tags": []
+  },
+  {
+   "handle": "blueskyfeedcreator.com",
+   "kind": "platform",
+   "tags": []
+  },
+  {
+   "handle": "bluefacts.app",
+   "kind": "platform",
+   "tags": []
+  },
+  {
+   "handle": "www.bluefeed.app",
+   "kind": "platform",
+   "tags": []
+  },
+  {
+   "handle": "blueskyfeeds.com",
+   "kind": "platform",
+   "tags": []
+  },
+  {
+   "handle": "api.bluestocks.app",
+   "kind": "platform",
+   "tags": []
+  },
+  {
+   "handle": "api.flashes.blue",
+   "kind": "platform",
+   "tags": []
+  },
+  {
+   "handle": "bsky.surf.social",
+   "kind": "platform",
+   "tags": []
+  },
+  {
+   "handle": "feeds.social",
+   "kind": "platform",
+   "tags": []
+  },
+  {
+   "handle": "discover.bsky.app",
+   "kind": "platform",
+   "tags": []
+  }
+ ],
+ "pins": []
+}

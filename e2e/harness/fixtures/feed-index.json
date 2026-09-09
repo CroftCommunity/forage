@@ -1,0 +1,33 @@
+{"v":1,
+"feeds":[
+{"uri":"at://did:plc:fixa/app.bsky.feed.generator/adult","name":"Late Hours","desc":"an index row the file labels adult","creator":"night.test","platform":"skyfeed.me","band":3,"tags":[],"labels":["porn"]},
+{"uri":"at://did:plc:fixa/app.bsky.feed.generator/art","name":"Index Art","desc":"art from the index","creator":"artist.test","platform":"skyfeed.me","band":3,"tags":["topic:art"]},
+{"uri":"at://did:plc:fixa/app.bsky.feed.generator/birds","name":"Index Birds","desc":"birds from the index","creator":"birder.test","platform":"api.graze.social","band":2,"tags":["topic:nature"]},
+{"uri":"at://did:plc:fixa/app.bsky.feed.generator/brasil","name":"Notícias do Brasil","desc":"notícias de política e esportes para você","creator":"brasil.test","platform":"skyfeed.me","band":2,"tags":["lang:pt"],"lang":"pt"},
+{"uri":"at://did:plc:fixa/app.bsky.feed.generator/games","name":"Index Games","desc":"games from the index","creator":"gamer.test","platform":"blueskyfeedcreator.com","band":1,"tags":["topic:gaming"]},
+{"uri":"at://did:plc:fixa/app.bsky.feed.generator/japan","name":"日本の写真","desc":"写真のフィード","creator":"shashin.test","platform":"skyfeed.me","band":1,"tags":["lang:ja"],"lang":"ja"},
+{"uri":"at://did:plc:fixa/app.bsky.feed.generator/news","name":"Index News","desc":"news from the index","creator":"editor.test","platform":"skyfeed.me","band":4,"tags":["topic:news"]},
+{"uri":"at://did:plc:fixa/app.bsky.feed.generator/plants","name":"Index Plants","desc":"plants from the index","creator":"grower.test","platform":null,"band":2,"tags":["topic:nature"]},
+{"uri":"at://did:plc:fixa/app.bsky.feed.generator/science","name":"Index Science","desc":"science from the index","creator":"lab.test","platform":"skyfeed.me","band":3,"tags":["topic:science"]},
+{"uri":"at://did:plc:fixa/app.bsky.feed.generator/video","name":"Index Video","desc":"video from the index","creator":"clips.test","platform":"skyfeed.me","band":2,"tags":[],"video":true},
+{"uri":"at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot","name":"Discover","desc":"the AppView's own — in the index AND the popular list","creator":"bsky.app","platform":"discover.bsky.app","band":4,"tags":["official"]}
+],
+"jumpstarts":[
+{"uri":"at://did:plc:fixp/app.bsky.graph.starterpack/artists","name":"Artists to follow","desc":"a jumpstart naming two feeds","creator":"curator.test","members":48,"band":2,"tags":["topic:art"]},
+{"uri":"at://did:plc:fixp/app.bsky.graph.starterpack/brasil","name":"Brasil no Bluesky","desc":"pessoas e feeds do Brasil","creator":"brasil.test","members":120,"band":3,"tags":["lang:pt"],"lang":"pt"},
+{"uri":"at://did:plc:fixp/app.bsky.graph.starterpack/late","name":"After Hours","desc":"a jumpstart the file labels adult","creator":"night.test","members":30,"band":1,"tags":[],"labels":["porn"]},
+{"uri":"at://did:plc:fixp/app.bsky.graph.starterpack/science","name":"Science people","desc":"the most-joined jumpstart in this fixture","creator":"lab.test","members":900,"band":4,"tags":["topic:science"]},
+{"uri":"at://did:plc:fixp/app.bsky.graph.starterpack/small","name":"A small one","desc":"","creator":"someone.test","members":3,"band":0,"tags":[]}
+],
+"edges":[
+["at://did:plc:fixp/app.bsky.graph.starterpack/artists","at://did:plc:fixa/app.bsky.feed.generator/art"],
+["at://did:plc:fixp/app.bsky.graph.starterpack/artists","at://did:plc:fixa/app.bsky.feed.generator/video"],
+["at://did:plc:fixp/app.bsky.graph.starterpack/brasil","at://did:plc:fixa/app.bsky.feed.generator/brasil"],
+["at://did:plc:fixp/app.bsky.graph.starterpack/science","at://did:plc:fixa/app.bsky.feed.generator/science"],
+["at://did:plc:fixp/app.bsky.graph.starterpack/science","at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot"]
+],
+"providers":[
+{"handle":"bsky.app","kind":"official","tags":["official"]},
+{"handle":"curator.test","kind":"curator","tags":["topic:art"]}
+]
+}

@@ -300,13 +300,17 @@ export async function run() {
   assert.ok(!signedInTitles.includes('After Dark'), 'adult stays hidden: the lexicon default is off');
   assert.ok(signedInTitles.includes('Rough Stuff'),
     'graphic-media returns once there is an account to mirror — the floor is a GUEST default, not a policy we impose');
-  assert.equal(await page.locator('[data-discover-feed]').count(), 5);
+  // feed-index Phase 2 (plan 2026-09-08): browse is the popular list ∪ the
+  // index, so the five this scenario declares are the rows marked as
+  // Bluesky-listed; the harness's fixture index adds its own rows beside them.
+  assert.equal(await page.locator('[data-discover-feed]:has([data-provenance="popular"]), [data-discover-feed]:has([data-provenance="both"])').count(), 5);
   assert.equal(await page.locator('input[type="checkbox"]:near(:text("adult"))').count(), 0,
     'discovery offers no adult toggle of its own — the account setting is the only source of truth');
 
   // 4b: the whole popular corpus is loaded, so the controls describe all of it
   await page.waitForSelector('[data-feed-controls]');
-  const titles = async () => page.locator('[data-discover-feed] a[href^="/f/"]').allTextContents();
+  // feed-index Phase 2: the sort checks below are about the five Bluesky-listed rows; index rows sit beside them
+  const titles = async () => page.locator('[data-discover-feed]:has([data-provenance="popular"]) a[href^="/f/"], [data-discover-feed]:has([data-provenance="both"]) a[href^="/f/"]').allTextContents();
   assert.deepEqual(await titles(), ['Garden Talk', 'Loudest', 'Freshest', 'Rough Stuff', 'Cleared Feed'],
     'the default is Bluesky\'s own order, untouched');
 
