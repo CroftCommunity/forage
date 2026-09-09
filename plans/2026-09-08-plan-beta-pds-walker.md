@@ -1,9 +1,6 @@
 # Plan: Beta features — rings from the data servers (pds-walker) instead of the AppView
 
-**Status:** DRAFTED 2026-09-08, all three planning passes in this one context (the
-`phase-plan` abbreviated form — a moderate change: one setting, one seam, one vendored
-tree); EXECUTING the same session on the owner's word ("go ahead and execute it too, pr and
-merge"). Phase markers below record what shipped.
+**Status:** SHIPPED 2026-09-08 — P1 `5b43b8f`, P2 `d37706a`, P3 `dc92c09`, P4 `aa58346`, P5 `b8878e4`; all three planning passes were done in one context (the `phase-plan` abbreviated form) and execution followed the same session on the owner's word ("go ahead and execute it too, pr and merge"). Landing = P6 (this commit's PR).
 **Worktree:** `worktrees/pds-walker-forage/forage` on `claude/beta-pds-walker`.
 Claim: `CroftC/.coordination/claims/forage--beta-pds-walker.md`.
 **Implements:** Phase 7 of croft-pwa `plans/2026-09-08-plan-pds-walker.md`, as an
@@ -155,3 +152,21 @@ RED: the switch is absent (`#pref-pdswalker` not found).
   sweep + direct reads); the harness's `FENCED` gap found in Pass 2 and folded into P5;
   Pass 3's gates: every phase has a RED named, the equivalence row (`followers :=
   mutuals`) is the mutation-resistant row for P3, the child-process import is P1a's wiring.
+
+## Execution record (2026-09-08)
+
+| phase | commit | RED observed | note |
+|---|---|---|---|
+| P1 | `5b43b8f` | 4 of 5 new vendor cases (no manifest, no tree); then shell.test "SHELL is missing /vendor/pds-walker/…" | P1a + P1b as one green checkpoint; 22 files vendored (11 runtime `.js` precached), CACHE v81 |
+| P2 | `d37706a` | `Cannot find module '../js/beta.js'` | first commit left shell.test red (the module not in SHELL) — amended before push |
+| P3 | `dc92c09` | two of three seam cases (the source ignored) | the equivalence row holds: `followers := mutuals` gives the AppView's `mut` and `hop` |
+| P4 | `aa58346` | `Cannot find module '../js/substrates/pds-graph.js'` | a warm store re-lists nothing that did not move |
+| P5 | `b8878e4` | the workflow timed out on `[data-beta]` | the first draft composed the source in the UI layer; `test/invariants.test.js` (UI imports no substrate) caught it, so the composition moved to `main.js` behind `setGraphSource` |
+
+Gates at P5: unit 900/900, conformance 86/86, reference-gate 2/2, the new workflow green
+alone; the full workflow suite's result is recorded on the PR.
+
+**Discoveries:** the layering invariant is the kind of test that pays for itself the first
+time a feature is wired "where it is convenient"; the harness's fence list is a hermeticity
+allowlist and a new host has to be added deliberately; a preference module needs a SHELL
+entry like any runtime module (shell.test), which is what turned P2 red once.
