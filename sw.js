@@ -32,7 +32,7 @@ const SHELL = [
   '/js/version.js', '/js/mode.js', '/js/board-cache.js', '/js/scroll-memory.js', '/js/hero.js', '/js/card-size.js', '/js/pictures.js', '/js/gif.js', '/js/gif-autoplay.js', '/js/alt-text.js', '/js/thread-shape.js', '/js/rail.js', '/js/provider-mark.js', '/js/drafts.js', '/js/ui/stage.js', '/js/lang.js', '/js/compose.js', '/js/ui/mode-view.js', '/css/tokens.css', '/css/app.css',
   '/js/main.js', '/js/router.js', '/js/store.js', '/js/storage.js', '/js/schema.js',
   '/js/reducers.js', '/js/selectors.js', '/js/personas.js', '/js/actions.js', '/js/util.js',
-  '/js/board-density.js', '/js/last-board.js', '/js/share-target.js', '/js/rings.js', '/js/ring-scope.js', '/js/mixes.js', '/js/mixes-pds.js', '/js/mix-deal.js', '/js/tagsubs.js', '/js/tagsubs-pds.js', '/js/lexicon.js', '/js/lexicons.js', '/js/tag-stats.js', '/js/trending-tags.js', '/js/hashtag-prefs.js', '/js/prng.js', '/js/devbar.js', '/js/engines/rank.js',
+  '/js/board-density.js', '/js/last-board.js', '/js/share-target.js', '/js/rings.js', '/js/ring-scope.js', '/js/beta.js', '/js/mixes.js', '/js/mixes-pds.js', '/js/mix-deal.js', '/js/tagsubs.js', '/js/tagsubs-pds.js', '/js/lexicon.js', '/js/lexicons.js', '/js/tag-stats.js', '/js/trending-tags.js', '/js/hashtag-prefs.js', '/js/prng.js', '/js/devbar.js', '/js/engines/rank.js',
   '/js/engines/limits.js', '/js/config/routing.js', '/js/substrates/memory.js',
   '/js/substrates/atproto.js', '/js/substrates/lens.js', '/js/ui/components.js', '/js/ui/menu.js', '/js/ui/sortbar.js', '/js/ui/refresh-control.js', '/js/haptics.js', '/js/ui/nav.js',
   '/js/ui/views.js', '/js/ui/lens-views.js', '/data/seed.js', '/scenarios/ban-readonly.js',
