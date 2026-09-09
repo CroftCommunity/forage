@@ -7,8 +7,21 @@
 // Bump CACHE whenever you want to force a clean re-cache on the very next load
 // (asset URLs are hashless, so the name is the version).
 
-const CACHE = 'forage-v80';
+const CACHE = 'forage-v81';
 const SHELL = [
+  // pds-walker (vendored ESM tree; plan 2026-09-08-plan-beta-pds-walker) — the rings-from-the-
+  // data-servers beta; every runtime file listed, per test/shell.test.js.
+  '/vendor/pds-walker/atproto/read.js',
+  '/vendor/pds-walker/pds-walker/core/cadence.js',
+  '/vendor/pds-walker/pds-walker/core/revgate.js',
+  '/vendor/pds-walker/pds-walker/core/rings.js',
+  '/vendor/pds-walker/pds-walker/index.js',
+  '/vendor/pds-walker/pds-walker/store/indexeddb.js',
+  '/vendor/pds-walker/pds-walker/store/memory.js',
+  '/vendor/pds-walker/pds-walker/transport/limiter.js',
+  '/vendor/pds-walker/pds-walker/transport/pds.js',
+  '/vendor/pds-walker/pds-walker/transport/resolve.js',
+  '/vendor/pds-walker/pds-walker/walker.js',
   '/', '/404.html', '/skins/bbs.css', '/skins/usenet.css', '/skins/usenet-dark.css', '/skins/forage-dark.css', '/skins/phpbb.css', '/skins/phpbb-dark.css',
   '/skins/rosewater.css', '/skins/rosewater-dark.css', '/skins/lavender.css', '/skins/lavender-dark.css',
   '/skins/apricot.css', '/skins/apricot-dark.css', '/skins/seaglass.css', '/skins/seaglass-dark.css',
@@ -19,9 +32,9 @@ const SHELL = [
   '/js/version.js', '/js/mode.js', '/js/board-cache.js', '/js/scroll-memory.js', '/js/hero.js', '/js/card-size.js', '/js/pictures.js', '/js/gif.js', '/js/gif-autoplay.js', '/js/alt-text.js', '/js/thread-shape.js', '/js/rail.js', '/js/provider-mark.js', '/js/drafts.js', '/js/ui/stage.js', '/js/lang.js', '/js/compose.js', '/js/ui/mode-view.js', '/css/tokens.css', '/css/app.css',
   '/js/main.js', '/js/router.js', '/js/store.js', '/js/storage.js', '/js/schema.js',
   '/js/reducers.js', '/js/selectors.js', '/js/personas.js', '/js/actions.js', '/js/util.js',
-  '/js/board-density.js', '/js/last-board.js', '/js/share-target.js', '/js/rings.js', '/js/ring-scope.js', '/js/mixes.js', '/js/mixes-pds.js', '/js/mix-deal.js', '/js/tagsubs.js', '/js/tagsubs-pds.js', '/js/lexicon.js', '/js/lexicons.js', '/js/tag-stats.js', '/js/trending-tags.js', '/js/hashtag-prefs.js', '/js/prng.js', '/js/devbar.js', '/js/engines/rank.js',
+  '/js/board-density.js', '/js/last-board.js', '/js/share-target.js', '/js/rings.js', '/js/ring-scope.js', '/js/beta.js', '/js/mixes.js', '/js/mixes-pds.js', '/js/mix-deal.js', '/js/tagsubs.js', '/js/tagsubs-pds.js', '/js/lexicon.js', '/js/lexicons.js', '/js/tag-stats.js', '/js/trending-tags.js', '/js/hashtag-prefs.js', '/js/prng.js', '/js/devbar.js', '/js/engines/rank.js',
   '/js/engines/limits.js', '/js/config/routing.js', '/js/substrates/memory.js',
-  '/js/substrates/atproto.js', '/js/substrates/lens.js', '/js/ui/components.js', '/js/ui/menu.js', '/js/ui/sortbar.js', '/js/ui/refresh-control.js', '/js/haptics.js', '/js/ui/nav.js',
+  '/js/substrates/atproto.js', '/js/substrates/lens.js', '/js/substrates/pds-graph.js', '/js/ui/components.js', '/js/ui/menu.js', '/js/ui/sortbar.js', '/js/ui/refresh-control.js', '/js/haptics.js', '/js/ui/nav.js',
   '/js/ui/views.js', '/js/ui/lens-views.js', '/data/seed.js', '/scenarios/ban-readonly.js',
   '/scenarios/comment-tree-collapse.js', '/scenarios/demo-extras.js',
   '/scenarios/feed-lifecycle.js', '/scenarios/format.js', '/scenarios/index.js',

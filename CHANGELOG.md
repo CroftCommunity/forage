@@ -8,6 +8,13 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-08 **Beta features, and the first one: your ring walked from the data servers.**
+  Your account page gains a Beta features section beside Advanced. Its first switch, off by
+  default, computes your ring — Mutuals and Follows — by walking the data servers that hold
+  the follow records themselves (the pds-walker library, vendored and pinned) instead of
+  asking Bluesky's worldwide view. It keeps working when that view is down and remembers
+  what it learned on this device. It changes how the ring is computed and nothing else:
+  boards still come from the worldwide view, and World is that view by definition.
 - 2026-09-08 **A mix can follow you.** On a mix's page under Your mixes, **Save to PDS** moves
   it into your account — Home's tuning included — so every Forage you sign into deals the same
   board, and **Remove from PDS** brings it back to this device. A saved mix is readable by

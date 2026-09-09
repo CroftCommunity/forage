@@ -13,13 +13,15 @@
     "workflows": "node e2e/run.mjs",
     "preview": "node scripts/preview.mjs",
     "import-phpbb": "node scripts/import-phpbb-style.mjs",
-    "reference-gate": "node --test tools/lexicon-reference-gate.mjs"
+    "reference-gate": "node --test tools/lexicon-reference-gate.mjs",
+    "vendor:sync": "node scripts/vendor-sync.mjs"
   },
   "devDependencies": {
     "@atproto/lexicon": "^0.7.12",
     "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.61.1",
-    "@stryker-mutator/core": "^10.0.0"
+    "@stryker-mutator/core": "^10.0.0",
+    "croft-pwa": "github:CroftCommunity/croft-pwa#6005f12c7c22f7807d54f587ef8960da1825638c"
   },
   "overrides": {
     "qs": ">=6.15.2"

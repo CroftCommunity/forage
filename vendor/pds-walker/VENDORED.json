@@ -1,0 +1,30 @@
+{
+  "source": "github:CroftCommunity/croft-pwa#6005f12c7c22f7807d54f587ef8960da1825638c",
+  "tag": "pds-walker-v0.1.0",
+  "packageVersion": "0.1.0",
+  "syncedAt": "2026-09-09",
+  "files": {
+    "atproto/read.d.ts": "1fbc9cfe36ca9ba1f0ae2156bda2596d88377649597a534ddd9e02dbdaa300a0",
+    "atproto/read.js": "50f59a09240de202206720094317e95b5d53b2915861ed32e5812a3e88882d7f",
+    "pds-walker/core/cadence.d.ts": "0565f4f7e80c68585880f862f7f2784191d51023708fd5d63ab07ecddb2098a4",
+    "pds-walker/core/cadence.js": "4a39b3f9fbec49cc0082c61ee38c4b85eda12239d93b9cd4160b893c19dc0622",
+    "pds-walker/core/revgate.d.ts": "214c95df3240f5cb8099ff9805ec10bbbdd95a2778cf33736e8ac6c37513b3fd",
+    "pds-walker/core/revgate.js": "2013c78c00784145240856c5c0ddec01b2d2a4530afddd93c3591a32b0eb417e",
+    "pds-walker/core/rings.d.ts": "1fb1fd4f5ce112d164ff27fd82b2b3a79cfb46cff39cd615aa4606658287edc5",
+    "pds-walker/core/rings.js": "8327794336e21e497b09e01f8e8bc7c4575141f59ec4e0bd2f42f56654293f9d",
+    "pds-walker/index.d.ts": "7d9498adb2f49996b11fb2cef24eeea9775267e6536921a9d26eaf42c1776a9b",
+    "pds-walker/index.js": "07af630de7cd11059f0ef16bbb934022f8cfe926979943e5aff17df93a9d717d",
+    "pds-walker/store/indexeddb.d.ts": "95b4e3cfbe020590cbe8cf7ed66a4a39576c54c31dedd540922a95dc6874522e",
+    "pds-walker/store/indexeddb.js": "198571d3fd7d95060ccff5904a134759bd71f96fe2736df50021f2c0ee80ab45",
+    "pds-walker/store/memory.d.ts": "4dfa04621a19d7ae89e2d292bb38fc942b53f3dbe4d1a1308e3076e0a77feed5",
+    "pds-walker/store/memory.js": "07338015b98e4b6fd9d6ba977f392670b6d3a55ec36ffca10a4d59800b69d740",
+    "pds-walker/transport/limiter.d.ts": "0c9beaefda7d17d114b9eeb60d86b4421e91dcc7f9fb926eaea9c07021fe36d9",
+    "pds-walker/transport/limiter.js": "5e557271563f6f55e57086fe7823d32fb99135708b1d9e67500c57b2f53318f1",
+    "pds-walker/transport/pds.d.ts": "aff4f60bf3ab15ce99d28a11cffd06c468e568bf5f0f2923af00bfec60d8a244",
+    "pds-walker/transport/pds.js": "5dfff8eca8e2326fcbb860ff6eff1fb6636659fe9fd4195b65fc55568463d80e",
+    "pds-walker/transport/resolve.d.ts": "0c2e4d6eb4b23c5fb32a37f2add6860eb3fceb781f868bd7e4c0b9a75d3fdd8c",
+    "pds-walker/transport/resolve.js": "3f26ad5528b8d333c0934c1d305aa52190d8f29cfd120387c159429009b6687a",
+    "pds-walker/walker.d.ts": "c3f09a35dd217a50dca833e9e2403ba994e0d8fb5d3ecf89450ed72bb2188d45",
+    "pds-walker/walker.js": "4e1d432451575d3048364f847cfb15dc113db4c72eb1266902c92dc1499080d4"
+  }
+}

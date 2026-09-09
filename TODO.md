@@ -12,6 +12,15 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 
 ## Needs the owner
 
+- **Beta: rings from the data servers (2026-09-08)** — the switch is live on `/me` › Beta
+  features (`plans/2026-09-08-plan-beta-pds-walker.md`). Owner-experiment notes for later:
+  the walker knows who follows you BACK, not every follower, so Mutuals is the same set either
+  way and nothing here shows follower counts; snapshots persist in IndexedDB
+  `forage.pds-walker` and are not cleared on sign-out (a warm start is the point — revisit on
+  a shared device); `hop` (+1) is the mutuals' follows from the same walk. Re-pin with
+  `npm install croft-pwa@github:CroftCommunity/croft-pwa#<sha> && npm run vendor:sync`
+  (test/vendor.test.js refuses a pin the tree was not synced from).
+
 - ~~**When should the refresh check run on its own?**~~ **DECIDED 2026-09-02 by the owner: on
   return to a board.** Coming back to a board you were reading checks page one and says what
   arrived, with no press. A timer while you read was rejected (a cadence nobody chose) and so

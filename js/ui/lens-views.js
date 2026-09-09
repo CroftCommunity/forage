@@ -16,6 +16,7 @@ import { appFor } from '../auth/hosts.js';
 import { navTree } from './nav.js';
 import { SCOPES, scopeFor } from '../rings.js';
 import * as ringScope from '../ring-scope.js';
+import * as beta from '../beta.js';
 import { extractTarget, directPath, threadPath, isDid } from '../share-target.js';
 import { lastBoard, setLastBoard, landingBoard, boardPath, DIRECTORY } from '../last-board.js';
 import * as mixesModel from '../mixes.js';
@@ -63,7 +64,16 @@ export function sessionAvatar() { return session ? sessionAvatarUrl : null; }
 const HIDDEN_KEY = 'forage.hidden';
 const hiddenUris = new Set((() => { try { return JSON.parse(localStorage.getItem(HIDDEN_KEY) || '[]'); } catch { return []; } })());
 const persistHidden = () => { try { localStorage.setItem(HIDDEN_KEY, JSON.stringify([...hiddenUris])); } catch { /* private mode */ } };
-let lens = createLens({ hiddenUris });
+// The ring-graph source (plan 2026-09-08-plan-beta-pds-walker): composed in main.js — the
+// UI layer imports no substrate but the read-only lens (test/invariants.test.js) — and set
+// here through setGraphSource. Every lens asks it at CALL time, so flipping the beta switch
+// needs no new lens: forgetRings() and a re-sync (main.js) are enough. Unset or null →
+// lens.js walks the AppView as before.
+let graphSource = null;
+const betaGraphSource = (args) => (graphSource ? graphSource(args) : null);
+export function setGraphSource(fn) { graphSource = fn; lens.forgetRings(); }
+export function forgetRings() { lens.forgetRings(); }
+let lens = createLens({ hiddenUris, graphSource: betaGraphSource });
 let bootPromise = null;   // the in-flight boot, SHARED — see bootAuth()
 // which feeds the account has saved (join state). Fetched ONCE per session
 // and shared — the header card and the sidebar both need it, and a race
@@ -353,7 +363,7 @@ async function adoptSession(s) {
     if (r.ok) handle = (await r.json()).handle ?? s.did;
   } catch { /* keep the did */ }
   session = { did: s.did, handle, fetchHandler: (p, i) => manager.fetch(p, i) };
-  lens = createLens({ session, hiddenUris });
+  lens = createLens({ session, hiddenUris, graphSource: betaGraphSource });
   sessionAvatarUrl = null;
   lens.profile(s.did).then((p) => { if (session?.did === s.did) { sessionAvatarUrl = p.avatar; rerender(); } })
     .catch((e) => console.warn('forage: could not load your profile picture', e));
@@ -3226,7 +3236,28 @@ export function lensProfileView() {
           'Which sections appear on the Hashtags page. Unchecking all of them leaves it empty, which is allowed.'),
         box));
   };
-  const prefs = () => el('div', { 'data-prefs': '1' }, settingsView().main, advanced());
+  // Beta features (owner, 2026-09-08): switches for things being tried before they are
+  // committed to. A <details> card like Advanced; a button[role=switch] like haptics (the
+  // tap floor measures the control). The first: rings walked from the data servers.
+  const betaCard = () => {
+    const on = beta.pdsWalker();
+    const sw = el('button', { type: 'button', class: 'switch', id: 'pref-pdswalker', role: 'switch', 'aria-checked': String(on) },
+      el('span', { class: 'switch-state' }, on ? 'On' : 'Off'));
+    sw.addEventListener('click', () => {
+      const next = sw.getAttribute('aria-checked') !== 'true';
+      beta.setPdsWalker(next);
+      sw.setAttribute('aria-checked', String(next));
+      sw.querySelector('.switch-state').textContent = next ? 'On' : 'Off';
+    });
+    return el('details', { class: 'card', 'data-beta': '1' },
+      el('summary', { style: 'cursor:pointer;min-height:44px;display:flex;align-items:center' }, 'Beta features'),
+      el('div', { style: 'margin-top:8px' },
+        el('h3', { style: 'font-size:var(--t-md);margin:0 0 4px' }, 'Rings from the data servers'),
+        el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
+          'Your ring — Mutuals and Follows — is normally computed by asking Bluesky’s worldwide view. On, it is walked instead from the data servers that hold the follow records themselves (the pds-walker library), which keeps working when that view is down and remembers what it learned on this device. It changes how the ring is computed and nothing else: boards still come from the worldwide view, and World is that view by definition. Mutuals means the people you follow who follow you back — the same set either way.'),
+        el('label', { class: 'seccheck', for: 'pref-pdswalker', style: 'display:flex;align-items:center;gap:8px' }, sw, el('span', {}, 'Walk my ring from the data servers'))));
+  };
+  const prefs = () => el('div', { 'data-prefs': '1' }, settingsView().main, advanced(), betaCard());
   if (!session) {
     return { main: el('div', {}, el('h1', {}, 'Your account'),
       el('p', { class: 'muted small' }, 'Sign in and this page carries your session and your moderation mirror.'),
