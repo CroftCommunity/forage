@@ -174,3 +174,51 @@ test('3x: forgetRings clears the memory — a new account is a new graph', async
   await lens.scopeMembersFor('mut');
   assert.ok(graphCalls > before, 'after forgetting, the graph is read again');
 });
+
+// P3 (plan 2026-09-08-plan-beta-pds-walker): the seam. `createLens({ graphSource })` asks
+// the source first; a non-null answer IS the graph (cached like the AppView one); null
+// falls through to the AppView walk. The equivalence row: a source that supplies
+// `followers := mutuals` (all the walker can know) yields the same `mut` as the AppView
+// graph with real followers, because mut = follows ∩ followers either way.
+test('a graphSource answers the ring and the AppView is not asked', async () => {
+  const { session, calls } = graphSession({ [`getFollows:${ME}`]: [['did:plc:x']], [`getFollowers:${ME}`]: [['did:plc:x']] });
+  const asked = [];
+  const graphSource = async ({ did, needsHop }) => {
+    asked.push({ did, needsHop });
+    return { me: did, follows: ['did:plc:m0', 'did:plc:only-follow'], followers: ['did:plc:m0'], hopFollows: new Map() };
+  };
+  const lens = createLens({ session, graphSource });
+  const r = await lens.scopeMembersFor('mut');
+  assert.deepEqual(r.members, [ME, 'did:plc:m0']);
+  assert.deepEqual(asked, [{ did: ME, needsHop: false }]);
+  assert.equal(calls.length, 0, 'no AppView graph call');
+  assert.deepEqual((await lens.scopeMembersFor('fol')).members, [ME, 'did:plc:m0', 'did:plc:only-follow']);
+  assert.equal(asked.length, 1, 'the second rung reused the cached graph');
+});
+
+test('a graphSource that answers null falls through to the AppView walk', async () => {
+  const { session, calls } = graphSession({ [`getFollows:${ME}`]: [['did:plc:a']], [`getFollowers:${ME}`]: [['did:plc:a']] });
+  const lens = createLens({ session, graphSource: async () => null });
+  assert.deepEqual((await lens.scopeMembersFor('mut')).members, [ME, 'did:plc:a']);
+  assert.ok(calls.length >= 2, 'the AppView was walked');
+});
+
+test('EQUIVALENCE: followers := mutuals gives the same mut and hop as the AppView graph with real followers', async () => {
+  const pages = {
+    [`getFollows:${ME}`]: [['did:plc:m0', 'did:plc:m1', 'did:plc:only-follow']],
+    [`getFollowers:${ME}`]: [['did:plc:m0', 'did:plc:fan'], ['did:plc:m1']],
+    'getFollows:did:plc:m0': [['did:plc:h0']],
+    'getFollows:did:plc:m1': [['did:plc:h1', ME]],
+  };
+  const appview = createLens({ session: graphSession(pages).session });
+  const viaAppView = { mut: (await appview.scopeMembersFor('mut')).members, hop: (await appview.scopeMembersFor('hop')).members };
+  const walkerLike = async ({ did, needsHop }) => ({
+    me: did,
+    follows: ['did:plc:m0', 'did:plc:m1', 'did:plc:only-follow'],
+    followers: ['did:plc:m0', 'did:plc:m1'],           // the walker knows who follows BACK, not every follower
+    hopFollows: needsHop ? new Map([['did:plc:m0', ['did:plc:h0']], ['did:plc:m1', ['did:plc:h1', ME]]]) : new Map(),
+  });
+  const walker = createLens({ session: graphSession({}).session, graphSource: walkerLike });
+  assert.deepEqual((await walker.scopeMembersFor('mut')).members, viaAppView.mut);
+  assert.deepEqual((await walker.scopeMembersFor('hop')).members, viaAppView.hop);
+});

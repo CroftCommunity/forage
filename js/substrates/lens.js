@@ -1254,7 +1254,13 @@ export const REPORT_REASONS = Object.freeze({
   other: 'com.atproto.moderation.defs#reasonOther',
 });
 
-export function createLens({ session = null, transport = fetch, hiddenUris = new Set() } = {}) {
+// graphSource (plan 2026-09-08-plan-beta-pds-walker, P3): the ring-graph seam. When given,
+// ringGraph asks it first — `({ did, needsHop }) => graph | null` — and a non-null answer is
+// the graph, cached exactly like the AppView one; null falls through to the AppView walk.
+// The shape is the same `{ me, follows, followers, hopFollows }`, so rings.js's chain and
+// every filter are untouched. A source that can only say who follows BACK supplies those as
+// `followers`; mut = follows ∩ followers is unchanged by that (test/lens-rings.test.js).
+export function createLens({ session = null, transport = fetch, hiddenUris = new Set(), graphSource = null } = {}) {
   // hiddenUris rides on the posture so the shape layer applies it like a mute;
   // the caller owns persisting it (a substrate never reaches for localStorage).
   let posture = { ...EMPTY_POSTURE, hiddenUris };
@@ -1612,6 +1618,10 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
       const cached = graphCache.get(key) || (needsHop ? null : graphCache.get('hop'));
       if (cached) return cached;
       const pending = (async () => {
+        if (graphSource) {
+          const supplied = await graphSource({ did: session.did, needsHop });
+          if (supplied) return { me: session.did, follows: supplied.follows, followers: supplied.followers, hopFollows: supplied.hopFollows ?? new Map() };
+        }
         const [follows, followers] = await Promise.all([
           pagedGraph('getFollows', session.did),
           pagedGraph('getFollowers', session.did),
