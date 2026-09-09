@@ -7,8 +7,21 @@
 // Bump CACHE whenever you want to force a clean re-cache on the very next load
 // (asset URLs are hashless, so the name is the version).
 
-const CACHE = 'forage-v80';
+const CACHE = 'forage-v81';
 const SHELL = [
+  // pds-walker (vendored ESM tree; plan 2026-09-08-plan-beta-pds-walker) — the rings-from-the-
+  // data-servers beta; every runtime file listed, per test/shell.test.js.
+  '/vendor/pds-walker/atproto/read.js',
+  '/vendor/pds-walker/pds-walker/core/cadence.js',
+  '/vendor/pds-walker/pds-walker/core/revgate.js',
+  '/vendor/pds-walker/pds-walker/core/rings.js',
+  '/vendor/pds-walker/pds-walker/index.js',
+  '/vendor/pds-walker/pds-walker/store/indexeddb.js',
+  '/vendor/pds-walker/pds-walker/store/memory.js',
+  '/vendor/pds-walker/pds-walker/transport/limiter.js',
+  '/vendor/pds-walker/pds-walker/transport/pds.js',
+  '/vendor/pds-walker/pds-walker/transport/resolve.js',
+  '/vendor/pds-walker/pds-walker/walker.js',
   '/', '/404.html', '/skins/bbs.css', '/skins/usenet.css', '/skins/usenet-dark.css', '/skins/forage-dark.css', '/skins/phpbb.css', '/skins/phpbb-dark.css',
   '/skins/rosewater.css', '/skins/rosewater-dark.css', '/skins/lavender.css', '/skins/lavender-dark.css',
   '/skins/apricot.css', '/skins/apricot-dark.css', '/skins/seaglass.css', '/skins/seaglass-dark.css',

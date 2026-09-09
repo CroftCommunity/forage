@@ -74,3 +74,70 @@ test('hls.js: the header records provenance and the content matches the pin', ()
   assert.equal(sha, HLS_PINNED_SHA256, 'vendored hls.js drifted — if deliberate, re-fetch per the header and re-pin');
   assert.ok(header.includes(HLS_PINNED_SHA256), 'the header’s sha line agrees with the pin');
 });
+
+// pds-walker (plan 2026-09-08-plan-beta-pds-walker, P1a): the THIRD vendored runtime
+// artifact, and the first that is OUR code (croft-pwa's `croft-pwa/pds-walker`) — so it is
+// pinned to a commit in package.json (SHARED-CODE.md rule 1) and vendored as an ESM tree
+// (forage serves js/ unbundled). `npm run vendor:sync` regenerates the tree from the
+// installed package and writes the manifest; these tests pin it two ways:
+//  - every vendored file's sha256 equals the manifest's entry, and no file is missing or extra
+//  - the manifest's `source` equals package.json's pin (a re-pin without a re-sync → red)
+//  - when node_modules/croft-pwa is installed, vendored bytes equal installed bytes (announced)
+import { readdirSync, statSync, existsSync } from 'node:fs';
+const PW_DIR = join(root, 'vendor', 'pds-walker');
+const PW_MANIFEST = join(PW_DIR, 'VENDORED.json');
+const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
+function filesUnder(dir, base = dir) {
+  const out = [];
+  if (!existsSync(dir)) return out;
+  for (const name of readdirSync(dir).sort()) {
+    const p = join(dir, name);
+    if (statSync(p).isDirectory()) out.push(...filesUnder(p, base));
+    else if (name !== 'VENDORED.json') out.push(p.slice(base.length + 1));
+  }
+  return out;
+}
+
+test('pds-walker: the manifest exists and names its source commit and tag', () => {
+  assert.ok(existsSync(PW_MANIFEST), 'vendor/pds-walker/VENDORED.json is missing — run `npm run vendor:sync`');
+  const m = JSON.parse(readFileSync(PW_MANIFEST, 'utf8'));
+  assert.match(m.source, /^github:CroftCommunity\/croft-pwa#[0-9a-f]{40}$/);
+  assert.match(m.tag, /^pds-walker-v\d+\.\d+\.\d+$/);
+  assert.ok(Object.keys(m.files).length > 0);
+});
+
+test('pds-walker: every vendored file matches the manifest, none missing, none extra', () => {
+  const m = JSON.parse(readFileSync(PW_MANIFEST, 'utf8'));
+  const onDisk = filesUnder(PW_DIR);
+  assert.deepEqual(onDisk, Object.keys(m.files).sort(), 'the set of vendored files is exactly the manifest');
+  for (const [rel, expected] of Object.entries(m.files)) {
+    assert.equal(sha256(readFileSync(join(PW_DIR, rel))), expected, `vendored ${rel} drifted from its manifest — if deliberate, run \`npm run vendor:sync\``);
+  }
+});
+
+test('pds-walker: the manifest source equals package.json\'s pin (re-pin ⇒ re-sync)', () => {
+  const m = JSON.parse(readFileSync(PW_MANIFEST, 'utf8'));
+  const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+  assert.equal(pkg.devDependencies['croft-pwa'], m.source, 'package.json pins a different commit than the vendored tree came from');
+});
+
+test('pds-walker: vendored bytes equal the installed package when it is present (announced either way)', (t) => {
+  const installed = join(root, 'node_modules', 'croft-pwa', 'lib');
+  if (!existsSync(installed)) { t.diagnostic('node_modules/croft-pwa absent (the gate job has no npm ci) — manifest pins stand alone here'); return; }
+  t.diagnostic('node_modules/croft-pwa present — comparing vendored bytes to the installed lib');
+  const m = JSON.parse(readFileSync(PW_MANIFEST, 'utf8'));
+  for (const rel of Object.keys(m.files)) {
+    assert.ok(existsSync(join(installed, rel)), `installed lib lacks ${rel}`);
+    assert.equal(sha256(readFileSync(join(PW_DIR, rel))), sha256(readFileSync(join(installed, rel))), `vendored ${rel} differs from the installed package`);
+  }
+});
+
+test('pds-walker: the vendored tree loads unbundled under node and exports the walker', () => {
+  const r = spawnSync(process.execPath, ['--input-type=module', '-e', `
+    const m = await import(${JSON.stringify(join(PW_DIR, 'pds-walker', 'index.js'))});
+    for (const k of ['createWalker', 'createFetchTransport', 'memoryStore', 'indexedDbStore', 'rings']) if (typeof m[k] !== 'function') throw new Error('no ' + k);
+    if (m.VERSION !== '0.1.0') throw new Error('VERSION ' + m.VERSION);
+    process.exit(0);
+  `], { encoding: 'utf8', timeout: 30000 });
+  assert.equal(r.status, 0, `child import failed: ${r.stderr}`);
+});
