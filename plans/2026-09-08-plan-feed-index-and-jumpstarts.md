@@ -594,9 +594,25 @@ Four findings, each a rule now written where it bit:
    feeds"; `signin` holds "N of 5 feeds. Hiding…" for the Bluesky-listed list. The
    Bluesky count keeps its exact wording; the index gets its own sentence after it.
 4. **The tap floor and the closed `<details>`.** `.seccheck` sized checkboxes to 44 px
-   but not radios (mine were the first radios there), and a `.row` inside the Advanced
-   `<details>` overrode the UA's hiding — the trap the file's own comment describes. The
-   CSS rule now covers radios; the `.row` is gone.
+   but not radios (mine were the first radios there), and a closed `<details>` does not
+   hide a `display:flex` label at all — the trap the file's own comment describes. The
+   mode is now one `.pillsel` select, the dressing the section's other dials already use;
+   the `.row` is gone. (A CSS rule extending the floor to radios was written, but into the
+   shared `main` checkout — a `cd` in an earlier command had leaked into the shell's cwd —
+   so it never reached the branch; it was restored there and not carried over, since the
+   select made it moot. COORDINATION rule 1, observed from the inside.)
+
+**The captures (MOCKS.md), and what they taught.** `plans/mocks/feed-index.html` v1, eight
+frames a side: Current from `main@a2af930`, Proposed from `3a590c0`, `snaps/feed-index/`.
+Three things bit on the way: (1) inside one invocation the second route timed out while
+each route alone passed, so each route and side is its own invocation (the manifest
+merges); (2) a `--serve` passed through a zsh variable reached the script as ONE token and
+was silently ignored — every "Current" frame was the branch, and the manifest said so
+(`3a590c0 · current`) — so the flag is spelled out, and the script now prints what the
+page held when a wait times out, which is what exposed both; (3) the fixture jumpstart
+carried a `graphic-media` label to stress the head card, and the guest floor (DL-035)
+hides that outright — the frame was the hidden state. The label came off; the labelled
+rows are in the Browse feeds frames, from the real index.
 
 Also: the index file left the service worker's install-time precache (see Phase 2 — the
 `hero` journey flaked once in the suite while the 900 KB precache competed with first
