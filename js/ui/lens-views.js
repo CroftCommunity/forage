@@ -3252,10 +3252,10 @@ export function lensProfileView() {
     return el('details', { class: 'card', 'data-beta': '1' },
       el('summary', { style: 'cursor:pointer;min-height:44px;display:flex;align-items:center' }, 'Beta features'),
       el('div', { style: 'margin-top:8px' },
-        el('h3', { style: 'font-size:var(--t-md);margin:0 0 4px' }, 'Rings from the data servers'),
+        el('h3', { style: 'font-size:var(--t-md);margin:0 0 4px' }, 'Social tree'),
         el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
-          'Your ring — Mutuals and Follows — is normally computed by asking Bluesky’s worldwide view. On, it is walked instead from the data servers that hold the follow records themselves (the pds-walker library), which keeps working when that view is down and remembers what it learned on this device. It changes how the ring is computed and nothing else: boards still come from the worldwide view, and World is that view by definition. Mutuals means the people you follow who follow you back — the same set either way.'),
-        el('label', { class: 'seccheck', for: 'pref-pdswalker', style: 'display:flex;align-items:center;gap:8px' }, sw, el('span', {}, 'Walk my ring from the data servers'))));
+          'Your social tree — the Mutuals and Follows your ring is built from — is normally read from Bluesky’s worldwide view. On, it is queried directly from the PDSs that hold the follow records (the pds-walker library), which keeps working when that view is down and remembers what it learned on this device. It changes where the tree comes from and nothing else: boards still come from the worldwide view, and World is that view by definition. Mutuals means the people you follow who follow you back — the same set either way.'),
+        el('label', { class: 'seccheck', for: 'pref-pdswalker', style: 'display:flex;align-items:center;gap:8px' }, sw, el('span', {}, 'Direct social tree PDS query'))));
   };
   const prefs = () => el('div', { 'data-prefs': '1' }, settingsView().main, advanced(), betaCard());
   if (!session) {
