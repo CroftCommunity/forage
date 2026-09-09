@@ -1,10 +1,11 @@
 # Plan: mixes on the PDS — a mix follows the reader, not the device
 
 date: 2026-09-08
-**Status:** PHASES 0–5 and 7 BUILT (2026-09-08; owner: "agreed to all 4"); the live proof
-passed against the real PDS. **Phase 6 (socialize) is the owner's to post** — the draft is
-in § F below. Acts: investigate DONE · validate DONE · publish is the namespace's owed act,
-unchanged (D3) · socialize DRAFTED. On `claude/mixes`, PR #62. Follows
+**Status:** PHASES 0–7 DONE (2026-09-08; owner: "agreed to all 4"); the live proof passed
+against the real PDS. Acts: investigate DONE · validate DONE · publish is the namespace's
+owed act, unchanged (D3) · **socialize DONE at the scope the owner set** — across our own
+projects, via `CroftC/.claude/LEXICONS.md` § 3 (CroftC PR); the wide post stays drafted in
+§ F for the day the project itself is socialized widely. On `claude/mixes`, PR #62. Follows
 `plans/2026-09-08-plan-mixes.md`, whose D4 was *"device local for now, yes, pds later, yes"* —
 this is the "later".
 repo: `CroftCommunity/forage`
@@ -129,12 +130,16 @@ it is in: `mix` joins `tagsub` as a type that carries user data in a namespace w
 Publishing the namespace is one act for all of `fyi.forage.*`, and it is owed by the
 register's own TODO, not by this plan.
 
-### F. Socialize — act 3 (the owner's to post; draft below)
+### F. Socialize — act 3 (DONE internally; the wide post kept as a draft)
 
-Before the record carries a second reader's data: a post on the lexicon.community forum
-(`discourse.atmosphere.community/c/lexicon-community/31`, the repo's stated home for
-discussion). The answer is recorded in the register entry either way. Draft, to post as-is
-or reword:
+**Scope (owner, 2026-09-08):** *"socialize is relative, for now we socialize across our own
+projects until we work on socializing the whole project widely."* So the act is met by
+raising the type in `CroftC/.claude/LEXICONS.md` § 3 — the file every project in the
+workspace loads — with one question for arecipe and croft (does any of you model, or want
+to model, "how one reader arranges their own subscriptions"?), and the register entry names
+that as where it was raised. The wide post below is kept so that the day the project is
+socialized widely it is a paste, not a rewrite. Its home then:
+`discourse.atmosphere.community/c/lexicon-community/31`.
 
 > **A per-reader "mix" of subscriptions — is a shared shape wanted?**
 >
@@ -194,7 +199,7 @@ The tagsub-pds-live shape: publish Weekend to the standing test account, read it
 through `listRecords`, validate it, unpublish, read-back-empty as the last assertion. Claim
 `testbed--forage-test-account` first.
 
-### Phase 6 — OWNER — socialize
+### Phase 6 — DONE 2026-09-08 (internally, per the owner's scope) — socialize
 The forum post (Act 3), and its outcome in the register entry.
 
 ### Phase 7 — DONE 2026-09-08 — the documents
@@ -250,3 +255,8 @@ thing only opening it produces.
      same key replaced (one record listed, `createdAt` kept), delete read back empty.
   4. A global text replace in a test rewrote a helper as a call to itself; five red tests,
      one line. Recorded because it is the kind of red that looks like the code's fault.
+- **2026-09-08 — socialize, scoped.** Owner: *"socialize is relative, for now we socialize
+  across our own projects until we work on socializing the whole project widely."* Done at
+  that scope: the type is raised in the workspace's LEXICONS.md with a question to the
+  sibling projects; the forum draft stays in § F for later. The rule itself landed in
+  CroftC as its own PR, per PATTERN.md.

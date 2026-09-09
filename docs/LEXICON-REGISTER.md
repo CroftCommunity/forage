@@ -342,5 +342,10 @@ LEXICONS.md names.
 
 Preference order applied: not `app.bsky.*` (a mix is never shown in an official client);
 `community.lexicon.*` holds nothing that fits, and a shared "how one client composes
-Bluesky-specific subscription kinds" type is exactly the nuance the owner named — raised as
-act 3 of the plan, outcome to be recorded here.
+Bluesky-specific subscription kinds" type is exactly the nuance the owner named.
+
+**Socialized (2026-09-08) at the scope the owner set — across our own projects, not the
+ecosystem** (*"socialize is relative, for now we socialize across our own projects until we
+work on socializing the whole project widely"*): raised in `CroftC/.claude/LEXICONS.md` § 3
+with one question to arecipe and croft. Outcome so far: none — record it here when one
+arrives. The wide post is drafted in the plan (§ F) for when the project goes wide.
