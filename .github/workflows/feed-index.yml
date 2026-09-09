@@ -1,0 +1,68 @@
+name: feed-index
+
+# The weekly harvest — plan 2026-09-08-plan-feed-index-and-jumpstarts, Phase 0.
+# Rebuilds data/feed-index.json from the AppView and commits it to main.
+#
+# Workspace CI pattern (CroftC/.claude/CI-PATTERN.md) applied to a job that
+# WRITES: `contents: read` at the top, `contents: write` on this one job only
+# (rule 5); a concurrency group so two runs never race on the push (the
+# croft-pwa idiom); a timeout (rule 8); a dispatch hatch (rule 9), pulled once
+# on landing and recorded in the plan's Review Log. This is the workspace's
+# first CI commit to a `main` — COORDINATION.md says what it touches and that a
+# session conflicting with it regenerates rather than hand-merges.
+#
+# The harvest's exit status is BRANCHED ON, never piped (VERIFICATION shape 1):
+# exit 2 is the guard refusing a materially smaller corpus (shape 3 — a green
+# run that graded an empty set) and the job fails with nothing written; only
+# exit 0 reaches the commit step. The regular ci.yml gate then runs on the push
+# like any other, and test/feed-index-file.test.js is what fails it on a
+# malformed file.
+on:
+  schedule:
+    - cron: "23 5 * * 2"   # Tuesdays 05:23 UTC — off the hour, off Monday's security scans
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: feed-index-main
+  cancel-in-progress: false
+
+jobs:
+  harvest:
+    runs-on: ubuntu-latest
+    # The pack walk is sequential (one cursor) at ~1.6 s/page: 400 pages found
+    # 889 jumpstarts above the floor in 13 min (2026-09-09); the prior 145k-pack
+    # crawl found 1,341, so a third sit past page 400. CI walks 1,500 pages
+    # (~40 min); a local run keeps the script's 400 default.
+    timeout-minutes: 75
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+        with:
+          ref: main
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7
+        with:
+          node-version-file: .nvmrc
+      # Node stdlib only; no npm ci (the script has no dependencies, and the
+      # shipped app's zero-dependency property is what ci.yml proves).
+      - name: harvest
+        run: |
+          node scripts/harvest-feeds.mjs --max-pack-pages 1500 > harvest.log 2>&1
+          status=$?
+          tail -40 harvest.log
+          echo "harvest exit $status"
+          exit $status
+      - name: commit if changed
+        run: |
+          git config user.name "forage feed-index"
+          git config user.email "feed-index@forage.fyi"
+          git add data/feed-index.json data/feed-index-meta.json
+          if git diff --cached --quiet; then echo "index unchanged; nothing to commit"; exit 0; fi
+          feeds=$(node -e 'console.log(JSON.parse(require("fs").readFileSync("data/feed-index-meta.json","utf8")).counts.feeds)')
+          packs=$(node -e 'console.log(JSON.parse(require("fs").readFileSync("data/feed-index-meta.json","utf8")).counts.jumpstarts)')
+          git commit -m "feed-index: regenerated — ${feeds} feeds, ${packs} jumpstarts" \
+            -m "Weekly harvest (plan 2026-09-08-plan-feed-index-and-jumpstarts). Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          git push origin HEAD:main

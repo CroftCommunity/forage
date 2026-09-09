@@ -7,7 +7,7 @@
 // Bump CACHE whenever you want to force a clean re-cache on the very next load
 // (asset URLs are hashless, so the name is the version).
 
-const CACHE = 'forage-v81';
+const CACHE = 'forage-v82';
 const SHELL = [
   // pds-walker (vendored ESM tree; plan 2026-09-08-plan-beta-pds-walker) — the rings-from-the-
   // data-servers beta; every runtime file listed, per test/shell.test.js.
@@ -22,7 +22,16 @@ const SHELL = [
   '/vendor/pds-walker/pds-walker/transport/pds.js',
   '/vendor/pds-walker/pds-walker/transport/resolve.js',
   '/vendor/pds-walker/pds-walker/walker.js',
-  '/', '/404.html', '/skins/bbs.css', '/skins/usenet.css', '/skins/usenet-dark.css', '/skins/forage-dark.css', '/skins/phpbb.css', '/skins/phpbb-dark.css',
+  '/', '/404.html',
+  // feed-index Phase 2: the CODE of the index ships with the shell. The index
+  // FILE (data/feed-index.json, ~900 KB raw) deliberately does not: adding it
+  // to install-time precache would cost every visitor the download on every
+  // cache bump before discovery is ever opened. It is same-origin, so the
+  // stale-while-revalidate handler below caches it on FIRST USE — after one
+  // visit to /feeds or /jumpstarts it is there offline, and a weekly
+  // regenerate is picked up on the next visit. (No apostrophes in this
+  // comment: test/shell.test.js reads every quoted string in this block.)
+  '/js/feed-index.js', '/js/feed-index-store.js', '/js/index-prefs.js', '/skins/bbs.css', '/skins/usenet.css', '/skins/usenet-dark.css', '/skins/forage-dark.css', '/skins/phpbb.css', '/skins/phpbb-dark.css',
   '/skins/rosewater.css', '/skins/rosewater-dark.css', '/skins/lavender.css', '/skins/lavender-dark.css',
   '/skins/apricot.css', '/skins/apricot-dark.css', '/skins/seaglass.css', '/skins/seaglass-dark.css',
   '/skins/cornflower.css', '/skins/cornflower-dark.css',

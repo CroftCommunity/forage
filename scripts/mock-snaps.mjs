@@ -17,7 +17,8 @@
 //        gif-lens gif-lens-paused gif-lens-alt gif-board
 //        self-lens self-lens-count self-lens-alone
 //        thread-lens-ring deep-lens-prefs-ring
-//        mix-board mix-tune mix-board-current mix-tune-current)
+//        mix-board mix-tune mix-board-current mix-tune-current
+//        feeds-index jumpstarts-lens jumpstart-lens rail-panels)
 //   node scripts/mock-snaps.mjs --as current --serve ../../forage
 //       # the same script and fixtures, rendering ANOTHER checkout (main): the
 //       # Current frames come from the tree the owner is running, captured by
@@ -628,6 +629,53 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
     await shoot(inn.page, 'board-lens-in', 'lens:mock-board', name, vp);
     inn.consoleErrors(); inn.errors();
     await inn.close();
+  }
+}
+
+// ---- feed-index (plan 2026-09-08): the index on /feeds, the jumpstart
+// surfaces, and the rail as panels. The POPULATION is the committed index
+// itself (data/feed-index.json, served from the tree being captured — the
+// widest counts and the labelled rows the harvest found are in it), plus a
+// jumpstart fixture built to stress the head card: a 5-digit member count, a
+// long name, a warn label, and a member sample. On a Current capture (main)
+// /jumpstarts and /j do not exist — the frame is the route's honest absence.
+for (const [name, vp] of Object.entries(VIEWPORTS)) {
+  const FEED_INDEX_ROUTES = ['feeds-index', 'jumpstarts-lens', 'jumpstart-lens', 'rail-panels'];
+  if (!FEED_INDEX_ROUTES.some(wanted)) continue;
+  const POP = 'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot';
+  const PACK = 'at://did:plc:mockpack/app.bsky.graph.starterpack/3kmock';
+  const FI = {
+    'getTrendingTopics': { topics: [{ topic: 'Gardening', link: '/profile/did:plc:z72i7hdynmk6r22z27h6tvur/feed/whats-hot' }] },
+    'getPopularFeedGenerators': { feeds: [
+      { uri: POP, displayName: 'Discover', description: 'Trending content from your personal network', likeCount: 39410, creator: { handle: 'bsky.app' }, did: 'did:web:discover.bsky.app' }] },
+    'getFeedGenerators': { __echoFeeds: { displayName: 'hydrated', likeCount: 12345, creator: { handle: 'curator.example' }, labels: [] } },
+    'getFeed?': { feed: [] },
+    'getFeedGenerator?': { view: { uri: POP, displayName: 'Discover', creator: { handle: 'bsky.app' } }, isOnline: true, isValid: true },
+    'getStarterPack?': { starterPack: { uri: PACK, cid: 'bafymock',
+      record: { name: 'Everyone who ever gardened on this network, and their feeds too — a long name', description: 'A jumpstart built to stress the head card: five-digit members, a week count, a label, three feeds.', feeds: [] },
+      creator: { did: 'did:plc:mockpack', handle: 'a-rather-long-curator-handle.bsky.social', displayName: 'A Curator With A Long Name' },
+      joinedAllTimeCount: 12045, joinedWeekCount: 37, list: { uri: 'at://did:plc:mockpack/app.bsky.graph.list/l1', listItemCount: 14930 }, labels: [{ val: 'graphic-media' }],
+      feeds: [{ uri: POP, displayName: 'Discover', likeCount: 39410, creator: { handle: 'bsky.app' } },
+        { uri: 'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/video', displayName: 'Video', likeCount: 7044, creator: { handle: 'bsky.app' } }],
+      listItemsSample: Array.from({ length: 12 }, (_, i) => ({ subject: { did: `did:plc:m${i}`, handle: `member-${i}.bsky.social`, displayName: i % 3 ? `Member ${i}` : null, avatar: null } })) } },
+  };
+  const PATHS = { 'feeds-index': '/feeds', 'jumpstarts-lens': '/jumpstarts', 'jumpstart-lens': '/j/a-rather-long-curator-handle.bsky.social/3kmock', 'rail-panels': '/feeds' };
+  const WAIT = { 'feeds-index': '[data-provenance], [data-discover-feed]', 'jumpstarts-lens': '[data-jumpstart], [data-jumpstart-controls], .empty, main', 'jumpstart-lens': '[data-jumpstart-head], .empty, main', 'rail-panels': '#side, main' };
+  for (const route of FEED_INDEX_ROUTES) {
+    if (!wanted(route)) continue;
+    const fx = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN], responses: FI, realIndex: true });
+    await fx.page.setViewportSize({ width: vp.width, height: vp.height });
+    await fx.page.goto(`${fx.origin}${PATHS[route]}`);
+    await fx.page.waitForSelector(WAIT[route], { timeout: 15000 });
+    await fx.page.waitForTimeout(600); // hydration and the rail's index read settle
+    await fx.page.evaluate(() => document.fonts?.ready);
+    if (route === 'rail-panels') {
+      // the rail is the subject: anchor on it (desktop) or open the drawer that holds it (phone)
+      await fx.page.evaluate(() => document.querySelector('#side')?.scrollIntoView({ block: 'start' }));
+      await fx.page.waitForTimeout(200);
+    }
+    await shoot(fx.page, route, 'lens:feed-index', name, vp);
+    await fx.close();
   }
 }
 

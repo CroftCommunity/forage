@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forage Feed Index</title>
+<meta name="mock-version" content="1">
+<meta name="mock-baseline" content="forage@a2af930">
+<meta name="mock-proposal" content="forage@PROPOSAL_SHA">
+<style>
+:root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
+  --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page-bg:#1C1813;--page-card:#262019;--page-ink:#EFE7D9;--page-muted:#B5A88F;--page-line:#3D3527;--page-accent:#A5CD98}}
+:root[data-theme="dark"]{--page-bg:#1C1813;--page-card:#262019;--page-ink:#EFE7D9;--page-muted:#B5A88F;--page-line:#3D3527;--page-accent:#A5CD98}
+*{box-sizing:border-box}
+body{background:var(--page-bg);color:var(--page-ink);font-family:var(--f-body);line-height:1.55;margin:0;padding:32px 20px 72px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:30px}
+h1{font-family:var(--f-display);font-size:30px;font-weight:600;margin:0;letter-spacing:-.01em}
+h2{font-family:var(--f-display);font-size:22px;font-weight:600;margin:0}
+h3{font-family:var(--f-display);font-size:17px;margin:0 0 7px;font-weight:600}
+.sub{color:var(--page-muted);font-size:15px;max-width:78ch;margin:0}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+section{display:flex;flex-direction:column;gap:14px}
+.stage{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap}
+.device{display:flex;flex-direction:column;gap:9px;min-width:0}
+.device-label{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+.phone{width:390px;max-width:100%}
+.desk{flex:1 1 460px;min-width:0}
+.shot{max-width:100%;display:block;border:1px solid var(--page-line);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.10),0 8px 24px rgba(0,0,0,.06)}
+.callout{background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:16px 18px}
+.callout p,.callout li{margin:0;font-size:14px;color:var(--page-muted)}
+.callout b,.callout code,td b{color:var(--page-ink);font-weight:600}
+.callout ul,.callout ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+table{border-collapse:collapse;font-size:14px;width:100%}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--page-line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page-muted)}
+.tablewrap{overflow-x:auto;background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:6px 8px}
+code{font-size:.92em}
+.small{font-size:13px;color:var(--page-muted)}
+.tag{display:inline-block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;padding:1px 8px;border-radius:999px;border:1px solid var(--page-line);color:var(--page-muted)}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:26px}
+@media (max-width:900px){.pair{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header style="display:flex;flex-direction:column;gap:10px">
+  <span class="eyebrow">Mock · v1 · 2026-09-09 · plan 2026-09-08-plan-feed-index-and-jumpstarts</span>
+  <h1>The feed index — thousands on /feeds, jumpstarts, and the rail as panels</h1>
+  <p class="sub">Four surfaces, eight frames each side. <b>Current</b> is <code>main</code> at <code>a2af930</code>;
+  <b>Proposed</b> is <code>claude/feed-index</code>. Both captured by <code>scripts/mock-snaps.mjs</code> against the same
+  fixtures, in the default skin, at 390×844 and 1280×900 (MOCKS.md). The population is the committed index itself —
+  1,735 feeds and 889 jumpstarts the harvest found, so the widest real counts and the labelled rows are in the frames —
+  plus one jumpstart fixture built to stress the head card: a 14,930-member list, a 12,045 all-time join count, a
+  long name, a long handle, a <code>graphic-media</code> label, two feeds, twelve sampled members.</p>
+</header>
+
+<section class="callout">
+  <h3>Open decisions</h3>
+  <ol>
+    <li><b>The provenance line under every feed row</b> (“Bluesky lists it · in the index · in 3 jumpstarts”). It is the honesty the plan asked for (D-own: a reader always knows whose editorial act they see) and it costs a line per row on a phone. Keep as a line, fold into the byline, or show only when it is not the common case?</li>
+    <li><b>“likes loading…” on index rows before hydration.</b> D2 says the file carries no count, so the first paint has none. Alternative: show the band as words (“100+ likes”) until the real count lands. The band is already how the Popular sort orders them.</li>
+    <li><b>Popular jumpstarts first in the rail by default.</b> Owner’s ask (2026-09-04) with “trending” corrected to “popular” (D6). The rail on a phone is a drawer; is eight rows the right count there, or four?</li>
+    <li><b>The jumpstart head links out for the follow</b> (D-follow: no follow-all here). The line under the link says Forage does not change your follows. Is that the right place for that sentence, or should it wait until the button exists?</li>
+  </ol>
+</section>
+
+<section>
+  <h2>1 · Browse feeds — the popular list ∪ the index</h2>
+  <p class="sub">Current: the 117 Bluesky lists as popular. Proposed: the same 117 plus the index, every row saying whose it is, index rows hydrating their counts 25 at a time, and the count line naming the index’s age.</p>
+  <div class="pair">
+    <div class="device"><span class="device-label">Current · phone</span><img class="shot phone" src="snaps/feed-index/feeds-index.phone.current.png" alt="Browse feeds on main, phone: the popular list of 117"></div>
+    <div class="device"><span class="device-label">Proposed · phone</span><img class="shot phone" src="snaps/feed-index/feeds-index.phone.proposed.png" alt="Browse feeds on the branch, phone: the popular list plus the index, rows marked with their provenance"></div>
+    <div class="device"><span class="device-label">Current · desktop</span><img class="shot desk" src="snaps/feed-index/feeds-index.desktop.current.png" alt="Browse feeds on main, desktop"></div>
+    <div class="device"><span class="device-label">Proposed · desktop</span><img class="shot desk" src="snaps/feed-index/feeds-index.desktop.proposed.png" alt="Browse feeds on the branch, desktop, with the rail’s Popular jumpstarts panel"></div>
+  </div>
+</section>
+
+<section>
+  <h2>2 · Browse jumpstarts — new</h2>
+  <p class="sub">Current: the route does not exist on main (the frame is the population gate’s honest absence). Proposed: the index’s jumpstarts, searched and sorted from memory, a curator chip, the gloss said once.</p>
+  <div class="pair">
+    <div class="device"><span class="device-label">Current · phone</span><img class="shot phone" src="snaps/feed-index/jumpstarts-lens.phone.current.png" alt="/jumpstarts on main, phone: no such surface"></div>
+    <div class="device"><span class="device-label">Proposed · phone</span><img class="shot phone" src="snaps/feed-index/jumpstarts-lens.phone.proposed.png" alt="/jumpstarts on the branch, phone"></div>
+    <div class="device"><span class="device-label">Current · desktop</span><img class="shot desk" src="snaps/feed-index/jumpstarts-lens.desktop.current.png" alt="/jumpstarts on main, desktop: no such surface"></div>
+    <div class="device"><span class="device-label">Proposed · desktop</span><img class="shot desk" src="snaps/feed-index/jumpstarts-lens.desktop.proposed.png" alt="/jumpstarts on the branch, desktop"></div>
+  </div>
+</section>
+
+<section>
+  <h2>3 · One jumpstart — the head card under load</h2>
+  <p class="sub">The fixture: a long name, a long handle, 14,930 members, 12,045 joined all time and 37 this week, a <code>graphic-media</code> label, two feeds it names, twelve sampled people, and the link out where the follow lives.</p>
+  <div class="pair">
+    <div class="device"><span class="device-label">Current · phone</span><img class="shot phone" src="snaps/feed-index/jumpstart-lens.phone.current.png" alt="/j/… on main, phone: no such surface"></div>
+    <div class="device"><span class="device-label">Proposed · phone</span><img class="shot phone" src="snaps/feed-index/jumpstart-lens.phone.proposed.png" alt="one jumpstart on the branch, phone"></div>
+    <div class="device"><span class="device-label">Current · desktop</span><img class="shot desk" src="snaps/feed-index/jumpstart-lens.desktop.current.png" alt="/j/… on main, desktop: no such surface"></div>
+    <div class="device"><span class="device-label">Proposed · desktop</span><img class="shot desk" src="snaps/feed-index/jumpstart-lens.desktop.proposed.png" alt="one jumpstart on the branch, desktop"></div>
+  </div>
+</section>
+
+<section>
+  <h2>4 · The rail as panels</h2>
+  <p class="sub">Current: sign-in card and Trending. Proposed: Popular jumpstarts first, then Trending, then sign-in for a guest — the order is the reader’s (Settings → Side panel), and “off” still empties it.</p>
+  <div class="pair">
+    <div class="device"><span class="device-label">Current · desktop</span><img class="shot desk" src="snaps/feed-index/rail-panels.desktop.current.png" alt="the rail on main, desktop"></div>
+    <div class="device"><span class="device-label">Proposed · desktop</span><img class="shot desk" src="snaps/feed-index/rail-panels.desktop.proposed.png" alt="the rail on the branch, desktop: Popular jumpstarts first"></div>
+    <div class="device"><span class="device-label">Current · phone</span><img class="shot phone" src="snaps/feed-index/rail-panels.phone.current.png" alt="the rail on main, phone"></div>
+    <div class="device"><span class="device-label">Proposed · phone</span><img class="shot phone" src="snaps/feed-index/rail-panels.phone.proposed.png" alt="the rail on the branch, phone"></div>
+  </div>
+</section>
+
+<section class="callout">
+  <h3>What the frames hold, and what they cannot</h3>
+  <ul>
+    <li>The index in the frames is the one the branch commits (<code>data/feed-index.json</code>, built 2026-09-09) — not a fixture. A later regenerate changes the rows; the manifest names the tree.</li>
+    <li>Hydration is fixtured (<code>__echoFeeds</code>: every index row answers with 12,345 likes), so the “likes loading…” state and the settled state are both real paints of the engine, not drawings.</li>
+    <li>The Current frames for /jumpstarts and /j are the route’s absence on main. That is the honest comparison: the surface is new.</li>
+    <li>Not shown: the Discovery index section under Advanced (Add / Replace / Off, paste or pick a file). It is a settings form; the plan’s workflow covers its behaviour and a frame of it adds nothing a form does not already say.</li>
+  </ul>
+</section>
+
+</div>
+</body>
+</html>

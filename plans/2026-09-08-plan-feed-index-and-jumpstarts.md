@@ -1,9 +1,14 @@
 # Plan: the feed index — feeds and jumpstarts as one CI-built graph the PWA carries
 
 date: 2026-09-08
-**Status:** PLANNED, all questions answered (owner, 2026-09-08 — § Decisions) — research
-complete (two crawls, every number below measured live), no code yet. Execution on
-`claude/feed-index` (worktree `worktrees/feed-index/forage`).
+**Status:** BUILT on `claude/feed-index` (worktree `worktrees/feed-index/forage`), Phases
+0–5 (2026-09-09; owner: "execute all phases in the plan"). The first committed index:
+**1,735 feeds, 889 jumpstarts, 298 edges** (harvest run 2 — 2,157 requests, 0 retries,
+804 s; run 1 was REFUSED by the guard, see Review Log Pass 3). Unit gate 948/948,
+conformance 86/86; workflows: see Pass 3. Landing via PR; the owner merges. Owed after
+landing: pull the `workflow_dispatch` hatch once (the rate-limit datapoint, `TODO.md`);
+the mock captures' Current frames; the device row. CroftC PR #45 carries the
+COORDINATION row.
 repo: `CroftCommunity/forage` — only. A first draft asked for a second repo; the owner's
 correction (2026-09-08: "a separate repo isn't more useful, what I meant was we don't want
 more than necessary server side resources to become necessary for forage") retired it.
@@ -92,7 +97,7 @@ URIs the client knows to ask about*. Nothing sits between forage and the AppView
   │   ~1,470 feeds · ~1,340 jumpstarts · edges · ~220 KB gzip · sorted         │
   │        │  same origin: in sw.js SHELL, cached and offline for free         │
   │        ▼                                                                   │
-  │ js/substrates/index.js → lens.js discoverFeeds · /jumpstarts · rail panels │
+  │ js/feed-index-store.js → lens.js discoverFeeds · /jumpstarts · rail panels │
   └────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -401,10 +406,12 @@ Each phase leaves both repos green and is landable alone.
 
 ### Phase 2 — forage consumes the index
 
-- [ ] `sw.js` `SHELL` gains `/data/feed-index.json` and `/data/feed-index-meta.json`;
-  the existing stale-while-revalidate already keeps them fresh after a regenerate. Bump
-  `CACHE`.
-- [ ] `js/substrates/index.js` (new): fetch same-origin → validate → expose `feeds()`,
+- [x] `sw.js`: the index's code joins `SHELL`; the index FILE does not (revised in
+  build, 2026-09-09: ~900 KB at install-time precache on every cache bump is the wrong
+  cost to put on a visitor who never opens discovery). Same-origin, so the existing
+  stale-while-revalidate caches it on first use — offline after one visit to `/feeds`
+  or `/jumpstarts`, fresh on the visit after a regenerate. `CACHE` bumped.
+- [ ] `js/feed-index-store.js` (new): fetch same-origin → validate → expose `feeds()`,
   `jumpstarts()`, `feedsInPack(uri)`, `packsWithFeed(uri)`, `search(q)`; every result
   carries the index's `generatedAt`, so the UI can say how old what it shows is. A
   missing or malformed file is refused with words and discovery falls back to today's
@@ -523,3 +530,76 @@ Mid-revision the owner added the principle that became D-own and Phase 2b: a
 prepopulated index must be user-manageable — replace, add, off — for equity, LTS, and
 independence from a central authority. It cost one settings surface and a documented
 file format; the storage arc (device-local now, PDS later) is the one mixes already walked.
+
+### Pass 3 — execution, Phases 0–5 (2026-09-08 → 2026-09-09)
+
+RED-first throughout: `test/feed-index.test.js` (the pure core: bands, the validator,
+merge, search, edges, script/language), `test/harvest.test.js` (the harvest's folds and
+the guard), `test/index-substrate.test.js` (the store: missing, malformed, own-index
+modes), `test/index-prefs.test.js` (D-own's device-local prefs), six new tests appended
+to `test/rail.test.js` (panels), seven to `test/lens-intake.test.js` (the union, hydration,
+the jumpstart shapers, `resolveJumpstart`), and `test/feed-index-file.test.js` — the gate
+half of the guard, which grades the COMMITTED files (valid, byte-stable under `serialize`,
+above the floors, no counts, a non-English row present).
+
+**The guard earned its keep on the first real run.** Harvest run 1 (started 2026-09-08
+03:21 UTC) took 9.6 hours: the laptop slept mid-walk, every themed pack query came back
+"fetch failed", 264 retries burned in seconds, the pack corpus truncated at 291 — and the
+guard **refused** (`jumpstarts 291 < 300`, exit 2, nothing written). Two fixes followed:
+the network-error path now waits 5 s→30 s between tries instead of spinning, and the
+run goes under `caffeinate`. Run 2: **1,735 feeds, 889 jumpstarts, 298 edges, 2,157
+requests, 0 retries, 804 s**, 286 KB gzipped (above the 220 KB estimate — descriptions).
+889 is under the ~1,340 the 145k crawl projected because the wildcard walk stops at 400
+pages locally; CI walks 1,500 (`--max-pack-pages`, `timeout-minutes: 75`).
+
+**Two corrections the build forced on the plan.** (1) `js/substrates/index.js` moved to
+`js/feed-index-store.js`: `test/invariants.test.js` holds that the UI layer imports no
+substrate but the read-only lens, and a same-origin loader is not a substrate. (2)
+Liveness and rising probes run over the Bluesky-listed rows only (`browseUris`), never
+the index's ~1,700 — the harvest floor already buys 87% live (D5), and 1,700 `getFeed`
+calls on arrival is the cost the file exists to avoid; the count line says so.
+
+**Recorded slips.** `cat > test/rail.test.js` overwrote three tracked tests (decision 6);
+recovered from HEAD and appended instead — the rule is now a memory note. The
+`indexJumpstarts` shaper was written before its test; the test was added the same pass.
+
+Phase 3 built `/jumpstarts` and `/j/<handle>/<rkey>` (no follow-all, D-follow; the head
+links out); Phase 4 grew `js/rail.js`'s word into an ordered panel list with Popular
+jumpstarts first and a per-panel chooser in Settings; Phase 5 wrote ADR-005,
+`docs/NAMING.md` § Jumpstart, `docs/FEED-INDEX.md`, the CHANGELOG entry, DL-039/DL-040,
+and the TODO rows (follow-all, the PDS record, the rate-limit datapoint, the device row).
+`e2e/feed-index.workflow.mjs` holds the three journeys (present / missing / malformed);
+the shim gained `__echoFeeds` so hydration can be fixtured. Mock captures:
+`scripts/mock-snaps.mjs` routes `feeds-index jumpstarts-lens jumpstart-lens rail-panels`.
+
+**What the workflow suite taught (2026-09-09, 30 ok / 8 failed on the first full run).**
+Four findings, each a rule now written where it bit:
+
+1. **A hermetic journey must never read the real index.** The served tree carries
+   `data/feed-index.json`, a file CI regenerates weekly — and the real one happened to
+   contain an unlabelled feed named "After Dark", which the sign-in journey's adult-floor
+   assertion had used as its adult fixture's name. The harness now serves
+   `e2e/harness/fixtures/feed-index.json` (11 feeds, 5 jumpstarts, a labelled row of
+   each, two languages, edges) to every scenario unless it asks for the real file
+   (`realIndex: true` — mock-snaps, whose population is the committed index). It rides
+   the fetch SHIM, not a page route: the first attempt used `page.route`, and the
+   signed-in half of `signin` then read the real file anyway — once the service worker
+   controls the page, Playwright's route never sees the request. The shim fences the
+   path in-page, ahead of the worker; a workflow's own `responses` entry for it wins.
+2. **The door stays first.** My default rail order put the sign-in card last;
+   `guest-surface` holds board-cards decision 6 ("the door, then trending"). The default
+   is sign-in → Popular jumpstarts → Trending; the sign-in panel draws nothing signed in,
+   so for a reader it is jumpstarts then trending, which is what the owner asked.
+3. **Two corpora, two sentences.** The count line had folded index rows into "N of M
+   feeds"; `signin` holds "N of 5 feeds. Hiding…" for the Bluesky-listed list. The
+   Bluesky count keeps its exact wording; the index gets its own sentence after it.
+4. **The tap floor and the closed `<details>`.** `.seccheck` sized checkboxes to 44 px
+   but not radios (mine were the first radios there), and a `.row` inside the Advanced
+   `<details>` overrode the UA's hiding — the trap the file's own comment describes. The
+   CSS rule now covers radios; the `.row` is gone.
+
+Also: the index file left the service worker's install-time precache (see Phase 2 — the
+`hero` journey flaked once in the suite while the 900 KB precache competed with first
+paint, and the install cost stands on its own); `nav` pins the browse rows and gained
+`jumpstarts`; `mixes` fails on `main` too (`Top: … (got undefined)`, a peer's landing the
+same day — reported, not touched).

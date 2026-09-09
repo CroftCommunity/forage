@@ -13,6 +13,7 @@
     "workflows": "node e2e/run.mjs",
     "preview": "node scripts/preview.mjs",
     "import-phpbb": "node scripts/import-phpbb-style.mjs",
+    "harvest": "node scripts/harvest-feeds.mjs",
     "reference-gate": "node --test tools/lexicon-reference-gate.mjs",
     "vendor:sync": "node scripts/vendor-sync.mjs"
   },

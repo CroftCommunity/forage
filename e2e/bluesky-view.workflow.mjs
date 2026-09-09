@@ -659,7 +659,9 @@ export async function run() {
   // is the whole of it.
   assert.equal(await page.locator('#side .card a[href="/feeds"]').count(), 0, 'no Feeds card on the rail');
   const railOrder = await page.$$eval('#side .card', (cs) => cs.map((c) => c.querySelector('h2')?.textContent.trim() ?? c.getAttribute('data-trending') ?? '?'));
-  assert.deepEqual(railOrder, ['Trending'], `signed in, the rail is Trending alone: ${JSON.stringify(railOrder)}`);
+  // feed-index Phase 4 (plan 2026-09-08): Popular jumpstarts leads the rail by
+  // default (owner, 2026-09-04); the sign-in panel draws nothing signed in.
+  assert.deepEqual(railOrder, ['Popular jumpstarts', 'Trending'], `signed in, the rail is jumpstarts then Trending: ${JSON.stringify(railOrder)}`);
   // (removing that card must not take the SLUG ROUTING with it — it was the
   // only caller that registered a saved feed under its slug. This account has
   // no saved feeds to route, so that check lives in signin.workflow, which

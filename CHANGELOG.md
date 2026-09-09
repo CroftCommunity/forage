@@ -8,6 +8,16 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-09 **Browse feeds starts from an index — thousands, not 117.** A file that ships with
+  Forage names the feeds and jumpstarts the network is worst at surfacing (Bluesky's popular
+  list shows 117 of at least 56,000), built weekly by CI and cached with the app, so search is
+  instant and works offline. Every row says whose it is — *Bluesky lists it*, *in the index*,
+  *in N jumpstarts*. **Browse jumpstarts** is new: a jumpstart is what the network calls a
+  starter pack, and the index knows which ones name which feeds. The index is **yours to
+  replace** under Advanced on your account page — add your own file over Forage's, use yours
+  instead, or switch it off. The right-hand panel is now a choice of panels, with Popular
+  jumpstarts first. (plan 2026-09-08-plan-feed-index-and-jumpstarts; ADR-005)
+
 - 2026-09-08 **Beta features, and the first one: Direct social tree PDS query.** Your
   account page gains a Beta features section beside Advanced. Its first switch, off by
   default, reads your social tree — the Mutuals and Follows your ring is built from — by
