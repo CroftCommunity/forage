@@ -1,11 +1,12 @@
 # Plan: the feed index — feeds and jumpstarts as one CI-built graph the PWA carries
 
 date: 2026-09-08
-**Status:** PLANNED — research complete (two crawls, every number below measured live),
-no code yet. Owner decisions taken during research are recorded in § Decisions; the ones
-still open are in § Open questions. Execution on `claude/feed-index`
-(worktree `worktrees/feed-index/forage`).
-repo: `CroftCommunity/forage` — plus a **new** repo this plan asks for (§ Phase 0)
+**Status:** PLANNED, all questions answered (owner, 2026-09-08 — § Decisions) — research
+complete (two crawls, every number below measured live), no code yet. Execution on
+`claude/feed-index` (worktree `worktrees/feed-index/forage`).
+repo: `CroftCommunity/forage` — only. A first draft asked for a second repo; the owner's
+correction (2026-09-08: "a separate repo isn't more useful, what I meant was we don't want
+more than necessary server side resources to become necessary for forage") retired it.
 baseline: `main` @ `d8ff6a9` (mixes landed, #62)
 parents: `plans/2026-08-26-1-plan-feed-discovery-sorts.md` (built `/feeds`, D1–D10 there
 are assumed here and not re-measured); `docs/adr/0004-constellation-backlinks.md` (the
@@ -14,9 +15,10 @@ pack↔feed signal this plan carries offline); `plans/2026-08-25-1-plan-backend-
 (the left bar this plan extends, not re-plans).
 backlog: no `ROADMAP_TODO` row exists for feed seeding or starter packs — this plan IS the
 shaped work (TRACKING.md § Two piles); it partially answers E139's *discovery* half only.
-dimensions touched: CI-PATTERN (a scheduled workflow), VERIFICATION (the empty-set guard),
-SUPPLY-CHAIN (a second origin), SHARED-CODE (read; nothing crosses the boundary but JSON),
-DESIGN (a new browse surface and a new noun), MOCKS (two surfaces need captures).
+dimensions touched: CI-PATTERN (a scheduled workflow that writes to `main`), VERIFICATION
+(the empty-set guard), COORDINATION (a bot commit on shared main — new), SHARED-CODE (read;
+moot once the harvest lives in forage), DESIGN (a new browse surface and a new noun), MOCKS
+(two surfaces need captures).
 
 ## Problem Statement
 
@@ -40,6 +42,13 @@ The owner, 2026-09-01, then 2026-09-04:
 > heavily cache locally in the PWA and broaden the horizons and better the search, rather
 > than introduce a server side component for a pure spa/pwa + pds+appview experience with
 > no 'middle man'"
+
+And the constraint that turns a convenience into a principle (owner, 2026-09-08, mid-plan):
+
+> "if we are going to prepopulate search endpoints like this we really should go the
+> lengths to make them user manageable in case they want to dump ours and upload their
+> own, that's the only way this stays equitable and keeps our LTS thinking … and
+> independence from a central authority"
 
 Three facts underneath the ask, all measured:
 
@@ -65,29 +74,33 @@ between what a file can say and what only a live call can:
   │ pack ↔ feed EDGES                                │  │ liveness, labels as applied now     │
   │ a stable rank hint (all-time, coarse)            │  │ trending topics (already wired)     │
   └──────────────────────────────────────────────────┘  └────────────────────────────────────┘
-        answers no query · sees no user · degrades to the shipped fallback
+        answers no query · sees no user · degrades to the live browse corpus
 ```
 
 The client's AppView calls stay exactly as direct as today; the index only widens *which
 URIs the client knows to ask about*. Nothing sits between forage and the AppView.
 
 ```
-  CroftCommunity/forage-index  (NEW; § Phase 0)          CroftCommunity/forage  (main)
-  ┌───────────────────────────────────────────┐          ┌─────────────────────────────────┐
-  │ providers.json   hand: accounts, tags     │          │ data/feed-index-fallback.json   │
-  │ queries.json     hand: the sweep's input  │          │   150 feeds + 50 packs, ~10 KB  │
-  │ harvest.mjs      Node stdlib, zero deps   │          │   ships in the shell, offline   │
-  │   ↓ cron weekly + workflow_dispatch       │  fetch   │                                 │
-  │ index.json  ──── GitHub Pages ────────────┼─────────►│ lens.js: fallback first, index  │
-  │   ~1,470 feeds · ~1,340 packs · edges     │  CORS *  │ supersedes; local search first  │
-  │   ~220 KB gzip · sorted · no timestamps   │          │ sw.js: opt-in cache of that URL │
-  └───────────────────────────────────────────┘          └─────────────────────────────────┘
-                never merged into forage
+  CroftCommunity/forage — one repo, main, served by Pages as today
+  ┌────────────────────────────────────────────────────────────────────────────┐
+  │ data/feed-providers.json   HAND: accounts, platforms, tags (~150 rows)     │
+  │ data/feed-queries.json     HAND: the sweep's input (324 terms)             │
+  │ scripts/harvest-feeds.mjs  Node stdlib, zero deps (like mock-snaps.mjs)    │
+  │        │  .github/workflows/feed-index.yml: cron weekly + dispatch         │
+  │        ▼  contents: write on THAT job only; guard; commits to main         │
+  │ data/feed-index.json       GENERATED, never hand-edited                    │
+  │   ~1,470 feeds · ~1,340 jumpstarts · edges · ~220 KB gzip · sorted         │
+  │        │  same origin: in sw.js SHELL, cached and offline for free         │
+  │        ▼                                                                   │
+  │ js/substrates/index.js → lens.js discoverFeeds · /jumpstarts · rail panels │
+  └────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Two files, two lifecycles: `providers.json` and `queries.json` are **hand-authored and
-small** (a human reviews 150 lines); `index.json` is **generated and never hand-edited**,
-the idiom `DEPLOYED.md` and `DEVICE-QUEUE.md` already use.
+Three files, two lifecycles: `feed-providers.json` and `feed-queries.json` are
+**hand-authored and small** (a human reviews 150 lines); `feed-index.json` is **generated
+and never hand-edited**, the idiom `DEPLOYED.md` and `DEVICE-QUEUE.md` already use. The
+generated file is committed to `main` by the workflow itself — no weekly merge for a
+human, no second origin, no fallback: the index *is* what ships.
 
 Surfaces (§ The units): the left bar gains one row (Browse jumpstarts — Mixes, Feeds,
 Hashtags and the browse rule are already there since #62); the right rail becomes
@@ -128,17 +141,23 @@ hides is an empty panel. All-time joins are meaningful for ~1,340 packs. Trendin
 exists and is already sourced (`getTrendingTopics` → generators, `lens.js` 3g); it is a
 second panel, not the default.
 
-**Why the second origin is acceptable under ADR-002/004.** ADR-004 already admits a second
-read host for feed signals, strictly additive and degrade-to-absent. The index is
-narrower still: it is our own file, it carries no viewer identity, and its failure mode
-is the shipped fallback. It is a *dependency* (SUPPLY-CHAIN) but not a data plane.
-
-**Why the fallback ships in `main` and the index does not.** `sw.js` ignores cross-origin
-requests by design (`if (url.origin !== location.origin) return;`), so a cold, offline, or
-index-host-down load must have something. 150 feeds + 50 packs is ~10 KB gzipped and is
-regenerated deliberately, rarely, by hand — it is what "travels with the site" buys; the
-published index is the enhancement. The owner's "never merged" (2026-09-01) is honoured by
-construction: the index has no path into forage's history.
+**Why the index lives in forage's own tree, committed by CI.** The first draft published
+it from a second repo's Pages, read "never merged" (owner, 2026-09-01) as *keep it out of
+forage's history*, and so needed a cross-origin fetch, a `sw.js` exception, a separate
+fallback, and a new ADR. The owner's correction (2026-09-08) was that the constraint is
+**no runtime server-side resources for forage** — not where the file sits. Same-origin
+dissolves all four: `sw.js` caches `data/feed-index.json` with the rest of the shell
+(offline for free), there is no CORS, no second dependency under SUPPLY-CHAIN, and no
+fallback because the index itself is what travels with the site. "Never merged" now means
+*no weekly merge ritual for a human*: the workflow commits the regenerated file to `main`
+itself. Precedent: croft-pwa and arecipe already let CI push a built site to `gh-pages`
+with `contents: write` scoped to that job and a concurrency group so pushes never race;
+what is new here is the target branch being `main`. That is a COORDINATION note (a bot
+commit on shared main), and it is cheap: every session already rebases onto `origin/main`
+before landing (rule 2), and a regenerated file is never hand-merged — a conflict is
+resolved by running the harvest again. Alternatives considered and set aside: a `gh-pages`
+deploy job (the workspace pattern, but forage deliberately has no deploy job and Pages
+serves `main`); a weekly PR (the ritual the owner declined).
 
 **Why the guard is not optional.** `app.bsky.unspecced.*` carries no stability guarantee,
 and a throttled or reshaped run that writes a near-empty index is VERIFICATION shape 3 — a
@@ -148,13 +167,27 @@ and exits non-zero. Rate limiting from GitHub's shared runner IPs is the one thi
 measured (every probe ran from a residential address); the guard is what turns that unknown
 into a loud failure instead of a silent corpus collapse.
 
-**Why nothing crosses the repo boundary but JSON (SHARED-CODE, read 2026-09-08).** The
-harvest is tempted to copy `tidTime`, the script heuristic, or `feedDisposition` from
-forage; each would be a registered copy (rule 4), and the alternative — forage as an npm
-package pinned by commit (rules 1–2) — is a library job for three helpers in a repo that is
-`private` and exports nothing. The harvest owns its own logic: it never renders and never
-applies posture, so it needs none of forage's. If the app ever needs harvest logic at
-runtime, the register names croft-pwa as the library home.
+**Why the index is user-manageable from day one, and why that is cheap here.** A
+prepopulated discovery surface is an editorial act: whoever writes `feed-providers.json`
+decides what a forager finds first. Left as ours alone, that is a central authority in a
+project whose whole reason for existing is that there should not be one — and a
+maintenance burden that ends the day we stop running the harvest (the LTS question: what
+still works when nobody is tending it). The owner's answer is that the forager can **dump
+ours and use their own**. The design already makes that nearly free: the index is a file
+with a versioned schema and one validator, so "your own" is the same file from a
+different source. What it costs is a settings surface and a storage decision — and the
+storage decision has a precedent in this repo: mixes were device-local first and followed
+the reader to the PDS in the next plan. The index does the same: device-local in this
+plan, with the PDS record named as the follow-up, so that a forager's index is theirs
+across devices and survives forage.fyi itself. The harvest is a script anyone can run
+(`npm run harvest`), so a community can build its own index from its own providers file
+and hand it around; the file format, not our hosting, is the interface.
+
+**SHARED-CODE (read 2026-09-08) is moot, and that is a point in favour.** With the
+harvest in `forage/scripts/`, there is no repo boundary for `tidTime` or the script
+heuristic to cross — the script imports them from `js/` like `mock-snaps.mjs` imports what
+it needs. The second-repo draft would have forced either a registered copy (rule 4) or
+forage becoming an npm package (rules 1–2) for three helpers. One repo, no register row.
 
 **Why a hand-authored providers list and not only a floor.** Search sees ~66% of what a
 creator actually publishes: `getActorFeeds` returned 1.51× the feeds search knew about
@@ -296,8 +329,18 @@ a phone is slower but not by the factor that would matter). No index structure, 
 - **D-labels:** include labeled feeds and packs, **tag them in the index** (2026-09-01).
   The tag saves a round-trip; `feedDisposition` and the account posture remain the
   authority (DL-035 unchanged: no discovery-local toggle).
-- **D-publish:** the index is published and fetched, **never merged** into forage
-  (2026-09-01). D8 makes that a Pages site.
+- **D-publish:** "never merged" (2026-09-01) = no weekly merge ritual. **The workflow
+  commits `data/feed-index.json` to `main`** (2026-09-08, "CI commits to main"), same
+  origin, served by Pages as everything else. D8 stays as the record of why a release
+  asset or a second host would not have worked had it been needed.
+- **D-where:** one repo. No `forage-index`, no host name, no separate fallback
+  (2026-09-08 — the three questions those would have raised are retired, not answered).
+- **D-follow:** "follow all" on a jumpstart is **its own plan, later** (2026-09-08). This
+  plan is read-only; the jumpstart page links out for the follow.
+- **D-own:** the index is **user-manageable** (2026-09-08): a forager can replace ours,
+  add to it, or turn it off; the same validator governs theirs; device-local in this plan,
+  PDS record as the named follow-up (the mixes arc). Equity, LTS, and independence from a
+  central authority — us included.
 - **D-noun:** starter packs are **"jumpstarts"** in forage's copy "for now" (2026-09-04).
   `docs/NAMING.md` is canonical and gets the entry (§ Phase 5); the UI glosses it once.
 - **D-fold:** feeds and jumpstarts are one plan, one index, one graph (2026-09-04).
@@ -309,59 +352,91 @@ Every unit is RED-first. Pure functions in `js/` get `node --test` units; the ha
 its own suite in its own repo; anything with a DOM gets a workflow journey under `e2e/`.
 Each phase leaves both repos green and is landable alone.
 
-### Phase 0 — the index repo exists (blocked on the owner: § Open questions Q1)
+### Phase 0 — the harvest and its workflow
 
-- [ ] `CroftCommunity/forage-index` (name: Q1), Pages enabled, `CNAME` decided (Q2).
-- [ ] `harvest.mjs`, Node stdlib only, `.nvmrc` + `engine-strict` per CI-PATTERN rule 7.
-  Inputs: `providers.json`, `queries.json`. Output: `index.json`, sorted by `uri`, fixed
-  key order, no timestamps in the payload (a sibling `meta.json` carries `generatedAt` and
-  the counts). Steps: sweep → browse → suggested → creator expansion (cap 25 feeds per
-  creator) → language rescue → packs wildcard (cap 400 pages) + themed → edges → guard.
-- [ ] **The guard**: refuse and exit non-zero when feeds < 80% of published or < 500, or
-  packs < 80% or < 300; 429-aware backoff; whole log to a file, exit status branched on
-  (VERIFICATION shape 1).
-- [ ] Workflow: `schedule` weekly + `workflow_dispatch`; `permissions: contents: read` at
-  the top, `pages: write` + `id-token: write` only on the publish job; `timeout-minutes`
-  on every job; actions pinned by SHA (SUPPLY-CHAIN). Pull the dispatch hatch once.
-- [ ] Both crawler scripts move here from the two scratchpads (they are not "ported"
-  anywhere — this is their first home); the D-numbers above cite this plan.
+- [ ] `scripts/harvest-feeds.mjs`, Node stdlib only (the shipped app's zero-dependency
+  gate is untouched — this is a script, like `mock-snaps.mjs`), under the repo's `.nvmrc`
+  + `engine-strict`. Inputs: `data/feed-providers.json`, `data/feed-queries.json`.
+  Output: `data/feed-index.json`, sorted by `uri`, fixed key order, no timestamps in the
+  payload (a sibling `data/feed-index-meta.json` carries `generatedAt` and the counts, so
+  the diff on the index itself is membership only). Steps: sweep → browse → suggested →
+  creator expansion (cap 25 feeds per creator) → language rescue → packs wildcard (cap
+  400 pages) + themed → edges → guard → write. Pure steps get `node --test` units against
+  recorded fixtures; the network layer is one function.
+- [ ] **The guard**: refuse and exit non-zero when feeds < 80% of the committed file's
+  count or < 500, or jumpstarts < 80% or < 300; 429-aware backoff; whole log to a file,
+  exit status branched on (VERIFICATION shape 1). A refused run leaves `main` untouched.
+- [ ] `.github/workflows/feed-index.yml`: `schedule` weekly + `workflow_dispatch`;
+  `permissions: contents: read` at the top, `contents: write` **only on the commit job**;
+  a concurrency group so two runs never race on the push (the croft-pwa idiom);
+  `timeout-minutes` on every job; actions pinned by SHA; the commit subject
+  `feed-index: regenerated — N feeds, M jumpstarts` with no `Claude-Session` (it is not a
+  session). Pull the dispatch hatch once, and record the run in the Review Log.
+- [ ] The existing `ci.yml` gate runs on that push as on any push to `main`; Phase 2's
+  validate-on-the-way-in test is what makes a malformed index fail it.
+- [ ] `.claude/COORDINATION.md` gets one line: a bot commit on `main` exists in forage,
+  touching only `data/feed-index*.json`; a session that conflicts with it regenerates,
+  never hand-merges. (CroftC PR, separate landing.)
+- [ ] Both crawler scripts move here from the two scratchpads as `scripts/lib/` fixtures
+  or are retired once the harvest reproduces their numbers — this plan is their record.
 
 ### Phase 1 — the schema and the hand-authored half
 
-- [ ] `index.json` schema, versioned (`"v": 1`):
+- [ ] `data/feed-index.json` schema, versioned (`"v": 1`):
   `feeds[] {uri, name, desc≤160, creator, platform, band, tags[], lang?, labels?, video?}` ·
   `jumpstarts[] {uri, name, desc≤160, creator, members, band, tags[], labels?}` ·
-  `edges[] [packUri, feedUri]` · `providers[] {handle, kind, tags[]}` — a JSON Schema in
-  the index repo, and forage validates on the way **in** (LEXICONS.md rule 4 applied to
-  our own artifact: a malformed index is our bug, and it must fail loud, not render
-  garbage).
-- [ ] `providers.json` v1: ~150 rows — the top-25 curators by total likes, the community
+  `edges[] [packUri, feedUri]` · `providers[] {handle, kind, tags[]}` — one validator in
+  `js/`, used by the harvest before it writes and by the app on the way **in**
+  (LEXICONS.md rule 4 applied to our own artifact: a malformed index is our bug, and it
+  must fail loud, not render garbage). A unit test runs it over the committed file, so a
+  bad harvest commit turns the gate red.
+- [ ] `data/feed-providers.json` v1: ~150 rows — the top-25 curators by total likes, the community
   accounts (bsky.app, bsky.art, rude1.blacksky.team, eurosky.social, furryli.st,
   skyfeed.eu, why.bsky.world, aendra.com, bossett.social, jnascim.info …), the
   official-but-unlisted pins (D3's 19), each with `tags` from a **fixed vocabulary** that
   starts from Bluesky's own 23 (D4) plus `lang:*` and `community:*`.
-- [ ] `queries.json` v1: the 324 from D1, as data.
+- [ ] `data/feed-queries.json` v1: the 324 from D1, as data.
 - [ ] `band`: 0–4 from all-time likes/joins at harvest time, so a first paint has an
   order and the diff never carries a raw count.
 
 ### Phase 2 — forage consumes the index
 
-- [ ] `data/feed-index-fallback.json`: 150 feeds + 50 jumpstarts, generated by the same
-  harvest with `--fallback`, committed by hand; added to `sw.js` `SHELL`.
-- [ ] `js/substrates/index.js` (new): load fallback → fetch published index →
-  validate → merge; exposes `feeds()`, `jumpstarts()`, `feedsInPack(uri)`,
-  `packsWithFeed(uri)`, `search(q)`; every result carries `source: 'fallback' | 'index'`
-  and the index's `generatedAt`, so the UI can say how old what it shows is.
-- [ ] `sw.js`: an explicit allow-list for the index origin, stale-while-revalidate — the
-  ONE cross-origin exception, stated at the site (as the nav file states its one).
+- [ ] `sw.js` `SHELL` gains `/data/feed-index.json` and `/data/feed-index-meta.json`;
+  the existing stale-while-revalidate already keeps them fresh after a regenerate. Bump
+  `CACHE`.
+- [ ] `js/substrates/index.js` (new): fetch same-origin → validate → expose `feeds()`,
+  `jumpstarts()`, `feedsInPack(uri)`, `packsWithFeed(uri)`, `search(q)`; every result
+  carries the index's `generatedAt`, so the UI can say how old what it shows is. A
+  missing or malformed file is refused with words and discovery falls back to today's
+  browse corpus — never an empty page, never garbage.
 - [ ] `lens.js discoverFeeds`: browse corpus ∪ index feeds, a provenance chip
   ("Bluesky lists it" / "in the index" / "in N jumpstarts"), posture applied in the shape
   layer exactly as 4a. Hydrate counts via `getFeedGenerators` in batches of 25 as rows
   enter the viewport (the 4c idiom).
 - [ ] `/feeds` search: index first (instant, offline), then "look wider on Bluesky" as the
   existing passthrough — the honest wording from 4b stays.
-- [ ] Journeys: index-host-down → fallback with words; malformed index → refused with
-  words, fallback shown; offline → cached index.
+- [ ] Journeys: index missing → browse corpus with words; malformed index → refused with
+  words, browse corpus shown; offline → the cached index, with its age.
+
+### Phase 2b — your own index (D-own)
+
+- [ ] Settings → **Discovery index**: shows the shipped index's `generatedAt` and counts;
+  three controls — **Replace** (upload a file or paste a URL; the URL is fetched once and
+  stored, never polled — a forager decides when to refresh), **Add** (a second index
+  merged over ours, theirs winning on a `uri` collision), **Off** (discovery falls back to
+  the live browse corpus only, with words). Device-local like the card size and the rail;
+  a corrupt stored value → shipped index, never an empty page.
+- [ ] The same validator runs on the way in; a rejected file says which row and why, in
+  the forager's language, and leaves the previous index in place.
+- [ ] Provenance is visible everywhere a row appears: "from your index" vs "from forage's",
+  so a forager always knows whose editorial act they are reading.
+- [ ] `npm run harvest -- --providers <file>`: the script takes a providers file as an
+  argument, so a community builds its own index from its own list with no code change;
+  `docs/FEED-INDEX.md` documents the schema (`"v": 1`), the providers file, and the
+  guard, as the interface it is.
+- [ ] **Named follow-up, not built here:** the index as a PDS record (`fyi.forage.*`,
+  LEXICONS four acts) so it follows the reader — the `plans/2026-09-08-plan-mixes-on-the-pds.md`
+  shape, applied to this file. Recorded in `TODO.md` at close.
 
 ### Phase 3 — jumpstarts
 
@@ -369,9 +444,9 @@ Each phase leaves both repos green and is landable alone.
   most members · most feeds), the platform chip replaced by a **creator** chip; posture
   applied to pack labels through the same disposition path.
 - [ ] `/j/<handle>/<rkey>`: one jumpstart — its description, its feeds (from the index,
-  then hydrated), its member sample (live, `getStarterPack`), and a "follow all" that is
-  honest about what a guest can do (nothing) and what a session can (a batch of follows
-  — session-gated, D-tier as `/h/`).
+  then hydrated), its member sample (live, `getStarterPack`), and a link out to the
+  jumpstart on the reader's provider for the follow. **No "follow all" here** (D-follow):
+  this plan writes nothing to a follow graph; that is its own plan once the surface exists.
 - [ ] `nav.js`: `item('jumpstarts', 'Browse jumpstarts', …)` beside Browse all feeds.
 - [ ] Feed row → "in N jumpstarts" from `packsWithFeed`; the Constellation count (4g)
   stays as the *live* number where the rail's adoption block already shows it — the two
@@ -391,12 +466,14 @@ Each phase leaves both repos green and is landable alone.
 
 - [ ] `docs/NAMING.md`: "jumpstart" — the noun, why not "starter pack" (the network's
   word for the network's object; ours is a forum's door), the gloss the UI shows once.
-- [ ] `docs/adr/0005-…`: the index as a second origin — narrower than ADR-004, our own
-  file, degrade-to-fallback; amends nothing in ADR-002.
+- [ ] `docs/adr/0005-…`: **the feed index — a CI-built graph committed to `main`**: why
+  a file and not a service, why same-origin, why a bot commits to `main`, what the guard
+  refuses; amends nothing in ADR-002 (no new data plane) and sits beside ADR-004 (the same
+  pack↔feed signal, offline).
 - [ ] `CHANGELOG.md` `[Unreleased]` entries per landing phase; ledger rows for the two
   new dispositions (index-vs-live disagreement; a labeled row from the index).
-- [ ] `TODO.md`: the device debt — the index fetch and sw cache on a phone on cellular
-  `[device: android x2]`.
+- [ ] `TODO.md`: the device debt — the index in the shell cache on a phone on cellular,
+  first load and after a regenerate `[device: android x2]`.
 
 ### NOT doing
 
@@ -404,24 +481,19 @@ Each phase leaves both repos green and is landable alone.
 - Importing third-party directories (D5 — not machine-readable; terms unread).
 - Trending jumpstarts as a default (D6 — 52 rows, NSFW-heavy). It can be a sort.
 - A discovery-local adult toggle (DL-035 stands).
-- Making forage an npm package for the harvest's sake (SHARED-CODE rules 1–2 — nothing
-  crosses the boundary but JSON).
+- A second repo, a second origin, a separate fallback, a `sw.js` cross-origin exception
+  (all in the first draft; retired by D-where).
+- "Follow all" on a jumpstart (D-follow — its own plan, later).
 - `likeCount`/`joinedAllTimeCount` inside the index (D2 — churn).
+- The forager's own index on the PDS (D-own's follow-up — named, not built; mixes-on-the-PDS
+  is the template).
+- Polling a forager's index URL (they refresh it; we never fetch on our own).
 
 ## Open questions — owner
 
-- **Q1 — the repo's name.** `forage-index` is the placeholder. It will be public and its
-  Pages URL is user-visible in devtools; a name that reads as forage's is fine.
-- **Q2 — the host name.** `index.forage.fyi` (a CNAME, one DNS row, cert by Pages) or the
-  bare `croftcommunity.github.io/<repo>/`. The former survives a repo rename; the latter
-  needs no DNS. Memory says this machine's resolver lies about new domains — verify
-  against the authoritative NS.
-- **Q3 — fallback regeneration cadence.** By hand, when someone notices — or a reminder
-  in `DEVICE-QUEUE`-style generated register? Proposal: by hand, with `meta.json`'s
-  `generatedAt` shown in Settings so staleness is visible.
-- **Q4 — "follow all" on a jumpstart.** Build it in Phase 3 (a batch of `app.bsky.graph.follow`
-  writes through the PDS proxy, session-gated) or defer to a plan of its own? It is the one
-  write this plan introduces.
+None. The first draft carried four (repo name, host name, fallback cadence, follow-all);
+the owner answered them one at a time on 2026-09-08 and the first answer retired the
+next two — recorded under § Decisions as D-publish, D-where and D-follow.
 
 ## Review Log
 
@@ -435,3 +507,19 @@ The owner's decisions (§ Decisions) were taken in conversation on 2026-09-01 an
 mid-plan (2026-09-08) and was read before this file was written; its consequence is one
 paragraph in § Reasoning and one line in § NOT doing. Mixes (#62) landed the same day and
 changed the left bar this plan extends — the nav section was re-read at `d8ff6a9`.
+
+### Pass 2 — the four questions, one at a time (2026-09-08)
+
+Q1 as drafted asked the new repo's name. The owner's answer was a correction of the
+premise: *"a separate repo isn't more useful, what I meant was we don't want more than
+necessary server side resources to become necessary for forage."* Re-asked as *where the
+harvest puts the file* with three options (CI commits to `main` · a `gh-pages` deploy job ·
+a weekly PR) — **CI commits to `main`**. That retired Q2 (no host) and Q3 (no fallback).
+Q4 — **follow-all is its own plan, later**; this one stays read-only. § Approach,
+§ Reasoning, § Decisions, Phases 0/2/3/5, § NOT doing and this section were rewritten to
+match; the evidence (D1–D9) is unchanged, D8 kept as the record of the road not needed.
+
+Mid-revision the owner added the principle that became D-own and Phase 2b: a
+prepopulated index must be user-manageable — replace, add, off — for equity, LTS, and
+independence from a central authority. It cost one settings surface and a documented
+file format; the storage arc (device-local now, PDS later) is the one mixes already walked.
