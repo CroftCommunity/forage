@@ -208,10 +208,13 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 ## Device queue — owed device runs (for the device-testing queue session to lift)
 
 - **The index in the shell cache on a phone on cellular.** First load of `/feeds` and
-  `/jumpstarts` (the ~220 KB gzipped `data/feed-index.json` precached with the shell), then
-  a return after a regenerate (stale-while-revalidate picks up the new file), then airplane
-  mode: search still answers from the file. Plan 2026-09-08-plan-feed-index-and-jumpstarts
-  Phase 5. `[device: android x2]`
+  `/jumpstarts` (the ~290 KB gzipped, 1.07 MB raw `data/feed-index.json` — NOT precached: the
+  service worker caches it on first use, `sw.js`), then a return after a regenerate
+  (stale-while-revalidate picks up the new file; the next harvest is Tuesday 05:23 UTC), then
+  airplane mode: search still answers from the file. Plan
+  2026-09-08-plan-feed-index-and-jumpstarts Phase 5. Cellular means the Pixel — the Samsung
+  has no SIM (`CroftC/.claude/TESTBED.md`), which is why this row no longer asks for two
+  Androids. `[device: pixel]`
 
 The workspace queue reads this section through the `[device: …]` tags (`CroftC/.claude/TESTBED.md`
 § The device queue): `bash CroftC/.claude/bin/device-queue.sh --have samsung` seats what the phone in
