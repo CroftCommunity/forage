@@ -27,11 +27,15 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
   `plans/2026-09-08-plan-mixes-on-the-pds.md` is the template). Decide the record's shape:
   the whole file (large) or a pointer to where it is hosted.
 
-- **The first scheduled harvest is the rate-limit datapoint.** Every probe behind the index
-  ran from a residential IP; GitHub's shared runner IPs are unmeasured. The guard turns a
-  throttled run into exit 2 and nothing written — read that run's log (`feed-index` workflow)
-  before trusting the cadence. Pull the `workflow_dispatch` hatch once after landing and
-  record it in the plan's Review Log.
+- ~~**The first scheduled harvest is the rate-limit datapoint.**~~ **MEASURED 2026-09-14**
+  (plan 2026-09-08-plan-feed-index-and-jumpstarts, Review Log Pass 4): the dispatched run
+  from GitHub's runner made 3,260 requests with 0 retries and committed `cbbe6c6` — no rate
+  limiting; the weekly cron is the cadence.
+
+- **`main`'s `workflows` CI job is red: `mixes.workflow.mjs`** (`Top: 10 likes × 2 = 20 beats
+  harvest's 13 (got undefined)`), failing since `a2af930` (2026-09-09, the pds-walker
+  landing) — observed while landing the feed index (#66), which did not change it. Every
+  push to `main` reports failure until it is fixed.
 - **Beta: Direct social tree PDS query (2026-09-08)** — the switch is live on `/me` › Beta
   features (`plans/2026-09-08-plan-beta-pds-walker.md`). Owner-experiment notes for later:
   the walker knows who follows you BACK, not every follower, so Mutuals is the same set either

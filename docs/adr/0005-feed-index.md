@@ -77,7 +77,9 @@ device-local first, PDS next).
 
 - `/feeds` is the popular list ∪ the index; `/jumpstarts` and `/j/<handle>/<rkey>` exist;
   the right rail is panel-choosable with Popular jumpstarts first.
-- A weekly bot commit lands on `main`; the regular gate runs on it.
-- The one unmeasured risk — rate limiting from GitHub's shared runner IPs — is caught by
-  the guard, not prevented; the first scheduled run is the datapoint.
+- A weekly bot commit lands on `main`. It does NOT trigger `ci.yml` — a `GITHUB_TOKEN` push
+  triggers no workflow (measured 2026-09-14) — so the workflow runs the same declared gate
+  itself, between the guard and the commit.
+- Rate limiting from GitHub's shared runner IPs: measured 2026-09-14 — 3,260 requests, 0
+  retries, 35 min. The guard remains the backstop.
 - "Follow all" on a jumpstart is not built; the jumpstart page links out (`TODO.md`).
