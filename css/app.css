@@ -991,6 +991,10 @@ hr.rule { border: none; border-top: 1px solid var(--border); margin: var(--s4) 0
      media stage runs the full width. Every OTHER card keeps a gutter. Mock:
      plans/mocks/phone-feed-edge.html. */
   .main > div > .row { padding-inline: var(--s3); }
+  /* the control bar spans the column (feed-refresh R1): its box reaches the screen edge
+     like the posts do, and its own padding keeps the pills off the edge */
+  .main > div > .row:has(> .sortbar), .main > div > .row.sortbar { padding-inline: 0; }
+  .sortbar { padding-inline: var(--s3); box-sizing: border-box; width: 100%; }
   .main .card:not(:has(> .postrow)) { margin-inline: var(--s2); }
   .card:has(> .postrow) { background: transparent; border: 0; border-radius: 0; padding: 0; }
   .card:has(> .postrow) > .postrow { background: var(--card); padding: var(--s3); border-bottom: 0; }

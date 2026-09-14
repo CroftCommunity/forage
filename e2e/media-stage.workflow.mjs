@@ -110,13 +110,17 @@ export async function run() {
     });
     assert.match(flat, /\.stage-back[^{]*\{[^}]*display:\s*none/, 'reduced transparency: no blurred backdrop, a flat band instead');
 
-    // the stage never exceeds the card by a pixel at any width
+    // the stage never exceeds its bounds by a pixel at any width. On a phone the bound
+    // is the VIEWPORT, not the card: board-cards decision 11 (2026-09-14) bleeds a bare
+    // picture to the screen edge, so at <= 480 the stage is wider than its row's content
+    // box on purpose and must instead stop at the screen; on a desktop the card still bounds it.
     for (const width of [320, 360, 390, 1280]) {
       await page.setViewportSize({ width, height: 800 });
       await page.waitForTimeout(50);
       for (const rkey of ['portrait', 'wide', 'video']) {
         const g = await geometry(stageOf(page, rkey));
-        assert.ok(g.right <= g.parentRight + 1, `${rkey} @${width}: the stage overflows the card (${g.right} > ${g.parentRight})`);
+        const bound = width <= 480 ? width : g.parentRight;
+        assert.ok(g.right <= bound + 1, `${rkey} @${width}: the stage overflows its bound (${g.right} > ${bound})`);
         assert.ok(g.h <= (await capOf(page)) + 1, `${rkey} @${width}: within the cap`);
       }
     }
