@@ -12,23 +12,10 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 
 ## Needs the owner
 
-- **Phone feed: posts edge to edge, and rows that read as rows** (owner, 2026-09-14,
-  from the Samsung captures for board-cards 5c). At 384–390 wide the posts sit in one white
-  column with a cream gutter either side, the media inset a second time inside that, and a
-  hairline between posts — so the feed reads as one long tile, not a stack of posts. Owner:
-  *"when I look at Instagram or Facebook each post on mobile naturally takes up side to side
-  for best visibility … that negative side space makes a poor use of space and less engaging
-  … each post is not quite distinct enough from each other, the top and bottom separation is
-  harder to read possibly bc they are tiles rather than full horizontal rows."* Direction:
-  on a phone the column and the stage go to the screen edge, and the separation between
-  posts becomes a band or a heavier divider, not a hairline inside a tile. Where it lives:
-  the column's surface and page padding, `.postrow`'s `--s2` side padding
-  (`css/app.css:252`), the stage's inset and `--radius-media`; desktop's 200/680/300 column
-  (board-cards decision 6) is untouched. **Next is a mock, not code** (`CroftC/.claude/MOCKS.md`):
-  Current captured from `main` and Proposed from the branch, both at 390×844 by the repo's
-  own script, one skin, the live board's widest posts — then the owner approves and it ships
-  as a board-cards plan revision. Not a skin: this restructures the phone row, which a skin
-  must never do (`SKINS.md`).
+- [x] **Phone feed: posts edge to edge, and rows that read as rows** — _shipped 2026-09-14_
+  as board-cards Phase 8 / decision 11 (mock `plans/mocks/phone-feed-edge.html`, approved on
+  v2 the same day; `e2e/phone-feed-edge.workflow.mjs` holds the frame's claims). Still owed
+  from it: one look on the Samsung after landing, and the tablet range — both on the plan.
 
 
 - **"Follow all" on a jumpstart — its own plan** (owner, 2026-09-08, D-follow in
