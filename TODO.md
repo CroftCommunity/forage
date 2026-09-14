@@ -207,7 +207,7 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 
 ## Device queue — owed device runs (for the device-testing queue session to lift)
 
-- **The index in the shell cache on a phone on cellular — what is still owed.** Ran on the
+- **The index in the shell cache on a phone on cellular — what is still owed.** [device: android=pixel] Ran on the
   Pixel over LTE 2026-09-14 (plan 2026-09-08-plan-feed-index-and-jumpstarts, Review Log
   Pass 5): the cold download (343 KB gzipped, 1.07 MB raw, 145 ms; NOT precached — the service
   worker caches it on first use, `sw.js`), the return visit (served by the worker from its
@@ -217,7 +217,7 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
   2026-09-15 05:23 UTC harvest picks up the new file (stale-while-revalidate); (2) `/feeds`
   offline on the DEPLOYED site once the fix lands; (3) real airplane mode, from a laptop not
   on the phone's hotspot. Cellular means the Pixel — the Samsung has no SIM
-  (`CroftC/.claude/TESTBED.md`). `[device: pixel]`
+  (`CroftC/.claude/TESTBED.md`).
 
 The workspace queue reads this section through the `[device: …]` tags (`CroftC/.claude/TESTBED.md`
 § The device queue): `bash CroftC/.claude/bin/device-queue.sh --have samsung` seats what the phone in
