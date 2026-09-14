@@ -8,6 +8,10 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-14 **Surf's muted text clears AA on cards too.** Surf's muted ink was 4.47:1 on the
+  elevated card surface, just under the 4.5 floor; it is a notch darker now (#586772, 4.74:1),
+  and the skin test grades muted-on-card-2 for every skin so no other skin can slip there.
+
 - 2026-09-09 **Browse feeds starts from an index — thousands, not 117.** A file that ships with
   Forage names the feeds and jumpstarts the network is worst at surfacing (Bluesky's popular
   list shows 117 of at least 56,000), built weekly by CI and cached with the app, so search is

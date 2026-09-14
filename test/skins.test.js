@@ -742,6 +742,8 @@ const ROLE_PAIRS = [
   ['--text', '--row-even', 4.5], ['--text', '--row-head', 4.5], ['--text', '--nav-fill', 4.5],
   ['--text', '--tint', 4.5],
   ['--muted', '--bg', 4.5], ['--muted', '--card', 4.5],
+  // TODO 2026-08-30: muted ink is read on the elevated surface too (surf measured 4.47 there)
+  ['--muted', '--card-2', 4.5],
   ['--link', '--card', 4.5], ['--link', '--bg', 4.5], ['--link', '--row-even', 4.5], ['--link', '--nav-fill', 4.5],
   ['--link-hover', '--card', 4.5],
   // feed-row 22: everything on a row is read while the row is lit
