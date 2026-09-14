@@ -396,6 +396,19 @@ Declared gate for every landing: `npm test && npm run conformance`, `npm run ref
   6. The mock's Current frames are Discover (`/f/whats-hot`) and `/me` — the nearest surfaces
      on main to a board and to subscription management; neither address in this plan exists
      there.
+- **2026-09-14 — the `workflows` job was red on `mixes.workflow.mjs` for five days, and the
+  cause was the fixture's calendar, not the board.** `mock-mix.mjs` stamped every post
+  `2026-09-08T10:xx`; the mix board opens Top on the *Today* window (`boardTimeframe = 'day'`,
+  `sortWindow`), so from 2026-09-09T10:59Z the window emptied the board, the journey read no
+  rows, and the assertion said `got undefined`. That is why the corpus was green at 03:15 and
+  red at 12:59 the same day across a landing that changed only the `/me` beta copy (#65),
+  and why every docs-only landing since was red too. Measured, not inferred: main and
+  `f5f50dc` both fail on a laptop today, deterministically. The fix is harness-only — the
+  fixture is now stamped minutes before the run, and `test/mix-population.test.js` pins the
+  claim (inside Today on the day it runs, post 1 newest per source), written RED first. The
+  board's behaviour and the journey's assertion are unchanged; no CHANGELOG entry. Note for
+  the next fixture: the mixes journey is the only one in the corpus that opens Top without
+  choosing a From, which is why the other calendar-dated populations never aged out.
 - **2026-09-08 — OWED: the fan-out timed on a phone on cellular, before D6 is final. [device: android]**
   Phase 0's numbers are a laptop on wi-fi; the number that decides whether "no cap, page
   size 12, per-source timeout" holds is a cold open of Home on a phone on cellular with a

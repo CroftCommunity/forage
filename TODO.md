@@ -40,10 +40,13 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
   from GitHub's runner made 3,260 requests with 0 retries and committed `cbbe6c6` — no rate
   limiting; the weekly cron is the cadence.
 
-- **`main`'s `workflows` CI job is red: `mixes.workflow.mjs`** (`Top: 10 likes × 2 = 20 beats
+- ~~**`main`'s `workflows` CI job is red: `mixes.workflow.mjs`** (`Top: 10 likes × 2 = 20 beats
   harvest's 13 (got undefined)`), failing since `a2af930` (2026-09-09, the pds-walker
-  landing) — observed while landing the feed index (#66), which did not change it. Every
-  push to `main` reports failure until it is fixed.
+  landing) — observed while landing the feed index (#66), which did not change it.~~
+  **FIXED 2026-09-14** — not that landing: the fixture's posts were stamped
+  `2026-09-08T10:xx` and the mix board opens Top on the *Today* window, so the population
+  aged out of the board at 2026-09-09T10:59Z. Stamped relative to the run now, pinned by
+  `test/mix-population.test.js` (plan 2026-09-08-plan-mixes, Review Log).
 - **Beta: Direct social tree PDS query (2026-09-08)** — the switch is live on `/me` › Beta
   features (`plans/2026-09-08-plan-beta-pds-walker.md`). Owner-experiment notes for later:
   the walker knows who follows you BACK, not every follower, so Mutuals is the same set either
