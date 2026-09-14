@@ -982,7 +982,20 @@ hr.rule { border: none; border-top: 1px solid var(--border); margin: var(--s4) 0
   /* thread-depth Phase A: `auto` on a phone runs out of column two levels sooner.
      The fixed choices are width-independent by definition and stay in the base rule. */
   [data-flatten="auto"] .comment.chain:not([data-depth="0"]):not([data-depth="1"]) > .kids { --in: 0px; --elbow: 8px; }
-  .shell { padding: var(--s2); }
+  .shell { padding: var(--s2) 0; }
+  /* Phone feed: edge to edge, rows that read as rows (owner, 2026-09-14, from the
+     Samsung captures: "each post on mobile naturally takes up side to side … that
+     negative side space makes a poor use of space … each post is not quite distinct
+     enough"). The posts' card stops being a tile: the column meets the screen edge,
+     each row paints its own surface, an 8px band of ground separates rows, and the
+     media stage runs the full width. Every OTHER card keeps a gutter. Mock:
+     plans/mocks/phone-feed-edge.html. */
+  .main > div > .row { padding-inline: var(--s3); }
+  .main .card:not(:has(> .postrow)) { margin-inline: var(--s2); }
+  .card:has(> .postrow) { background: transparent; border: 0; border-radius: 0; padding: 0; }
+  .card:has(> .postrow) > .postrow { background: var(--card); padding: var(--s3); border-bottom: 0; }
+  .card:has(> .postrow) > .postrow + .postrow { margin-top: var(--s2); }
+  .card:has(> .postrow) > .postrow .stage { margin-inline: calc(-1 * var(--s3)); width: auto; border-radius: 0; border-left: 0; border-right: 0; }
 }
 .feed-avatar { width: 40px; height: 40px; border-radius: var(--radius-card); border: 1px solid var(--border); flex: none; }
 /* 3p: the feed's own description, quoted like a thread quote — the rule is the
