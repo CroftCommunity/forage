@@ -10,7 +10,21 @@ A file, built weekly by CI and committed to `main`, that says **what feeds and j
 exist and what they are about** — so `/feeds` and `/jumpstarts` can show thousands of
 things instead of the 117 the AppView lists as popular, search them instantly and offline,
 and say which jumpstart names which feed. It is served from forage.fyi like every other
-file and cached by the service worker with the shell.
+file — 1.07 MB raw, ~340 KB on the wire — and the service worker caches it on **first
+use**, not at install (`sw.js`: a megabyte on every cache bump would cost every visitor
+before discovery is ever opened). After one visit to `/feeds` or `/jumpstarts` through an
+installed worker it is there offline, and a weekly regenerate is picked up on the next
+visit (stale-while-revalidate). One page late on a brand-new install: the worker does not
+control the page it was installed from, so that first page's fetch bypasses it and the
+cache fills on the next navigation (measured on a phone, 2026-09-14).
+
+**When Bluesky does not answer** — offline, or the AppView down — both pages answer from
+the file alone: `/jumpstarts` always did; `/feeds` shows the index's rows with *Bluesky did
+not answer (why)* in its count line, and search keeps working (fixed 2026-09-14 after a
+phone showed *Discovery failed* over a cached index). Only an absent index leaves `/feeds`
+with nothing to show. Measured over LTE the same day: the cold download took 145 ms; the
+first row on `/feeds` took ~11 s, which is the liveness probes over the Bluesky-listed rows,
+not the file; a return visit had the file from the worker's cache in 39 ms.
 
 It is **not** a server. It answers no query and sees no user. Everything live — a feed's
 content, its like count, a jumpstart's members, whether a feed is still alive — still
