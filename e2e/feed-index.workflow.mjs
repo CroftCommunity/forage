@@ -8,7 +8,12 @@
 //   2. the index MISSING (a 404 for the file) — the page is the live list
 //      alone, and says so in words;
 //   3. the index MALFORMED — refused with the validator's words, live list
-//      shown, never garbage.
+//      shown, never garbage;
+//   4. BLUESKY DOES NOT ANSWER (the phone is offline, the AppView is down) —
+//      the index answers alone, says so in words, and search still works.
+//      Device-found 2026-09-14 (Pixel, emulated offline): the page read
+//      "Discovery failed — Failed to fetch" with the whole file sitting in
+//      the service worker's cache. /jumpstarts answered; /feeds did not.
 //
 // The AppView is shimmed as always; the index is same-origin, so cases 2 and
 // 3 route the file at the PAGE (a page route wins over the harness's context
@@ -95,6 +100,38 @@ export async function run() {
       assert.equal(await s.page.locator('[data-discover-feed]').count(), 1, 'the live list alone — never garbage');
       const line = await s.page.locator('.xs.muted', { hasText: 'refused' }).first().innerText();
       assert.match(line, /The index was refused \(feeds\[0\]/, line);
+    } finally { await s.close(); }
+  }
+
+  // ---- 4. Bluesky does not answer — the index alone ---------------------------
+  // The popular call fails (a declared 502 is the shim's "did not answer"; on a
+  // phone it is "Failed to fetch"). The file is present, so the page is the
+  // index's rows with the reason in words — never a dead "Discovery failed"
+  // over a cache that could have answered. Hydration fails silently (rows keep
+  // their band, as designed); search answers from the file.
+  {
+    const s = await scenario('first-visit', { responses: { ...responses,
+      'getPopularFeedGenerators': { __status: 502 }, 'getFeedGenerators': { __status: 502 } } });
+    try {
+      await open(s);
+      const cards = s.page.locator('[data-discover-feed]');
+      await cards.first().waitFor({ timeout: 15000 });
+      // the fixture's 11 feeds minus the labelled one: every row is the index's
+      const n = await cards.count();
+      assert.equal(n, 10, `the index alone, minus the labelled row: ${n} cards`);
+      assert.equal(await s.page.locator('[data-provenance="index"]').count(), 10, 'every row says it is from the index');
+      assert.equal(await s.page.locator('[data-provenance="both"]').count(), 0, 'nothing can claim Bluesky listed it — Bluesky did not answer');
+      const line = await s.page.locator('.xs.muted', { hasText: 'did not answer' }).first().innerText();
+      assert.match(line, /^Bluesky did not answer \(.+\)\. 10 from the index \(built 2026-09-09\)\./, line);
+      assert.equal(await s.page.locator('#main .empty').count(), 0, 'no "Discovery failed" empty state over a present index');
+      // search still answers from the file
+      await s.page.fill('[data-feed-search]', 'index');
+      await s.page.press('[data-feed-search]', 'Enter');
+      await s.page.waitForFunction(() => /from the index/.test(document.body.innerText) && !/first, then/.test(document.body.innerText), null, { timeout: 10000 });
+      const found = await s.page.locator('[data-discover-feed] a[href*="/f/"]').allTextContents();
+      assert.ok(found.includes('Index News') && found.indexOf('Index News') < found.indexOf('Index Games'), `band-ranked from the file: ${JSON.stringify(found)}`);
+      const sline = await s.page.locator('.xs.muted', { hasText: 'did not answer' }).first().innerText();
+      assert.match(sline, /^\d+ results? from the index — Bluesky did not answer \(.+\)\./, sline);
     } finally { await s.close(); }
   }
 }

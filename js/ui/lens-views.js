@@ -2984,6 +2984,11 @@ export function lensFeedsView() {
   // avoid. Their counts arrive by hydration, 25 per request, in shown order.
   let browseUris = [];
   let hydrating = false;
+  // device run 2026-09-14 (Pixel, offline): the live call failing must not
+  // hide a present index — the file is the whole point of being offline. When
+  // Bluesky did not answer, this holds the reason, the corpus is the index's
+  // rows alone, and the count line says so instead of "Discovery failed".
+  let liveError = null;
   let paintTimer = null;
   const paintSoon = () => { if (paintTimer) return; paintTimer = setTimeout(() => { paintTimer = null; paint(); }, 120); };
   // 4c: uri → { d7, d30, capped }. Measured lazily, ONCE per page load, the
@@ -3059,14 +3064,20 @@ export function lensFeedsView() {
     const shownIndex = shown.filter(isIdx).length;
     const popular = corpus.length - fromIndex;
     const shownPopular = shown.length - shownIndex;
-    const base = searching
-      ? `${shown.length} result${shown.length === 1 ? '' : 's'} — ${shownIndex ? `${shownIndex} from the index first, then ` : ''}in the order Bluesky's search ranked them.`
-      : shownPopular === popular
-        ? `All ${popular} feeds Bluesky lists as popular.`
-        : `${shownPopular} of ${popular} feeds.`;
-    const indexSentence = fromIndex && !searching
-      ? ` Plus ${shownIndex === fromIndex ? fromIndex : `${shownIndex} of ${fromIndex}`} from ${indexStore.status().status === 'mine' ? 'your' : 'the'} index${indexWords()}.`
-      : (searching ? '' : indexWords());
+    const whose = indexStore.status().status === 'mine' ? 'your' : 'the';
+    const base = liveError
+      ? (searching
+        ? `${shown.length} result${shown.length === 1 ? '' : 's'} from ${whose} index — Bluesky did not answer (${liveError}).`
+        : `Bluesky did not answer (${liveError}). ${shownIndex === fromIndex ? fromIndex : `${shownIndex} of ${fromIndex}`} from ${whose} index${indexWords()}.`)
+      : searching
+        ? `${shown.length} result${shown.length === 1 ? '' : 's'} — ${shownIndex ? `${shownIndex} from the index first, then ` : ''}in the order Bluesky's search ranked them.`
+        : shownPopular === popular
+          ? `All ${popular} feeds Bluesky lists as popular.`
+          : `${shownPopular} of ${popular} feeds.`;
+    const indexSentence = liveError ? ''
+      : fromIndex && !searching
+        ? ` Plus ${shownIndex === fromIndex ? fromIndex : `${shownIndex} of ${fromIndex}`} from ${whose} index${indexWords()}.`
+        : (searching ? '' : indexWords());
     // 4c: say what Rising is counting, and that joins are not countable at all
     // 4d: never filter silently — say how many went where, and keep `silent`
     // separate from `stale`, because one is an observation and the other is the
@@ -3187,6 +3198,7 @@ export function lensFeedsView() {
     indexStore.ready()
       .then(() => lens.discoverFeeds({ query, index: indexStore }))
       .then((feeds) => {
+        liveError = null;
         const fromIndex = searching ? lens.indexRows(indexStore.search(query).feeds, indexStore) : [];
         const have = new Set(feeds.map((f) => f.uri));
         corpus = [...fromIndex.filter((f) => !have.has(f.uri)), ...feeds];
@@ -3208,8 +3220,28 @@ export function lensFeedsView() {
         ensureHydration();
       })
       .catch((e) => {
-        controls.replaceChildren();
-        results.replaceChildren(emptyState('Discovery failed', e.message));
+        // The index answers alone when it can (offline, AppView down): its
+        // rows, band-ranked, with the reason in the count line. Only an
+        // absent index leaves the page with nothing to show.
+        const rows = indexStore.feeds().length
+          ? lens.indexRows(searching ? indexStore.search(query).feeds : indexStore.feeds(), indexStore)
+          : [];
+        if (!rows.length) {
+          controls.replaceChildren();
+          results.replaceChildren(emptyState('Discovery failed', e.message));
+          return;
+        }
+        liveError = e.message;
+        corpus = rows;
+        browseUris = [];
+        windows = new Map();
+        states = new Map();
+        hideDead = true;
+        if (!searching) { platform = ''; videoOnly = false; }
+        if (sort.startsWith('rising')) sort = 'popular';
+        buildControls();
+        paint();
+        ensureHydration();
       });
   };
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') run(input.value.trim() || undefined); });
