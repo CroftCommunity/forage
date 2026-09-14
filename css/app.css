@@ -903,9 +903,11 @@ hr.rule { border: none; border-top: 1px solid var(--border); margin: var(--s4) 0
 /* alt text printed under a picture, when the reader asked for it (Advanced) */
 .alt-caption { font-size: var(--t-sm); color: var(--muted); display: grid; gap: 2px; }
 
-/* a flat band instead of the blur: for readers who asked, and for a phone that
-   drops frames on ten blurred frames (D1's fallback — same rule, selected by
-   `data-flat` if that measurement ever says so) */
+/* a flat band instead of the blur: for readers who asked (prefers-reduced-transparency),
+   and — had a phone dropped frames on ten blurred stages — as a phone default via
+   `data-flat`. D1 measured 2026-09-14 on the Samsung SM-S947U1: card size 4, 18 stages,
+   5,000 px scrolled, 0 frames over the 60 Hz budget with the blur on. No phone default;
+   `data-flat` stays an explicit opt-in (TODO.md, the D1 line, has the numbers). */
 @media (prefers-reduced-transparency: reduce) { .stage .stage-back { display: none; } .stage { background: #111; } }
 .stage[data-flat] .stage-back { display: none; }
 

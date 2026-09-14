@@ -417,7 +417,7 @@ post action row with share), **B** (#27 — 5a–6: aspect shaping, the media st
 landing gated on `npm test` + `npm run workflows` by the runner's exit code (A: 623/0 +
 25/0; B: 633/0 + 26/0; C: see its PR).
 
-**Owed / deferred:** D1 (the blur's cost on a mid-range phone) — no device was attached in
+**Owed / deferred:** D1 (the blur's cost on a mid-range phone) — **measured 2026-09-14 on the Samsung: PASS, 0 dropped frames at 60 Hz scrolling card size 4; TODO.md's D1 line carries the numbers and caveats.** At the time, no device was attached in
 either session; `prefers-reduced-transparency` and `.stage[data-flat]` are the written
 fallback, and the Samsung look at each of the four card sizes (5c's Broad validation) is
 still owed. Phase 6's swipe is proven as a handler (pointer events via `mouse`), not as a

@@ -214,12 +214,19 @@ make because no device was attached. Each names the plan, the phase, and the exa
 none needs code before the run, and each may need code after it. Claim `testbed--samsung`
 (`CroftC/.claude/TESTBED.md`) before running.
 
-- **board-cards D1 — the blurred backdrop's cost.** `plans/2026-08-29-plan-board-cards.md` (since 2026-08-29) [device: android]
+- **board-cards D1 — the blurred backdrop's cost.** `plans/2026-08-29-plan-board-cards.md` (since 2026-08-29) [device done 2026-09-14: android=samsung]
   Phase 0/5b (O2, PHASE-GATED). Ten stages with `filter: blur(22px)` on a mid-range
   Android: scroll a picture-heavy board (`/f/whats-hot` at card size 4) and read the frame
   timeline. **Pass:** no dropped frames at 60Hz. **Fail:** set `data-flat` on `.stage`
   (the flat band `prefers-reduced-transparency` already selects) by default on phones —
   the rule exists in `css/app.css`; only the trigger is missing.
+  **PASS on the Samsung SM-S947U1 (Chrome 152, 2026-09-14):** `/f/@bsky.app/whats-hot` at
+  card size 4, 18 stages / 57 images on the page, scrolled 5,000 px over 6 s by `scrollBy`
+  per animation frame — 361 frames, p50 16.7 ms, p95 16.8 ms, max 17.0 ms, **0 frames over
+  1.5× the 16.7 ms budget**, blur as shipped; forcing `data-flat` on every `.stage` measured
+  the same (one 31 ms frame, noise). So no phone-default trigger for `data-flat`. Caveats,
+  honestly: the Samsung is a flagship, not the mid-range phone this item names (it is the
+  only Android registered), and the scroll was programmatic rather than a thumb fling.
 - **board-cards 5c Broad — the four card sizes on the Samsung.** Same plan, Phase 5c. (since 2026-08-29) [device: android=samsung]
   The live site's shapes at card size 1, 2, 3 and 4 (toolbar pill or Settings → Card size):
   does 4 feel tall on a phone (O4 said 3 would be the first thing to try)? Portrait /
