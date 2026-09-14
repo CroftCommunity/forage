@@ -996,6 +996,14 @@ hr.rule { border: none; border-top: 1px solid var(--border); margin: var(--s4) 0
   .card:has(> .postrow) > .postrow { background: var(--card); padding: var(--s3); border-bottom: 0; }
   .card:has(> .postrow) > .postrow + .postrow { margin-top: var(--s2); }
   .card:has(> .postrow) > .postrow .stage { margin-inline: calc(-1 * var(--s3)); width: auto; border-radius: 0; border-left: 0; border-right: 0; }
+  /* mock v2 (owner, first look): the four actions centred in their equal cells —
+     "4 across" — and one step bigger and heavier, the same for all four (replies,
+     reposts, like, share), glyphs included. */
+  .card:has(> .postrow) > .postrow .actions { justify-items: stretch; }
+  .card:has(> .postrow) > .postrow .actions > .cbtn,
+  .card:has(> .postrow) > .postrow .actions > .vote { justify-content: center; font-size: var(--t-sm); font-weight: 500; gap: 6px; }
+  .card:has(> .postrow) > .postrow .actions .glyph { width: 1.3em; height: 1.3em; }
+  .card:has(> .postrow) > .postrow .actions .arrow { font-size: 1.15em; }
 }
 .feed-avatar { width: 40px; height: 40px; border-radius: var(--radius-card); border: 1px solid var(--border); flex: none; }
 /* 3p: the feed's own description, quoted like a thread quote — the rule is the
