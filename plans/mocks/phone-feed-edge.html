@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forage Phone Feed Edge v1</title>
+<meta name="mock-version" content="1">
+<meta name="mock-baseline" content="forage@4280fb7">
+<meta name="mock-proposal" content="forage@5a0bdb8">
+<style>
+:root{--page-bg:#F6F4F0;--page-card:#fff;--page-ink:#26231F;--page-muted:#6B665E;--page-line:#E2DDD4}
+body{margin:0;background:var(--page-bg);color:var(--page-ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1480px;margin:0 auto;padding:24px 20px 60px}
+h1{font-size:26px;margin:0 0 4px} h2{font-size:19px;margin:36px 0 10px}
+p{max-width:78ch} .meta{color:var(--page-muted);font-size:13px;margin-bottom:18px}
+code{font-family:ui-monospace,Menlo,monospace;font-size:.92em}
+table{border-collapse:collapse;font-size:14px;width:100%} th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--page-line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page-muted)}
+.tablewrap{overflow-x:auto;background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:6px 8px}
+section{background:var(--page-card);border:1px solid var(--page-line);border-radius:10px;padding:18px;margin:18px 0}
+.stage{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;margin:12px 0}
+.device{min-width:0}.device-label{font-size:12px;color:var(--page-muted);margin-bottom:6px}
+img.shot{width:100%;height:auto;display:block;border:1px solid var(--page-line);border-radius:6px}
+.phone img.shot{max-width:390px}
+pre{background:#f3f1ec;border:1px solid var(--page-line);border-radius:6px;padding:12px;overflow-x:auto;font-size:12.5px;line-height:1.45}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page-muted)}
+</style>
+</head>
+<body>
+<main>
+<h1>Forage — the phone feed: posts edge to edge, rows that read as rows</h1>
+<p class="meta">Mock v1 · <b>one proposal</b>, for the phone board only · Current <code>forage@4280fb7</code> (main) beside Proposed <code>forage@5a0bdb8</code> (branch <code>claude/feed-edge</code>) · both captured by <code>scripts/mock-snaps.mjs</code> at 390×844 and 1280×900 over the hermetic <code>lens:mock-board</code> population · <b>default skin</b>, both columns (compare in one skin, MOCKS.md rule 4)</p>
+
+<p><b>What this shows.</b> The owner looked at the Samsung captures for board-cards 5c on 2026-09-14 and the finding was not about card size: <i>"I don't like that the cards have the sidewall. When I look at Instagram or Facebook each post on mobile naturally takes up side to side for best visibility … that negative side space makes a poor use of space and less engaging … each post is not quite distinct enough from each other, the top and bottom separation is harder to read possibly bc they are tiles rather than full horizontal rows."</i> Today at 390 wide the posts sit in one white tile (<code>.card</code>, 16px padding, 1px border, 6px corners) inside an 8px page gutter, with a second 8px inset on each row and an 8px-radius frame on the media — the text starts 46px from the screen edge, and a hairline is all that separates one post from the next. <b>Proposed:</b> the column meets the screen edge, each row paints its own surface, an 8px band of ground separates rows, and the media runs the full width. Every other card on the page (the feed header, the rail's cards when they fold in) keeps a gutter. The desktop column is untouched — its frames are here to prove it.</p>
+
+<h2>Open decisions</h2>
+<div class="tablewrap"><table>
+<tr><th>#</th><th>Decision</th><th>Proposed</th><th>Not taken</th></tr>
+<tr><td>1</td><td>What separates two posts</td><td>An 8px band of page ground (<code>--s2</code>) between white rows — the Instagram / Facebook shape the owner named</td><td>A heavier hairline (2px) inside one continuous white column: cheaper, but it keeps the "one long tile" reading the owner rejected</td></tr>
+<tr><td>2</td><td>How far the media bleeds</td><td>To the screen edge on a top-level post (square corners, no side border). A picture inside a <em>quoted</em> post stays inside the quote card's frame — the quote is a card by design (feed-row v16)</td><td>Bleeding the quote's picture too: it would break the quote's own box, which is what tells a reader the words are someone else's</td></tr>
+<tr><td>3</td><td>Text inset on a row</td><td>12px (<code>--s3</code>) — the text starts at x=12 instead of x=46</td><td>8px: too tight against the screen edge for a 16px body face; 16px: spends width the owner asked back</td></tr>
+<tr><td>4</td><td>The other cards</td><td>Keep an 8px gutter (the feed header card, the sign-in / rail cards when they fold into the column) — only the <em>posts'</em> card changes, scoped by <code>.card:has(&gt; .postrow)</code></td><td>Edge to edge for every card: the feed header would read as part of the feed; the sign-in card is a door, not a post</td></tr>
+<tr><td>5</td><td>Scope</td><td>≤ 480px only. Desktop's 200 / 680 / 300 column (board-cards decision 6) is unchanged, and its frames below are identical</td><td>Tablet (481–860) unchanged in this mock; a follow-up decides whether the band pattern belongs there too</td></tr>
+</table></div>
+
+<section>
+  <div class="eyebrow">Proposal A</div>
+  <h2>A. The board on a phone — the top of the feed</h2>
+  <div class="stage">
+    <div class="device phone"><div class="device-label">Phone · board-lens · CURRENT (forage@4280fb7)</div>
+      <img class="shot" src="snaps/phone-feed-edge/board-lens.phone.current.png" alt="The lens board on a phone today: the posts inside one white tile with a page gutter each side, text starting 46px in, a hairline between posts"></div>
+    <div class="device phone"><div class="device-label">Phone · board-lens · PROPOSED (forage@5a0bdb8)</div>
+      <img class="shot" src="snaps/phone-feed-edge/board-lens.phone.proposed.png" alt="The lens board on the branch: the column meets the screen edge, the row is its own white surface, text starts 12px in, a band of ground below the post"></div>
+  </div>
+  <div class="stage">
+    <div class="device phone"><div class="device-label">Phone · board-lens-media · CURRENT (forage@4280fb7)</div>
+      <img class="shot" src="snaps/phone-feed-edge/board-lens-media.phone.current.png" alt="Scrolled to a post with a picture, today: the picture sits inside the tile with rounded corners and a border, 46px from each edge"></div>
+    <div class="device phone"><div class="device-label">Phone · board-lens-media · PROPOSED (forage@5a0bdb8)</div>
+      <img class="shot" src="snaps/phone-feed-edge/board-lens-media.phone.proposed.png" alt="The same scroll on the branch: the picture runs the full width with square edges; a band of ground separates the post above from it"></div>
+  </div>
+  <p><b>What to read for.</b> Where the text starts (12px vs 46px). Whether the band between rows reads as "next post" at a glance. Whether the picture at full width is what you meant by side to side. The quote card in the first post keeps its frame on purpose (decision 2).</p>
+</section>
+
+<section>
+  <div class="eyebrow">Control</div>
+  <h2>Desktop is unchanged — the same two routes at 1280</h2>
+  <div class="stage">
+    <div class="device desk"><div class="device-label">Desktop · board-lens · CURRENT (forage@4280fb7)</div>
+      <img class="shot" src="snaps/phone-feed-edge/board-lens.desktop.current.png" alt="The lens board at 1280 today"></div>
+    <div class="device desk"><div class="device-label">Desktop · board-lens · PROPOSED (forage@5a0bdb8)</div>
+      <img class="shot" src="snaps/phone-feed-edge/board-lens.desktop.proposed.png" alt="The lens board at 1280 on the branch — identical: the change is scoped to 480px and under"></div>
+  </div>
+</section>
+
+<h2>Mapping to code</h2>
+<p>One block in <code>css/app.css</code>, inside the existing <code>@media (max-width: 480px)</code> rule that already sets the shell's phone padding. Nothing in JS; no skin file changes (a skin restyles, never restructures — <code>docs/SKINS.md</code>).</p>
+<pre>.shell { padding: var(--s2) 0; }                    /* was var(--s2): the column meets the edge */
+.main &gt; div &gt; .row { padding-inline: var(--s3); }   /* the page title row keeps its inset */
+.main .card:not(:has(&gt; .postrow)) { margin-inline: var(--s2); }   /* every other card keeps a gutter */
+.card:has(&gt; .postrow) { background: transparent; border: 0; border-radius: 0; padding: 0; }
+.card:has(&gt; .postrow) &gt; .postrow { background: var(--card); padding: var(--s3); border-bottom: 0; }
+.card:has(&gt; .postrow) &gt; .postrow + .postrow { margin-top: var(--s2); }        /* the band */
+.card:has(&gt; .postrow) &gt; .postrow .stage { margin-inline: calc(-1 * var(--s3)); width: auto;
+  border-radius: 0; border-left: 0; border-right: 0; }                          /* the bleed */</pre>
+<p><b>If approved:</b> this lands as a board-cards plan revision (Phase 8: the phone row) with a workflow that holds the frame's claims — the row's left edge at x=0, the text at 12px, the band at 8px, the stage at the viewport's width, the desktop column unmoved — and the 5c/7 device lines close with the owner's words. <b>Still owed after this:</b> the tablet range (decision 5), and a look on the Samsung once it ships, since these frames are Chromium at 390 and the owner's finding came from the phone.</p>
+</main>
+</body>
+</html>
