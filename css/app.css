@@ -999,7 +999,9 @@ hr.rule { border: none; border-top: 1px solid var(--border); margin: var(--s4) 0
      thick enough to be read, drawn from the skin's own tokens (the brand tinting
      the border) so every skin draws its own line. */
   .card:has(> .postrow) > .postrow + .postrow { margin-top: 0; border-top: 3px solid color-mix(in srgb, var(--brand) 45%, var(--border)); }
-  .card:has(> .postrow) > .postrow .stage { margin-inline: calc(-1 * var(--s3)); width: auto; border-radius: 0; border-left: 0; border-right: 0; }
+  /* decision 2: a BARE picture bleeds; a picture inside a quote card or a link card stays
+     inside that card's frame — the frame is what says whose words / whose page it is. */
+  .card:has(> .postrow) > .postrow .stage:not(.quoted .stage, [data-quoted] .stage, .extcard .stage) { margin-inline: calc(-1 * var(--s3)); width: auto; border-radius: 0; border-left: 0; border-right: 0; }
   /* mock v2 (owner, first look): the four actions centred in their equal cells —
      "4 across" — and one step bigger and heavier, the same for all four (replies,
      reposts, like, share), glyphs included. */
