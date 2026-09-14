@@ -12,6 +12,25 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 
 ## Needs the owner
 
+- **Phone feed: posts edge to edge, and rows that read as rows** (owner, 2026-09-14,
+  from the Samsung captures for board-cards 5c). At 384–390 wide the posts sit in one white
+  column with a cream gutter either side, the media inset a second time inside that, and a
+  hairline between posts — so the feed reads as one long tile, not a stack of posts. Owner:
+  *"when I look at Instagram or Facebook each post on mobile naturally takes up side to side
+  for best visibility … that negative side space makes a poor use of space and less engaging
+  … each post is not quite distinct enough from each other, the top and bottom separation is
+  harder to read possibly bc they are tiles rather than full horizontal rows."* Direction:
+  on a phone the column and the stage go to the screen edge, and the separation between
+  posts becomes a band or a heavier divider, not a hairline inside a tile. Where it lives:
+  the column's surface and page padding, `.postrow`'s `--s2` side padding
+  (`css/app.css:252`), the stage's inset and `--radius-media`; desktop's 200/680/300 column
+  (board-cards decision 6) is untouched. **Next is a mock, not code** (`CroftC/.claude/MOCKS.md`):
+  Current captured from `main` and Proposed from the branch, both at 390×844 by the repo's
+  own script, one skin, the live board's widest posts — then the owner approves and it ships
+  as a board-cards plan revision. Not a skin: this restructures the phone row, which a skin
+  must never do (`SKINS.md`).
+
+
 - **"Follow all" on a jumpstart — its own plan** (owner, 2026-09-08, D-follow in
   `plans/2026-09-08-plan-feed-index-and-jumpstarts.md`). Shape decided: a signed-in forager
   taps it on `/j/<handle>/<rkey>`, a confirm step lists who they are about to follow, then a
@@ -227,10 +246,18 @@ none needs code before the run, and each may need code after it. Claim `testbed-
   the same (one 31 ms frame, noise). So no phone-default trigger for `data-flat`. Caveats,
   honestly: the Samsung is a flagship, not the mid-range phone this item names (it is the
   only Android registered), and the scroll was programmatic rather than a thumb fling.
-- **board-cards 5c Broad — the four card sizes on the Samsung.** Same plan, Phase 5c. (since 2026-08-29) [device: android=samsung]
+- **board-cards 5c Broad — the four card sizes on the Samsung.** Same plan, Phase 5c. (since 2026-08-29) [device done 2026-09-14: android=samsung]
   The live site's shapes at card size 1, 2, 3 and 4 (toolbar pill or Settings → Card size):
   does 4 feel tall on a phone (O4 said 3 would be the first thing to try)? Portrait /
   landscape / wide / video posts each at 390 wide.
+  **Looked at 2026-09-14** (Samsung captures of sizes 1–4, portrait, the live board; landscape
+  and video posts not staged). The owner's verdict was not about height at all: *"I don't like
+  that the cards have the sidewall … each post on mobile naturally takes up side to side for
+  best visibility … that negative side space makes a poor use of space and less engaging …
+  each post is not quite distinct enough from each other … the top and bottom separation is
+  harder to read possibly bc they are tiles rather than full horizontal rows."* Filed as its
+  own item under Needs the owner (phone feed: edge to edge, distinct rows). Size 4's
+  tallness was not judged either way.
 - **board-cards 6 — the carousel's swipe as a feel.** The handler is proven (pointer (since 2026-08-29) [device: android]
   events, `e2e/media-stage`); the feel — threshold 40px, the 250ms slide — is not. A
   four-picture post at setting 1 (the default).
