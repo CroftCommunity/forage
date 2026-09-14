@@ -994,7 +994,11 @@ hr.rule { border: none; border-top: 1px solid var(--border); margin: var(--s4) 0
   .main .card:not(:has(> .postrow)) { margin-inline: var(--s2); }
   .card:has(> .postrow) { background: transparent; border: 0; border-radius: 0; padding: 0; }
   .card:has(> .postrow) > .postrow { background: var(--card); padding: var(--s3); border-bottom: 0; }
-  .card:has(> .postrow) > .postrow + .postrow { margin-top: var(--s2); }
+  /* mock v2, decision 1 (owner): not rows floating on the ground with a gap — a
+     STREAM: one continuous surface, and between posts an active rule, thin but
+     thick enough to be read, drawn from the skin's own tokens (the brand tinting
+     the border) so every skin draws its own line. */
+  .card:has(> .postrow) > .postrow + .postrow { margin-top: 0; border-top: 3px solid color-mix(in srgb, var(--brand) 45%, var(--border)); }
   .card:has(> .postrow) > .postrow .stage { margin-inline: calc(-1 * var(--s3)); width: auto; border-radius: 0; border-left: 0; border-right: 0; }
   /* mock v2 (owner, first look): the four actions centred in their equal cells —
      "4 across" — and one step bigger and heavier, the same for all four (replies,
