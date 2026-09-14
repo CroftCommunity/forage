@@ -87,6 +87,17 @@ Numbered as on mock v5. Each is decided; the alternative is recorded.
    save and reply*, opening the sign-in sheet — on every post and comment, both tiers.
 9. **The masthead is pinned** (the `#masthost` wrapper takes the sticky; the dev bar is
    unpinned — scaffolding should not spend viewport). Folded into decision 6 on the mock.
+11. **The phone row is a stream, edge to edge** (owner, 2026-09-14, from the Samsung
+   captures for 5c; mock `plans/mocks/phone-feed-edge.html`, approved on v2). At ≤480px the
+   posts' card stops being a tile: the column meets the screen edge, one continuous surface,
+   a 3px rule of the skin's brand tinted into its border between posts, text 12px in, a bare
+   picture full width, the four actions centred in equal cells at one size and weight. Every
+   other card keeps a gutter; a picture inside a quote card or a link card keeps that card's
+   frame; desktop's 200/680/300 (decision 6) is untouched. *Why:* "each post on mobile
+   naturally takes up side to side … that negative side space makes a poor use of space …
+   each post is not quite distinct enough from each other." *Not taken:* an 8px band of ground
+   between rows (mock v1 — "posts seemingly floating free"); a plain hairline (the tile
+   reading); a brand-solid rule (loud, and it competes with the like's boost colour).
 
 **Why the phases are small and the landings grouped:** the 4-file rule; `components.js`,
 `lens-views.js` and `app.css` are in most write-sets; the suites that pin today's shapes
@@ -392,6 +403,21 @@ rail's cards follow the content. *(Was "the sign-in card is the top notice" — 
 way first, and `hero` refused it: a card above the home hero pushed the front door to 81%
 of a 390 fold against a 55% ceiling. On a phone the doors are the hero and, on boards,
 decisions 1 and 8; the card follows.)*
+#### Phase 8: the phone row — edge to edge, a stream with a seam (decision 11) — ✅ shipped 2026-09-14
+- **8a (RED):** `e2e/phone-feed-edge.workflow.mjs` — seven claims at 390 over `lens:mock-board`
+  (the surface at x=0 with no tile border or padding; text at 12px; a bare picture's stage
+  full width, square; a 3px rule and no gap between posts; four equal, centred cells at
+  14px/500; no sideways overflow with `overflow-x` not `clip`) and the desktop control at
+  1280 (the card keeps its 1px border and 16px padding). `FORAGE_ROOT=<main>` proves it RED.
+- **8b:** `css/app.css`, one block inside the existing `@media (max-width: 480px)` rule,
+  scoped by `.card:has(> .postrow)` so only the posts' card changes — 1 file.
+**Edges:** a stage inside `.quoted` / `[data-quoted]` / `.extcard` keeps its card's frame
+(found by the workflow: the fixture's first stage is a link card's); the feed header card and
+the folded rail cards keep an 8px gutter; tablet (481–860) is unchanged and undecided.
+**Done when:** the phone board reads as a stream of full-width posts; the workflow holds.
+**Owed:** one look on the Samsung after landing (the frames are Chromium at 390, and the
+finding came from the phone) — `[device: android=samsung]`; the tablet range.
+
 **Done when:** the live board reads as one content column with a quiet rail; all suites
 green.
 **Observability:** *(Pass 3)* none — layout; the suites and the look are the instrument.
