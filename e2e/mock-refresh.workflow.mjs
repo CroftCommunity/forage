@@ -31,8 +31,16 @@ export async function run() {
       const m = await s.page.evaluate(() => {
         const bar = document.querySelector('.sortbar');
         const card = [...document.querySelectorAll('.card')].find((c) => c.querySelector('.postrow'));
+        // board-cards decision 11 (2026-09-14): on a phone the posts' surface IS the screen, so
+        // "the column's right edge" for alignment is where a post's text ends (the row's
+        // content box), not the surface's outer edge — a pill flush against the screen edge
+        // is not alignment. On a desktop the card's outer edge is still the column's edge.
+        const row = card.querySelector('.postrow');
+        const columnRight = innerWidth <= 480
+          ? Math.round(row.getBoundingClientRect().right - parseFloat(getComputedStyle(row).paddingRight))
+          : Math.round(card.getBoundingClientRect().right);
         return { barRight: Math.round(bar.getBoundingClientRect().right),
-                 cardRight: Math.round(card.getBoundingClientRect().right) };
+                 cardRight: columnRight };
       });
       assert.ok(Math.abs(m.barRight - m.cardRight) <= 2,
         `R1 ${name}: the control bar must reach the feed column's right edge (bar ${m.barRight}, card ${m.cardRight})`);
@@ -102,8 +110,16 @@ export async function run() {
       const m = await s.page.evaluate(() => {
         const btn = document.querySelector('[data-refresh]');
         const card = [...document.querySelectorAll('.card')].find((c) => c.querySelector('.postrow'));
+        // board-cards decision 11 (2026-09-14): on a phone the posts' surface IS the screen, so
+        // "the column's right edge" for alignment is where a post's text ends (the row's
+        // content box), not the surface's outer edge — a pill flush against the screen edge
+        // is not alignment. On a desktop the card's outer edge is still the column's edge.
+        const row = card.querySelector('.postrow');
+        const columnRight = innerWidth <= 480
+          ? Math.round(row.getBoundingClientRect().right - parseFloat(getComputedStyle(row).paddingRight))
+          : Math.round(card.getBoundingClientRect().right);
         return { btnRight: Math.round(btn.getBoundingClientRect().right),
-                 cardRight: Math.round(card.getBoundingClientRect().right) };
+                 cardRight: columnRight };
       });
       assert.ok(Math.abs(m.btnRight - m.cardRight) <= 2,
         `R9 ${name}: with a count showing, refresh still ends at the column's right edge (btn ${m.btnRight}, card ${m.cardRight})`);
