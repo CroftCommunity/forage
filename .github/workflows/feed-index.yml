@@ -14,9 +14,13 @@ name: feed-index
 # The harvest's exit status is BRANCHED ON, never piped (VERIFICATION shape 1):
 # exit 2 is the guard refusing a materially smaller corpus (shape 3 — a green
 # run that graded an empty set) and the job fails with nothing written; only
-# exit 0 reaches the commit step. The regular ci.yml gate then runs on the push
-# like any other, and test/feed-index-file.test.js is what fails it on a
-# malformed file.
+# exit 0 reaches the gate, and only a green gate reaches the commit.
+#
+# THE GATE RUNS HERE, because a push made with GITHUB_TOKEN triggers no
+# workflow — measured on the first run (2026-09-14, cbbe6c6): ci.yml never ran
+# on the bot's commit, only pages-build-deployment did. So this job runs the
+# same declared gate ci.yml runs (test/feed-index-file.test.js is the check
+# that grades the regenerated file) before it is allowed to commit.
 on:
   schedule:
     - cron: "23 5 * * 2"   # Tuesdays 05:23 UTC — off the hour, off Monday's security scans
@@ -55,6 +59,8 @@ jobs:
           tail -40 harvest.log
           echo "harvest exit $status"
           exit $status
+      - name: gate (ci.yml will not run on this push)
+        run: npm test && npm run conformance
       - name: commit if changed
         run: |
           git config user.name "forage feed-index"

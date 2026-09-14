@@ -1,14 +1,13 @@
 # Plan: the feed index — feeds and jumpstarts as one CI-built graph the PWA carries
 
 date: 2026-09-08
-**Status:** BUILT on `claude/feed-index` (worktree `worktrees/feed-index/forage`), Phases
-0–5 (2026-09-09; owner: "execute all phases in the plan"). The first committed index:
-**1,735 feeds, 889 jumpstarts, 298 edges** (harvest run 2 — 2,157 requests, 0 retries,
-804 s; run 1 was REFUSED by the guard, see Review Log Pass 3). Unit gate 948/948,
-conformance 86/86; workflows: see Pass 3. Landing via PR; the owner merges. Owed after
-landing: pull the `workflow_dispatch` hatch once (the rate-limit datapoint, `TODO.md`);
-the mock captures' Current frames; the device row. CroftC PR #45 carries the
-COORDINATION row.
+**Status:** LANDED — forage #66 (`26b2cef`, 2026-09-14) and CroftC #45; the dispatch hatch
+pulled once the same day and the workflow made its first commit to `main` (`cbbe6c6`:
+**1,773 feeds, 1,351 jumpstarts, 439 edges** — 3,260 requests, **0 retries**, 2,109 s from
+GitHub's runner; the rate-limit question is answered). That run also showed a
+`GITHUB_TOKEN` push triggers no workflow, so the harvest job now runs the gate itself
+before committing (Review Log Pass 4). Phases 0–5 built 2026-09-09. Still owed: the device
+row (`TODO.md` § Device queue). Follow-all and the PDS record are their own plans.
 repo: `CroftCommunity/forage` — only. A first draft asked for a second repo; the owner's
 correction (2026-09-08: "a separate repo isn't more useful, what I meant was we don't want
 more than necessary server side resources to become necessary for forage") retired it.
@@ -377,8 +376,10 @@ Each phase leaves both repos green and is landable alone.
   `timeout-minutes` on every job; actions pinned by SHA; the commit subject
   `feed-index: regenerated — N feeds, M jumpstarts` with no `Claude-Session` (it is not a
   session). Pull the dispatch hatch once, and record the run in the Review Log.
-- [ ] The existing `ci.yml` gate runs on that push as on any push to `main`; Phase 2's
-  validate-on-the-way-in test is what makes a malformed index fail it.
+- [x] ~~The existing `ci.yml` gate runs on that push as on any push to `main`~~ — it does
+  not: a `GITHUB_TOKEN` push triggers no workflow (measured on the first run, 2026-09-14).
+  The harvest job runs `npm test && npm run conformance` itself, between the guard and the
+  commit; `test/feed-index-file.test.js` is the check that grades the regenerated file.
 - [ ] `.claude/COORDINATION.md` gets one line: a bot commit on `main` exists in forage,
   touching only `data/feed-index*.json`; a session that conflicts with it regenerates,
   never hand-merges. (CroftC PR, separate landing.)
@@ -619,3 +620,25 @@ Also: the index file left the service worker's install-time precache (see Phase 
 paint, and the install cost stands on its own); `nav` pins the browse rows and gained
 `jumpstarts`; `mixes` fails on `main` too (`Top: … (got undefined)`, a peer's landing the
 same day — reported, not touched).
+
+### Pass 4 — landed, and the first run from GitHub's runner (2026-09-14)
+
+forage #66 merged as `26b2cef`, CroftC #45 as `5bea9f3`; worktrees and branches torn down.
+The `workflow_dispatch` hatch was pulled once (run 34888707721). **The unmeasured risk is
+measured:** from GitHub's shared runner IPs the harvest made 3,260 requests with 0 retries —
+no 429, no network error — in 35 min (1,500 wildcard pages, 153,474 packs seen, 87/87
+pack-referenced feeds hydrated). It committed `cbbe6c6` to `main`: 1,773 feeds, 1,351
+jumpstarts, 439 edges. 1,351 is the number the 145k crawl projected for the joins floor (D6:
+1,341), which the local 400-page walk had undershot at 889.
+
+**Two things the run corrected.** (1) `ci.yml` did not run on the bot's push — only
+`pages-build-deployment` did. A push made with `GITHUB_TOKEN` triggers no workflow; the plan,
+ADR-005 and the COORDINATION row had all said the regular gate would run. The harvest job now
+runs that gate itself (`npm test && npm run conformance`) between the guard and the commit, so
+a regenerated file that fails `test/feed-index-file.test.js` is never committed. (2) `main`'s
+`workflows` job was already red before this plan landed — `mixes.workflow.mjs`, failing since
+`a2af930` (2026-09-09, a peer's landing); `gate` and `reference-gate` are green. Not this
+plan's, and not fixed here; the owner has it.
+
+The weekly cron is now the cadence; nothing else is owed by the harvest.
+
