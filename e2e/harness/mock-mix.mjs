@@ -12,7 +12,13 @@ const post = (rkey, did, handle, ts, text, likes = 0) => ({
   record: { text, createdAt: ts }, indexedAt: ts,
   replyCount: 0, repostCount: 0, likeCount: likes,
 });
-const at = (i) => `2026-09-08T10:${String(59 - i).padStart(2, '0')}:00Z`;
+// Stamped MINUTES before the run, not on a calendar date: the mix board opens
+// Top on the "Today" window (lens-views.js boardTimeframe = 'day'), so a fixed
+// 2026-09-08T10:xx stamp emptied the board — and the corpus — from
+// 2026-09-09T10:59Z onward (test/mix-population.test.js pins this). Post 1 of
+// every source is its newest; sources tie minute for minute, as before.
+const T0 = Date.now() - Date.now() % 60_000;
+const at = (i) => new Date(T0 - i * 60_000).toISOString();
 const run = (name, did, handle, n, likes = (i) => i) => Array.from({ length: n }, (_, i) => ({ post: post(`${name}${i + 1}`, did, handle, at(i), `${name} post ${i + 1}`, likes(i)) }));
 
 export const FUNNY = 'at://did:plc:funny/app.bsky.feed.generator/funny';
