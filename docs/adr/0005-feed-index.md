@@ -82,4 +82,7 @@ device-local first, PDS next).
   itself, between the guard and the commit.
 - Rate limiting from GitHub's shared runner IPs: measured 2026-09-14 — 3,260 requests, 0
   retries, 35 min. The guard remains the backstop.
-- "Follow all" on a jumpstart is not built; the jumpstart page links out (`TODO.md`).
+- "Follow all" on a jumpstart is not built; the jumpstart page links out. Its plan is
+  drafted for owner review (`plans/2026-09-14-plan-jumpstart-follow-all.md`).
+- Offline, both pages answer from the file: `/feeds` fell back to *Discovery failed* until a
+  phone showed it (2026-09-14); it now shows the index alone and says Bluesky did not answer.

@@ -19,7 +19,9 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 
 
 - **"Follow all" on a jumpstart — its own plan** (owner, 2026-09-08, D-follow in
-  `plans/2026-09-08-plan-feed-index-and-jumpstarts.md`). Shape decided: a signed-in forager
+  `plans/2026-09-08-plan-feed-index-and-jumpstarts.md`). **PLAN DRAFTED 2026-09-14:**
+  `plans/2026-09-14-plan-jumpstart-follow-all.md` — awaiting the owner on its D1–D7 and
+  O1–O3 (the live proof's jumpstart, Undo, the button's words). Shape decided: a signed-in forager
   taps it on `/j/<handle>/<rkey>`, a confirm step lists who they are about to follow, then a
   batch of `app.bsky.graph.follow` writes through the PDS proxy — session-gated like `/h/`; a
   guest sees the button explained and cannot press it. It is the first place Forage would
@@ -205,11 +207,17 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 
 ## Device queue — owed device runs (for the device-testing queue session to lift)
 
-- **The index in the shell cache on a phone on cellular.** First load of `/feeds` and
-  `/jumpstarts` (the ~220 KB gzipped `data/feed-index.json` precached with the shell), then
-  a return after a regenerate (stale-while-revalidate picks up the new file), then airplane
-  mode: search still answers from the file. Plan 2026-09-08-plan-feed-index-and-jumpstarts
-  Phase 5. `[device: android x2]`
+- **The index in the shell cache on a phone on cellular — what is still owed.** Ran on the
+  Pixel over LTE 2026-09-14 (plan 2026-09-08-plan-feed-index-and-jumpstarts, Review Log
+  Pass 5): the cold download (343 KB gzipped, 1.07 MB raw, 145 ms; NOT precached — the service
+  worker caches it on first use, `sw.js`), the return visit (served by the worker from its
+  cache, 39 ms), and offline — EMULATED over DevTools, not airplane mode, because the laptop
+  rode this phone's hotspot. Offline found `/feeds` saying *Discovery failed* over a cached
+  index (fixed the same day; `/jumpstarts` answered). Left: (1) a return after the
+  2026-09-15 05:23 UTC harvest picks up the new file (stale-while-revalidate); (2) `/feeds`
+  offline on the DEPLOYED site once the fix lands; (3) real airplane mode, from a laptop not
+  on the phone's hotspot. Cellular means the Pixel — the Samsung has no SIM
+  (`CroftC/.claude/TESTBED.md`). `[device: pixel]`
 
 The workspace queue reads this section through the `[device: …]` tags (`CroftC/.claude/TESTBED.md`
 § The device queue): `bash CroftC/.claude/bin/device-queue.sh --have samsung` seats what the phone in

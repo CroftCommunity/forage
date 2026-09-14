@@ -642,3 +642,48 @@ plan's, and not fixed here; the owner has it.
 
 The weekly cron is now the cadence; nothing else is owed by the harvest.
 
+### Pass 5 — the device row, half-run on the Pixel over LTE (2026-09-14)
+
+The row asked for a phone on cellular. The Samsung has no SIM (TESTBED said so; this session
+turned its Wi-Fi off before reading that line and got no network — the registry now says it
+in bold, and the row names the Pixel). The Pixel ran it, owner-authorized, with one
+constraint that shaped the run: the laptop rode the Pixel's hotspot, so airplane mode was off
+the table and "offline" was DevTools' emulation (`Network.emulateNetworkConditions`), which
+the service worker honours — a query-string URL the cache could not hold came back as the
+worker's own `504 offline`. Chrome over the forwarded DevTools socket; the numbers are
+resource-timing entries read in-page (scratchpad JSON, not durable — the numbers live here).
+
+**Measured (Verizon LTE, `navigator.connection` 4g / 2.85 Mbps est. / 100 ms rtt).**
+- Cold (`Storage.clearDataForOrigin` cache_storage+service_workers AND `Network.clearBrowserCache`
+  — the first attempt cleared only the former and the file came from Chrome's HTTP cache,
+  transferSize 0, which would have read as a 16 ms "download"): `/data/feed-index.json`
+  343,076 bytes on the wire (342,776 encoded, 1,074,115 decoded) in **145 ms**; the meta file
+  542 bytes / 101 ms. First index row **10.9 s** after navigation start — the file is not the
+  wait; the liveness probes over the 111 Bluesky-listed rows are ("Hiding 9 stale, 7 that did
+  not answer"), and the count line then read *Plus 1604 from the index (built 2026-09-14)*.
+- The worker does not control the page it was installed from: on that cold `/feeds` the fetch
+  had `workerStart 0` and Cache Storage held **no** index afterwards; the next navigation
+  (`/jumpstarts`) went through the worker (`workerStart` > 0, 80 ms) and the cache then held
+  the file (1,074,115 bytes) and the meta (`generatedAt 2026-09-14T20:19:42Z`). So "after one
+  visit it is there offline" (the `sw.js` comment) is true of a reader whose worker is already
+  installed — the common case — and one page late on a brand-new install.
+- Return: `/feeds` index from the worker's cache in **39 ms**, `/jumpstarts` in 10 ms;
+  first jumpstart row 3.8 s after navigation start (1,351 rows).
+- Offline (emulated): `/jumpstarts` answered — 1,351 rows, a search for "art" narrowed to 608.
+  **`/feeds` did not:** *Discovery failed — Failed to fetch*, no rows, no search, with the
+  whole file in the worker's cache. The view's `run()` caught the popular call's rejection and
+  replaced everything with the empty state; the index was never consulted on that path.
+
+**Fixed the same day, RED first:** journey 4 in `e2e/feed-index.workflow.mjs` (the popular
+call a declared 502; expects the index's 10 rows alone, `Bluesky did not answer (…). 10 from
+the index (built 2026-09-09).`, no empty state, and a search that still band-ranks from the
+file) failed on `main`'s code at `open()` — the failure state had emptied the controls —
+and passes with the fallback in `lensFeedsView`: when the live call fails and the store holds
+rows, the corpus is the index (or its search matches), `liveError` carries the reason, and the
+count line says so in place of the two-corpora sentence. Hydration still runs and fails
+silently by design (rows keep their band). Unverified on the deployed site until it lands
+(the row says so).
+
+**Still owed on the row:** the return after the 2026-09-15 harvest (the first regenerate
+since the phone cached the 20:19Z file), `/feeds` offline on the deployed site, and real
+airplane mode from a laptop that is not on the phone's hotspot.
