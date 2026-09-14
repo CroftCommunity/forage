@@ -8,6 +8,12 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-14 **On a phone, posts run edge to edge.** The feed's posts no longer sit in a
+  framed tile with a gutter either side: the column meets the screen edge, each post is
+  its own full-width row with a thin rule in the skin's colour between posts, a picture runs
+  the full width, and the four actions under a post sit evenly across, a step larger.
+  Quoted posts and link cards keep their own frames. Desktop is unchanged. (owner, from a
+  look on the phone; mock `plans/mocks/phone-feed-edge.html`, board-cards decision 11)
 - 2026-09-14 **Surf's muted text clears AA on cards too.** Surf's muted ink was 4.47:1 on the
   elevated card surface, just under the 4.5 floor; it is a notch darker now (#586772, 4.74:1),
   and the skin test grades muted-on-card-2 for every skin so no other skin can slip there.
