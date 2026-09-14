@@ -12,6 +12,26 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 
 ## Needs the owner
 
+- **"Follow all" on a jumpstart — its own plan** (owner, 2026-09-08, D-follow in
+  `plans/2026-09-08-plan-feed-index-and-jumpstarts.md`). Shape decided: a signed-in forager
+  taps it on `/j/<handle>/<rkey>`, a confirm step lists who they are about to follow, then a
+  batch of `app.bsky.graph.follow` writes through the PDS proxy — session-gated like `/h/`; a
+  guest sees the button explained and cannot press it. It is the first place Forage would
+  change a follow graph on someone's behalf, which is why it is not in the read-only index
+  plan. Until it exists the jumpstart page links out for the follow.
+
+- **Your discovery index on the PDS** (D-own's named follow-up, plan
+  `2026-09-08-plan-feed-index-and-jumpstarts.md` Phase 2b). Today a forager's own index is
+  device-local (`js/index-prefs.js`); the mixes arc says what comes next — a `fyi.forage.*`
+  record that follows the reader between devices and survives forage.fyi (LEXICONS four acts;
+  `plans/2026-09-08-plan-mixes-on-the-pds.md` is the template). Decide the record's shape:
+  the whole file (large) or a pointer to where it is hosted.
+
+- **The first scheduled harvest is the rate-limit datapoint.** Every probe behind the index
+  ran from a residential IP; GitHub's shared runner IPs are unmeasured. The guard turns a
+  throttled run into exit 2 and nothing written — read that run's log (`feed-index` workflow)
+  before trusting the cadence. Pull the `workflow_dispatch` hatch once after landing and
+  record it in the plan's Review Log.
 - **Beta: Direct social tree PDS query (2026-09-08)** — the switch is live on `/me` › Beta
   features (`plans/2026-09-08-plan-beta-pds-walker.md`). Owner-experiment notes for later:
   the walker knows who follows you BACK, not every follower, so Mutuals is the same set either
@@ -178,6 +198,12 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
   310/sec Jetstream is good at.
 
 ## Device queue — owed device runs (for the device-testing queue session to lift)
+
+- **The index in the shell cache on a phone on cellular.** First load of `/feeds` and
+  `/jumpstarts` (the ~220 KB gzipped `data/feed-index.json` precached with the shell), then
+  a return after a regenerate (stale-while-revalidate picks up the new file), then airplane
+  mode: search still answers from the file. Plan 2026-09-08-plan-feed-index-and-jumpstarts
+  Phase 5. `[device: android x2]`
 
 The workspace queue reads this section through the `[device: …]` tags (`CroftC/.claude/TESTBED.md`
 § The device queue): `bash CroftC/.claude/bin/device-queue.sh --have samsung` seats what the phone in

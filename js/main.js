@@ -238,6 +238,9 @@ router.route('/m/:slug', blueskyOnly(lensViews.lensMixView));
 router.route('/mixes', blueskyOnly(lensViews.lensMixesView));
 router.route('/mixes/:slug', blueskyOnly(lensViews.lensMixEditView));
 router.route('/feeds', blueskyOnly(lensViews.lensFeedsView));
+// feed-index Phase 3: jumpstarts — the network's starter packs, from the index
+router.route('/jumpstarts', blueskyOnly(lensViews.lensJumpstartsView));
+router.route('/j/:handle/:rkey', blueskyOnly(lensViews.lensJumpstartView));
 router.route('/hashtags', blueskyOnly(lensViews.lensHashtagsView));
 router.route('/hashtags/:section', blueskyOnly(lensViews.lensHashtagsView));
 router.route('/u/:handle', byMode(lensViews.lensUserView, views.profileView));

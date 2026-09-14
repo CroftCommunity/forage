@@ -102,6 +102,10 @@ export function navTree({ el, session, feeds, tags, current, mixes = [] }) {
   nav.append(el('hr', { class: 'navrule' }));
   if (session) item('mixes', 'Your mixes', '◍', '/mixes');
   item('feeds', 'Browse all feeds', '☷', '/feeds');
+  // feed-index Phase 3: jumpstarts (the network's "starter packs") are a
+  // browse surface like feeds — a curator's list of accounts plus up to three
+  // feeds. A door to new boards, so it sits below the rule with the others.
+  item('jumpstarts', 'Browse jumpstarts', '✦', '/jumpstarts');
   item('hashtags', 'Browse hashtags', '#', '/hashtags');
 
   if (!session) {

@@ -1,0 +1,25 @@
+{
+  "generatedAt": "2026-09-09T13:13:48.938Z",
+  "counts": {
+    "feeds": 1735,
+    "jumpstarts": 889,
+    "edges": 298,
+    "providers": 122
+  },
+  "requests": 2157,
+  "retries": 0,
+  "seconds": 804,
+  "inputs": {
+    "providers": 122,
+    "pins": 0,
+    "feedQueries": 319,
+    "jumpstartQueries": 64
+  },
+  "floors": {
+    "likes": 100,
+    "joins": 10,
+    "perScript": 25,
+    "minLikes": 5,
+    "perCreator": 25
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "generatedAt": "2026-09-09T00:00:00.000Z",
+  "counts": { "feeds": 11, "jumpstarts": 5, "edges": 5, "providers": 2 },
+  "requests": 1,
+  "retries": 0,
+  "seconds": 0,
+  "fixture": "e2e/harness/fixtures — the hermetic index every journey sees unless it asks for the real file (scenario realIndex: true)"
+}

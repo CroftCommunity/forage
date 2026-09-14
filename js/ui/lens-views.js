@@ -39,6 +39,9 @@ import { sortBar, TIMEFRAMES, WALK_TIMEFRAMES, nearestTimeframe } from './sortba
 import { refreshControl } from './refresh-control.js';
 import * as boardCache from '../board-cache.js';
 import { sortItems } from '../engines/rank.js';
+import { createIndexStore } from '../feed-index-store.js';
+import * as indexPrefs from '../index-prefs.js';
+import * as rail from '../rail.js';
 import { POST_LIMITS, IMAGE_LIMITS, graphemes, withTag } from '../compose.js';
 import { cardSizeDial } from '../card-size.js';
 import { settingsView } from './views.js';
@@ -74,6 +77,10 @@ const betaGraphSource = (args) => (graphSource ? graphSource(args) : null);
 export function setGraphSource(fn) { graphSource = fn; lens.forgetRings(); }
 export function forgetRings() { lens.forgetRings(); }
 let lens = createLens({ hiddenUris, graphSource: betaGraphSource });
+// feed-index Phase 2: the index that ships with the app, read once per page
+// load and then from memory (js/feed-index-store.js). D-own: the forager's
+// own file folds in through js/index-prefs.js; the settings page reloads it.
+const indexStore = createIndexStore({ own: indexPrefs.current() });
 let bootPromise = null;   // the in-flight boot, SHARED — see bootAuth()
 // which feeds the account has saved (join state). Fetched ONCE per session
 // and shared — the header card and the sidebar both need it, and a race
@@ -941,8 +948,38 @@ function langChip(p) {
 // curated boards for a guest, your saved feeds signed in — and its "browse ›"
 // pointed where the nav's "Browse all feeds" already points. Two lists of one
 // thing, side by side, is a question about which one is authoritative.
+//
+// feed-index Phase 4 (owner, 2026-09-04: "a couple of user choosable panels …
+// by default it's trending 'jumpstarts'"): the rail is the reader's ORDERED
+// LIST of panels (js/rail.js) — Popular jumpstarts first by default, then
+// Trending, then the sign-in card for a guest. A view that draws Trending in
+// its own column still passes trending: false and that panel steps aside.
 function lensRail({ trending = true } = {}) {
-  return [session ? null : sessionCard(), trending ? trendingRail() : null];
+  const draw = { jumpstarts: () => jumpstartsRail(), trending: () => (trending ? trendingRail() : null), signin: () => (session ? null : sessionCard()) };
+  return rail.panels().map((id) => draw[id]?.()).filter(Boolean);
+}
+
+// feed-index Phase 4: Popular jumpstarts — the index's top rows by band,
+// from memory, no request. Popular, not trending (D6). Says whose index.
+function jumpstartsRail() {
+  const box = el('div', { class: 'card', 'data-rail-jumpstarts': '1' });
+  const draw = () => {
+    const s = indexStore.status();
+    const rows = lens.indexJumpstarts(indexStore.jumpstarts(), indexStore)
+      .sort((a, b) => (b.band - a.band) || (b.members - a.members) || a.name.localeCompare(b.name)).slice(0, 8);
+    box.replaceChildren(
+      el('h2', {}, 'Popular jumpstarts'),
+      el('div', { class: 'xs muted', style: 'margin-bottom:6px' }, s.status === 'loading' ? 'Loading the index…'
+        : rows.length ? `The most-joined in ${s.status === 'mine' ? 'your' : 'the'} index. A jumpstart is what the network calls a starter pack.`
+        : `Nothing to show.${indexStatusWords()}`),
+      ...rows.map((j) => el('div', { class: 'row spread', style: 'gap:8px;min-height:44px;align-items:center' },
+        el('a', { class: 'small', href: jumpstartPath(j), 'data-rail-jumpstart': j.uri, style: 'min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap' }, j.name),
+        el('span', { class: 'xs muted', style: 'flex:none' }, `${j.members} · ${bandWord[j.band] || '?'}`))),
+      rows.length ? el('div', { style: 'margin-top:8px' }, el('a', { class: 'small', href: '/jumpstarts', 'data-see-all': 'jumpstarts' }, 'Browse jumpstarts →')) : null);
+  };
+  draw();
+  if (indexStore.status().status === 'loading') indexStore.ready().then(draw);
+  return box;
 }
 
 function sessionCard() {
@@ -2696,6 +2733,236 @@ export function lensHashtagsView(params = {}) {
   return { main, side: null };
 }
 
+// feed-index Phase 2: the index's own status, in words, every time a count
+// line paints — how old it is, whose it is, or why it is absent.
+function indexStatusWords() {
+  const s = indexStore.status();
+  const when = s.generatedAt ? ` (built ${s.generatedAt.slice(0, 10)})` : '';
+  switch (s.status) {
+    case 'forage': return when;
+    case 'merged': return ` Your index over Forage's${when}.`;
+    case 'mine': return ' Your index, in place of Forage\'s.';
+    case 'off': return ' The index is off — this is the live list alone (Advanced, on your account page).';
+    case 'missing': return ' The index did not load — this is the live list alone.';
+    case 'invalid': return ` The index was refused (${s.errors[0] || 'malformed'}) — this is the live list alone.`;
+    default: return '';
+  }
+}
+
+// feed-index Phase 3: the noun. "Jumpstart" is Forage's word for what the
+// network calls a starter pack (owner, 2026-09-04; docs/NAMING.md). Said once
+// per page, in the blurb, so a reader who knows the network's word is not lost.
+const JUMPSTART_GLOSS = 'A jumpstart is what the network calls a starter pack: one person\'s list of accounts worth following, plus up to three feeds, put together to get someone started.';
+const jumpstartPath = (row) => `/j/${encodeURIComponent(row.creator)}/${encodeURIComponent(row.uri.split('/').pop())}`;
+const bandWord = ['under 10', '10+', '100+', '1,000+', '10,000+'];
+
+// feed-index Phase 3: /jumpstarts — the index's jumpstarts, searched and
+// sorted from memory. No live counts on the list (a jumpstart's joins arrive
+// when it is opened); the BAND is the order, and the row says so. Popular,
+// never "trending": 52 packs in 145k had any weekly joins (D6).
+export function lensJumpstartsView() {
+  const results = el('div', { class: 'stack' }, skeleton(4));
+  const countLine = el('div', { class: 'xs muted', style: 'margin:6px 0' });
+  const controls = el('div', { class: 'row wrap', style: 'gap:6px;margin-top:8px', 'data-jumpstart-controls': '1' });
+  const input = el('input', { type: 'text', placeholder: 'Search jumpstarts…', 'data-jumpstart-search': '1' });
+  let corpus = [];
+  let query = '';
+  let sort = 'popular';
+  let creator = '';
+
+  const card = (j) => el('div', { class: 'card', 'data-jumpstart': j.uri },
+    el('div', { class: 'row spread wrap', style: 'gap:8px;align-items:center' },
+      el('div', { style: 'min-width:0' },
+        el('a', { href: jumpstartPath(j) }, j.name),
+        el('div', { class: 'xs muted' },
+          `by @${j.creator} · ${j.members} member${j.members === 1 ? '' : 's'} · ${bandWord[j.band] || '?'} joined`,
+          j.feedCount ? ` · names ${j.feedCount} feed${j.feedCount === 1 ? '' : 's'}` : '',
+          j.lang ? ` · ${j.lang}` : '',
+          j.warnLabels ? ` · ${j.warnLabels.join(', ')}` : ''),
+        el('div', { class: 'xs muted', 'data-provenance': j.source || 'index' }, j.source === 'mine' ? 'in your index' : 'in the index'))),
+    j.desc ? el('div', { class: 'xs muted', style: 'margin-top:4px' }, j.desc) : null);
+
+  const SORTS = {
+    popular: (a, b) => (b.band - a.band) || a.name.localeCompare(b.name),
+    members: (a, b) => (b.members - a.members) || a.name.localeCompare(b.name),
+    feeds: (a, b) => (b.feedCount - a.feedCount) || (b.band - a.band) || a.name.localeCompare(b.name),
+    name: (a, b) => a.name.localeCompare(b.name),
+  };
+  const paint = () => {
+    const base = query ? lens.indexJumpstarts(indexStore.search(query).jumpstarts, indexStore) : corpus;
+    const shown = [...base].filter((j) => !creator || j.creator === creator).sort(SORTS[sort]);
+    results.replaceChildren(...(shown.length ? shown.map(card)
+      : [emptyState('No jumpstarts found', query ? 'Nothing in the index matched that.' : 'The index has no jumpstarts to show.' + indexStatusWords())]));
+    countLine.replaceChildren(`${shown.length} of ${corpus.length} jumpstarts in the index${query ? ` matching “${query}”` : ''}` +
+      ` — ordered by ${sort === 'popular' ? 'how many people joined, in bands' : sort}.${indexStatusWords()}`);
+  };
+  const buildControls = () => {
+    const sortSel = el('select', { 'data-jumpstart-sort': '1', class: 'pillsel', 'aria-label': 'Order' },
+      ...[['popular', 'Popular'], ['members', 'Most members'], ['feeds', 'Most feeds'], ['name', 'By name']]
+        .map(([v, l]) => el('option', { value: v, selected: sort === v || false }, l)));
+    sortSel.addEventListener('change', () => { sort = sortSel.value; paint(); });
+    const counts = new Map();
+    for (const j of corpus) counts.set(j.creator, (counts.get(j.creator) || 0) + 1);
+    const top = [...counts].filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]).slice(0, 40);
+    const creatorSel = el('select', { 'data-jumpstart-creator': '1', class: 'pillsel', 'aria-label': 'Curator' },
+      el('option', { value: '', selected: creator === '' || false }, 'Any curator'),
+      ...top.map(([h, n]) => el('option', { value: h, selected: creator === h || false }, `@${h} (${n})`)));
+    creatorSel.addEventListener('change', () => { creator = creatorSel.value; paint(); });
+    controls.replaceChildren(sortSel, creatorSel);
+  };
+  indexStore.ready().then(() => {
+    corpus = lens.indexJumpstarts(indexStore.jumpstarts(), indexStore);
+    buildControls();
+    paint();
+  });
+  const run = () => { query = input.value.trim(); paint(); };
+  input.addEventListener('input', run);
+  return {
+    main: el('div', {},
+      el('h1', {}, 'Browse jumpstarts'),
+      el('p', { class: 'small muted' }, `${JUMPSTART_GLOSS} These are the ones the index knows about; open one to see who is in it and which feeds it names.`),
+      el('div', { class: 'card' }, el('div', { class: 'row', style: 'gap:6px' }, input), controls),
+      countLine, results),
+    side: el('div', { class: 'side' }, ...lensRail()),
+  };
+}
+
+// feed-index Phase 3: /j/<handle>/<rkey> — one jumpstart, live. Its feeds
+// (live, then the index's edges as names when the record lists none), a
+// sample of its members, and its joins. No "follow all" here (D-follow: its
+// own plan); the link out goes to the network's page, where that button is.
+export function lensJumpstartView(params) {
+  const handle = decodeURIComponent(params.handle);
+  const rkey = decodeURIComponent(params.rkey);
+  const host = el('div', {}, skeleton(5));
+  const side = el('div', { class: 'side' }, ...lensRail());
+  Promise.all([indexStore.ready(), lens.resolveJumpstart({ handle, rkey })])
+    .then(([, j]) => {
+      if (j.hidden) {
+        host.replaceChildren(emptyState('This jumpstart is hidden', 'Your moderation settings hide it, so Forage does not show it.',
+          el('a', { class: 'btn', href: '/jumpstarts' }, 'Browse jumpstarts')));
+        return;
+      }
+      const inIndex = indexStore.jumpstart(j.uri);
+      const feedRows = j.feeds.length ? j.feeds
+        : lens.indexRows(indexStore.feedsInPack(j.uri).map((u) => indexStore.feed(u)).filter(Boolean), indexStore);
+      const feedCard = (f) => el('div', { class: 'card', 'data-jumpstart-feed': f.uri },
+        el('a', { href: `/f/${encodeURIComponent(f.creator)}/${encodeURIComponent(f.uri.split('/').pop())}` }, f.title),
+        el('div', { class: 'xs muted' }, `by @${f.creator}${f.likeCount === null ? '' : ` · ${fmtScore(f.likeCount)} likes`}${f.source === 'index' ? ' · from the index' : ''}`),
+        f.description ? el('div', { class: 'xs muted', style: 'margin-top:4px' }, f.description) : null);
+      const person = (m) => el('a', { class: 'row', style: 'gap:8px;align-items:center;min-height:44px', href: `/u/${encodeURIComponent(m.handle)}`, 'data-jumpstart-member': m.handle },
+        m.avatar ? el('img', { src: m.avatar, alt: '', class: 'feed-avatar', loading: 'lazy' }) : null,
+        el('span', {}, m.displayName || `@${m.handle}`, el('span', { class: 'xs muted' }, ` @${m.handle}`)));
+      const outHref = `https://bsky.app/starter-pack/${encodeURIComponent(j.creator)}/${encodeURIComponent(rkey)}`;
+      host.replaceChildren(
+        el('div', { class: 'row', style: 'gap:8px;align-items:center;margin-bottom:4px' },
+          el('a', { class: 'small', href: '/jumpstarts', 'data-back-to-jumpstarts': '1' }, '← Jumpstarts')),
+        el('div', { class: 'card', 'data-jumpstart-head': j.uri },
+          el('h1', { style: 'margin:0' }, j.name),
+          el('div', { class: 'small muted' }, `by ${j.creatorName ? `${j.creatorName} ` : ''}@${j.creator}`),
+          el('div', { class: 'row wrap', style: 'gap:12px;margin-top:6px' },
+            el('span', { class: 'small' }, el('strong', {}, fmtScore(j.members)), ' members'),
+            el('span', { class: 'small' }, el('strong', {}, fmtScore(j.joinedAllTime)), ' joined, all time'),
+            j.joinedWeek ? el('span', { class: 'small' }, el('strong', {}, fmtScore(j.joinedWeek)), ' this week') : null),
+          j.description ? el('p', { class: 'small', style: 'margin:8px 0 0;white-space:pre-wrap' }, j.description) : null,
+          j.warnLabels ? el('div', { class: 'xs muted', style: 'margin-top:6px' }, `Labelled: ${j.warnLabels.join(', ')}`) : null,
+          el('div', { class: 'xs muted', style: 'margin-top:6px' }, inIndex ? 'In the index.' : 'Not in the index — opened from a link.'),
+          el('div', { class: 'xs', style: 'margin-top:6px' },
+            el('a', { href: outHref, target: '_blank', rel: 'noopener noreferrer', 'data-jumpstart-out': '1' }, 'Open on bsky.app ↗'),
+            el('span', { class: 'muted' }, ' — following everyone in it happens there; Forage does not change your follows.'))),
+        el('h2', {}, feedRows.length ? `Feeds it names (${feedRows.length})` : 'Feeds'),
+        ...(feedRows.length ? feedRows.map(feedCard) : [el('div', { class: 'xs muted' }, 'This jumpstart names no feeds.')]),
+        el('h2', {}, `People (${j.members})`),
+        el('div', { class: 'card' }, ...(j.sample.length ? j.sample.map(person) : [el('div', { class: 'xs muted' }, 'No sample of members came back.')]),
+          j.members > j.sample.length ? el('div', { class: 'xs muted', style: 'margin-top:6px' }, `Showing ${j.sample.length} of ${j.members}; the full list is on bsky.app.`) : null));
+    })
+    .catch((e) => host.replaceChildren(emptyState('Could not open that jumpstart',
+      `@${handle} / ${rkey} — ${e.message}`, el('a', { class: 'btn', href: '/jumpstarts' }, 'Browse jumpstarts'))));
+  return { main: host, side };
+}
+
+// feed-index Phase 2b (D-own, owner 2026-09-08: "user manageable in case they
+// want to dump ours and upload their own … equitable … LTS … independence from
+// a central authority"): the Discovery index section under Advanced. Three
+// words for the mode — Add (yours over Forage's), Replace (yours alone), Off
+// (the live list only) — and one way in for a file: paste it or pick it. The
+// file goes through the same validator ours does; a refused one says which
+// row and why and leaves the previous good one standing. Device-local; the
+// PDS record that follows you is the named follow-up.
+function discoveryIndexSection() {
+  const cur = indexPrefs.current();
+  const own = indexPrefs.own();
+  const st = indexStore.status();
+  const status = el('div', { class: 'xs muted', 'data-index-status': st.status, style: 'margin-bottom:6px' });
+  const say = () => {
+    const s = indexStore.status();
+    const shipped = s.generatedAt ? `Forage's index was built ${s.generatedAt.slice(0, 10)}` : 'Forage\'s index';
+    const mine = own ? `Your file: ${own.name || 'unnamed'}, ${own.index.feeds.length} feeds, ${own.index.jumpstarts.length} jumpstarts.` : 'No file of yours is stored.';
+    const now = { forage: `${shipped} — ${s.counts.feeds} feeds, ${s.counts.jumpstarts} jumpstarts. In use.`,
+      merged: `${shipped}; yours is laid over it (${s.counts.feeds} feeds in all).`,
+      mine: `Yours alone is in use (${s.counts.feeds} feeds, ${s.counts.jumpstarts} jumpstarts).`,
+      off: 'The index is off: browse shows the live popular list alone.',
+      missing: 'Forage\'s index did not load; browse shows the live list alone.',
+      invalid: `Forage's index was refused (${s.errors[0] || 'malformed'}); browse shows the live list alone.`,
+      loading: 'Loading…' }[s.status] || '';
+    status.textContent = `${now} ${mine}`;
+  };
+  say();
+  const apply = async (mode) => {
+    indexPrefs.setMode(mode);
+    await indexStore.reload(indexPrefs.current());
+    say();
+  };
+  // One `.pillsel` dial, the same dressing as the thread dials above it: a
+  // 44px control on a phone. (Radios were tried first; a closed <details>
+  // does not hide a display:flex label, and Chrome kept them at 13px under
+  // the tap floor — mobile-fit.workflow.mjs caught it.)
+  const MODES = [['forage', 'Forage\'s index — the file that ships with the app'],
+    ['add', 'Add mine — my file laid over Forage\'s; mine wins where they name the same thing'],
+    ['replace', 'Replace with mine — my file alone'],
+    ['off', 'Off — no index; the live popular list only']];
+  const modeSel = el('select', { class: 'pillsel', id: 'feedindex-mode', 'data-feedindex-mode': '1', 'aria-label': 'Which discovery index to use' },
+    ...MODES.map(([id, label]) => el('option', { value: id, selected: indexPrefs.mode() === id || false,
+      disabled: (id === 'replace' || id === 'add') && !own ? true : false }, label)));
+  modeSel.addEventListener('change', () => apply(modeSel.value));
+  const errBox = el('div', { class: 'xs', 'data-feedindex-errors': '1', style: 'white-space:pre-wrap;color:var(--danger,#b00)' });
+  const takeText = (text, name) => {
+    const r = indexPrefs.parseOwnText(text);
+    if (!r.ok) { errBox.textContent = `Not stored — ${r.errors.slice(0, 6).join('\n')}`; return; }
+    try { indexPrefs.setOwn({ index: r.index, name }); } catch (e) { errBox.textContent = e.message; return; }
+    errBox.textContent = '';
+    toast(`Stored ${name || 'your index'}: ${r.index.feeds.length} feeds, ${r.index.jumpstarts.length} jumpstarts. Added over Forage's.`, 'ok');
+    indexStore.reload(indexPrefs.current()).then(() => rerenderNow());
+  };
+  const paste = el('textarea', { rows: 3, placeholder: 'Paste an index file here (JSON, "v": 1)…', 'data-feedindex-paste': '1',
+    style: 'width:100%;font-family:monospace;font-size:12px' });
+  const pasteBtn = el('button', { type: 'button', class: 'btn sm', 'data-feedindex-store': '1' }, 'Store pasted file');
+  pasteBtn.addEventListener('click', () => { if (paste.value.trim()) takeText(paste.value, 'pasted'); });
+  const file = el('input', { type: 'file', accept: 'application/json,.json', 'data-feedindex-file': '1', style: 'min-height:44px' });
+  file.addEventListener('change', async () => {
+    const f = file.files && file.files[0];
+    if (!f) return;
+    takeText(await f.text(), f.name);
+  });
+  const clear = el('button', { type: 'button', class: 'btn sm', 'data-feedindex-clear': '1', disabled: !own || undefined }, 'Forget my file');
+  clear.addEventListener('click', () => { indexPrefs.clearOwn(); indexStore.reload(indexPrefs.current()).then(() => rerenderNow()); });
+  return [
+    el('h3', { style: 'font-size:var(--t-md);margin:12px 0 4px' }, 'Discovery index'),
+    el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
+      'Browse feeds and Browse jumpstarts start from an index — a file that ships with Forage naming thousands of feeds and jumpstarts, built weekly from the network. ' +
+      'It is an editorial choice, so it is yours to change: lay your own file over it, use yours instead, or switch it off and browse the live list alone. ' +
+      'The format is documented in docs/FEED-INDEX.md, and a file that does not fit it is refused with the reason.'),
+    status,
+    el('label', { style: 'display:flex;flex-direction:column;align-items:flex-start;gap:4px', for: 'feedindex-mode' },
+      el('span', { class: 'xs' }, 'Which index'), modeSel),
+    el('div', { style: 'margin:8px 0 4px' }, paste),
+    // NOT class="row" (see the hashtag sections above): `.row` is display:flex,
+    // which overrides the UA rule hiding a closed <details>'s children
+    el('div', { style: 'margin-top:6px' }, pasteBtn, ' ', file, ' ', clear),
+    errBox,
+  ];
+}
+
 export function lensFeedsView() {
   const results = el('div', { class: 'stack' }, skeleton(4));
   const controls = el('div', { class: 'row wrap', style: 'gap:6px;margin-top:8px', 'data-feed-controls': '1' });
@@ -2710,6 +2977,15 @@ export function lensFeedsView() {
   let sort = 'popular';
   let platform = '';
   let videoOnly = false;
+  // feed-index Phase 2: the Bluesky-listed rows are the ones the per-feed
+  // probes (liveness, rising) run over — 117 requests, as before. Index rows
+  // are NOT probed: the harvest's floor already buys 87% live (D5), and
+  // probing ~1,500 more feeds on arrival is the cost this file exists to
+  // avoid. Their counts arrive by hydration, 25 per request, in shown order.
+  let browseUris = [];
+  let hydrating = false;
+  let paintTimer = null;
+  const paintSoon = () => { if (paintTimer) return; paintTimer = setTimeout(() => { paintTimer = null; paint(); }, 120); };
   // 4c: uri → { d7, d30, capped }. Measured lazily, ONCE per page load, the
   // first time a Rising sort is chosen — 117 requests is not something to spend
   // on arrival for a sort nobody may pick.
@@ -2734,11 +3010,26 @@ export function lensFeedsView() {
           el('div', { style: 'min-width:0' },
             el('a', { href: feedPath({ creator: f.creator, uri: f.uri }) || `/f/${f.uri.split('/').pop()}` }, f.title),
             el('div', { class: 'xs muted' },
-              `by @${f.creator} · ${fmtScore(f.likeCount)} likes`,
+              // D2: an index row has no count until hydrated — say so, never a zero
+              `by @${f.creator} · ${f.likeCount === null ? 'likes loading…' : `${fmtScore(f.likeCount)} likes`}`,
               risingNote(f),
               f.platform ? ` · built on ${f.platform}` : '',
-              f.video ? ' · video' : '')))),
+              f.video ? ' · video' : '',
+              f.lang ? ` · ${f.lang}` : ''),
+            provenance(f)))),
       f.description ? el('div', { class: 'xs muted', style: 'margin-top:4px' }, f.description) : null);
+  };
+
+  // feed-index Phase 2: whose row this is, always. "Bluesky lists it" is the
+  // popular list; "in the index" is the file that ships with Forage (or the
+  // forager's own — the store's status says which); "in N jumpstarts" is the
+  // edges, offline (D7).
+  const provenance = (f) => {
+    const bits = [];
+    if (f.source === 'popular' || f.source === 'both') bits.push('Bluesky lists it');
+    if (f.source === 'index' || f.source === 'both') bits.push(indexStore.status().status === 'mine' ? 'in your index' : 'in the index');
+    if (f.inPacks) bits.push(`in ${f.inPacks} jumpstart${f.inPacks === 1 ? '' : 's'}`);
+    return bits.length ? el('div', { class: 'xs muted', 'data-provenance': f.source || 'popular' }, bits.join(' · ')) : null;
   };
 
   const risingNote = (f) => {
@@ -2760,11 +3051,22 @@ export function lensFeedsView() {
       : [emptyState('No feeds found', searching
           ? 'Nothing matched that search.'
           : 'No feed in the list matches those filters. Widen them and it comes back.')]));
+    // feed-index Phase 2: two sentences, because they are two corpora. The
+    // Bluesky-listed count keeps its exact wording (signin.workflow.mjs holds
+    // "N of 5 feeds. Hiding…"); the index gets its own sentence after it.
+    const isIdx = (f) => f.source === 'index';
+    const fromIndex = corpus.filter(isIdx).length;
+    const shownIndex = shown.filter(isIdx).length;
+    const popular = corpus.length - fromIndex;
+    const shownPopular = shown.length - shownIndex;
     const base = searching
-      ? `${shown.length} result${shown.length === 1 ? '' : 's'} — in the order Bluesky's search ranked them.`
-      : shown.length === corpus.length
-        ? `All ${corpus.length} feeds Bluesky lists as popular.`
-        : `${shown.length} of ${corpus.length} feeds.`;
+      ? `${shown.length} result${shown.length === 1 ? '' : 's'} — ${shownIndex ? `${shownIndex} from the index first, then ` : ''}in the order Bluesky's search ranked them.`
+      : shownPopular === popular
+        ? `All ${popular} feeds Bluesky lists as popular.`
+        : `${shownPopular} of ${popular} feeds.`;
+    const indexSentence = fromIndex && !searching
+      ? ` Plus ${shownIndex === fromIndex ? fromIndex : `${shownIndex} of ${fromIndex}`} from ${indexStore.status().status === 'mine' ? 'your' : 'the'} index${indexWords()}.`
+      : (searching ? '' : indexWords());
     // 4c: say what Rising is counting, and that joins are not countable at all
     // 4d: never filter silently — say how many went where, and keep `silent`
     // separate from `stale`, because one is an observation and the other is the
@@ -2776,10 +3078,39 @@ export function lensFeedsView() {
       : (hideDead && probing ? ' Checking which are still alive…' : '');
     const note = sort.startsWith('rising')
       ? ` Ranked by likes gained in the last ${sort === 'rising7' ? '7 days' : '30 days'}` +
-        `${measuring ? ` — measured ${windows.size} of ${corpus.length} so far…` : ''}. ` +
+        `${measuring ? ` — measured ${windows.size} of ${browseUris.length} so far…` : ''}` +
+        `${fromIndex ? ' — over the Bluesky-listed feeds; index rows are not measured and sort by their band' : ''}. ` +
         'Joining a feed is private, so likes are the only public signal there is.'
       : '';
-    countLine.replaceChildren(base + dropped + note);
+    countLine.replaceChildren(base + dropped + indexSentence + note);
+  };
+
+  // the index's status in words: for a loaded index just its age, which the
+  // sentence above wraps; otherwise the whole reason it is absent
+  const indexWords = () => {
+    const s = indexStore.status();
+    return s.status === 'forage' || s.status === 'merged' || s.status === 'mine' ? (s.generatedAt ? ` (built ${s.generatedAt.slice(0, 10)})` : '') : indexStatusWords();
+  };
+
+  // feed-index Phase 2: counts for index rows, 25 per request, in the order
+  // they are shown, each landing into the row the list is already painting
+  // from (3l's idiom). A row posture hides once its live labels arrive is
+  // dropped — the file's label was a hint; the AppView's is the authority.
+  const ensureHydration = () => {
+    if (hydrating) return;
+    const want = corpus.filter((f) => f.likeCount === null).map((f) => f.uri);
+    if (!want.length) return;
+    hydrating = true;
+    lens.hydrateFeeds(want, {
+      onFeed: (uri, row) => {
+        const i = corpus.findIndex((f) => f.uri === uri);
+        if (i < 0) return;
+        if (row === null) corpus.splice(i, 1);
+        else Object.assign(corpus[i], { likeCount: row.likeCount, avatar: row.avatar || corpus[i].avatar,
+          indexedAt: row.indexedAt, description: corpus[i].description || row.description, video: corpus[i].video || row.video });
+        paintSoon();
+      },
+    }).finally(() => { hydrating = false; paintSoon(); });
   };
 
   // 4b: sorting a search slice would claim to rank everything that matched, so
@@ -2827,7 +3158,7 @@ export function lensFeedsView() {
     if (!sort.startsWith('rising') || measuring || windows.size) return;
     measuring = true;
     paint();
-    lens.likeWindows(corpus.map((f) => f.uri), {
+    lens.likeWindows(browseUris, {
       nowMs: Date.now(),
       // progressive: each measurement lands in the map the view is already
       // rendering from, so the list reorders as the counts arrive (3l's idiom)
@@ -2839,7 +3170,7 @@ export function lensFeedsView() {
     if (!hideDead || probing || states.size) return;
     probing = true;
     paint();
-    lens.liveness(corpus.map((f) => f.uri), {
+    lens.liveness(browseUris, {
       nowMs: Date.now(),
       onState: (uri, st) => { states.set(uri, st); paint(); },
     }).finally(() => { probing = false; paint(); });
@@ -2849,9 +3180,17 @@ export function lensFeedsView() {
     searching = !!query;
     results.replaceChildren(skeleton(3));
     countLine.replaceChildren('');
-    lens.discoverFeeds({ query })
+    // feed-index Phase 2: browse is the popular list ∪ the index; a search is
+    // the index's own matches FIRST (instant, offline, band-ranked) and then
+    // the server's slice in its order, so "look wider on Bluesky" is the
+    // same box. The store is ready once per page load and read from memory.
+    indexStore.ready()
+      .then(() => lens.discoverFeeds({ query, index: indexStore }))
       .then((feeds) => {
-        corpus = feeds;
+        const fromIndex = searching ? lens.indexRows(indexStore.search(query).feeds, indexStore) : [];
+        const have = new Set(feeds.map((f) => f.uri));
+        corpus = [...fromIndex.filter((f) => !have.has(f.uri)), ...feeds];
+        browseUris = feeds.filter((f) => f.source !== 'index').map((f) => f.uri);
         windows = new Map();   // a new corpus invalidates the measurements
         states = new Map();
         // feed-row v11 decision 26 (owner, 2026-08-30: "make the hide inactive on
@@ -2866,6 +3205,7 @@ export function lensFeedsView() {
         ensureWindows();
         ensureLiveness();
         paint();
+        ensureHydration();
       })
       .catch((e) => {
         controls.replaceChildren();
@@ -3219,6 +3559,7 @@ export function lensProfileView() {
           'Replies deeper than this arrive folded behind one line saying how many there are. Press it and the whole branch opens where it stands — nothing is fetched again and you do not leave the page.'),
         el('label', { style: 'display:flex;flex-direction:column;align-items:flex-start;gap:4px', for: 'pref-threadfold' },
           el('span', { class: 'xs' }, 'Fold replies deeper than'), foldSel),
+        ...discoveryIndexSection(),
         el('h3', { style: 'font-size:var(--t-md);margin:12px 0 4px' }, 'Your ring'),
         el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
           'Your ring is how close to you a post has to come from before you see it, and the pill at the top of the page sets it. These are the stops that pill offers — a tighter one shows you less, and each one includes everyone in the one before it. World is always offered: it is the ring not narrowing at all, and it is how you get everything back. Turning the ring down never turns your moderation off — blocks, mutes and muted words apply the same at every stop.'),

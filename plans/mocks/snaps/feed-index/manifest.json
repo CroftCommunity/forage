@@ -1,0 +1,149 @@
+{
+  "capturedAt": "2026-09-09",
+  "files": [
+    {
+      "file": "feeds-index.phone.current.png",
+      "route": "feeds-index",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@a2af930",
+      "population": "lens:feed-index"
+    },
+    {
+      "file": "feeds-index.desktop.current.png",
+      "route": "feeds-index",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@a2af930",
+      "population": "lens:feed-index"
+    },
+    {
+      "file": "feeds-index.phone.proposed.png",
+      "route": "feeds-index",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@3a590c0",
+      "population": "lens:feed-index"
+    },
+    {
+      "file": "feeds-index.desktop.proposed.png",
+      "route": "feeds-index",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@3a590c0",
+      "population": "lens:feed-index"
+    },
+    {
+      "file": "jumpstarts-lens.phone.current.png",
+      "route": "jumpstarts-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@a2af930",
+      "population": "lens:feed-index"
+    },
+    {
+      "file": "jumpstarts-lens.desktop.current.png",
+      "route": "jumpstarts-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@a2af930",
+      "population": "lens:feed-index"
+    },
+    {
+      "file": "jumpstarts-lens.phone.proposed.png",
+      "route": "jumpstarts-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@3a590c0",
+      "population": "lens:feed-index"
+    },
+    {
+      "file": "jumpstarts-lens.desktop.proposed.png",
+      "route": "jumpstarts-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@3a590c0",
+      "population": "lens:feed-index"
+    },
+    {
+      "file": "jumpstart-lens.phone.current.png",
+      "route": "jumpstart-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@a2af930",
+      "population": "lens:feed-index"
+    },
+    {
+      "file": "jumpstart-lens.desktop.current.png",
+      "route": "jumpstart-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@a2af930",
+      "population": "lens:feed-index"
+    },
+    {
+      "file": "jumpstart-lens.phone.proposed.png",
+      "route": "jumpstart-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@3a590c0",
+      "population": "lens:feed-index"
+    },
+    {
+      "file": "jumpstart-lens.desktop.proposed.png",
+      "route": "jumpstart-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@3a590c0",
+      "population": "lens:feed-index"
+    },
+    {
+      "file": "rail-panels.phone.current.png",
+      "route": "rail-panels",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@a2af930",
+      "population": "lens:feed-index"
+    },
+    {
+      "file": "rail-panels.desktop.current.png",
+      "route": "rail-panels",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@a2af930",
+      "population": "lens:feed-index"
+    },
+    {
+      "file": "rail-panels.phone.proposed.png",
+      "route": "rail-panels",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@3a590c0",
+      "population": "lens:feed-index"
+    },
+    {
+      "file": "rail-panels.desktop.proposed.png",
+      "route": "rail-panels",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@3a590c0",
+      "population": "lens:feed-index"
+    }
+  ]
+}

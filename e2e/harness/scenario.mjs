@@ -66,7 +66,27 @@ export async function diagnoseLive() {
   return out.join('\n');
 }
 
-export async function scenario(state, { initScripts = [], mode, root, ...shimOpts } = {}) {
+// feed-index (2026-09-09): the served tree carries data/feed-index.json — a
+// file CI regenerates WEEKLY. A hermetic journey must not read it: the day
+// the real index happened to contain a feed named "After Dark", the sign-in
+// journey's adult-floor assertion failed on a row no fixture had declared.
+// So every scenario gets the fixture index below unless it asks for the real
+// one (`realIndex: true` — mock-snaps, whose population IS the committed file).
+// It rides the fetch SHIM, not a page route: once the service worker controls
+// the page a page.route never sees the request, and the signed-in half of a
+// journey would read the real file while the guest half read the fixture.
+// A workflow's own `responses` entry for the path wins over the default.
+import { readFileSync } from 'node:fs';
+const FIXTURE_INDEX = JSON.parse(readFileSync(new URL('./fixtures/feed-index.json', import.meta.url), 'utf8'));
+const FIXTURE_META = JSON.parse(readFileSync(new URL('./fixtures/feed-index-meta.json', import.meta.url), 'utf8'));
+
+export async function scenario(state, { initScripts = [], mode, root, realIndex = false, ...shimOpts } = {}) {
+  if (!realIndex) {
+    shimOpts = { ...shimOpts, responses: { '/data/feed-index-meta.json': FIXTURE_META, '/data/feed-index.json': FIXTURE_INDEX, ...(shimOpts.responses || {}) } };
+  } else {
+    // the real file: let it through the fence unshimmed by naming it a pass-through
+    shimOpts = { ...shimOpts, responses: { ...(shimOpts.responses || {}) }, passThrough: ['/data/feed-index'] };
+  }
   if (!STATES.includes(state)) {
     throw new Error(`unknown scenario state: ${state} (known: ${STATES.join(', ')})`);
   }

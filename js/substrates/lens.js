@@ -948,7 +948,10 @@ const FEED_SORTS = {
   // than re-deriving it — DL-010's principle applied one level up, to the list
   // of feeds instead of the posts inside one.
   popular: null,
-  likes: (a, b) => (b.likeCount ?? 0) - (a.likeCount ?? 0),
+  // feed-index Phase 2: an index row not yet hydrated has no count but has a
+  // BAND; it sorts at its band's floor (band 2 reads as 100), so the list is
+  // sensibly ordered on first paint and reorders as the real counts arrive.
+  likes: (a, b) => likesForSort(b) - likesForSort(a),
   new: (a, b) => String(b.indexedAt || '').localeCompare(String(a.indexedAt || '')),
   old: (a, b) => String(a.indexedAt || '').localeCompare(String(b.indexedAt || '')),
   // 4c: measured against a window. A feed with no measurement yet sorts LAST
@@ -958,6 +961,8 @@ const FEED_SORTS = {
   rising30: null,
 };
 const RISING_KEY = { rising7: 'd7', rising30: 'd30' };
+const BAND_FLOOR = [0, 10, 100, 1000, 10000];
+const likesForSort = (f) => (f.likeCount === null || f.likeCount === undefined ? (BAND_FLOOR[f.band] ?? 0) : f.likeCount);
 
 export function sortFeeds(feeds, sort, windows) {
   if (!(sort in FEED_SORTS)) {
@@ -1358,6 +1363,39 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
     // it came from — an author board's rows link `/u/<handle>`, not a feed
     // path nothing resolves (feed-row v1, 2026-08-30: forage.fyi/f/pds.ls)
     return { feedId: `lens:${slug}`, feedSlug: slug, feedTitle: title || slug, feedKind: source.kind };
+  };
+
+  // feed-index Phase 2: the ONE discovery shape. A generator view (browse,
+  // search, getFeedGenerators, a jumpstart's feeds) and an index row (the file
+  // that ships with the app) both become this, posture applied here (4a).
+  // `source` says whose a row is; an index row has a band and NO count until
+  // hydrated — null, never a silent zero (D2).
+  const shapeDiscoverFeed = (f, source) => {
+    const disp = feedDisposition(f, posture);
+    return {
+      uri: f.uri, title: f.displayName || f.uri.split('/').pop(), description: f.description || '',
+      avatar: f.avatar || null, likeCount: f.likeCount ?? 0, creator: f.creator?.handle || '[unknown]',
+      creatorDid: f.creator?.did || null,
+      // the service DID is the BUILDER: did:web:skyfeed.me, did:web:api.graze.social…
+      platform: String(f.did || '').startsWith('did:web:') ? f.did.slice('did:web:'.length) : null,
+      video: f.contentMode === 'app.bsky.feed.defs#contentModeVideo',
+      acceptsInteractions: !!f.acceptsInteractions,
+      indexedAt: f.indexedAt || null,
+      source,
+      ...(disp?.mode === 'hide' ? { hidden: true } : {}),
+      ...(disp?.mode === 'warn' ? { warnLabels: disp.labels } : {}),
+    };
+  };
+  const shapeIndexFeed = (r, inPacks) => {
+    const disp = feedDisposition({ labels: (r.labels || []).map((val) => ({ val })) }, posture);
+    return {
+      uri: r.uri, title: r.name, description: r.desc || '', avatar: null, likeCount: null,
+      creator: r.creator || '[unknown]', creatorDid: null, platform: r.platform ?? null, video: !!r.video,
+      acceptsInteractions: false, indexedAt: null,
+      source: 'index', band: r.band, tags: r.tags || [], lang: r.lang || null, inPacks,
+      ...(disp?.mode === 'hide' ? { hidden: true } : {}),
+      ...(disp?.mode === 'warn' ? { warnLabels: disp.labels } : {}),
+    };
   };
 
   return {
@@ -1934,6 +1972,26 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
       return did;
     },
 
+    // feed-index Phase 3: a SHARED jumpstart link cold — handle → did →
+    // starter pack, the same arc as resolveFeed (3v); both calls unauth-200.
+    async resolveJumpstart({ handle, rkey }) {
+      const did = String(handle || '').startsWith('did:')
+        ? handle
+        : (await get('com.atproto.identity.resolveHandle', { handle })).did;
+      if (!did) throw new Error(`lens: could not resolve @${handle} to an account`);
+      return this.jumpstart(`at://${did}/app.bsky.graph.starterpack/${rkey}`);
+    },
+
+    // feed-index Phase 3: index jumpstart rows shaped for the view — posture
+    // applied to the file's label hints; the AppView's labels re-apply on open.
+    indexJumpstarts(rows, index) {
+      return rows.map((r) => {
+        const disp = feedDisposition({ labels: (r.labels || []).map((val) => ({ val })) }, posture);
+        return { ...r, feedCount: index ? index.feedsInPack(r.uri).length : 0,
+          ...(disp?.mode === 'hide' ? { hidden: true } : {}), ...(disp?.mode === 'warn' ? { warnLabels: disp.labels } : {}) };
+      }).filter((r) => !r.hidden);
+    },
+
     // 3j: discovery — popular generators, optionally searched. Unauth-200
     // (probe-verified), so guests browse too.
     // 4a: the account's posture applies HERE, in the shape layer, exactly as it
@@ -1945,7 +2003,15 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
     // still had more after 1,500 rows), so it takes one page and keeps the
     // server's relevance order — sorting a slice of that would present itself
     // as a ranking of everything that matched, which it is not.
-    async discoverFeeds({ query, limit = 100 } = {}) {
+    // feed-index Phase 2 (plan 2026-09-08): BROWSE is the popular corpus ∪ the
+    // index — the file that ships with the app (js/feed-index-store.js). Every
+    // row says whose it is (`source`: popular | index | both), an index-only
+    // row carries its BAND and `likeCount: null` until hydrateFeeds fills it
+    // (D2: the file holds no count; null is never a silent zero), and posture
+    // applies to it here, in the shape layer, exactly as to a browse row. A
+    // QUERY never consults the index: the view searches the file itself
+    // (instant, offline) and shows the server's slice beneath, in its order.
+    async discoverFeeds({ query, limit = 100, index = null } = {}) {
       const collected = [];
       let cursor;
       do {
@@ -1953,21 +2019,73 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
         collected.push(...(data.feeds || []));
         cursor = query ? null : data.cursor;
       } while (cursor && collected.length < MAX_DISCOVERY_FEEDS);
-      return collected.map((f) => {
-        const disp = feedDisposition(f, posture);
-        return {
-          uri: f.uri, title: f.displayName || f.uri.split('/').pop(), description: f.description || '',
-          avatar: f.avatar || null, likeCount: f.likeCount ?? 0, creator: f.creator?.handle || '[unknown]',
-          creatorDid: f.creator?.did || null,
-          // the service DID is the BUILDER: did:web:skyfeed.me, did:web:api.graze.social…
-          platform: String(f.did || '').startsWith('did:web:') ? f.did.slice('did:web:'.length) : null,
-          video: f.contentMode === 'app.bsky.feed.defs#contentModeVideo',
-          acceptsInteractions: !!f.acceptsInteractions,
-          indexedAt: f.indexedAt || null,
-          ...(disp?.mode === 'hide' ? { hidden: true } : {}),
-          ...(disp?.mode === 'warn' ? { warnLabels: disp.labels } : {}),
-        };
-      }).filter((f) => !f.hidden);
+      const rows = collected.map((f) => shapeDiscoverFeed(f, 'popular')).filter((f) => !f.hidden);
+      if (query || !index) return rows;
+      const seen = new Map(rows.map((r) => [r.uri, r]));
+      for (const r of index.feeds()) {
+        const inPacks = index.packsWithFeed(r.uri).length;
+        const have = seen.get(r.uri);
+        if (have) { Object.assign(have, { source: 'both', band: r.band, tags: r.tags || [], lang: r.lang || null, inPacks }); continue; }
+        const row = shapeIndexFeed(r, inPacks);
+        if (!row.hidden) { seen.set(r.uri, row); rows.push(row); }
+      }
+      return rows;
+    },
+
+    // feed-index Phase 2: index rows (a search's matches, a jumpstart's feeds
+    // from the file) shaped for the view — posture applied, edges attached.
+    indexRows(rows, index) {
+      return rows.map((r) => shapeIndexFeed(r, index ? index.packsWithFeed(r.uri).length : 0)).filter((f) => !f.hidden);
+    },
+
+    // feed-index Phase 2: the live counts for index rows, 25 per request
+    // (getFeedGenerators' page), announced as each batch lands so the list
+    // repaints progressively (3l's idiom). A row posture hides once its live
+    // labels arrive is announced as NULL, and the view drops it.
+    async hydrateFeeds(uris, { onFeed, concurrency = 3 } = {}) {
+      const out = new Map();
+      const batches = [];
+      for (let i = 0; i < uris.length; i += 25) batches.push(uris.slice(i, i + 25));
+      const worker = async () => {
+        for (let b = batches.shift(); b !== undefined; b = batches.shift()) {
+          let feeds = [];
+          try { feeds = (await get('app.bsky.feed.getFeedGenerators', Object.fromEntries(b.map((u, i) => [`feeds[${i}]`, u])))).feeds || []; }
+          catch { continue; /* unmeasured: the row keeps its band and says so */ }
+          for (const f of feeds) {
+            const row = shapeDiscoverFeed(f, 'index');
+            const value = row.hidden ? null : row;
+            out.set(f.uri, value);
+            onFeed?.(f.uri, value);
+          }
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(concurrency, batches.length) }, worker));
+      return out;
+    },
+
+    // feed-index Phase 3: one jumpstart (the network's "starter pack"), from
+    // getStarterPack — unauth-200 (probed 2026-09-04). Its labels go through
+    // the same disposition as a feed's; a hidden one comes back as { hidden }.
+    async jumpstart(uri) {
+      const data = await get('app.bsky.graph.getStarterPack', { starterPack: uri });
+      const sp = data.starterPack || {};
+      const disp = feedDisposition(sp, posture);
+      if (disp?.mode === 'hide') return { uri, hidden: true };
+      const rec = sp.record || {};
+      return {
+        uri: sp.uri || uri, cid: sp.cid || null,
+        name: rec.name || uri.split('/').pop(), description: rec.description || '',
+        creator: sp.creator?.handle || '[unknown]', creatorDid: sp.creator?.did || null,
+        creatorName: sp.creator?.displayName || null, creatorAvatar: sp.creator?.avatar || null,
+        joinedAllTime: sp.joinedAllTimeCount ?? 0, joinedWeek: sp.joinedWeekCount ?? 0,
+        members: sp.list?.listItemCount ?? 0, listUri: sp.list?.uri || null,
+        feeds: (sp.feeds || []).map((f) => shapeDiscoverFeed(f, 'jumpstart')).filter((f) => !f.hidden),
+        sample: (sp.listItemsSample || []).map((it) => ({
+          did: it.subject?.did || null, handle: it.subject?.handle || '', displayName: it.subject?.displayName || null,
+          avatar: it.subject?.avatar || null })),
+        indexedAt: sp.indexedAt || null,
+        ...(disp?.mode === 'warn' ? { warnLabels: disp.labels } : {}),
+      };
     },
 
     // 4c: one getLikes per feed, bounded concurrency, announced as each lands
