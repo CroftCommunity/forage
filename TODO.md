@@ -19,7 +19,9 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 
 
 - **"Follow all" on a jumpstart — its own plan** (owner, 2026-09-08, D-follow in
-  `plans/2026-09-08-plan-feed-index-and-jumpstarts.md`). Shape decided: a signed-in forager
+  `plans/2026-09-08-plan-feed-index-and-jumpstarts.md`). **PLAN DRAFTED 2026-09-14:**
+  `plans/2026-09-14-plan-jumpstart-follow-all.md` — awaiting the owner on its D1–D7 and
+  O1–O3 (the live proof's jumpstart, Undo, the button's words). Shape decided: a signed-in forager
   taps it on `/j/<handle>/<rkey>`, a confirm step lists who they are about to follow, then a
   batch of `app.bsky.graph.follow` writes through the PDS proxy — session-gated like `/h/`; a
   guest sees the button explained and cannot press it. It is the first place Forage would
