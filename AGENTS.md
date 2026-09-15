@@ -173,6 +173,10 @@ ones do not rot. An OAuth fragment response (`code` + `state`) is never mistaken
 for a route — that bridge explicitly refuses it, which is what stops it eating a
 sign-in callback.
 
+Browser-only state has a register too: `docs/DEVICE-LOCAL.md`, one row per storage key
+with its account half (record / planned / cache / device / undecided), harvested from the
+code by `test/device-local-register.test.js` — a new `'forage.…'` key without a row fails.
+
 The lens writes, and `test/invariants.test.js` counts every one of them —
 adding another means arguing for it there first:
 

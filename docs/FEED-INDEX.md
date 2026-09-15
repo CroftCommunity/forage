@@ -107,7 +107,10 @@ forager finds first. So it is yours to dump. Under **Advanced** on your account 
 Your file goes through the same validator; a refused one leaves the previous good one in
 place and tells you which row and why. Every row on `/feeds` says whose it is. This is
 device-local today, like the card size; a record on your PDS that follows you between
-devices is the named follow-up (`TODO.md`).
+devices is the named follow-up (`TODO.md` — shape decided 2026-09-14: local by default, a
+whole-file or a pointer record when you choose, Forage's index always available and never
+retaking a choice made away from it; the register of every browser-only store and its
+account half is `docs/DEVICE-LOCAL.md`).
 
 To build your own from your own list: `npm run harvest -- --providers my-providers.json
 --out my-index.json` (and `--queries` to sweep different terms). The file format, not our
