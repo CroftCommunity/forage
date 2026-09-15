@@ -115,4 +115,7 @@ test('followRecord: { $type, subject, createdAt, via } and nothing else — via 
   assert.throws(() => followRecord({ did: 'did:plc:a', via: { uri: via.uri }, now: '2026-09-14T12:00:00.000Z' }), /via.*cid|cid.*via/i);
   assert.throws(() => followRecord({ did: 'did:plc:a', via: null, now: '2026-09-14T12:00:00.000Z' }), /via/i);
   assert.throws(() => followRecord({ did: 'not-a-did', via, now: '2026-09-14T12:00:00.000Z' }), /did/i);
+  // mutation survivors (stryker, 2026-09-14): each half of both guards has a case of its own
+  assert.throws(() => followRecord({ did: undefined, via, now: '2026-09-14T12:00:00.000Z' }), /did/i, 'a missing subject is refused in words, not a TypeError');
+  assert.throws(() => followRecord({ did: 'did:plc:a', via: { cid: via.cid }, now: '2026-09-14T12:00:00.000Z' }), /via/i, 'a via with no uri is not a strongRef');
 });

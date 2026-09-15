@@ -338,6 +338,16 @@ corpus 47 found, 0 failed. Where the build departs from the text above, on purpo
   state is asserted free of `null|undefined`, and frame 3 was re-captured after the fix.
 - **`sw.js`** precaches `js/follow-all.js` (CACHE v83); `test/hero.test.js` caught the
   omission.
+- **Mutation testing on the pure core** (stryker 10, `mutate: ["js/follow-all.js"]`, command
+  runner `node --test test/follow-all.test.js test/lens-writes.test.js` — the repo's
+  `stryker.config.json` runs `npm test`, whose dry run fails inside stryker's sandbox copy
+  today, unrelated to this plan): 102 mutants, first pass 99 killed / 3 survived. Two were
+  real gaps and are closed by a case each — `followRecord` with an `undefined` subject
+  (the mutant threw a TypeError instead of words) and a `via` with a cid but no uri. The
+  third is equivalent: `myDid !== null && m.did === myDid` → `m.did === myDid` cannot
+  differ, because a member's `did` is a required string on `profileView` (E2) and
+  `listMembers` copies it — `m.did === null` never holds. Second pass 101 killed / 1
+  survived, the equivalent one.
 - **The live proof** (Phase 4) ran under a `testbed--forage-test-account` claim: the
   jumpstart resolved with its cid, the two members read back followed by nobody, `followAll`
   wrote two records in ONE `applyWrites`, `listRecords` on the PDS showed each with `via =
