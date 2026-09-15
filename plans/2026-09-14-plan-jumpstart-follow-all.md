@@ -4,8 +4,8 @@ date: 2026-09-14
 **Status:** BUILT 2026-09-14 (Phases 0–5; RED-first throughout, the journey written before
 a route existed). Hermetic journey green (`e2e/follow-all.workflow.mjs`), the live proof green
 against the test account's own jumpstart (`e2e/follow-all-live.workflow.mjs`, `LIVE=1`),
-mock `plans/mocks/jumpstart-follow.html` captured both sides. Open on this plan: O3 (copy)
-and D6 (per-row opt-out) as follow-ups if wanted; the mock's open decisions 2 and 4.
+mock `plans/mocks/jumpstart-follow.html` captured both sides (v2 after D6). Open on this plan:
+O3 (copy) and the mock's open decision on the guest page's count.
 Decided 2026-09-14 (owner, in conversation: D4 → Unfollow all as a standing action, the list
 as the unit; O1 → the live-proof jumpstart, made by script).
 repo: `CroftCommunity/forage`
@@ -152,7 +152,7 @@ redundant.
 | **D3** | Who is skipped | (a) the official client's four: me, already following, blocking/blocked-by, muted; (b) those plus anyone my moderation settings hide; (c) nobody but me — follow the list as written | **(b).** (a) is the network's own behaviour and the reader expects it; posture on top because Forage never renders a hidden account and should not follow one either. Every skip is COUNTED on the page with its reason, never silent |
 | **D4** | The way back | (a) a session-only *Undo* on the result; (b) **Unfollow all** as a standing action, mirror of Follow all, its own confirm page — the list as the unit; (c) (b) but only follows made through this jumpstart (read `via` off every follow record) | **DECIDED (b), owner 2026-09-14.** Follow and unfollow are the same kind of thing on the page. (c) lost: it needs the whole follow list fetched and inspected per record, only sees follows written with `via`, and *"is full of edge cases and not valuable enough"*. The invariants pin the deletes to uris read from the list's `viewer.following` — never a parsed or remembered uri |
 | **D5** | The confirm step | (a) a page, `/j/<handle>/<rkey>/follow`; (b) the `<dialog>` sheet; (c) inline on `/j/` behind a reveal | **(a).** The navigation law: pages, not modals, and the sheet exception is for choose-one steps. A 150-row list with a commit button is a page. (c) puts 150 rows under the jumpstart head and makes the URL lie about what is on screen |
-| **D6** | Per-row opt-out | (a) all-or-nothing, as the owner's shape says ("Follow all"); (b) a checkbox per row, default on | **(a) for this plan.** A reader who wants some of them has the profile pages; (b) is a natural follow-up if the owner wants it, and the pure core is written so the follow list is an input, not a constant |
+| **D6** | Per-row opt-out | (a) all-or-nothing, as the owner's shape says ("Follow all"); (b) a checkbox per row, default on; (c) every member a row with its OWN Follow / Unfollow button beside the big one | **DECIDED (c), owner 2026-09-14, on the mock:** *"each member entry should also have their own unique follow/unfollow button to allow users the basic flip all or flip any choice."* Both pages list every member: a Follow button, or *Following* with an Unfollow button, or the skip reason and no button; the per-row write is the same lens call with one op, so a single follow made here still carries `via`. The heading, the sentence and the big button count from the rows' current state |
 | **D7** | A failed chunk | (a) stop, report the count, offer *Try the rest* which re-reads the list; (b) retry with backoff; (c) continue with the next chunk | **(a).** A 429 means the account's write budget is spent; retrying spends it faster. Re-reading makes the retry idempotent without Forage remembering anything |
 
 ## Phases
@@ -209,7 +209,6 @@ entry under 2026-09; `TODO.md` item closed with the date; this plan's Status.
   network's.
 - **Following the curator, or the feeds.** The feeds have their own Join on `/f/`; the
   curator is one profile page away. The official client follows neither on Follow all.
-- **Per-row opt-out** (D6b) — a follow-up if wanted.
 - **A session-only Undo** — redundant beside a standing Unfollow all (D4).
 - **Rate-limit budgeting across jumpstarts.** The PDS keeps the count; Forage reports the
   refusal with words rather than modelling the budget.
@@ -300,6 +299,24 @@ looking at — not "the lens can now bulk-delete".
   calls a starter pack)* once per page.
 
 ## Review Log
+
+### Pass 4 — D6 on the mock (2026-09-14)
+
+The owner read the v1 mock: *"the mock is good but I think each member entry should also
+have their own unique follow/unfollow button to allow users the basic flip all or flip any
+choice."* D6 flips from all-or-nothing to (c): both confirm pages list EVERY member — the
+direction's targets first — and each row carries a Follow button, or *Following* with an
+Unfollow button, or its skip reason (you / blocked / muted / hidden by your settings) and no
+button. The per-row write is `followAll([did], { via })` / `unfollowAll([uri])` — the same
+one `applyWrites` caller with a single op — so a follow made one row at a time still says
+which jumpstart it came through, and `test/invariants.test.js` did not move. The heading,
+the plan sentence and the big button repaint from the rows' current state after every
+flip; when nothing is left the heading says *Nobody left to follow* and the big button
+goes. Journey first (RED on the row count), then the page; the journey now flips one row
+each way on each page and checks the bodies (one create with `via`; one delete of the
+exact rkey) and the counts stepping. The mock's v1 open decision 2 (skipped as rows?) is
+answered by this: yes, greyed, with the reason. The v2 frames are re-captured from the
+branch.
 
 ### Pass 3 — the build (2026-09-14)
 

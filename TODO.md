@@ -25,8 +25,8 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
   with *Try the rest*), Unfollow all as the standing mirror (owner: the list is the unit).
   Hermetic journey `e2e/follow-all.workflow.mjs`; live proof `e2e/follow-all-live.workflow.mjs`
   green 2026-09-14 against the test account's own jumpstart; mock
-  `plans/mocks/jumpstart-follow.html`. Left open on the plan: O3 (the buttons' words) and D6
-  (per-row opt-out) as follow-ups if wanted.
+  `plans/mocks/jumpstart-follow.html` (v2: every member a row with its own button — flip all
+  or flip any, owner on the mock). Left open on the plan: O3 (the buttons' words).
 
 - **Your discovery index on the PDS** (D-own's named follow-up, plan
   `2026-09-08-plan-feed-index-and-jumpstarts.md` Phase 2b). Today a forager's own index is

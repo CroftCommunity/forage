@@ -2917,39 +2917,70 @@ function jumpstartHref(handle, rkey, tail = '') {
   return `/j/${encodeURIComponent(handle)}/${encodeURIComponent(rkey)}${tail}`;
 }
 
-function followRow(m) {
-  return el('div', { class: 'row', style: 'gap:8px;align-items:center;min-height:44px', 'data-follow-row': m.did },
-    m.avatar ? el('img', { src: m.avatar, alt: '', class: 'feed-avatar', loading: 'lazy' }) : null,
-    el('a', { href: `/u/${encodeURIComponent(m.handle)}`, style: 'flex:1;min-width:0' },
-      m.displayName || `@${m.handle}`, el('span', { class: 'xs muted' }, ` @${m.handle}`)),
-    el('span', { class: 'xs muted', 'data-follow-row-state': '1' }));
+// D6 (owner, 2026-09-14: "flip all or flip any"): every member is a row, and a
+// row carries its own button — Follow, or Unfollow with *Following* beside it —
+// unless it is skipped for a reason, which the row says instead. The per-row
+// write is the SAME lens call as the bulk one, with one op: a single follow made
+// here still says which jumpstart it came through (D2), and the invariants stay
+// as they are. A guest sees the rows and no buttons.
+const SKIP_WORDS = { me: 'you', blocked: 'blocked', muted: 'muted', hidden: 'hidden by your settings' };
+
+function followRow(entry, { onFollow, onUnfollow }) {
+  const { m } = entry;
+  const row = el('div', { class: 'row', style: 'gap:8px;align-items:center;min-height:44px', 'data-follow-row': m.did });
+  const paint = () => {
+    const right = entry.followingUri
+      ? [el('span', { class: 'xs muted' }, 'Following'),
+        onUnfollow ? el('button', { type: 'button', class: 'btn sm', 'data-unfollow-one': m.did }, 'Unfollow') : null]
+      : entry.skip
+        ? [el('span', { class: 'xs muted', 'data-follow-row-skip': entry.skip }, SKIP_WORDS[entry.skip])]
+        : [onFollow ? el('button', { type: 'button', class: 'btn sm', 'data-follow-one': m.did }, 'Follow') : null];
+    row.replaceChildren(
+      m.avatar ? el('img', { src: m.avatar, alt: '', class: 'feed-avatar', loading: 'lazy' }) : null,
+      el('a', { href: `/u/${encodeURIComponent(m.handle)}`, style: 'flex:1;min-width:0' },
+        m.displayName || `@${m.handle}`, el('span', { class: 'xs muted' }, ` @${m.handle}`)),
+      ...right.filter(Boolean));
+    if (entry.followingUri) row.setAttribute('data-follow-state', 'following'); else row.removeAttribute('data-follow-state');
+    const btn = row.querySelector('button');
+    if (btn) btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      try { await (entry.followingUri ? onUnfollow(entry) : onFollow(entry)); }
+      catch (e) { toast(e.reason || e.message, 'err'); btn.disabled = false; return; }
+      paint();
+    });
+  };
+  paint();
+  return { row, paint };
 }
 
-// The skips, counted with their reasons — never silent (D3).
-function skipWords(counts) {
-  const parts = [];
-  if (counts.me) parts.push('you');
-  if (counts.blocked) parts.push(`${counts.blocked} blocked`);
-  if (counts.muted) parts.push(`${counts.muted} muted`);
-  if (counts.hidden) parts.push(`${counts.hidden} hidden by your settings`);
-  return parts;
+// The plan's counts, from the rows' CURRENT state — every per-row flip moves
+// them, so the heading, the sentence and the big button always agree.
+function followCounts(entries) {
+  const c = { follow: 0, following: 0, me: 0, blocked: 0, muted: 0, hidden: 0 };
+  for (const e of entries) {
+    if (e.followingUri) c.following += 1;
+    else if (e.skip) c[e.skip] += 1;
+    else c.follow += 1;
+  }
+  return c;
 }
 
-function followPlanSentence(direction, plan, n) {
+function followPlanSentence(direction, c, total) {
+  const n = direction === 'follow' ? c.follow : c.following;
   if (!session) {
     return direction === 'follow'
-      ? `Sign in to follow everyone in it. Forage adds ${plural(n, 'follow record')} to your account, in batches of ${CHUNK_SIZE}, and skips anyone you already follow, block or mute.`
+      ? `Sign in to follow everyone in it, or anyone in it. Forage adds ${plural(n, 'follow record')} to your account, in batches of ${CHUNK_SIZE}, and skips anyone you already follow, block or mute.`
       : `Sign in to see who on this list you follow. Forage removes those follow records from your account, in batches of ${CHUNK_SIZE}.`;
   }
   if (direction === 'follow') {
-    const c = plan.counts;
     const skipped = c.me + c.blocked + c.muted + c.hidden;
+    const words = ['me', 'blocked', 'muted', 'hidden'].filter((k) => c[k]).map((k) => (k === 'me' ? 'you' : `${c[k]} ${SKIP_WORDS[k]}`));
     return `Forage will add ${plural(n, 'follow record')} to your account, in batches of ${CHUNK_SIZE}.`
       + (c.following ? ` Already following ${c.following}.` : '')
-      + (skipped ? ` Skipped ${skipped} (${skipWords(c).join(', ')}).` : '');
+      + (skipped ? ` Skipped ${skipped} (${words.join(', ')}).` : '');
   }
   return `Forage will remove ${plural(n, 'follow record')} from your account — everyone on this list you follow, whenever you followed them — in batches of ${CHUNK_SIZE}.`
-    + (plan.counts.notFollowed ? ` ${plan.counts.notFollowed} on the list you do not follow.` : '');
+    + (total - n ? ` ${total - n} on the list you do not follow.` : '');
 }
 
 function jumpstartFollowPage(params, direction) {
@@ -2976,33 +3007,38 @@ function jumpstartFollowPage(params, direction) {
       return;
     }
     const members = await lens.listMembers(j.listUri);
-    const plan = direction === 'follow' ? planFollows(members, { myDid: session?.did || null }) : planUnfollows(members);
-    const targets = direction === 'follow' ? plan.follow : plan.unfollow;
-    const n = targets.length;
-    const head = [
-      back(),
-      el('h1', { style: 'margin:0' }, `${verb} ${plural(n, 'person', 'people')}`),
-      el('div', { class: 'xs muted' }, `A jumpstart (what the network calls a starter pack) by @${j.creator}: ${j.name}`),
-      el('p', { class: 'small', 'data-follow-all-plan': '1' }, followPlanSentence(direction, plan, n)),
-    ];
-    if (!session) {
-      const door = el('button', { type: 'button', class: 'btn primary', 'data-follow-all-door': '1' }, `Sign in to ${verb.toLowerCase()}`);
-      door.addEventListener('click', () => openAuthSheet());
-      host.replaceChildren(...head, door,
-        n ? el('div', { class: 'card', style: 'margin-top:10px' }, ...targets.map(followRow)) : null);
-      return;
-    }
-    if (n === 0) {
-      host.replaceChildren(...head, emptyState(direction === 'follow' ? 'Nobody to follow' : 'Nobody to unfollow',
-        direction === 'follow' ? 'Everyone on this list is already followed, or skipped for a reason above.' : 'You follow nobody on this list.',
-        el('a', { class: 'btn', href: jumpstartHref(handle, rkey) }, 'Back to the jumpstart')));
-      return;
-    }
-    const rows = new Map(targets.map((m) => [m.did, followRow(m)]));
-    const mark = (dids, word) => { for (const did of dids) { const r = rows.get(did); if (!r) continue; r.setAttribute('data-follow-state', word.toLowerCase()); r.querySelector('[data-follow-row-state]').textContent = word; } };
+    const via = { uri: j.uri, cid: j.cid };
+    // one entry per member: the reason it is skipped (never 'following' — that
+    // is the followingUri's job, and it moves), and the uri when followed
+    const reasons = new Map(planFollows(members, { myDid: session?.did || null }).skipped
+      .filter((s) => s.reason !== 'following').map((s) => [s.member.did, s.reason]));
+    const entries = members.map((m) => ({ m, followingUri: m.followingUri, skip: reasons.get(m.did) || null }));
+    // the direction's targets first, then the rest — a page is read top down
+    const isTarget = (e) => (direction === 'follow' ? !e.followingUri && !e.skip : !!e.followingUri);
+    entries.sort((a, b) => Number(isTarget(b)) - Number(isTarget(a)));
+
+    const title = el('h1', { style: 'margin:0' });
+    const planLine = el('p', { class: 'small', 'data-follow-all-plan': '1' });
     const progress = el('div', { class: 'small', 'data-follow-all-progress': '1', 'aria-live': 'polite', role: 'status' });
     const result = el('div', { class: 'small', style: 'margin-top:8px' });
-    const commit = el('button', { type: 'button', class: 'btn primary', 'data-follow-all-commit': '1' }, `${verb} ${plural(n, 'person', 'people')}`);
+    const commit = el('button', { type: 'button', class: 'btn primary', 'data-follow-all-commit': '1' });
+    const targets = () => entries.filter(isTarget);
+    const paintHead = () => {
+      const c = followCounts(entries);
+      const n = targets().length;
+      title.textContent = n ? `${verb} ${plural(n, 'person', 'people')}` : `Nobody left to ${verb.toLowerCase()}`;
+      planLine.textContent = followPlanSentence(direction, c, entries.length);
+      commit.textContent = `${verb} ${plural(n, 'person', 'people')}`;
+      commit.hidden = !session || n === 0;
+    };
+    const onFollow = session ? async (e) => { const done = await lens.followAll([e.m.did], { via }); e.followingUri = done.get(e.m.did) || null; paintHead(); } : null;
+    const onUnfollow = session ? async (e) => { await lens.unfollowAll([e.followingUri]); e.followingUri = null; paintHead(); } : null;
+    const rows = new Map(entries.map((e) => [e.m.did, followRow(e, { onFollow, onUnfollow })]));
+    const repaint = (dids) => { for (const did of dids) rows.get(did)?.paint(); };
+    paintHead();
+
+    const door = el('button', { type: 'button', class: 'btn primary', 'data-follow-all-door': '1' }, `Sign in to ${verb.toLowerCase()}`);
+    door.addEventListener('click', () => openAuthSheet());
     const finish = (text, retry) => {
       commit.remove();
       progress.textContent = '';
@@ -3010,28 +3046,38 @@ function jumpstartFollowPage(params, direction) {
       result.replaceChildren(...[text, retry ? ' ' : null, retry].filter(Boolean));
     };
     commit.addEventListener('click', async () => {
+      const batch = targets();
+      const n = batch.length;
       commit.disabled = true;
       const onProgress = (done, total) => { progress.textContent = `${verb}ing… ${done} of ${total}`; };
+      const settle = (uris) => {
+        for (const e of batch) {
+          if (direction === 'follow') { const uri = uris.get(e.m.did); if (uri) e.followingUri = uri; }
+        }
+      };
       try {
         if (direction === 'follow') {
-          const followed = await lens.followAll(targets.map((m) => m.did), { via: { uri: j.uri, cid: j.cid }, onProgress });
-          mark(followed.keys(), 'Following');
+          settle(await lens.followAll(batch.map((e) => e.m.did), { via, onProgress }));
         } else {
-          await lens.unfollowAll(targets.map((m) => m.followingUri), { onProgress });
-          mark(rows.keys(), 'Unfollowed');
+          await lens.unfollowAll(batch.map((e) => e.followingUri), { onProgress });
+          for (const e of batch) e.followingUri = null;
         }
+        repaint(batch.map((e) => e.m.did)); paintHead();
         finish(`${past} ${plural(n, 'person', 'people')}.`);
       } catch (e) {
         const done = e.done ?? 0;
-        if (direction === 'follow' && e.followed) mark(e.followed.keys(), 'Following');
-        else mark(targets.slice(0, done).map((m) => m.did), 'Unfollowed');
+        if (direction === 'follow' && e.followed) settle(e.followed);
+        else for (const en of batch.slice(0, done)) en.followingUri = null;
+        repaint(batch.map((en) => en.m.did)); paintHead();
         const retry = el('button', { type: 'button', class: 'btn sm', 'data-follow-all-retry': '1' }, 'Try the rest');
         retry.addEventListener('click', () => { host.replaceChildren(skeleton(5)); render().catch(fail); });
         finish(`${past} ${done} of ${n}; the rest did not go through — ${e.reason || e.message}`, retry);
       }
     });
-    host.replaceChildren(...head, commit, progress, result,
-      el('div', { class: 'card', style: 'margin-top:10px' }, ...rows.values()));
+    host.replaceChildren(back(), title,
+      el('div', { class: 'xs muted' }, `A jumpstart (what the network calls a starter pack) by @${j.creator}: ${j.name}`),
+      planLine, session ? commit : door, progress, result,
+      el('div', { class: 'card', style: 'margin-top:10px' }, ...[...rows.values()].map((r) => r.row)));
   };
   const fail = (e) => host.replaceChildren(back(), emptyState('Could not open that jumpstart',
     `@${handle} / ${rkey} — ${e.message}`, el('a', { class: 'btn', href: '/jumpstarts' }, 'Browse jumpstarts')));

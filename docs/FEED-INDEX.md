@@ -105,8 +105,10 @@ and why — you, anyone you already follow, block or mute, and anyone your moder
 settings hide. Every follow it writes names the jumpstart it came through (`via`). A batch
 that does not go through stops the run; the page says how many landed and *Try the rest*
 re-reads the list, so nobody is followed twice. **Unfollow everyone in it** is the mirror
-(`/unfollow`): every member of the list you follow, whenever you followed them. A guest reads
-both pages and the button is the sign-in door. Plan:
+(`/unfollow`): every member of the list you follow, whenever you followed them. Both pages
+list every member, each with its own Follow or Unfollow button — flip all, or flip any — and
+a skipped member says why instead. A guest reads both pages and the button is the sign-in
+door. Plan:
 `plans/2026-09-14-plan-jumpstart-follow-all.md`; the writes are counted in `AGENTS.md`.
 
 ## Bring your own

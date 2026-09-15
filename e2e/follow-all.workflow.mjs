@@ -114,6 +114,7 @@ export const R = { ...RESPONSES,
 };
 
 const J = '/j/curator.test/3sp';
+const VIA_OF_PACK = { uri: PACK, cid: 'bafysp' };
 export const seeded = () => PRE_FOLLOWED.map((r) => ({ ...r, $type: 'app.bsky.graph.follow', collection: 'app.bsky.graph.follow', repo: ME, createdAt: '2026-01-01T00:00:00Z' }));
 
 export async function run() {
@@ -138,7 +139,8 @@ export async function run() {
       await page.goto(`${g.origin}${J}/follow`);
       await page.waitForSelector('[data-follow-all-page="follow"]');
       assert.match(await page.locator('h1').innerText(), /Follow 104 people/, 'a guest is nobody\'s "me"; the guest floor hides the labelled member');
-      assert.equal(await page.locator('[data-follow-row]').count(), 104);
+      assert.equal(await page.locator('[data-follow-row]').count(), 105, 'every member is a row (D6: flip all or flip any)');
+      assert.equal(await page.locator('[data-follow-one], [data-unfollow-one]').count(), 0, 'no per-row buttons signed out');
       assert.equal(await page.locator('[data-follow-all-commit]').count(), 0, 'no commit button for a guest');
       assert.equal(await page.locator('[data-follow-all-door]').count(), 1);
       assert.match(await page.locator('[data-follow-all-plan]').innerText(), /sign in/i);
@@ -171,7 +173,14 @@ export async function run() {
       assert.match(plan, /1 blocked/);
       assert.match(plan, /1 muted/);
       assert.match(plan, /1 hidden/);
-      assert.equal(await page.locator('[data-follow-row]').count(), 99, 'the rows are the people about to be followed');
+      // D6 (owner, 2026-09-14: "flip all or flip any"): every member is a row —
+      // the 99 with a Follow button, the 2 followed with an Unfollow button, the
+      // 4 skipped with their reason and no button
+      assert.equal(await page.locator('[data-follow-row]').count(), 105);
+      assert.equal(await page.locator('[data-follow-one]').count(), 99);
+      assert.equal(await page.locator('[data-unfollow-one]').count(), 2);
+      assert.deepEqual((await page.locator('[data-follow-row-skip]').evaluateAll((ns) => ns.map((n) => n.getAttribute('data-follow-row-skip')))).sort(),
+        ['blocked', 'hidden', 'me', 'muted']);
       assert.match(await page.locator('[data-follow-all-page]').innerText(), /what the network calls a starter pack/, 'the gloss, once');
       // the tap floor is a PHONE rule (css/app.css, max-width 480): at 390 wide
       // every row and the button are at least 44px tall
@@ -186,12 +195,38 @@ export async function run() {
       assert.deepEqual(axe.violations.map((v) => `${v.id}: ${v.nodes.length}`), [], 'the confirm page scans clean');
       assert.match(await page.locator('[data-follow-all-commit]').innerText(), /Follow 99 people/);
 
+      // flip ANY: one row's Follow is one applyWrites of one create, with via;
+      // the row flips to Following with an Unfollow button; the heading, the
+      // sentence and the big button all count one fewer
+      await page.click('[data-follow-one="did:plc:p0"]');
+      await page.waitForSelector('[data-follow-row="did:plc:p0"][data-follow-state="following"]');
+      assert.equal(await page.locator('[data-follow-row="did:plc:p0"] [data-unfollow-one]').count(), 1);
+      let bodies = await bodiesOf(page);
+      assert.equal(bodies.length, 1);
+      assert.equal(bodies[0].writes.length, 1);
+      assert.equal(bodies[0].writes[0].value.subject, 'did:plc:p0');
+      assert.deepEqual(bodies[0].writes[0].value.via, VIA_OF_PACK);
+      assert.match(await page.locator('h1').innerText(), /Follow 98 people/);
+      assert.match(await page.locator('[data-follow-all-plan]').innerText(), /98 follow records/);
+      assert.match(await page.locator('[data-follow-all-plan]').innerText(), /Already following 3/);
+      assert.match(await page.locator('[data-follow-all-commit]').innerText(), /Follow 98 people/);
+      // and one row's Unfollow, on a follow made long before the jumpstart: one
+      // delete of that exact rkey; the row flips back to a Follow button
+      await page.click('[data-follow-row="did:plc:f1"] [data-unfollow-one]');
+      await page.waitForSelector('[data-follow-row="did:plc:f1"] [data-follow-one]');
+      bodies = await bodiesOf(page);
+      assert.equal(bodies.length, 2);
+      assert.deepEqual(bodies[1].writes, [{ $type: 'com.atproto.repo.applyWrites#delete', collection: 'app.bsky.graph.follow', rkey: '3pre1' }]);
+      assert.match(await page.locator('h1').innerText(), /Follow 99 people/, 'f1 is followable again');
+      assert.equal((await repoOf(page)).length, 2, 'p0 in, f1 out');
+      await page.evaluate((k) => localStorage.removeItem(k), LOG_KEY);
+
       await page.click('[data-follow-all-commit]');
       await page.waitForSelector('[data-follow-all-result]');
       // EXACT: the first mock capture showed "Followed 144 people.nullnull" — a
       // regex match had let two stringified nulls through
       assert.equal((await page.locator('[data-follow-all-result]').innerText()).trim(), 'Followed 99 people.');
-      const bodies = await bodiesOf(page);
+      bodies = await bodiesOf(page);
       assert.deepEqual(bodies.map((b) => b.writes.length), [50, 49], 'two applyWrites calls, the official client\'s chunk');
       assert.ok(bodies.every((b) => b.repo === ME), 'every call addresses MY repo');
       assert.ok(bodies.flatMap((b) => b.writes).every((w) => w.$type === 'com.atproto.repo.applyWrites#create' && w.collection === 'app.bsky.graph.follow' && w.rkey === undefined));
@@ -199,8 +234,11 @@ export async function run() {
       assert.equal(repo.length, 101, 'the two she had plus ninety-nine');
       const written = repo.filter((r) => !r.rkey.startsWith('3pre'));
       assert.ok(written.every((r) => r.via && r.via.uri === PACK && r.via.cid === 'bafysp'), 'every follow says which jumpstart it came through (D2)');
-      assert.ok(!written.some((r) => [ME, 'did:plc:f1', 'did:plc:f2', 'did:plc:blk', 'did:plc:mut', 'did:plc:gore'].includes(r.subject)), 'nobody skipped was followed');
-      assert.equal(await page.locator('[data-follow-row][data-follow-state="following"]').count(), 99, 'the rows say Following without a refetch');
+      assert.ok(!written.some((r) => [ME, 'did:plc:f2', 'did:plc:blk', 'did:plc:mut', 'did:plc:gore'].includes(r.subject)), 'nobody skipped was followed (f1 was unfollowed by hand above, so Follow all took her back)');
+      assert.equal(await page.locator('[data-follow-row][data-follow-state="following"]').count(), 101, 'every followed row says Following without a refetch');
+      assert.equal(await page.locator('[data-follow-one]').count(), 0, 'nobody left to follow by row either');
+      assert.equal(await page.locator('[data-unfollow-one]').count(), 101, 'and every one of them can be flipped back, one at a time');
+      assert.match(await page.locator('h1').innerText(), /Nobody left to follow/);
       assert.equal(await page.locator('[data-follow-all-commit]').count(), 0, 'the button is gone — the work is done');
       assert.equal(await page.locator('[data-follow-all-progress]').getAttribute('aria-live'), 'polite');
 
@@ -211,16 +249,25 @@ export async function run() {
       const uplan = await page.locator('[data-follow-all-plan]').innerText();
       assert.match(uplan, /101 follow records/);
       assert.match(uplan, /4 on the list you do not follow/);
-      assert.equal(await page.locator('[data-follow-row]').count(), 101, 'every name is shown — nothing is hidden');
-      assert.equal(await page.locator('[data-follow-row="did:plc:f1"]').count(), 1);
+      assert.equal(await page.locator('[data-follow-row]').count(), 105, 'every name is shown — nothing is hidden');
+      assert.equal(await page.locator('[data-unfollow-one]').count(), 101, 'every followed row has its own Unfollow');
+      assert.equal(await page.locator('[data-follow-one]').count(), 0, 'the four not followed are me, blocked, muted, hidden — no Follow button on those');
+      await page.evaluate((k) => localStorage.removeItem(k), LOG_KEY);
+      // flip any, the other way: one row, one delete, the counts step down
+      await page.click('[data-follow-row="did:plc:f2"] [data-unfollow-one]');
+      await page.waitForSelector('[data-follow-row="did:plc:f2"] [data-follow-one]');
+      assert.match(await page.locator('h1').innerText(), /Unfollow 100 people/);
+      assert.match(await page.locator('[data-follow-all-plan]').innerText(), /5 on the list you do not follow/);
       await page.evaluate((k) => localStorage.removeItem(k), LOG_KEY);
       await page.click('[data-follow-all-commit]');
       await page.waitForSelector('[data-follow-all-result]');
-      assert.equal((await page.locator('[data-follow-all-result]').innerText()).trim(), 'Unfollowed 101 people.');
+      assert.equal((await page.locator('[data-follow-all-result]').innerText()).trim(), 'Unfollowed 100 people.');
+      assert.match(await page.locator('h1').innerText(), /Nobody left to unfollow/);
+      assert.equal(await page.locator('[data-follow-one]').count(), 101, 'every unfollowed row offers Follow again — the hundred, and the one flipped by hand');
       const ub = await bodiesOf(page);
-      assert.deepEqual(ub.map((b) => b.writes.length), [50, 50, 1]);
+      assert.deepEqual(ub.map((b) => b.writes.length), [50, 50]);
       assert.ok(ub.flatMap((b) => b.writes).every((w) => w.$type === 'com.atproto.repo.applyWrites#delete' && w.collection === 'app.bsky.graph.follow' && typeof w.rkey === 'string'));
-      assert.ok(ub.flatMap((b) => b.writes).some((w) => w.rkey === '3pre1'), 'the old follow\'s exact rkey, read from the list\'s viewer state');
+      assert.ok(ub.flatMap((b) => b.writes).some((w) => w.rkey.startsWith('3f')), 'rkeys the PDS minted, read from the list\'s viewer state');
       assert.deepEqual(await repoOf(page), [], 'the repo holds no follow of anyone on the list');
 
       await page.goto(`${s.origin}${J}`);
@@ -247,7 +294,7 @@ export async function run() {
       assert.match(res, /budget/i, 'a 429 is explained as the account\'s write budget');
       assert.doesNotMatch(res, /null|undefined/, 'nothing stringified into the sentence');
       assert.equal((await repoOf(page)).length, 52, 'the first chunk landed whole');
-      assert.equal(await page.locator('[data-follow-row][data-follow-state="following"]').count(), 50, 'the fifty that landed say so');
+      assert.equal(await page.locator('[data-follow-row][data-follow-state="following"]').count(), 52, 'the fifty that landed say so (beside the two she had)');
       assert.equal(await page.locator('[data-follow-all-retry]').count(), 1);
       // the budget comes back; Try the rest re-reads the list — the fifty now
       // carry viewer.following and are skipped, so nothing is followed twice
