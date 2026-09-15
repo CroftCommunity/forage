@@ -96,7 +96,23 @@ test('the lens exception holds: writes are records-none, likes-one-pair, prefere
   // would have silently examined only the first (caught in Pass 2 review).
   assert.equal((src.match(/deleteRecord/g) || []).length, 7, 'exactly seven deleteRecord (the unlike, the post delete, the tagsub delete, the unblock, the unrepost, the unfollow, the mix delete)');
   assert.match(src, /FOLLOW_COLLECTION = 'app\.bsky\.graph\.follow'/, 'the follow collection is a named constant');
-  assert.equal((src.match(/collection: FOLLOW_COLLECTION/g) || []).length, 2, 'follow and unfollow bind to it');
+  // Plan 2026-09-14 jumpstart-follow-all: Follow all / Unfollow all — the FIRST
+  // bulk write, and a new KIND of write: com.atproto.repo.applyWrites is neither
+  // a createRecord nor a `call(` procedure, so the regexes above cannot see it.
+  // Pinned tighter than the others because one call is fifty records:
+  //   • exactly ONE applyWrites caller (a private helper both directions share)
+  //   • its ops are #create and #delete only — never #update, never another kind
+  //   • both ops bind to FOLLOW_COLLECTION (2 → 4 with follow/unfollow)
+  //   • every #create value is built by the PURE followRecord, never inline
+  //   • the deletes' rkeys come from uris the lens parses against session.did
+  assert.equal((src.match(/post\('com\.atproto\.repo\.applyWrites'/g) || []).length, 1, 'exactly one applyWrites caller');
+  assert.equal((src.match(/applyWrites/g) || []).length, 4, 'the caller, the two op shapes, and the comment that names the pin — nothing else');
+  assert.equal((src.match(/applyWrites#create/g) || []).length, 1, 'one #create op shape — the follow');
+  assert.equal((src.match(/applyWrites#delete/g) || []).length, 1, 'one #delete op shape — the unfollow');
+  assert.equal((src.match(/applyWrites#update/g) || []).length, 0, 'applyWrites never updates');
+  assert.equal((src.match(/collection: FOLLOW_COLLECTION/g) || []).length, 4, 'follow, unfollow, follow all and unfollow all bind to it');
+  assert.match(src, /import \{ followRecord, chunk \} from '\.\.\/follow-all\.js'/, 'the bulk follow record comes from the pure core');
+  assert.match(src, /value: followRecord\(/, 'every #create value is a followRecord');
   assert.match(src, /BLOCK_COLLECTION = 'app\.bsky\.graph\.block'/, 'the block collection is a named constant');
   assert.equal((src.match(/collection: BLOCK_COLLECTION/g) || []).length, 2, 'block and unblock bind to it');
   assert.match(src, /REPOST_COLLECTION = 'app\.bsky\.feed\.repost'/, 'and the repost collection');
