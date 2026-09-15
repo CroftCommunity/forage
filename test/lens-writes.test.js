@@ -651,8 +651,10 @@ test('listMembers pages getList at 100 until no cursor and shapes the viewer sta
 test('followAll sends applyWrites #create ops in chunks of 50 to MY repo, each value a followRecord with via, and returns did → uri', async () => {
   const { session, calls } = bulkSession();
   const lens = createLens({ session });
-  const followed = await lens.followAll(dids(51), { via: VIA, now: '2026-09-14T12:00:00.000Z' });
+  const seen = [];
+  const followed = await lens.followAll(dids(51), { via: VIA, now: '2026-09-14T12:00:00.000Z', onProgress: (done, total) => seen.push([done, total]) });
   assert.equal(calls.length, 2, 'two chunks for 51');
+  assert.deepEqual(seen, [[50, 51], [51, 51]], 'progress is announced after each chunk lands, so the page can say "50 of 131"');
   assert.ok(calls.every((c) => c.path === '/xrpc/com.atproto.repo.applyWrites' && c.method === 'POST'));
   assert.deepEqual(calls.map((c) => c.body.writes.length), [50, 1]);
   assert.equal(calls[0].body.repo, 'did:plc:me');
@@ -680,6 +682,9 @@ test('followAll: a failed chunk STOPS the run and the error says how far it got;
   assert.equal(calls.length, 2, 'the third chunk was never sent');
   assert.ok(err.followed instanceof Map);
   assert.equal(err.followed.size, 50, 'what DID land rides on the error so the rows can flip');
+  assert.equal(err.done, 50); assert.equal(err.total, 131);
+  assert.match(err.reason, /HTTP 429/, 'the reason alone, for the page\'s sentence');
+  assert.match(err.reason, /budget/i);
   const { session: s2 } = bulkSession({ failChunk: 1, failWith: 500 });
   await assert.rejects(() => createLens({ session: s2 }).followAll(dids(3), { via: VIA }), /0 of 3.*500|500.*0 of 3/);
 });
@@ -697,8 +702,10 @@ test('unfollowAll sends applyWrites #delete ops for EXACTLY those rkeys, in the 
   const { session, calls } = bulkSession();
   const lens = createLens({ session });
   const uris = dids(51).map((d) => `at://did:plc:me/app.bsky.graph.follow/${d.split(':').pop()}`);
-  const n = await lens.unfollowAll(uris);
+  const seen = [];
+  const n = await lens.unfollowAll(uris, { onProgress: (done, total) => seen.push([done, total]) });
   assert.equal(n, 51);
+  assert.deepEqual(seen, [[50, 51], [51, 51]]);
   assert.deepEqual(calls.map((c) => c.body.writes.length), [50, 1]);
   assert.deepEqual(calls[0].body.writes[0], { $type: 'com.atproto.repo.applyWrites#delete', collection: 'app.bsky.graph.follow', rkey: 'm0' });
   assert.equal(calls[0].body.repo, 'did:plc:me');

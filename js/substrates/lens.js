@@ -1845,7 +1845,7 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
     // whole or not at all; a failed chunk STOPS the run (D7 — a 429 means the
     // hour's write budget is spent and retrying spends it faster) and the
     // error says how far it got. The page re-reads the list to try the rest.
-    async followWrites(ops, verb, onChunk) {
+    async followWrites(ops, verb, { onChunk, onProgress = () => {} }) {
       if (!session) throw new Error(`lens: ${verb} needs a session — sign in first`);
       const chunks = chunk(ops);
       const total = ops.length;
@@ -1855,30 +1855,31 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
         try {
           data = await post('com.atproto.repo.applyWrites', { repo: session.did, writes }, verb);
         } catch (e) {
-          const why = /HTTP 429/.test(e.message)
+          const reason = /HTTP 429/.test(e.message)
             ? 'HTTP 429 — the account\'s write budget for this hour is spent; try again later'
             : e.message.replace(/^lens: [^ ]+( all)? failed /, '');
-          const err = new Error(`lens: ${verb} stopped after ${done} of ${total} — ${why}`);
-          err.done = done; err.total = total;
+          const err = new Error(`lens: ${verb} stopped after ${done} of ${total} — ${reason}`);
+          err.done = done; err.total = total; err.reason = reason;
           throw err;
         }
         onChunk(writes, data.results || []);
         done += writes.length;
+        onProgress(done, total);
       }
     },
     // Follow all: N follow records in MY repo, each saying which jumpstart it
     // came through (D2, `via`). Returns did → the uri the PDS minted, so the
     // rows can say Following without a refetch; on failure the same map rides
     // on the error for what DID land.
-    async followAll(dids, { via, now = new Date().toISOString() } = {}) {
+    async followAll(dids, { via, now = new Date().toISOString(), onProgress } = {}) {
       const followed = new Map();
       const ops = dids.map((did) => ({
         $type: 'com.atproto.repo.applyWrites#create', collection: FOLLOW_COLLECTION, value: followRecord({ did, via, now }),
       }));
       try {
-        await this.followWrites(ops, 'follow all', (writes, results) => {
+        await this.followWrites(ops, 'follow all', { onProgress, onChunk: (writes, results) => {
           writes.forEach((w, i) => { if (results[i]?.uri) followed.set(w.value.subject, results[i].uri); });
-        });
+        } });
       } catch (e) {
         e.followed = followed;
         throw e;
@@ -1888,7 +1889,7 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
     // Unfollow all (D4): deletes of follow records the AppView attributes to
     // me, from the list the reader is looking at — every uri is parsed against
     // MY repo and the follow collection BEFORE any request. Returns the count.
-    async unfollowAll(followUris) {
+    async unfollowAll(followUris, { onProgress } = {}) {
       if (!session) throw new Error('lens: unfollow all needs a session — sign in first');
       const ops = followUris.map((uri) => {
         const m = /^at:\/\/([^/]+)\/([^/]+)\/([^/]+)$/.exec(uri);
@@ -1897,7 +1898,7 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
         return { $type: 'com.atproto.repo.applyWrites#delete', collection: FOLLOW_COLLECTION, rkey: m[3] };
       });
       let done = 0;
-      await this.followWrites(ops, 'unfollow all', (writes) => { done += writes.length; });
+      await this.followWrites(ops, 'unfollow all', { onProgress, onChunk: (writes) => { done += writes.length; } });
       return done;
     },
 
