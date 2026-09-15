@@ -307,7 +307,7 @@ Built in one worktree, RED-first at every step, in the plan's order except that 
 hermetic journey (Phase 3) was written BEFORE the pages (Phase 2) — the views have no unit
 tier, so the journey is the pages' failing test. Gate `npm test && npm run conformance`
 green throughout (985 → 985 tests as the last count; conformance 86/86); the full workflow
-corpus 47 found, 0 failed. Where the build departs from the text above, on purpose:
+corpus 48 found (one live-only, skipped), 0 failed on the final tree. Where the build departs from the text above, on purpose:
 
 - **Posture is applied in the lens, not the pure core.** § B said `planFollows(members,
   { myDid, posture })`; built, `listMembers` marks each member `hidden` through the same
