@@ -2929,17 +2929,20 @@ function followRow(entry, { onFollow, onUnfollow }) {
   const { m } = entry;
   const row = el('div', { class: 'row', style: 'gap:8px;align-items:center;min-height:44px', 'data-follow-row': m.did });
   const paint = () => {
+    // the Unfollow button says the state; the word is for a reader with no button
     const right = entry.followingUri
-      ? [el('span', { class: 'xs muted' }, 'Following'),
-        onUnfollow ? el('button', { type: 'button', class: 'btn sm', 'data-unfollow-one': m.did }, 'Unfollow') : null]
+      ? [onUnfollow ? el('button', { type: 'button', class: 'btn sm', 'data-unfollow-one': m.did }, 'Unfollow')
+        : el('span', { class: 'xs muted' }, 'Following')]
       : entry.skip
         ? [el('span', { class: 'xs muted', 'data-follow-row-skip': entry.skip }, SKIP_WORDS[entry.skip])]
         : [onFollow ? el('button', { type: 'button', class: 'btn sm', 'data-follow-one': m.did }, 'Follow') : null];
-    row.replaceChildren(
+    // replaceChildren stringifies a null (the first mock capture read "null" on
+    // every avatar-less row): every child list here is filtered
+    row.replaceChildren(...[
       m.avatar ? el('img', { src: m.avatar, alt: '', class: 'feed-avatar', loading: 'lazy' }) : null,
       el('a', { href: `/u/${encodeURIComponent(m.handle)}`, style: 'flex:1;min-width:0' },
         m.displayName || `@${m.handle}`, el('span', { class: 'xs muted' }, ` @${m.handle}`)),
-      ...right.filter(Boolean));
+      ...right].filter(Boolean));
     if (entry.followingUri) row.setAttribute('data-follow-state', 'following'); else row.removeAttribute('data-follow-state');
     const btn = row.querySelector('button');
     if (btn) btn.addEventListener('click', async () => {
@@ -2975,10 +2978,12 @@ function followPlanSentence(direction, c, total) {
   if (direction === 'follow') {
     const skipped = c.me + c.blocked + c.muted + c.hidden;
     const words = ['me', 'blocked', 'muted', 'hidden'].filter((k) => c[k]).map((k) => (k === 'me' ? 'you' : `${c[k]} ${SKIP_WORDS[k]}`));
-    return `Forage will add ${plural(n, 'follow record')} to your account, in batches of ${CHUNK_SIZE}.`
-      + (c.following ? ` Already following ${c.following}.` : '')
-      + (skipped ? ` Skipped ${skipped} (${words.join(', ')}).` : '');
+    const head = n
+      ? `Forage will add ${plural(n, 'follow record')} to your account, in batches of ${CHUNK_SIZE}.` + (c.following ? ` Already following ${c.following}.` : '')
+      : `You follow ${plural(c.following, 'person', 'people')} on this list — everyone Forage would add.`;
+    return head + (skipped ? ` Skipped ${skipped} (${words.join(', ')}).` : '');
   }
+  if (!n) return `You follow nobody on this list.`;
   return `Forage will remove ${plural(n, 'follow record')} from your account — everyone on this list you follow, whenever you followed them — in batches of ${CHUNK_SIZE}.`
     + (total - n ? ` ${total - n} on the list you do not follow.` : '');
 }

@@ -316,7 +316,14 @@ goes. Journey first (RED on the row count), then the page; the journey now flips
 each way on each page and checks the bodies (one create with `via`; one delete of the
 exact rkey) and the counts stepping. The mock's v1 open decision 2 (skipped as rows?) is
 answered by this: yes, greyed, with the reason. The v2 frames are re-captured from the
-branch.
+branch — and the first v2 capture caught the SAME defect class as v1's: every avatar-less
+row began with the word *null* (`replaceChildren` stringifying a null child), and the
+done state's sentence read *Forage will add 0 follow records … Already following 146*.
+The journey now asserts no row text reads `null` or `undefined` and that the done sentence
+names how many she follows rather than promising to add nothing; every child list on the
+page is filtered; and a followed row with an Unfollow button no longer also says
+*Following* — the button is the state. Two frames, two catches, one lesson written into
+the code: the frame is the check the claims had not written yet.
 
 ### Pass 3 — the build (2026-09-14)
 

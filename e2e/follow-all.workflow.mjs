@@ -177,6 +177,10 @@ export async function run() {
       // the 99 with a Follow button, the 2 followed with an Unfollow button, the
       // 4 skipped with their reason and no button
       assert.equal(await page.locator('[data-follow-row]').count(), 105);
+      // the v2 mock's first capture showed "null" at the head of every row — an
+      // avatar-less member's null child stringified. No row may read it.
+      assert.doesNotMatch(await page.locator('[data-follow-row="did:plc:p1"]').innerText(), /\bnull\b|undefined/);
+      assert.doesNotMatch(await page.locator('[data-follow-row="did:plc:f1"]').innerText(), /\bnull\b|undefined/);
       assert.equal(await page.locator('[data-follow-one]').count(), 99);
       assert.equal(await page.locator('[data-unfollow-one]').count(), 2);
       assert.deepEqual((await page.locator('[data-follow-row-skip]').evaluateAll((ns) => ns.map((n) => n.getAttribute('data-follow-row-skip')))).sort(),
@@ -239,6 +243,9 @@ export async function run() {
       assert.equal(await page.locator('[data-follow-one]').count(), 0, 'nobody left to follow by row either');
       assert.equal(await page.locator('[data-unfollow-one]').count(), 101, 'and every one of them can be flipped back, one at a time');
       assert.match(await page.locator('h1').innerText(), /Nobody left to follow/);
+      const donePlan = await page.locator('[data-follow-all-plan]').innerText();
+      assert.doesNotMatch(donePlan, /0 follow records/, 'with nothing left the sentence does not promise to add nothing');
+      assert.match(donePlan, /101/, 'it says how many on the list she follows');
       assert.equal(await page.locator('[data-follow-all-commit]').count(), 0, 'the button is gone — the work is done');
       assert.equal(await page.locator('[data-follow-all-progress]').getAttribute('aria-live'), 'polite');
 
