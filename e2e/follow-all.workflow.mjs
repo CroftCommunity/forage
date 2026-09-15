@@ -14,15 +14,15 @@ import { FAKE_SIGNED_IN, RESPONSES } from './tagsub.workflow.mjs';
 
 const AxeBuilder = axePkg.default ?? axePkg;
 
-const PACK = 'at://did:plc:curator/app.bsky.graph.starterpack/3sp';
-const LIST = 'at://did:plc:curator/app.bsky.graph.list/3list';
+export const PACK = 'at://did:plc:curator/app.bsky.graph.starterpack/3sp';
+export const LIST = 'at://did:plc:curator/app.bsky.graph.list/3list';
 const ME = 'did:plc:me';
 
 // 105 members, built to stress the plan: me, two I already follow, one I block,
 // one muted, one hidden under the guest floor AND a signed-in account with adult content off (porn), and 99 plain — some with long
 // names and no avatar. Two getList pages (100 + 5); 99 to follow → chunks of
 // 50 + 49; after Follow all, 101 followed → Unfollow all in 50 + 50 + 1.
-const MEMBERS = [
+export const MEMBERS = [
   { did: ME, handle: 'me.test', displayName: 'Me' },
   { did: 'did:plc:f1', handle: 'f1.test', displayName: 'Followed One' },
   { did: 'did:plc:f2', handle: 'f2.test', displayName: null },
@@ -38,9 +38,10 @@ const REPO_KEY = '__followrepo';
 const LOG_KEY = '__applyBodies';
 const FAIL_KEY = '__failChunk';
 const CALLS_KEY = '__applyCalls';
-const LIVE_FOLLOWS = (seed) => `(() => {
+// (seed, members) — mock-snaps passes its own 150-member stress population
+export const LIVE_FOLLOWS = (seed, members = MEMBERS) => `(() => {
   const REPO_KEY = ${JSON.stringify(REPO_KEY)}, LOG_KEY = ${JSON.stringify(LOG_KEY)}, FAIL_KEY = ${JSON.stringify(FAIL_KEY)}, CALLS_KEY = ${JSON.stringify(CALLS_KEY)};
-  const MEMBERS = ${JSON.stringify(MEMBERS)};
+  const MEMBERS = ${JSON.stringify(members)};
   if (localStorage.getItem(REPO_KEY) === null) localStorage.setItem(REPO_KEY, JSON.stringify(${JSON.stringify(seed)}));
   const read = (k, d) => JSON.parse(localStorage.getItem(k) || d);
   const write = (k, v) => localStorage.setItem(k, JSON.stringify(v));
@@ -95,7 +96,7 @@ const LIVE_FOLLOWS = (seed) => `(() => {
 const repoOf = (page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k) || '[]'), REPO_KEY);
 const bodiesOf = (page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k) || '[]'), LOG_KEY);
 
-const pack = (extra = {}) => ({ starterPack: { uri: PACK, cid: 'bafysp',
+export const pack = (extra = {}) => ({ starterPack: { uri: PACK, cid: 'bafysp',
   record: { name: 'Gardeners of the test network', description: 'A jumpstart of test accounts.', feeds: [] },
   creator: { did: 'did:plc:curator', handle: 'curator.test', displayName: 'The Curator' },
   joinedAllTimeCount: 12, joinedWeekCount: 1, list: { uri: LIST, listItemCount: MEMBERS.length }, labels: [], feeds: [],
@@ -104,7 +105,7 @@ const pack = (extra = {}) => ({ starterPack: { uri: PACK, cid: 'bafysp',
 
 // the signed-in account page draws the moderation mirror (tagsub-pds's note):
 // declare every read or the journey is not hermetic
-const R = { ...RESPONSES,
+export const R = { ...RESPONSES,
   getProfile: { did: ME, handle: 'me.test' },
   getMutes: { mutes: [] }, getBlocks: { blocks: [] }, getListMutes: { lists: [] }, getListBlocks: { lists: [] },
   resolveHandle: { did: 'did:plc:curator' },
@@ -113,7 +114,7 @@ const R = { ...RESPONSES,
 };
 
 const J = '/j/curator.test/3sp';
-const seeded = () => PRE_FOLLOWED.map((r) => ({ ...r, $type: 'app.bsky.graph.follow', collection: 'app.bsky.graph.follow', repo: ME, createdAt: '2026-01-01T00:00:00Z' }));
+export const seeded = () => PRE_FOLLOWED.map((r) => ({ ...r, $type: 'app.bsky.graph.follow', collection: 'app.bsky.graph.follow', repo: ME, createdAt: '2026-01-01T00:00:00Z' }));
 
 export async function run() {
   // ---- a guest: the button is the door, and the confirm page explains it ----
@@ -187,7 +188,9 @@ export async function run() {
 
       await page.click('[data-follow-all-commit]');
       await page.waitForSelector('[data-follow-all-result]');
-      assert.match(await page.locator('[data-follow-all-result]').innerText(), /Followed 99 people/);
+      // EXACT: the first mock capture showed "Followed 144 people.nullnull" — a
+      // regex match had let two stringified nulls through
+      assert.equal((await page.locator('[data-follow-all-result]').innerText()).trim(), 'Followed 99 people.');
       const bodies = await bodiesOf(page);
       assert.deepEqual(bodies.map((b) => b.writes.length), [50, 49], 'two applyWrites calls, the official client\'s chunk');
       assert.ok(bodies.every((b) => b.repo === ME), 'every call addresses MY repo');
@@ -213,7 +216,7 @@ export async function run() {
       await page.evaluate((k) => localStorage.removeItem(k), LOG_KEY);
       await page.click('[data-follow-all-commit]');
       await page.waitForSelector('[data-follow-all-result]');
-      assert.match(await page.locator('[data-follow-all-result]').innerText(), /Unfollowed 101 people/);
+      assert.equal((await page.locator('[data-follow-all-result]').innerText()).trim(), 'Unfollowed 101 people.');
       const ub = await bodiesOf(page);
       assert.deepEqual(ub.map((b) => b.writes.length), [50, 50, 1]);
       assert.ok(ub.flatMap((b) => b.writes).every((w) => w.$type === 'com.atproto.repo.applyWrites#delete' && w.collection === 'app.bsky.graph.follow' && typeof w.rkey === 'string'));
@@ -242,6 +245,7 @@ export async function run() {
       assert.match(res, /Followed 50 of 99/, 'the count so far');
       assert.match(res, /did not go through/);
       assert.match(res, /budget/i, 'a 429 is explained as the account\'s write budget');
+      assert.doesNotMatch(res, /null|undefined/, 'nothing stringified into the sentence');
       assert.equal((await repoOf(page)).length, 52, 'the first chunk landed whole');
       assert.equal(await page.locator('[data-follow-row][data-follow-state="following"]').count(), 50, 'the fifty that landed say so');
       assert.equal(await page.locator('[data-follow-all-retry]').count(), 1);

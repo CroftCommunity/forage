@@ -3007,7 +3007,7 @@ function jumpstartFollowPage(params, direction) {
       commit.remove();
       progress.textContent = '';
       result.setAttribute('data-follow-all-result', '1');
-      result.replaceChildren(text, retry ? ' ' : null, retry || null);
+      result.replaceChildren(...[text, retry ? ' ' : null, retry].filter(Boolean));
     };
     commit.addEventListener('click', async () => {
       commit.disabled = true;

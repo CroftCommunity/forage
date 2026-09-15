@@ -200,6 +200,8 @@ adding another means arguing for it there first:
 | `deleteRecord` → `app.bsky.feed.repost` | Un-repost | post-and-thread 4a |
 | `putRecord` → `fyi.forage.mix` | save a mix to your repo, or edit one already there — the ONE put the lens makes; the record's key is the mix's slug, so a second save is the same record | mixes-on-the-pds |
 | `deleteRecord` → `fyi.forage.mix` | remove a mix from your repo (it comes back to the device) | mixes-on-the-pds |
+| `applyWrites` `#create` → `app.bsky.graph.follow` | **Follow all** on a jumpstart — up to 50 follow records per call, each carrying `via` (the jumpstart), skipping you / already following / blocked / muted / posture-hidden, every skip counted on the page; the ONE bulk write, and the one `applyWrites` caller | jumpstart-follow-all |
+| `applyWrites` `#delete` → `app.bsky.graph.follow` | **Unfollow all** — the mirror; the list is the unit: every member you follow, whenever you followed them, from uris the live list's viewer state names | jumpstart-follow-all |
 
 The eighth and ninth are the first records **Forage defined for itself** that
 reach a repo. That step is argued for in `docs/LEXICON-REGISTER.md`, which every
@@ -208,7 +210,11 @@ what was checked in the ecosystem first (`test/lexicons.test.js` enforces all
 three). A `fyi.forage.*` type that duplicates an official lexicon is a fork of
 the network wearing a namespace.
 
-No `putRecord` anywhere: the lens creates and deletes, and never edits a
+`applyWrites` is a new KIND of write (2026-09-14): one call, fifty records, so it is pinned
+tighter — exactly one caller shared by both directions, `#create`/`#delete` only, every
+create's value built by the pure `js/follow-all.js`, a failed chunk stops the run (a 429 is
+the account's write budget; retrying spends it faster) and "Try the rest" re-reads the list
+rather than remembering anything. Besides the mix's put, no `putRecord` anywhere: the lens creates and deletes, and never edits a
 record — changing a post means deleting it and writing another, which is what
 the network itself does. **Every write addresses `session.did` and nothing
 else**, and the post delete additionally parses the at-uri and refuses one

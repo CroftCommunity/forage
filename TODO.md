@@ -18,15 +18,15 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
   from it: one look on the Samsung after landing, and the tablet range — both on the plan.
 
 
-- **"Follow all" on a jumpstart — its own plan** (owner, 2026-09-08, D-follow in
-  `plans/2026-09-08-plan-feed-index-and-jumpstarts.md`). **PLAN DRAFTED 2026-09-14:**
-  `plans/2026-09-14-plan-jumpstart-follow-all.md` — awaiting the owner on its D1–D7 and
-  O1–O3 (the live proof's jumpstart, Undo, the button's words). Shape decided: a signed-in forager
-  taps it on `/j/<handle>/<rkey>`, a confirm step lists who they are about to follow, then a
-  batch of `app.bsky.graph.follow` writes through the PDS proxy — session-gated like `/h/`; a
-  guest sees the button explained and cannot press it. It is the first place Forage would
-  change a follow graph on someone's behalf, which is why it is not in the read-only index
-  plan. Until it exists the jumpstart page links out for the follow.
+- [x] **"Follow all" on a jumpstart** — _shipped 2026-09-14_ as
+  `plans/2026-09-14-plan-jumpstart-follow-all.md` (Phases 0–5): `/j/<handle>/<rkey>/follow`
+  and `/unfollow`, the list read live, the plan of who to follow in `js/follow-all.js`, the
+  lens' one `applyWrites` caller (≤ 50 a call, `via` on every record, a failed chunk stops
+  with *Try the rest*), Unfollow all as the standing mirror (owner: the list is the unit).
+  Hermetic journey `e2e/follow-all.workflow.mjs`; live proof `e2e/follow-all-live.workflow.mjs`
+  green 2026-09-14 against the test account's own jumpstart; mock
+  `plans/mocks/jumpstart-follow.html`. Left open on the plan: O3 (the buttons' words) and D6
+  (per-row opt-out) as follow-ups if wanted.
 
 - **Your discovery index on the PDS** (D-own's named follow-up, plan
   `2026-09-08-plan-feed-index-and-jumpstarts.md` Phase 2b). Today a forager's own index is

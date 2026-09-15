@@ -18,7 +18,8 @@
 //        self-lens self-lens-count self-lens-alone
 //        thread-lens-ring deep-lens-prefs-ring
 //        mix-board mix-tune mix-board-current mix-tune-current
-//        feeds-index jumpstarts-lens jumpstart-lens rail-panels)
+//        feeds-index jumpstarts-lens jumpstart-lens rail-panels
+//        jumpstart-follow jumpstart-follow-done jumpstart-unfollow jumpstart-follow-guest)
 //   node scripts/mock-snaps.mjs --as current --serve ../../forage
 //       # the same script and fixtures, rendering ANOTHER checkout (main): the
 //       # Current frames come from the tree the owner is running, captured by
@@ -68,6 +69,7 @@ import { RESPONSES as DEEP, THREAD_PATH as DEEP_PATH, QUOTE_URI as DEEP_QUOTE, S
 import { RESPONSES as GIF, BOARD_PATH as GIF_BOARD, THREAD_PATH as GIF_THREAD } from '../e2e/harness/mock-gif.mjs';
 import { RESPONSES as SELF, THREAD_PATH as SELF_PATH, ALONE as SELF_ALONE, ALONE_PATH as SELF_ALONE_PATH } from '../e2e/harness/mock-selfthread.mjs';
 import { RESPONSES as MIX, FAKE_SIGNED_IN as MIX_SIGNED_IN, SCIENCE as MIX_SCIENCE } from '../e2e/harness/mock-mix.mjs';
+import { LIVE_FOLLOWS as FOLLOW_REPO, MEMBERS as FOLLOW_MEMBERS, R as FOLLOW_R, seeded as followSeed } from '../e2e/follow-all.workflow.mjs';
 import { mergeManifest } from './lib/snaps-manifest.mjs';
 import { SKINS } from '../js/skins.js';
 import { execFileSync } from 'node:child_process';
@@ -660,6 +662,9 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
       record: { $type: 'app.bsky.feed.post', text: 'still alive', createdAt: new Date().toISOString() },
       author: { did: 'did:plc:a', handle: 'alive.test', displayName: 'Alive' }, likeCount: 1, replyCount: 0, repostCount: 0 } }] },
     'getFeedGenerator?': { view: { uri: POP, displayName: 'Discover', creator: { handle: 'bsky.app' } }, isOnline: true, isValid: true },
+    // follow-all (plan 2026-09-14): a signed-in /j/ reads the member list live to
+    // decide whether to offer Unfollow all; an empty list keeps this frame the head card
+    'getList?': { list: { uri: 'at://did:plc:mockpack/app.bsky.graph.list/l1', listItemCount: 14930 }, items: [] },
     'getStarterPack?': { starterPack: { uri: PACK, cid: 'bafymock',
       record: { name: 'Everyone who ever gardened on this network, and their feeds too — a long name', description: 'A jumpstart built to stress the head card: five-digit members, a week count, a label, three feeds.', feeds: [] },
       creator: { did: 'did:plc:mockpack', handle: 'a-rather-long-curator-handle.bsky.social', displayName: 'A Curator With A Long Name' },
@@ -676,7 +681,9 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
   // error state by accident. A Current capture (main) has no jumpstart
   // routes: the not-found view (`.empty`) is the frame we want there.
   const WAIT = AS === 'current'
-    ? { 'feeds-index': '[data-discover-feed]', 'jumpstarts-lens': '#main .empty', 'jumpstart-lens': '#main .empty', 'rail-panels': '#side .card' }
+    // (main has carried the jumpstart routes since 2026-09-09, so a Current capture
+    // now waits for the page OR its absence — whichever the served tree has)
+    ? { 'feeds-index': '[data-discover-feed]', 'jumpstarts-lens': '#main .empty, [data-jumpstart]', 'jumpstart-lens': '#main .empty, [data-jumpstart-head]', 'rail-panels': '#side .card' }
     : { 'feeds-index': '[data-provenance="index"]', 'jumpstarts-lens': '[data-jumpstart]', 'jumpstart-lens': '[data-jumpstart-head]', 'rail-panels': '[data-rail-jumpstart]' };
   for (const route of FEED_INDEX_ROUTES) {
     if (!wanted(route)) continue;
@@ -703,6 +710,52 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
     // A Current capture serves main, which has no data/feed-index.json: the
     // 404 the store reports with words is the frame's whole point, and the
     // harness's close() would otherwise fail the run on that console error.
+    await fx.close().catch((e) => console.error(`  (${route} ${name}: ${String(e.message).split('\n')[0]})`));
+  }
+}
+
+// ---- follow-all (plan 2026-09-14): the confirm pages, signed in and as a
+// guest, and the result state after the button. The population is built to
+// STRESS the page: 150 members (the official client's cap — three getList
+// pages), long display names with emoji, a labelled member, a blocked one,
+// a muted one, two already followed, and me. The Current frame for the
+// confirm routes is their honest absence on main (`.empty`); for /j/ it is
+// the head card as it is, captured by the feed-index block above.
+for (const [name, vp] of Object.entries(VIEWPORTS)) {
+  const FOLLOW_ROUTES = ['jumpstart-follow', 'jumpstart-follow-done', 'jumpstart-unfollow', 'jumpstart-follow-guest'];
+  if (!FOLLOW_ROUTES.some(wanted)) continue;
+  const STRESS = [
+    ...FOLLOW_MEMBERS.slice(0, 6),
+    ...Array.from({ length: 144 }, (_, i) => ({ did: `did:plc:s${i}`, handle: i % 11 === 0 ? `a-very-long-handle-that-someone-actually-registered-${i}.bsky.social` : `member-${i}.bsky.social`,
+      displayName: i % 9 === 0 ? `A display name that runs long enough to wrap on a phone ${i} 🌱🍄` : (i % 4 ? `Member ${i}` : null) })),
+  ];
+  const J = '/j/curator.test/3sp';
+  const PATHS = { 'jumpstart-follow': `${J}/follow`, 'jumpstart-follow-done': `${J}/follow`, 'jumpstart-unfollow': `${J}/unfollow`, 'jumpstart-follow-guest': `${J}/follow` };
+  const WAIT = AS === 'current'
+    ? Object.fromEntries(FOLLOW_ROUTES.map((r) => [r, '#main .empty']))
+    : { 'jumpstart-follow': '[data-follow-all-commit]', 'jumpstart-follow-done': '[data-follow-all-result]', 'jumpstart-unfollow': '[data-follow-all-commit]', 'jumpstart-follow-guest': '[data-follow-all-door]' };
+  for (const route of FOLLOW_ROUTES) {
+    if (!wanted(route)) continue;
+    const guest = route === 'jumpstart-follow-guest';
+    const fx = await scenario('first-visit', { root: SERVE, mode: 'bluesky',
+      initScripts: [...SKIN_INIT, ...(guest ? [] : [FAKE_SIGNED_IN]), FOLLOW_REPO(followSeed(), STRESS)], responses: FOLLOW_R });
+    await fx.page.setViewportSize({ width: vp.width, height: vp.height });
+    await fx.page.goto(`${fx.origin}${PATHS[route]}`);
+    try {
+      if (route === 'jumpstart-follow-done' && AS !== 'current') {
+        await fx.page.waitForSelector('[data-follow-all-commit]', { timeout: 15000 });
+        await fx.page.click('[data-follow-all-commit]');
+      }
+      await fx.page.waitForSelector(WAIT[route], { timeout: 15000 });
+    } catch (e) {
+      const seen = await fx.page.evaluate(() => ({ url: location.pathname, main: (document.querySelector('#main')?.innerText || '').slice(0, 300).replace(/\n+/g, ' | '),
+        misses: (window.__shimMisses || []).slice(0, 5) })).catch(() => null);
+      console.error(`${route} ${name}: waited for ${WAIT[route]} — page held ${JSON.stringify(seen)}`);
+      throw e;
+    }
+    await fx.page.waitForTimeout(400);
+    await fx.page.evaluate(() => document.fonts?.ready);
+    await shoot(fx.page, route, 'lens:follow-all', name, vp);
     await fx.close().catch((e) => console.error(`  (${route} ${name}: ${String(e.message).split('\n')[0]})`));
   }
 }

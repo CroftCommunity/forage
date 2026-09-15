@@ -82,7 +82,9 @@ device-local first, PDS next).
   itself, between the guard and the commit.
 - Rate limiting from GitHub's shared runner IPs: measured 2026-09-14 — 3,260 requests, 0
   retries, 35 min. The guard remains the backstop.
-- "Follow all" on a jumpstart is not built; the jumpstart page links out. Its plan is
-  drafted for owner review (`plans/2026-09-14-plan-jumpstart-follow-all.md`).
+- "Follow all" on a jumpstart is built (2026-09-14, `plans/2026-09-14-plan-jumpstart-follow-all.md`):
+  `/j/<handle>/<rkey>/follow` and `/unfollow` read the list LIVE — the index still carries no
+  members — and write through the lens' one `applyWrites` caller. The link-out stays as the
+  network's own page, not the only place to follow.
 - Offline, both pages answer from the file: `/feeds` fell back to *Discovery failed* until a
   phone showed it (2026-09-14); it now shows the index alone and says Bluesky did not answer.

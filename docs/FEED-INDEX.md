@@ -95,6 +95,20 @@ exactly this: a laptop slept mid-walk, the pack corpus came back at 291, nothing
 written. `.github/workflows/feed-index.yml` runs it weekly and commits the result to
 `main` only on exit 0.
 
+## Following everyone in a jumpstart
+
+The index names jumpstarts; it carries none of their members (bands only, nothing that
+churns weekly). So **Follow everyone in it** on `/j/<handle>/<rkey>` leads to a confirm page,
+`/follow`, that reads the list live from the network and says exactly what will happen: how
+many follow records Forage will add to your account, in batches of 50, and who is skipped
+and why — you, anyone you already follow, block or mute, and anyone your moderation
+settings hide. Every follow it writes names the jumpstart it came through (`via`). A batch
+that does not go through stops the run; the page says how many landed and *Try the rest*
+re-reads the list, so nobody is followed twice. **Unfollow everyone in it** is the mirror
+(`/unfollow`): every member of the list you follow, whenever you followed them. A guest reads
+both pages and the button is the sign-in door. Plan:
+`plans/2026-09-14-plan-jumpstart-follow-all.md`; the writes are counted in `AGENTS.md`.
+
 ## Bring your own
 
 The index is an editorial act — whoever writes `feed-providers.json` decides what a

@@ -8,6 +8,17 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-14 **Follow everyone in a jumpstart — from Forage.** A jumpstart's page used to
+  send you to bsky.app to follow its people; now *Follow everyone in it* leads to a confirm
+  page that reads the list live and says what will happen first: how many follow records
+  Forage will add to your account, in batches of 50, and who is skipped and why (you, anyone
+  you already follow, block or mute, anyone your settings hide). Every follow it writes says
+  which jumpstart it came through. If a batch does not go through, the page says how many
+  landed and *Try the rest* re-reads the list, so nobody is followed twice. *Unfollow everyone
+  in it* is the mirror — every member of the list you follow, whenever you followed them.
+  Signed out, both pages are readable and the button is the sign-in door. The first time
+  Forage changes a follow graph on someone's behalf; the writes are counted in `AGENTS.md`.
+  (plan 2026-09-14-plan-jumpstart-follow-all; mock `plans/mocks/jumpstart-follow.html`)
 - 2026-09-14 **On a phone, posts run edge to edge.** The feed's posts no longer sit in a
   framed tile with a gutter either side: the column meets the screen edge, each post is
   its own full-width row with a thin rule in the skin's colour between posts, a picture runs
