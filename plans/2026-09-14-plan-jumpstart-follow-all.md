@@ -291,9 +291,10 @@ looking at — not "the lens can now bulk-delete".
   `scripts/test-jumpstart.mjs`, `test/test-jumpstart.test.js`; idempotent by name), registered
   in `CroftC/.claude/TESTBED.md`.
 - ~~**O2 — D4 (Undo).**~~ **DECIDED 2026-09-14:** Unfollow all as a standing action (D4 b).
-- **O3 — the button's words.** *Follow everyone in it* on `/j/`, *Follow 131 people* on the
-  confirm page. The gloss stays *jumpstart (what the network calls a starter pack)* once per
-  page.
+- **O3 — the button's words** (copy; does not block Phase 0 — change them on the mock).
+  *Follow everyone in it* and *Unfollow everyone in it* on `/j/`; *Follow 131 people* and
+  *Unfollow 96 people* on the confirm pages. The gloss stays *jumpstart (what the network
+  calls a starter pack)* once per page.
 
 ## Review Log
 
