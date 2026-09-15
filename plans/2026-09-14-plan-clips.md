@@ -433,3 +433,8 @@ than here.
 
 - 2026-09-14 — drafted from the owner's question, the Skylight research (§ Prior art),
   and the probes in § Verified assumptions. Awaiting D1–D6 and Phase 0.
+- 2026-09-14 — the owner asked to see it: `plans/mocks/clips.html` v1. Current is a capture
+  of the engine (`board-lens-media`, phone and desktop, `forage@be82a95` = main's UI tree);
+  every Proposed frame is a labelled SKETCH, because nothing is built — Phase 4 replaces
+  them with captures. The sketch reads D1–D4 and D6 one way each so there is something to
+  disagree with; the plan's decisions stay open.
