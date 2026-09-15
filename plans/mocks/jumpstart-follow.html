@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Forage Jumpstart Follow All</title>
-<meta name="mock-version" content="1">
+<meta name="mock-version" content="2">
 <meta name="mock-baseline" content="forage@003f7b7">
-<meta name="mock-proposal" content="forage@c036b9f">
+<meta name="mock-proposal" content="forage@ef63001">
 <style>
 :root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
   --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
@@ -52,10 +52,10 @@ code{font-size:.92em}
 <div class="wrap">
 
 <header style="display:flex;flex-direction:column;gap:10px">
-  <span class="eyebrow">Mock · v1 · 2026-09-14 · plan 2026-09-14-plan-jumpstart-follow-all</span>
+  <span class="eyebrow">Mock · v2 · 2026-09-14 · plan 2026-09-14-plan-jumpstart-follow-all</span>
   <h1>Follow all on a jumpstart — the confirm page, its result, its mirror, and the door</h1>
   <p class="sub">Five surfaces, twenty frames. <b>Current</b> is <code>main</code> at <code>003f7b7</code>;
-  <b>Proposed</b> is <code>claude/jumpstart-follow-all</code> at <code>c036b9f</code>. Both captured by
+  <b>Proposed</b> is <code>claude/jumpstart-follow-all</code> at <code>ef63001</code> (v2 — the Proposed frames re-captured after D6 was decided on v1: every member is a row with its own button). Both captured by
   <code>scripts/mock-snaps.mjs</code> against the same fixtures, in the default skin, at 390×844 and 1280×900
   (MOCKS.md). The population is built to stress the page: a 150-member list (the official client's cap — three
   <code>getList</code> pages), display names long enough to wrap with emoji, handles long enough to break,
@@ -68,8 +68,7 @@ code{font-size:.92em}
   <h3>Open decisions</h3>
   <ol>
     <li><b>O3 — the buttons' words.</b> <i>Follow everyone in it</i> / <i>Unfollow everyone in it</i> on the jumpstart page; <i>Follow 144 people</i> / <i>Unfollow 2 people</i> on the confirm pages, the number in the button. The gloss (<i>jumpstart — what the network calls a starter pack</i>) is said once, under the heading.</li>
-    <li><b>The skipped are counted, not listed.</b> The sentence says <i>Already following 2. Skipped 4 (you, 1 blocked, 1 muted, 1 hidden by your settings)</i>; the rows are the people about to be followed. Should the skipped be rows too, greyed, with their reason?</li>
-    <li><b>D6 — per-row opt-out.</b> All-or-nothing, as the owner's shape says. A checkbox per row, default on, is the natural follow-up; the pure core takes the follow list as an input, so it costs the page, not the model.</li>
+    <li><b>Decided on v1 — D6, flip all or flip any</b> (owner, 2026-09-14: <i>“each member entry should also have their own unique follow/unfollow button to allow users the basic flip all or flip any choice”</i>). Every member is a row on both pages: a Follow button, or <i>Following</i> with an Unfollow button, or the skip reason and no button. This also answers v1's question about the skipped — they are rows, greyed, with the reason.</li>
     <li><b>The guest's count.</b> Signed out there is no "me" and no viewer state, so the guest page counts everyone the floor does not hide (149 of 150) and says sign-in skips anyone already followed, blocked or muted. Honest, but is the number useful to a guest, or should the guest page say <i>Follow everyone in it</i> without one?</li>
   </ol>
 </section>
@@ -87,7 +86,7 @@ code{font-size:.92em}
 
 <section>
   <h2>2 · The confirm page — <code>/j/…/follow</code>, signed in</h2>
-  <p class="sub">Current: the route does not exist on main (the frame is its honest absence). Proposed: the heading with the number, the gloss once, the plan as a sentence — 144 records in batches of 50, already following 2, skipped 4 with each reason — the primary button with the number in it, and the 144 rows at the 44px floor, long names wrapping.</p>
+  <p class="sub">Current: the route does not exist on main (the frame is its honest absence). Proposed: the heading with the number, the gloss once, the plan as a sentence — 144 records in batches of 50, already following 2, skipped 4 with each reason — the primary button with the number in it, and every one of the 150 members as a row at the 44px floor: the 144 to follow first, each with its own <i>Follow</i>; then the 2 followed, each with an <i>Unfollow</i>; then the 4 skipped, each saying why. Long names wrap.</p>
   <div class="pair">
     <div class="device"><span class="device-label">Current · phone</span><img class="shot phone" src="snaps/jumpstart-follow/jumpstart-follow.phone.current.png" alt="/j/…/follow on main, phone: no such surface"></div>
     <div class="device"><span class="device-label">Proposed · phone</span><img class="shot phone" src="snaps/jumpstart-follow/jumpstart-follow.phone.proposed.png" alt="the confirm page on the branch, phone: Follow 144 people, the plan sentence, the rows"></div>
@@ -98,7 +97,7 @@ code{font-size:.92em}
 
 <section>
   <h2>3 · After the button — the result</h2>
-  <p class="sub">The same page after <i>Follow 144 people</i> was pressed: three <code>applyWrites</code> calls (50 + 50 + 44) answered by the live repo in the page. The button is gone, the sentence says <i>Followed 144 people.</i>, every row says <i>Following</i> without a refetch. (The failed-chunk state — <i>Followed 50 of 144; the rest did not go through — HTTP 429 …</i> with <i>Try the rest</i> — is held by the journey, not framed here.)</p>
+  <p class="sub">The same page after <i>Follow 144 people</i> was pressed: three <code>applyWrites</code> calls (50 + 50 + 44) answered by the live repo in the page. The heading now says <i>Nobody left to follow</i>, the big button is gone, the sentence says <i>Followed 144 people.</i>, and every followed row carries its own <i>Unfollow</i> — flip any of them back — without a refetch; the sentence says how many she now follows on the list. (The failed-chunk state — <i>Followed 50 of 144; the rest did not go through — HTTP 429 …</i> with <i>Try the rest</i> — is held by the journey, not framed here.)</p>
   <div class="pair">
     <div class="device"><span class="device-label">Current · phone</span><img class="shot phone" src="snaps/jumpstart-follow/jumpstart-follow-done.phone.current.png" alt="no such surface on main"></div>
     <div class="device"><span class="device-label">Proposed · phone</span><img class="shot phone" src="snaps/jumpstart-follow/jumpstart-follow-done.phone.proposed.png" alt="the result on the branch, phone: Followed 144 people, every row Following"></div>
@@ -109,7 +108,7 @@ code{font-size:.92em}
 
 <section>
   <h2>4 · The mirror — <code>/j/…/unfollow</code></h2>
-  <p class="sub">The list is the unit (owner, 2026-09-14): every member she follows is listed, whenever the follow was made — here the two she followed long before the jumpstart — and the sentence says so, with the count of members on the list she does not follow. Same shape, same button, same result and failed-chunk states.</p>
+  <p class="sub">The list is the unit (owner, 2026-09-14): the two she follows — long before the jumpstart — come first, each with its own <i>Unfollow</i>; then the 144 she could follow, each with a <i>Follow</i>; then the skipped with their reason. The sentence counts the members on the list she does not follow. Same shape, same big button, same result and failed-chunk states.</p>
   <div class="pair">
     <div class="device"><span class="device-label">Current · phone</span><img class="shot phone" src="snaps/jumpstart-follow/jumpstart-unfollow.phone.current.png" alt="/j/…/unfollow on main, phone: no such surface"></div>
     <div class="device"><span class="device-label">Proposed · phone</span><img class="shot phone" src="snaps/jumpstart-follow/jumpstart-unfollow.phone.proposed.png" alt="Unfollow 2 people on the branch, phone"></div>
@@ -120,7 +119,7 @@ code{font-size:.92em}
 
 <section>
   <h2>5 · Signed out — the door</h2>
-  <p class="sub">A guest reads the same page: the list, and a sentence that says sign-in is the step and what Forage will do after it. The button is the sign-in sheet. Nothing is written.</p>
+  <p class="sub">A guest reads the same page: every member as a row with no buttons, and a sentence that says sign-in is the step and what Forage will do after it — everyone in it, or anyone in it. The button is the sign-in sheet. Nothing is written.</p>
   <div class="pair">
     <div class="device"><span class="device-label">Current · phone</span><img class="shot phone" src="snaps/jumpstart-follow/jumpstart-follow-guest.phone.current.png" alt="no such surface on main"></div>
     <div class="device"><span class="device-label">Proposed · phone</span><img class="shot phone" src="snaps/jumpstart-follow/jumpstart-follow-guest.phone.proposed.png" alt="the confirm page signed out, phone: Sign in to follow"></div>
@@ -133,7 +132,8 @@ code{font-size:.92em}
   <h3>What the frames hold, and what they cannot</h3>
   <ul>
     <li>The first Proposed capture of frame 3 read <i>Followed 144 people.nullnull</i> — two nulls stringified into the sentence by the result line's children. The journey's regex had matched anyway; it now pins the exact sentence, and the frame was re-captured after the fix. The frame is the check the claims had not written yet.</li>
-    <li>The rows are the people about to be followed; the skipped are counted in the sentence with their reasons and are not rows (open decision 2).</li>
+    <li>v2: every member is a row (D6, decided on v1). The direction's targets come first; the skipped are greyed rows saying why. The per-row write is the same lens call as the bulk one, with one op, so a follow made one row at a time still carries <code>via</code>.</li>
+    <li>The first v2 capture caught a second stringified <i>null</i> — at the head of every avatar-less row — and a done-state sentence promising to add 0 records. Both fixed, both now pinned by the journey, the frames re-captured.</li>
     <li>The Current frames for the three confirm routes are their absence on main. For the jumpstart page, Current is the head card as it shipped on 2026-09-09.</li>
     <li>Not framed: the failed-chunk state and <i>Try the rest</i>, the hidden-jumpstart and no-list empty states — all held by <code>e2e/follow-all.workflow.mjs</code>. The live proof (<code>e2e/follow-all-live.workflow.mjs</code>, <code>LIVE=1</code>) ran green 2026-09-14 against the test account's own jumpstart: two records with <code>via</code> read back from the PDS, then Unfollow all, then an empty read-back.</li>
   </ul>
