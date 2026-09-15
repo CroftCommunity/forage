@@ -1,11 +1,13 @@
 # Plan: Follow all on a jumpstart — the first follow graph Forage changes for someone
 
 date: 2026-09-14
-**Status:** DECIDED 2026-09-14 (owner, in conversation: D4 → Unfollow all as a standing
-action, the list as the unit; O1 → the live-proof jumpstart exists, made by script). Phase 0
-not started; the jumpstart recipe (`scripts/test-jumpstart.mjs` + its runner) is the one
-thing built. Deferred from `plans/2026-09-08-plan-feed-index-and-jumpstarts.md` (D-follow: *"its
-own plan, later"*) and shaped by the owner in `TODO.md` § Needs the owner (2026-09-08).
+**Status:** BUILT 2026-09-14 (Phases 0–5; RED-first throughout, the journey written before
+a route existed). Hermetic journey green (`e2e/follow-all.workflow.mjs`), the live proof green
+against the test account's own jumpstart (`e2e/follow-all-live.workflow.mjs`, `LIVE=1`),
+mock `plans/mocks/jumpstart-follow.html` captured both sides (v2 after D6). Open on this plan:
+O3 (copy) and the mock's open decision on the guest page's count.
+Decided 2026-09-14 (owner, in conversation: D4 → Unfollow all as a standing action, the list
+as the unit; O1 → the live-proof jumpstart, made by script).
 repo: `CroftCommunity/forage`
 baseline: `main` @ `2a8a2bf` (the feed index landed, #66/#68; the first harvest committed)
 branch: `claude/jumpstart-follow-all`
@@ -150,19 +152,19 @@ redundant.
 | **D3** | Who is skipped | (a) the official client's four: me, already following, blocking/blocked-by, muted; (b) those plus anyone my moderation settings hide; (c) nobody but me — follow the list as written | **(b).** (a) is the network's own behaviour and the reader expects it; posture on top because Forage never renders a hidden account and should not follow one either. Every skip is COUNTED on the page with its reason, never silent |
 | **D4** | The way back | (a) a session-only *Undo* on the result; (b) **Unfollow all** as a standing action, mirror of Follow all, its own confirm page — the list as the unit; (c) (b) but only follows made through this jumpstart (read `via` off every follow record) | **DECIDED (b), owner 2026-09-14.** Follow and unfollow are the same kind of thing on the page. (c) lost: it needs the whole follow list fetched and inspected per record, only sees follows written with `via`, and *"is full of edge cases and not valuable enough"*. The invariants pin the deletes to uris read from the list's `viewer.following` — never a parsed or remembered uri |
 | **D5** | The confirm step | (a) a page, `/j/<handle>/<rkey>/follow`; (b) the `<dialog>` sheet; (c) inline on `/j/` behind a reveal | **(a).** The navigation law: pages, not modals, and the sheet exception is for choose-one steps. A 150-row list with a commit button is a page. (c) puts 150 rows under the jumpstart head and makes the URL lie about what is on screen |
-| **D6** | Per-row opt-out | (a) all-or-nothing, as the owner's shape says ("Follow all"); (b) a checkbox per row, default on | **(a) for this plan.** A reader who wants some of them has the profile pages; (b) is a natural follow-up if the owner wants it, and the pure core is written so the follow list is an input, not a constant |
+| **D6** | Per-row opt-out | (a) all-or-nothing, as the owner's shape says ("Follow all"); (b) a checkbox per row, default on; (c) every member a row with its OWN Follow / Unfollow button beside the big one | **DECIDED (c), owner 2026-09-14, on the mock:** *"each member entry should also have their own unique follow/unfollow button to allow users the basic flip all or flip any choice."* Both pages list every member: a Follow button, or *Following* with an Unfollow button, or the skip reason and no button; the per-row write is the same lens call with one op, so a single follow made here still carries `via`. The heading, the sentence and the big button count from the rows' current state |
 | **D7** | A failed chunk | (a) stop, report the count, offer *Try the rest* which re-reads the list; (b) retry with backoff; (c) continue with the next chunk | **(a).** A 429 means the account's write budget is spent; retrying spends it faster. Re-reading makes the retry idempotent without Forage remembering anything |
 
 ## Phases
 
-### Phase 0 — the pure core · `js/follow-all.js` · `test/follow-all.test.js`
+### Phase 0 — the pure core · `js/follow-all.js` · `test/follow-all.test.js` — DONE 2026-09-14
 RED first: `planFollows` with a list that holds me, someone I follow, someone I block, someone
 who blocks me, someone muted, someone posture-hides, and four plain members → four to follow,
 six skipped with the right reasons and counts; `chunk` at 50 (0, 1, 50, 51, 150 members);
 `followRecord` produces `{ $type, subject, createdAt, via }` and nothing else. Guest input
 (no `viewer` blocks) plans every non-me member.
 
-### Phase 1 — the lens · `lens.js` · `test/lens-writes.test.js`, `test/invariants.test.js`
+### Phase 1 — the lens · `lens.js` · `test/lens-writes.test.js`, `test/invariants.test.js` — DONE 2026-09-14
 The invariants change FIRST and fail: one `applyWrites` caller, bound to the follow constant,
 `#create` and `#delete` ops only, `repo: session.did`. Then `listMembers` (paginated, shaped
 with the viewer state: `did`, `handle`, `followingUri`, `blocked`, `muted`, labels),
@@ -171,7 +173,7 @@ failed chunk and throws with the count so far in the message), `unfollowAll(uris
 chunks of `#delete`, uris only ever from `listMembers`' `followingUri`). A 429 reads as
 words; a guest call is refused before any request.
 
-### Phase 2 — the pages · `lens-views.js`, `main.js`
+### Phase 2 — the pages · `lens-views.js`, `main.js` — DONE 2026-09-14
 Two buttons on `/j/` — *Follow everyone in it* and *Unfollow everyone in it* (the second only
 when the live list says she follows at least one; signed in: links to the two confirm pages;
 guest: the door). The unfollow page mirrors the follow page: the plan's counts (N she
@@ -183,7 +185,7 @@ the failed-chunk state with *Try the rest*, the hidden-jumpstart and no-list emp
 states. The link-out sentence on `/j/` changes to say the link is the network's page, not the
 only place to follow.
 
-### Phase 3 — journeys and the mock · `e2e/follow-all.workflow.mjs`, `scripts/mock-snaps.mjs`
+### Phase 3 — journeys and the mock · `e2e/follow-all.workflow.mjs`, `scripts/mock-snaps.mjs` — DONE 2026-09-14
 Hermetic, on the tagsub-pds pattern (an in-page fetch patch with a live repo in
 `localStorage`): the guest door; the plan of who to follow against a two-page list; the
 `applyWrites` bodies (two chunks for 51); the result and the rows flipping to *Following*;
@@ -192,12 +194,12 @@ Unfollow all's confirm page and delete bodies; a second chunk that fails and the
 invocation, 390 × 844 and 1280 × 900, against a 150-member population built to stress the
 page (long names, a labelled member, a blocked one).
 
-### Phase 4 — the live proof · `e2e/follow-all-live.workflow.mjs` (`LIVE=1`)
+### Phase 4 — the live proof · `e2e/follow-all-live.workflow.mjs` (`LIVE=1`) — DONE 2026-09-14
 Against the standing test account and a jumpstart made of our own test accounts (O1): follow
 all, read the follows back through `listRecords` and check each carries `via`, Unfollow all, read back
 empty as the last assertion. Claim `testbed--forage-test-account` first.
 
-### Phase 5 — the documents
+### Phase 5 — the documents — DONE 2026-09-14
 `AGENTS.md` write table; ADR-005's "not built" line; `docs/FEED-INDEX.md`; `CHANGELOG.md`
 entry under 2026-09; `TODO.md` item closed with the date; this plan's Status.
 
@@ -207,7 +209,6 @@ entry under 2026-09; `TODO.md` item closed with the date; this plan's Status.
   network's.
 - **Following the curator, or the feeds.** The feeds have their own Join on `/f/`; the
   curator is one profile page away. The official client follows neither on Follow all.
-- **Per-row opt-out** (D6b) — a follow-up if wanted.
 - **A session-only Undo** — redundant beside a standing Unfollow all (D4).
 - **Rate-limit budgeting across jumpstarts.** The PDS keeps the count; Forage reports the
   refusal with words rather than modelling the budget.
@@ -291,12 +292,93 @@ looking at — not "the lens can now bulk-delete".
   `scripts/test-jumpstart.mjs`, `test/test-jumpstart.test.js`; idempotent by name), registered
   in `CroftC/.claude/TESTBED.md`.
 - ~~**O2 — D4 (Undo).**~~ **DECIDED 2026-09-14:** Unfollow all as a standing action (D4 b).
-- **O3 — the button's words** (copy; does not block Phase 0 — change them on the mock).
+- **O3 — the button's words** (copy; built as below, change them on the mock —
+  `plans/mocks/jumpstart-follow.html`, open decision 1).
   *Follow everyone in it* and *Unfollow everyone in it* on `/j/`; *Follow 131 people* and
   *Unfollow 96 people* on the confirm pages. The gloss stays *jumpstart (what the network
   calls a starter pack)* once per page.
 
 ## Review Log
+
+### Pass 4 — D6 on the mock (2026-09-14)
+
+The owner read the v1 mock: *"the mock is good but I think each member entry should also
+have their own unique follow/unfollow button to allow users the basic flip all or flip any
+choice."* D6 flips from all-or-nothing to (c): both confirm pages list EVERY member — the
+direction's targets first — and each row carries a Follow button, or *Following* with an
+Unfollow button, or its skip reason (you / blocked / muted / hidden by your settings) and no
+button. The per-row write is `followAll([did], { via })` / `unfollowAll([uri])` — the same
+one `applyWrites` caller with a single op — so a follow made one row at a time still says
+which jumpstart it came through, and `test/invariants.test.js` did not move. The heading,
+the plan sentence and the big button repaint from the rows' current state after every
+flip; when nothing is left the heading says *Nobody left to follow* and the big button
+goes. Journey first (RED on the row count), then the page; the journey now flips one row
+each way on each page and checks the bodies (one create with `via`; one delete of the
+exact rkey) and the counts stepping. The mock's v1 open decision 2 (skipped as rows?) is
+answered by this: yes, greyed, with the reason. The v2 frames are re-captured from the
+branch — and the first v2 capture caught the SAME defect class as v1's: every avatar-less
+row began with the word *null* (`replaceChildren` stringifying a null child), and the
+done state's sentence read *Forage will add 0 follow records … Already following 146*.
+The journey now asserts no row text reads `null` or `undefined` and that the done sentence
+names how many she follows rather than promising to add nothing; every child list on the
+page is filtered; and a followed row with an Unfollow button no longer also says
+*Following* — the button is the state. Two frames, two catches, one lesson written into
+the code: the frame is the check the claims had not written yet.
+
+### Pass 3 — the build (2026-09-14)
+
+Built in one worktree, RED-first at every step, in the plan's order except that the
+hermetic journey (Phase 3) was written BEFORE the pages (Phase 2) — the views have no unit
+tier, so the journey is the pages' failing test. Gate `npm test && npm run conformance`
+green throughout (985 → 985 tests as the last count; conformance 86/86); the full workflow
+corpus 48 found (one live-only, skipped), 0 failed on the final tree. Where the build departs from the text above, on purpose:
+
+- **Posture is applied in the lens, not the pure core.** § B said `planFollows(members,
+  { myDid, posture })`; built, `listMembers` marks each member `hidden` through the same
+  `labelDisposition` the feeds use, and `planFollows(members, { myDid })` reads the flag. The
+  pure module never sees a posture object, and the lens stays the one authority on what
+  Forage shows (D3's argument, in the place that already holds it).
+- **`followRecord({ did, via, now })`** takes an options object (CLAUDE.md), not positionals,
+  and refuses a `via` that is not a full strongRef — a record with a bare uri would reach a
+  PDS that accepts it (LEXICONS.md: a lexicon binds you and nobody else).
+- **`planUnfollows`** joined Phase 0: D4's mirror is pure too, and the `/j/` page uses it to
+  decide whether to offer Unfollow all (one live `getList` read after the head paints; a
+  failed read says so under the button rather than hiding it).
+- **The invariants count callers, not mentions.** `post('com.atproto.repo.applyWrites'`
+  exactly once; the two op shapes once each; `#update` never; `collection:
+  FOLLOW_COLLECTION` 2 → 4; the `followRecord`/`chunk` import and `value: followRecord(`
+  pinned by regex. The first draft counted the string and tripped on its own op `$type`s.
+- **The lens gained `onProgress` and `err.reason`/`done`/`total`** so the page can say
+  *Following… 50 of 131* and *Followed 50 of 131; the rest did not go through — HTTP 429 —
+  the account's write budget for this hour is spent*, tests first.
+- **The signed-in posture does not hide `gore`.** The journey's labelled member was first
+  labelled `gore`, hidden under the guest floor and NOT under a signed-in account's default
+  posture (adult labels only) — the plan counted 99, the page said 100, and the page was
+  right. The fixture now carries `porn`, hidden under both, and the plan sentence's counts are
+  asserted against it.
+- **The frame caught what the regex let through.** The first Proposed capture of the result
+  read *Followed 144 people.nullnull* (two nulls stringified by `replaceChildren`); the
+  journey's `/Followed 99 people/` had matched. It now pins the exact sentence, the failed
+  state is asserted free of `null|undefined`, and frame 3 was re-captured after the fix.
+- **`sw.js`** precaches `js/follow-all.js` (CACHE v83); `test/hero.test.js` caught the
+  omission.
+- **Mutation testing on the pure core** (stryker 10, `mutate: ["js/follow-all.js"]`, command
+  runner `node --test test/follow-all.test.js test/lens-writes.test.js` — the repo's
+  `stryker.config.json` runs `npm test`, whose dry run fails inside stryker's sandbox copy
+  today, unrelated to this plan): 102 mutants, first pass 99 killed / 3 survived. Two were
+  real gaps and are closed by a case each — `followRecord` with an `undefined` subject
+  (the mutant threw a TypeError instead of words) and a `via` with a cid but no uri. The
+  third is equivalent: `myDid !== null && m.did === myDid` → `m.did === myDid` cannot
+  differ, because a member's `did` is a required string on `profileView` (E2) and
+  `listMembers` copies it — `m.did === null` never holds. Second pass 101 killed / 1
+  survived, the equivalent one.
+- **The live proof** (Phase 4) ran under a `testbed--forage-test-account` claim: the
+  jumpstart resolved with its cid, the two members read back followed by nobody, `followAll`
+  wrote two records in ONE `applyWrites`, `listRecords` on the PDS showed each with `via =
+  { uri, cid }` of the jumpstart, the AppView reported both `followingUri`s on the list within
+  the poll, `unfollowAll` removed exactly those, and the last assertion read the repo back
+  with no follow of either member. Anyone the account followed before the run is put back
+  at the end (nobody, this run).
 
 ### Pass 2 — the decisions, in conversation (2026-09-14)
 

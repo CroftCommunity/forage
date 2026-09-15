@@ -38,6 +38,7 @@ import { density, densityDial } from '../board-density.js';
 import { sortBar, TIMEFRAMES, WALK_TIMEFRAMES, nearestTimeframe } from './sortbar.js';
 import { refreshControl } from './refresh-control.js';
 import * as boardCache from '../board-cache.js';
+import { planFollows, planUnfollows, CHUNK_SIZE } from '../follow-all.js';
 import { sortItems } from '../engines/rank.js';
 import { createIndexStore } from '../feed-index-store.js';
 import * as indexPrefs from '../index-prefs.js';
@@ -2854,6 +2855,29 @@ export function lensJumpstartView(params) {
         m.avatar ? el('img', { src: m.avatar, alt: '', class: 'feed-avatar', loading: 'lazy' }) : null,
         el('span', {}, m.displayName || `@${m.handle}`, el('span', { class: 'xs muted' }, ` @${m.handle}`)));
       const outHref = `https://bsky.app/starter-pack/${encodeURIComponent(j.creator)}/${encodeURIComponent(rkey)}`;
+      // Follow all / Unfollow all (plan 2026-09-14): two standing actions, each
+      // to its own confirm page. A guest's button is the door. Unfollow all is
+      // offered only when the LIVE list says she follows at least one member —
+      // the index carries no members, so this is one getList read, after the
+      // head has painted, and a failed read says so rather than hiding the button.
+      const followAll = session
+        ? el('a', { class: 'btn primary', href: jumpstartHref(handle, rkey, '/follow'), 'data-jumpstart-follow-all': '1' }, 'Follow everyone in it')
+        : el('button', { type: 'button', class: 'btn primary', 'data-jumpstart-follow-all': '1' }, 'Follow everyone in it');
+      if (!session) followAll.addEventListener('click', () => openAuthSheet());
+      const actions = el('div', { class: 'row wrap', style: 'gap:8px;margin-top:10px;align-items:center' }, followAll);
+      if (session && j.listUri) {
+        lens.listMembers(j.listUri).then((members) => {
+          const { counts } = planUnfollows(members);
+          actions.setAttribute('data-jumpstart-members-live', String(counts.unfollow));
+          if (counts.unfollow > 0) {
+            actions.append(el('a', { class: 'btn', href: jumpstartHref(handle, rkey, '/unfollow'), 'data-jumpstart-unfollow-all': '1' },
+              'Unfollow everyone in it'), el('span', { class: 'xs muted' }, `You follow ${plural(counts.unfollow, 'person', 'people')} on it.`));
+          }
+        }).catch((e) => {
+          actions.setAttribute('data-jumpstart-members-live', 'failed');
+          actions.append(el('span', { class: 'xs muted' }, `Could not read the member list — ${e.message}`));
+        });
+      }
       host.replaceChildren(
         el('div', { class: 'row', style: 'gap:8px;align-items:center;margin-bottom:4px' },
           el('a', { class: 'small', href: '/jumpstarts', 'data-back-to-jumpstarts': '1' }, '← Jumpstarts')),
@@ -2867,9 +2891,10 @@ export function lensJumpstartView(params) {
           j.description ? el('p', { class: 'small', style: 'margin:8px 0 0;white-space:pre-wrap' }, j.description) : null,
           j.warnLabels ? el('div', { class: 'xs muted', style: 'margin-top:6px' }, `Labelled: ${j.warnLabels.join(', ')}`) : null,
           el('div', { class: 'xs muted', style: 'margin-top:6px' }, inIndex ? 'In the index.' : 'Not in the index — opened from a link.'),
+          actions,
           el('div', { class: 'xs', style: 'margin-top:6px' },
             el('a', { href: outHref, target: '_blank', rel: 'noopener noreferrer', 'data-jumpstart-out': '1' }, 'Open on bsky.app ↗'),
-            el('span', { class: 'muted' }, ' — following everyone in it happens there; Forage does not change your follows.'))),
+            el('span', { class: 'muted' }, ' — the network\'s own page for it.'))),
         el('h2', {}, feedRows.length ? `Feeds it names (${feedRows.length})` : 'Feeds'),
         ...(feedRows.length ? feedRows.map(feedCard) : [el('div', { class: 'xs muted' }, 'This jumpstart names no feeds.')]),
         el('h2', {}, `People (${j.members})`),
@@ -2880,6 +2905,193 @@ export function lensJumpstartView(params) {
       `@${handle} / ${rkey} — ${e.message}`, el('a', { class: 'btn', href: '/jumpstarts' }, 'Browse jumpstarts'))));
   return { main: host, side };
 }
+
+// ---- Follow all / Unfollow all (plan 2026-09-14-plan-jumpstart-follow-all) ----
+// The confirm step, one view with a direction. The member list is read LIVE
+// (the index carries no members); the plan of who to follow — or unfollow —
+// is the pure core's; the write is the lens' one applyWrites caller, ≤ 50 a
+// call. A failed chunk stops the run and the page says how far it got, with
+// "Try the rest" re-reading the list so what landed is skipped (D7) — nothing
+// is remembered here. A guest reads the same page; the button is the door.
+function jumpstartHref(handle, rkey, tail = '') {
+  return `/j/${encodeURIComponent(handle)}/${encodeURIComponent(rkey)}${tail}`;
+}
+
+// D6 (owner, 2026-09-14: "flip all or flip any"): every member is a row, and a
+// row carries its own button — Follow, or Unfollow with *Following* beside it —
+// unless it is skipped for a reason, which the row says instead. The per-row
+// write is the SAME lens call as the bulk one, with one op: a single follow made
+// here still says which jumpstart it came through (D2), and the invariants stay
+// as they are. A guest sees the rows and no buttons.
+const SKIP_WORDS = { me: 'you', blocked: 'blocked', muted: 'muted', hidden: 'hidden by your settings' };
+
+function followRow(entry, { onFollow, onUnfollow }) {
+  const { m } = entry;
+  const row = el('div', { class: 'row', style: 'gap:8px;align-items:center;min-height:44px', 'data-follow-row': m.did });
+  const paint = () => {
+    // the Unfollow button says the state; the word is for a reader with no button
+    const right = entry.followingUri
+      ? [onUnfollow ? el('button', { type: 'button', class: 'btn sm', 'data-unfollow-one': m.did }, 'Unfollow')
+        : el('span', { class: 'xs muted' }, 'Following')]
+      : entry.skip
+        ? [el('span', { class: 'xs muted', 'data-follow-row-skip': entry.skip }, SKIP_WORDS[entry.skip])]
+        : [onFollow ? el('button', { type: 'button', class: 'btn sm', 'data-follow-one': m.did }, 'Follow') : null];
+    // replaceChildren stringifies a null (the first mock capture read "null" on
+    // every avatar-less row): every child list here is filtered
+    row.replaceChildren(...[
+      m.avatar ? el('img', { src: m.avatar, alt: '', class: 'feed-avatar', loading: 'lazy' }) : null,
+      el('a', { href: `/u/${encodeURIComponent(m.handle)}`, style: 'flex:1;min-width:0' },
+        m.displayName || `@${m.handle}`, el('span', { class: 'xs muted' }, ` @${m.handle}`)),
+      ...right].filter(Boolean));
+    if (entry.followingUri) row.setAttribute('data-follow-state', 'following'); else row.removeAttribute('data-follow-state');
+    const btn = row.querySelector('button');
+    if (btn) btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      try { await (entry.followingUri ? onUnfollow(entry) : onFollow(entry)); }
+      catch (e) { toast(e.reason || e.message, 'err'); btn.disabled = false; return; }
+      paint();
+    });
+  };
+  paint();
+  return { row, paint };
+}
+
+// The plan's counts, from the rows' CURRENT state — every per-row flip moves
+// them, so the heading, the sentence and the big button always agree.
+function followCounts(entries) {
+  const c = { follow: 0, following: 0, me: 0, blocked: 0, muted: 0, hidden: 0 };
+  for (const e of entries) {
+    if (e.followingUri) c.following += 1;
+    else if (e.skip) c[e.skip] += 1;
+    else c.follow += 1;
+  }
+  return c;
+}
+
+function followPlanSentence(direction, c, total) {
+  const n = direction === 'follow' ? c.follow : c.following;
+  if (!session) {
+    return direction === 'follow'
+      ? `Sign in to follow everyone in it, or anyone in it. Forage adds ${plural(n, 'follow record')} to your account, in batches of ${CHUNK_SIZE}, and skips anyone you already follow, block or mute.`
+      : `Sign in to see who on this list you follow. Forage removes those follow records from your account, in batches of ${CHUNK_SIZE}.`;
+  }
+  if (direction === 'follow') {
+    const skipped = c.me + c.blocked + c.muted + c.hidden;
+    const words = ['me', 'blocked', 'muted', 'hidden'].filter((k) => c[k]).map((k) => (k === 'me' ? 'you' : `${c[k]} ${SKIP_WORDS[k]}`));
+    const head = n
+      ? `Forage will add ${plural(n, 'follow record')} to your account, in batches of ${CHUNK_SIZE}.` + (c.following ? ` Already following ${c.following}.` : '')
+      : `You follow ${plural(c.following, 'person', 'people')} on this list — everyone Forage would add.`;
+    return head + (skipped ? ` Skipped ${skipped} (${words.join(', ')}).` : '');
+  }
+  if (!n) return `You follow nobody on this list.`;
+  return `Forage will remove ${plural(n, 'follow record')} from your account — everyone on this list you follow, whenever you followed them — in batches of ${CHUNK_SIZE}.`
+    + (total - n ? ` ${total - n} on the list you do not follow.` : '');
+}
+
+function jumpstartFollowPage(params, direction) {
+  const handle = decodeURIComponent(params.handle);
+  const rkey = decodeURIComponent(params.rkey);
+  const host = el('div', { 'data-follow-all-page': direction }, skeleton(5));
+  const side = el('div', { class: 'side' }, ...lensRail());
+  const back = () => el('div', { class: 'row', style: 'gap:8px;align-items:center;margin-bottom:4px' },
+    el('a', { class: 'small', href: jumpstartHref(handle, rkey), 'data-back-to-jumpstart': '1' }, '← Back to the jumpstart'));
+  const verb = direction === 'follow' ? 'Follow' : 'Unfollow';
+  const past = direction === 'follow' ? 'Followed' : 'Unfollowed';
+
+  const render = async () => {
+    const j = await lens.resolveJumpstart({ handle, rkey });
+    if (j.hidden) {
+      host.replaceChildren(back(), emptyState('This jumpstart is hidden',
+        'Your moderation settings hide it, so Forage will not follow or unfollow anyone in it.',
+        el('a', { class: 'btn', href: '/jumpstarts' }, 'Browse jumpstarts')));
+      return;
+    }
+    if (!j.listUri) {
+      host.replaceChildren(back(), emptyState('This jumpstart names no list', 'There is nobody here to follow or unfollow.',
+        el('a', { class: 'btn', href: jumpstartHref(handle, rkey) }, 'Back to the jumpstart')));
+      return;
+    }
+    const members = await lens.listMembers(j.listUri);
+    const via = { uri: j.uri, cid: j.cid };
+    // one entry per member: the reason it is skipped (never 'following' — that
+    // is the followingUri's job, and it moves), and the uri when followed
+    const reasons = new Map(planFollows(members, { myDid: session?.did || null }).skipped
+      .filter((s) => s.reason !== 'following').map((s) => [s.member.did, s.reason]));
+    const entries = members.map((m) => ({ m, followingUri: m.followingUri, skip: reasons.get(m.did) || null }));
+    // the direction's targets first, then the rest — a page is read top down
+    const isTarget = (e) => (direction === 'follow' ? !e.followingUri && !e.skip : !!e.followingUri);
+    entries.sort((a, b) => Number(isTarget(b)) - Number(isTarget(a)));
+
+    const title = el('h1', { style: 'margin:0' });
+    const planLine = el('p', { class: 'small', 'data-follow-all-plan': '1' });
+    const progress = el('div', { class: 'small', 'data-follow-all-progress': '1', 'aria-live': 'polite', role: 'status' });
+    const result = el('div', { class: 'small', style: 'margin-top:8px' });
+    const commit = el('button', { type: 'button', class: 'btn primary', 'data-follow-all-commit': '1' });
+    const targets = () => entries.filter(isTarget);
+    const paintHead = () => {
+      const c = followCounts(entries);
+      const n = targets().length;
+      title.textContent = n ? `${verb} ${plural(n, 'person', 'people')}` : `Nobody left to ${verb.toLowerCase()}`;
+      planLine.textContent = followPlanSentence(direction, c, entries.length);
+      commit.textContent = `${verb} ${plural(n, 'person', 'people')}`;
+      commit.hidden = !session || n === 0;
+    };
+    const onFollow = session ? async (e) => { const done = await lens.followAll([e.m.did], { via }); e.followingUri = done.get(e.m.did) || null; paintHead(); } : null;
+    const onUnfollow = session ? async (e) => { await lens.unfollowAll([e.followingUri]); e.followingUri = null; paintHead(); } : null;
+    const rows = new Map(entries.map((e) => [e.m.did, followRow(e, { onFollow, onUnfollow })]));
+    const repaint = (dids) => { for (const did of dids) rows.get(did)?.paint(); };
+    paintHead();
+
+    const door = el('button', { type: 'button', class: 'btn primary', 'data-follow-all-door': '1' }, `Sign in to ${verb.toLowerCase()}`);
+    door.addEventListener('click', () => openAuthSheet());
+    const finish = (text, retry) => {
+      commit.remove();
+      progress.textContent = '';
+      result.setAttribute('data-follow-all-result', '1');
+      result.replaceChildren(...[text, retry ? ' ' : null, retry].filter(Boolean));
+    };
+    commit.addEventListener('click', async () => {
+      const batch = targets();
+      const n = batch.length;
+      commit.disabled = true;
+      const onProgress = (done, total) => { progress.textContent = `${verb}ing… ${done} of ${total}`; };
+      const settle = (uris) => {
+        for (const e of batch) {
+          if (direction === 'follow') { const uri = uris.get(e.m.did); if (uri) e.followingUri = uri; }
+        }
+      };
+      try {
+        if (direction === 'follow') {
+          settle(await lens.followAll(batch.map((e) => e.m.did), { via, onProgress }));
+        } else {
+          await lens.unfollowAll(batch.map((e) => e.followingUri), { onProgress });
+          for (const e of batch) e.followingUri = null;
+        }
+        repaint(batch.map((e) => e.m.did)); paintHead();
+        finish(`${past} ${plural(n, 'person', 'people')}.`);
+      } catch (e) {
+        const done = e.done ?? 0;
+        if (direction === 'follow' && e.followed) settle(e.followed);
+        else for (const en of batch.slice(0, done)) en.followingUri = null;
+        repaint(batch.map((en) => en.m.did)); paintHead();
+        const retry = el('button', { type: 'button', class: 'btn sm', 'data-follow-all-retry': '1' }, 'Try the rest');
+        retry.addEventListener('click', () => { host.replaceChildren(skeleton(5)); render().catch(fail); });
+        finish(`${past} ${done} of ${n}; the rest did not go through — ${e.reason || e.message}`, retry);
+      }
+    });
+    host.replaceChildren(back(), title,
+      el('div', { class: 'xs muted' }, `A jumpstart (what the network calls a starter pack) by @${j.creator}: ${j.name}`),
+      planLine, session ? commit : door, progress, result,
+      el('div', { class: 'card', style: 'margin-top:10px' }, ...[...rows.values()].map((r) => r.row)));
+  };
+  const fail = (e) => host.replaceChildren(back(), emptyState('Could not open that jumpstart',
+    `@${handle} / ${rkey} — ${e.message}`, el('a', { class: 'btn', href: '/jumpstarts' }, 'Browse jumpstarts')));
+  render().catch(fail);
+  return { main: host, side };
+}
+
+export const lensJumpstartFollowView = (params) => jumpstartFollowPage(params, 'follow');
+export const lensJumpstartUnfollowView = (params) => jumpstartFollowPage(params, 'unfollow');
 
 // feed-index Phase 2b (D-own, owner 2026-09-08: "user manageable in case they
 // want to dump ours and upload their own … equitable … LTS … independence from

@@ -568,3 +568,158 @@ test('mix writes and reads need a session, in words', async () => {
   await assert.rejects(() => lens.removeMix('weekend'), /sign in/i);
   await assert.rejects(() => lens.mixRecords(), /sign in/i);
 });
+
+// ---- Follow all / Unfollow all (plan 2026-09-14 jumpstart-follow-all, Phase 1) ----
+// The lens' first BULK write: com.atproto.repo.applyWrites, ≤ 50 ops per call
+// (the official client's chunk), creates for Follow all and deletes for
+// Unfollow all, both in MY repo, both bound to the follow collection. A failed
+// chunk stops the run and says how far it got; the page re-reads the list to
+// try the rest (D7 — idempotence by re-reading, never by remembering).
+
+const VIA = { uri: 'at://did:plc:curator/app.bsky.graph.starterpack/3sp', cid: 'bafysp' };
+const dids = (n, from = 0) => Array.from({ length: n }, (_, i) => `did:plc:m${from + i}`);
+
+function bulkSession({ failChunk = null, failWith = 500 } = {}) {
+  const calls = [];
+  let applyCalls = 0;
+  const fetchHandler = async (path, init = {}) => {
+    const body = init.body ? JSON.parse(init.body) : null;
+    calls.push({ path, method: init.method || 'GET', body });
+    if (path.startsWith('/xrpc/com.atproto.repo.applyWrites')) {
+      applyCalls += 1;
+      if (applyCalls === failChunk) return { ok: false, status: failWith, json: async () => ({ error: 'RateLimitExceeded' }) };
+      const results = body.writes.map((w, i) => (w.$type.endsWith('#create')
+        ? { $type: 'com.atproto.repo.applyWrites#createResult', uri: `at://did:plc:me/app.bsky.graph.follow/${w.value.subject.split(':').pop()}`, cid: `cid${i}` }
+        : { $type: 'com.atproto.repo.applyWrites#deleteResult' }));
+      return { ok: true, status: 200, json: async () => ({ results }) };
+    }
+    return { ok: false, status: 404, json: async () => ({}) };
+  };
+  return { session: { did: 'did:plc:me', handle: 'me.test', fetchHandler }, calls };
+}
+
+// getList answers in the AppView's shape: items of { uri, subject: profileView },
+// viewer state on the subject, two pages when the list is over 100.
+function listSession(pages) {
+  const calls = [];
+  const fetchHandler = async (path) => {
+    calls.push({ path });
+    const url = new URL(path, 'https://pds.test');
+    const cursor = url.searchParams.get('cursor');
+    const page = pages[cursor ? Number(cursor) : 0];
+    return { ok: true, status: 200, json: async () => page };
+  };
+  return { session: { did: 'did:plc:me', handle: 'me.test', fetchHandler }, calls };
+}
+
+const item = (did, subject = {}) => ({ uri: `at://did:plc:curator/app.bsky.graph.listitem/${did.split(':').pop()}`,
+  subject: { did, handle: `${did.split(':').pop()}.test`, ...subject } });
+
+test('listMembers pages getList at 100 until no cursor and shapes the viewer state into flags', async () => {
+  const pages = [
+    { items: [
+      item('did:plc:plain', { displayName: 'Plain', avatar: 'https://cdn/p.jpg' }),
+      item('did:plc:followed', { viewer: { following: 'at://did:plc:me/app.bsky.graph.follow/3f' } }),
+      item('did:plc:iblock', { viewer: { blocking: 'at://did:plc:me/app.bsky.graph.block/3b' } }),
+      item('did:plc:blocksme', { viewer: { blockedBy: true } }),
+      item('did:plc:muted', { viewer: { muted: true } }),
+      item('did:plc:gore', { labels: [{ val: 'gore', src: 'did:plc:labeler' }] }),
+      item('did:plc:retracted', { labels: [{ val: 'gore', src: 'did:plc:labeler', neg: true }] }),
+    ], cursor: '1' },
+    { items: [item('did:plc:page2')] },
+  ];
+  const { session, calls } = listSession(pages);
+  const members = await createLens({ session }).listMembers('at://did:plc:curator/app.bsky.graph.list/3l');
+  assert.equal(calls.length, 2, 'two pages, one call each');
+  const first = new URL(calls[0].path, 'https://pds.test');
+  assert.equal(first.pathname, '/xrpc/app.bsky.graph.getList');
+  assert.equal(first.searchParams.get('list'), 'at://did:plc:curator/app.bsky.graph.list/3l');
+  assert.equal(first.searchParams.get('limit'), '100');
+  assert.equal(new URL(calls[1].path, 'https://pds.test').searchParams.get('cursor'), '1');
+  assert.deepEqual(members.map((m) => m.did), ['did:plc:plain', 'did:plc:followed', 'did:plc:iblock', 'did:plc:blocksme', 'did:plc:muted', 'did:plc:gore', 'did:plc:retracted', 'did:plc:page2']);
+  assert.deepEqual(members[0], { did: 'did:plc:plain', handle: 'plain.test', displayName: 'Plain', avatar: 'https://cdn/p.jpg',
+    followingUri: null, blocked: false, muted: false, hidden: false });
+  assert.equal(members[1].followingUri, 'at://did:plc:me/app.bsky.graph.follow/3f');
+  assert.equal(members[2].blocked, true, 'I block them');
+  assert.equal(members[3].blocked, true, 'they block me — the same flag; neither direction is followable');
+  assert.equal(members[4].muted, true);
+  assert.equal(members[5].hidden, true, 'a label the posture hides marks the member hidden');
+  assert.equal(members[6].hidden, false, 'a retracted label hides nothing');
+  assert.equal(members[7].displayName, null);
+});
+
+test('followAll sends applyWrites #create ops in chunks of 50 to MY repo, each value a followRecord with via, and returns did → uri', async () => {
+  const { session, calls } = bulkSession();
+  const lens = createLens({ session });
+  const seen = [];
+  const followed = await lens.followAll(dids(51), { via: VIA, now: '2026-09-14T12:00:00.000Z', onProgress: (done, total) => seen.push([done, total]) });
+  assert.equal(calls.length, 2, 'two chunks for 51');
+  assert.deepEqual(seen, [[50, 51], [51, 51]], 'progress is announced after each chunk lands, so the page can say "50 of 131"');
+  assert.ok(calls.every((c) => c.path === '/xrpc/com.atproto.repo.applyWrites' && c.method === 'POST'));
+  assert.deepEqual(calls.map((c) => c.body.writes.length), [50, 1]);
+  assert.equal(calls[0].body.repo, 'did:plc:me');
+  assert.equal(calls[0].body.validate, undefined, 'validate is left to the PDS default');
+  const op = calls[0].body.writes[0];
+  assert.deepEqual(op, {
+    $type: 'com.atproto.repo.applyWrites#create', collection: 'app.bsky.graph.follow',
+    value: { $type: 'app.bsky.graph.follow', subject: 'did:plc:m0', createdAt: '2026-09-14T12:00:00.000Z', via: VIA },
+  });
+  assert.equal(op.rkey, undefined, 'the rkey is the PDS\'s to mint');
+  assert.equal(calls[1].body.writes[0].value.subject, 'did:plc:m50');
+  assert.ok(followed instanceof Map);
+  assert.equal(followed.size, 51);
+  assert.equal(followed.get('did:plc:m0'), 'at://did:plc:me/app.bsky.graph.follow/m0');
+  assert.equal(followed.get('did:plc:m50'), 'at://did:plc:me/app.bsky.graph.follow/m50');
+});
+
+test('followAll: a failed chunk STOPS the run and the error says how far it got; a 429 reads as the write budget', async () => {
+  const { session, calls } = bulkSession({ failChunk: 2, failWith: 429 });
+  const lens = createLens({ session });
+  const err = await lens.followAll(dids(131), { via: VIA }).then(() => null, (e) => e);
+  assert.ok(err, 'rejected');
+  assert.match(err.message, /50 of 131/, 'the count so far is in the words');
+  assert.match(err.message, /budget|rate/i, 'a 429 is explained, not numbered');
+  assert.equal(calls.length, 2, 'the third chunk was never sent');
+  assert.ok(err.followed instanceof Map);
+  assert.equal(err.followed.size, 50, 'what DID land rides on the error so the rows can flip');
+  assert.equal(err.done, 50); assert.equal(err.total, 131);
+  assert.match(err.reason, /HTTP 429/, 'the reason alone, for the page\'s sentence');
+  assert.match(err.reason, /budget/i);
+  const { session: s2 } = bulkSession({ failChunk: 1, failWith: 500 });
+  await assert.rejects(() => createLens({ session: s2 }).followAll(dids(3), { via: VIA }), /0 of 3.*500|500.*0 of 3/);
+});
+
+test('followAll refuses a guest before any request, refuses a via that is not a strongRef, and sends nothing for an empty list', async () => {
+  await assert.rejects(() => createLens({}).followAll(dids(2), { via: VIA }), /session|sign/i);
+  const { session, calls } = bulkSession();
+  const lens = createLens({ session });
+  await assert.rejects(() => lens.followAll(dids(2), { via: { uri: VIA.uri } }), /via/);
+  assert.deepEqual(await lens.followAll([], { via: VIA }), new Map());
+  assert.equal(calls.length, 0);
+});
+
+test('unfollowAll sends applyWrites #delete ops for EXACTLY those rkeys, in the same chunks, and refuses a uri outside my repo before any request', async () => {
+  const { session, calls } = bulkSession();
+  const lens = createLens({ session });
+  const uris = dids(51).map((d) => `at://did:plc:me/app.bsky.graph.follow/${d.split(':').pop()}`);
+  const seen = [];
+  const n = await lens.unfollowAll(uris, { onProgress: (done, total) => seen.push([done, total]) });
+  assert.equal(n, 51);
+  assert.deepEqual(seen, [[50, 51], [51, 51]]);
+  assert.deepEqual(calls.map((c) => c.body.writes.length), [50, 1]);
+  assert.deepEqual(calls[0].body.writes[0], { $type: 'com.atproto.repo.applyWrites#delete', collection: 'app.bsky.graph.follow', rkey: 'm0' });
+  assert.equal(calls[0].body.repo, 'did:plc:me');
+  assert.equal(calls[1].body.writes[0].rkey, 'm50');
+  calls.length = 0;
+  await assert.rejects(() => lens.unfollowAll([uris[0], 'at://did:plc:other/app.bsky.graph.follow/3x']), /outside|not yours/i);
+  await assert.rejects(() => lens.unfollowAll([uris[0], 'at://did:plc:me/app.bsky.feed.like/3x']), /follow/i);
+  assert.equal(calls.length, 0, 'the refusals sent nothing');
+  await assert.rejects(() => createLens({}).unfollowAll(uris), /session|sign/i);
+});
+
+test('unfollowAll: a failed chunk stops and counts, like followAll', async () => {
+  const { session, calls } = bulkSession({ failChunk: 2, failWith: 502 });
+  const uris = dids(120).map((d) => `at://did:plc:me/app.bsky.graph.follow/${d.split(':').pop()}`);
+  await assert.rejects(() => createLens({ session }).unfollowAll(uris), /50 of 120/);
+  assert.equal(calls.length, 2);
+});

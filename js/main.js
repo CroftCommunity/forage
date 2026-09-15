@@ -241,6 +241,10 @@ router.route('/feeds', blueskyOnly(lensViews.lensFeedsView));
 // feed-index Phase 3: jumpstarts — the network's starter packs, from the index
 router.route('/jumpstarts', blueskyOnly(lensViews.lensJumpstartsView));
 router.route('/j/:handle/:rkey', blueskyOnly(lensViews.lensJumpstartView));
+// Follow all / Unfollow all (plan 2026-09-14): the confirm step is a PAGE, not a
+// sheet — a list of 131 people with a commit button is a destination with a URL
+router.route('/j/:handle/:rkey/follow', blueskyOnly(lensViews.lensJumpstartFollowView));
+router.route('/j/:handle/:rkey/unfollow', blueskyOnly(lensViews.lensJumpstartUnfollowView));
 router.route('/hashtags', blueskyOnly(lensViews.lensHashtagsView));
 router.route('/hashtags/:section', blueskyOnly(lensViews.lensHashtagsView));
 router.route('/u/:handle', byMode(lensViews.lensUserView, views.profileView));

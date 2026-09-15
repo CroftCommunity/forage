@@ -15,6 +15,7 @@ import { deal } from '../mix-deal.js';
 import { validateRecord } from '../lexicon.js';
 import { MIX_DEFS } from '../lexicons.js';
 import { gifOf, parseAlt } from '../gif.js';
+import { followRecord, chunk } from '../follow-all.js';
 
 export const LENS_PERMS = Object.freeze({
   viewerId: null, loggedIn: false, admin: false, probation: false,
@@ -1807,6 +1808,98 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
       return post('com.atproto.repo.deleteRecord', {
         repo: session?.did, collection: FOLLOW_COLLECTION, rkey,
       }, 'unfollow');
+    },
+
+    // Plan 2026-09-14 jumpstart-follow-all: the members of a list, LIVE (the
+    // index carries no members), paged at 100 until the AppView stops handing
+    // back a cursor — the 150 cap is the official client's, not the lexicon's.
+    // The viewer state (only present with a session) is folded into flags the
+    // pure core reads, and the posture is applied HERE as `hidden`: the lens
+    // is the authority on what Forage shows, so it is the authority on whom
+    // Forage will not follow either (D3).
+    async listMembers(listUri) {
+      const members = [];
+      let cursor;
+      do {
+        const data = await get('app.bsky.graph.getList', { list: listUri, limit: 100, cursor });
+        for (const it of data.items || []) {
+          const s = it.subject || {};
+          const v = s.viewer || {};
+          members.push({
+            did: s.did || null, handle: s.handle || '', displayName: s.displayName || null, avatar: s.avatar || null,
+            followingUri: v.following || null,
+            blocked: !!(v.blocking || v.blockedBy),
+            muted: !!v.muted,
+            hidden: labelDisposition(s, posture)?.mode === 'hide',
+          });
+        }
+        cursor = data.cursor;
+      } while (cursor);
+      return members;
+    },
+
+    // The lens' first BULK write, and a new KIND of write — pinned by
+    // test/invariants.test.js as the ONE applyWrites caller. Both directions
+    // share it: creates for Follow all, deletes for Unfollow all, ≤ 50 ops a
+    // call (the official client's chunk), one commit per call. A chunk lands
+    // whole or not at all; a failed chunk STOPS the run (D7 — a 429 means the
+    // hour's write budget is spent and retrying spends it faster) and the
+    // error says how far it got. The page re-reads the list to try the rest.
+    async followWrites(ops, verb, { onChunk, onProgress = () => {} }) {
+      if (!session) throw new Error(`lens: ${verb} needs a session — sign in first`);
+      const chunks = chunk(ops);
+      const total = ops.length;
+      let done = 0;
+      for (const writes of chunks) {
+        let data;
+        try {
+          data = await post('com.atproto.repo.applyWrites', { repo: session.did, writes }, verb);
+        } catch (e) {
+          const reason = /HTTP 429/.test(e.message)
+            ? 'HTTP 429 — the account\'s write budget for this hour is spent; try again later'
+            : e.message.replace(/^lens: [^ ]+( all)? failed /, '');
+          const err = new Error(`lens: ${verb} stopped after ${done} of ${total} — ${reason}`);
+          err.done = done; err.total = total; err.reason = reason;
+          throw err;
+        }
+        onChunk(writes, data.results || []);
+        done += writes.length;
+        onProgress(done, total);
+      }
+    },
+    // Follow all: N follow records in MY repo, each saying which jumpstart it
+    // came through (D2, `via`). Returns did → the uri the PDS minted, so the
+    // rows can say Following without a refetch; on failure the same map rides
+    // on the error for what DID land.
+    async followAll(dids, { via, now = new Date().toISOString(), onProgress } = {}) {
+      const followed = new Map();
+      const ops = dids.map((did) => ({
+        $type: 'com.atproto.repo.applyWrites#create', collection: FOLLOW_COLLECTION, value: followRecord({ did, via, now }),
+      }));
+      try {
+        await this.followWrites(ops, 'follow all', { onProgress, onChunk: (writes, results) => {
+          writes.forEach((w, i) => { if (results[i]?.uri) followed.set(w.value.subject, results[i].uri); });
+        } });
+      } catch (e) {
+        e.followed = followed;
+        throw e;
+      }
+      return followed;
+    },
+    // Unfollow all (D4): deletes of follow records the AppView attributes to
+    // me, from the list the reader is looking at — every uri is parsed against
+    // MY repo and the follow collection BEFORE any request. Returns the count.
+    async unfollowAll(followUris, { onProgress } = {}) {
+      if (!session) throw new Error('lens: unfollow all needs a session — sign in first');
+      const ops = followUris.map((uri) => {
+        const m = /^at:\/\/([^/]+)\/([^/]+)\/([^/]+)$/.exec(uri);
+        if (!m || m[1] !== session?.did) throw new Error(`lens: that follow record is outside your repo — ${uri}`);
+        if (m[2] !== FOLLOW_COLLECTION) throw new Error(`lens: not a follow record — ${uri}`);
+        return { $type: 'com.atproto.repo.applyWrites#delete', collection: FOLLOW_COLLECTION, rkey: m[3] };
+      });
+      let done = 0;
+      await this.followWrites(ops, 'unfollow all', { onProgress, onChunk: (writes) => { done += writes.length; } });
+      return done;
     },
 
     // P5: your published hashtag subscriptions. The repo IS the set — that is
