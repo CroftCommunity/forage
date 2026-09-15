@@ -1,0 +1,185 @@
+{
+  "capturedAt": "2026-09-14",
+  "files": [
+    {
+      "file": "jumpstart-lens.phone.proposed.png",
+      "route": "jumpstart-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@c036b9f",
+      "population": "lens:feed-index"
+    },
+    {
+      "file": "jumpstart-lens.desktop.proposed.png",
+      "route": "jumpstart-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@c036b9f",
+      "population": "lens:feed-index"
+    },
+    {
+      "file": "jumpstart-follow.phone.proposed.png",
+      "route": "jumpstart-follow",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@c036b9f",
+      "population": "lens:follow-all"
+    },
+    {
+      "file": "jumpstart-follow-done.phone.proposed.png",
+      "route": "jumpstart-follow-done",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@c036b9f",
+      "population": "lens:follow-all"
+    },
+    {
+      "file": "jumpstart-unfollow.phone.proposed.png",
+      "route": "jumpstart-unfollow",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@c036b9f",
+      "population": "lens:follow-all"
+    },
+    {
+      "file": "jumpstart-follow-guest.phone.proposed.png",
+      "route": "jumpstart-follow-guest",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@c036b9f",
+      "population": "lens:follow-all"
+    },
+    {
+      "file": "jumpstart-follow.desktop.proposed.png",
+      "route": "jumpstart-follow",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@c036b9f",
+      "population": "lens:follow-all"
+    },
+    {
+      "file": "jumpstart-follow-done.desktop.proposed.png",
+      "route": "jumpstart-follow-done",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@c036b9f",
+      "population": "lens:follow-all"
+    },
+    {
+      "file": "jumpstart-unfollow.desktop.proposed.png",
+      "route": "jumpstart-unfollow",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@c036b9f",
+      "population": "lens:follow-all"
+    },
+    {
+      "file": "jumpstart-follow-guest.desktop.proposed.png",
+      "route": "jumpstart-follow-guest",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@c036b9f",
+      "population": "lens:follow-all"
+    },
+    {
+      "file": "jumpstart-lens.phone.current.png",
+      "route": "jumpstart-lens",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@003f7b7",
+      "population": "lens:feed-index"
+    },
+    {
+      "file": "jumpstart-lens.desktop.current.png",
+      "route": "jumpstart-lens",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@003f7b7",
+      "population": "lens:feed-index"
+    },
+    {
+      "file": "jumpstart-follow.phone.current.png",
+      "route": "jumpstart-follow",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@003f7b7",
+      "population": "lens:follow-all"
+    },
+    {
+      "file": "jumpstart-follow-done.phone.current.png",
+      "route": "jumpstart-follow-done",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@003f7b7",
+      "population": "lens:follow-all"
+    },
+    {
+      "file": "jumpstart-unfollow.phone.current.png",
+      "route": "jumpstart-unfollow",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@003f7b7",
+      "population": "lens:follow-all"
+    },
+    {
+      "file": "jumpstart-follow-guest.phone.current.png",
+      "route": "jumpstart-follow-guest",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@003f7b7",
+      "population": "lens:follow-all"
+    },
+    {
+      "file": "jumpstart-follow.desktop.current.png",
+      "route": "jumpstart-follow",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@003f7b7",
+      "population": "lens:follow-all"
+    },
+    {
+      "file": "jumpstart-follow-done.desktop.current.png",
+      "route": "jumpstart-follow-done",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@003f7b7",
+      "population": "lens:follow-all"
+    },
+    {
+      "file": "jumpstart-unfollow.desktop.current.png",
+      "route": "jumpstart-unfollow",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@003f7b7",
+      "population": "lens:follow-all"
+    },
+    {
+      "file": "jumpstart-follow-guest.desktop.current.png",
+      "route": "jumpstart-follow-guest",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@003f7b7",
+      "population": "lens:follow-all"
+    }
+  ]
+}
