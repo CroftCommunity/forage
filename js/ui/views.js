@@ -634,11 +634,24 @@ export function settingsView() {
   // measures the control itself, and a switch is what the plan calls it.
   const hapticsBox = el('button', { type: 'button', class: 'switch', id: 'pref-haptics', role: 'switch',
     'aria-checked': String(haptics.enabled()) }, el('span', { class: 'switch-state' }, haptics.enabled() ? 'On' : 'Off'));
+  // The silenced chip (owner, 2026-09-16): On, but a buzz would go nowhere,
+  // and why — only for the gates the web can see (js/haptics.js silenced()).
+  // Off shows nothing: off is off. role=status so a screen reader hears the
+  // change when the switch flips it in or out.
+  const silencedChip = el('span', { class: 'chip haptics-silenced', id: 'pref-haptics-silenced', role: 'status', hidden: '' });
+  const paintSilenced = () => {
+    const why = haptics.enabled() ? haptics.silenced() : null;
+    if (why) { silencedChip.textContent = `🔇 silenced — ${haptics.SILENCED_WHY[why]}`; silencedChip.removeAttribute('hidden'); }
+    else silencedChip.setAttribute('hidden', '');
+  };
+  paintSilenced();
+  haptics.onSilencedChange(paintSilenced);
   hapticsBox.addEventListener('click', () => {
     const on = hapticsBox.getAttribute('aria-checked') !== 'true';
     haptics.set(on);
     hapticsBox.setAttribute('aria-checked', String(on));
     hapticsBox.querySelector('.switch-state').textContent = on ? 'On' : 'Off';
+    paintSilenced();
     if (on) haptics.buzz();
   });
   const skinSel = el('select', { class: 'form', id: 'pref-skin' },
@@ -750,7 +763,7 @@ export function settingsView() {
     el('div', { class: 'xs muted', style: 'margin:-4px 0 8px' },
       'Light or dark is the ☾ toggle in the top bar. A style that ships one palette says so.'),
     el('div', { class: 'field-row' }, el('label', { for: 'pref-haptics' }, 'Buzz on like'),
-      el('span', {}, hapticsBox, el('span', { class: 'xs muted', style: 'margin-left:8px' }, 'a short vibration when you like or promote something, on phones that can'))),
+      el('span', {}, hapticsBox, silencedChip, el('span', { class: 'xs muted', style: 'margin-left:8px' }, 'a short vibration when you like or promote something, on phones that can. A phone on mute silences it too, and Forage cannot see that switch.'))),
     el('div', { class: 'field-row' }, el('label', {}, 'Mode'),
       el('a', { href: '/mode' }, 'Bluesky view ↔ Memory sandbox — choose at /mode')),
     el('div', { class: 'field-row' }, el('label', {}, 'Accounts'),

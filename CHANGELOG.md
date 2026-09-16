@@ -8,6 +8,16 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-16 **The like's buzz is one you can feel.** The vibration on a like or promote
+  was 12 ms, a length the owner's phone did not register on posts or on comments; it is
+  30 ms now, the shortest pulse that reads as a vibration rather than nothing. Off is still
+  off, un-liking is still silent, and the Buzz on like setting now shows a 🔇 *silenced*
+  chip when On would buzz nothing and why: a device with no vibration, or your reduced-motion
+  setting. It updates as the setting changes. The one gate it cannot show is the phone on
+  mute; the browser gives no way to see that switch, so the hint says so in words. For a
+  phone that still feels nothing,
+  `scripts/probe-haptics.html` opened on that phone says which of the four gates is shut.
+  (owner, from the phone; plan 2026-08-29-plan-post-and-thread Phase 7's owed device run)
 - 2026-09-14 **Follow everyone in a jumpstart — from Forage.** A jumpstart's page used to
   send you to bsky.app to follow its people; now *Follow everyone in it* leads to a confirm
   page that reads the list live and says what will happen first: how many follow records
