@@ -750,7 +750,7 @@ export function settingsView() {
     el('div', { class: 'xs muted', style: 'margin:-4px 0 8px' },
       'Light or dark is the ☾ toggle in the top bar. A style that ships one palette says so.'),
     el('div', { class: 'field-row' }, el('label', { for: 'pref-haptics' }, 'Buzz on like'),
-      el('span', {}, hapticsBox, el('span', { class: 'xs muted', style: 'margin-left:8px' }, 'a short vibration when you like or promote something, on phones that can'))),
+      el('span', {}, hapticsBox, el('span', { class: 'xs muted', style: 'margin-left:8px' }, 'a short vibration when you like or promote something, on phones that can — not while the phone is on mute'))),
     el('div', { class: 'field-row' }, el('label', {}, 'Mode'),
       el('a', { href: '/mode' }, 'Bluesky view ↔ Memory sandbox — choose at /mode')),
     el('div', { class: 'field-row' }, el('label', {}, 'Accounts'),

@@ -685,6 +685,12 @@ checkbox — a 13px checkbox failed the tap floor at 320 (`mobile-fit`). `no-dow
 `navigator.vibrate` per document and pins one buzz per like-on, none per like-off, none
 when switched off. **Owed:** the Samsung run ("a like buzzes and the switch stops it") —
 D4 was deferred for want of a device; the platform contract is the only evidence so far.
+**Device run, 2026-09-16 (owner, Android): 12 ms felt like nothing, on posts and on comments.**
+The pulse is 30 ms now (`PULSE_MS` in `js/haptics.js`; the reasoning and sources sit above
+it), the settings hint names the mute case Chromium refuses on its own, and the D4 probe
+exists at last as `scripts/probe-haptics.html` — open it on the phone to read the four
+gates and the raw return value at 12/30/50/100 ms. Still owed: the owner's word that 30 is
+felt; the probe is how the next number gets chosen if it is not.
 **Goal:** a like or promote buzzes on devices that can; one switch on `/me`; default on.
 **Changes:**
 - [ ] `js/haptics.js` (new) — `buzz()` reads `forage.haptics` (default `'on'`), calls

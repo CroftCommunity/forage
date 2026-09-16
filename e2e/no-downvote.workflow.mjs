@@ -207,7 +207,7 @@ export async function run() {
   // removing it is a product change rather than the retirement of a dead
   // control.
   // Phase 7 (plan 2026-08-29 post-and-thread, decision 6): a like BUZZES —
-  // navigator.vibrate(12) exactly once per like-on, zero per like-off, and the
+  // navigator.vibrate(30) exactly once per like-on, zero per like-off, and the
   // settings switch stops it. Stubbed at the context so every page sees it.
   const VIBRATE_STUB = `Object.defineProperty(navigator, 'vibrate', { configurable: true, value: (ms) => { (window.__buzz ||= []).push(ms); return true; } });`;
   const mem = await scenario('seeded', { initScripts: [VIBRATE_STUB] });
@@ -242,7 +242,7 @@ export async function run() {
       (document.querySelector('button[data-vote] .n')?.textContent.trim() ?? null) === b, before);
     assert.equal(await scoreOf(), before, 'and un-boosting puts it back — the toggle still toggles');
     assert.equal(await first.getAttribute('aria-pressed'), 'false');
-    assert.deepEqual(await buzzes(), [12], 'one like-on = one 12ms buzz; the like-off added none');
+    assert.deepEqual(await buzzes(), [30], 'one like-on = one 30ms buzz; the like-off added none');
 
     // A comment carries the SECOND vote control, and it is the one easiest to
     // miss — `miniVote` is a separate implementation of the same idea.
@@ -275,7 +275,7 @@ export async function run() {
     await page.waitForFunction(([s, n]) => document.querySelector(s)?.querySelector('.n').textContent.trim() === String(n), [SEL, n0]);
     assert.equal(await page.locator(SEL).first().getAttribute('aria-pressed'), 'false', 'and back');
     // the stub is per document, so the count restarted at the navigation
-    assert.deepEqual(await buzzes(), [12], 'the comment like buzzed once too, and its un-like did not');
+    assert.deepEqual(await buzzes(), [30], 'the comment like buzzed once too, and its un-like did not');
     // the switch: off on /settings, and the next like is silent
     await page.goto(`${mem.origin}/settings`);
     await page.waitForSelector('#pref-haptics');

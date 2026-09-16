@@ -3,7 +3,7 @@
 // no vibrate API and degrades to nothing — never a sound, never a toast.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { enabled, set, buzz } from '../js/haptics.js';
+import { enabled, set, buzz, PULSE_MS } from '../js/haptics.js';
 
 // node has no localStorage; the module must read "absent" as the default (on)
 function withStorage(values, fn) {
@@ -32,13 +32,15 @@ test('enabled(): absent → on (the default); only the literal "off" disables; g
   withStorage({}, (store) => { set(false); assert.equal(store.get('forage.haptics'), 'off'); assert.equal(enabled(), false); set(true); assert.equal(enabled(), true); });
 });
 
-test('buzz(): calls navigator.vibrate(12) exactly once when on; zero times when off', () => {
+test('buzz(): calls navigator.vibrate(PULSE_MS) exactly once when on; zero times when off', () => {
+  // 30 ms, not the plan's 12: the owner's phone felt nothing at 12 (2026-09-16).
+  assert.equal(PULSE_MS, 30);
   const calls = [];
   withVibrate((ms) => { calls.push(ms); return true; }, () => {
     withStorage({}, () => { assert.equal(buzz(), true); });
-    assert.deepEqual(calls, [12]);
+    assert.deepEqual(calls, [30]);
     withStorage({ 'forage.haptics': 'off' }, () => { assert.equal(buzz(), false); });
-    assert.deepEqual(calls, [12], 'off: not called again (zero, not ≤1)');
+    assert.deepEqual(calls, [30], 'off: not called again (zero, not ≤1)');
   });
 });
 
@@ -54,6 +56,6 @@ test('buzz() (O3): prefers-reduced-motion: reduce → zero calls even when enabl
     withReducedMotion(true, () => withStorage({}, () => assert.equal(buzz(), false)));
     assert.deepEqual(calls, []);
     withReducedMotion(false, () => withStorage({}, () => assert.equal(buzz(), true)));
-    assert.deepEqual(calls, [12]);
+    assert.deepEqual(calls, [30]);
   });
 });
