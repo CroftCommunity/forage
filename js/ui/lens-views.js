@@ -899,6 +899,13 @@ const lensRow = (p, view = 'card') => {
     // post-text: the row trims the card's own url too — the row shows the card
     // (bodyNode, below), so the raw url would be printed twice there as well
     : p.body ? el('div', { class: 'posttitle posttext' }, ...headWords(p))
+    // body-text-link (owner's phone, 2026-09-16): an image-only post's title is
+    // its alt text, and it fell through to postRow's default — an <a> to the
+    // thread, which `.posttitle.posttext a` paints link-blue. Beside a text
+    // post's plain words the row read as a link that was not one. The alt is
+    // words too: plain, same class, no anchor; the row's own ground opens the
+    // thread, as it does for every other lens row.
+    : p.title ? el('div', { class: 'posttitle posttext', 'data-alt-title': '1' }, p.title)
     : undefined;
   return postRow(p, !!session, {
     onVote: lensVote(p),

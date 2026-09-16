@@ -710,6 +710,23 @@ export async function run() {
   // image-only titles from alt; Compact drops it
   await page.waitForSelector('.stage img.stage-fore');
   await page.waitForSelector('text=a test image post');
+  // body-text-link (owner's phone, 2026-09-16): the alt-derived title is WORDS,
+  // like a text post's — not an anchor, not painted link-blue. It had fallen
+  // through to postRow's default title link, so an image-only row's text read
+  // as a link beside a text row's plain words.
+  {
+    const altTitle = page.locator('.posttitle[data-alt-title]', { hasText: 'a test image post' }).first();
+    assert.equal(await altTitle.count(), 1, 'the image-only post titles from its alt, as plain words');
+    assert.equal(await altTitle.locator('a').count(), 0, 'the alt-derived title is not a link');
+    const colours = await altTitle.evaluate((t) => {
+      const probe = document.createElement('a'); probe.href = '/x'; t.parentElement.append(probe);
+      const link = getComputedStyle(probe).color; probe.remove();
+      const text = getComputedStyle(t.closest('.postrow')).color;
+      return { got: getComputedStyle(t).color, link, text };
+    });
+    assert.notEqual(colours.got, colours.link, 'the alt-derived title is not link-coloured');
+    assert.equal(colours.got, colours.text, 'it reads in the row\'s text colour');
+  }
   // The no-alt image post (tp4): its media renders, so the '[image]'
   // placeholder title must NOT print above it — the image is the content.
   assert.ok(await page.locator('.stage img.stage-fore').count() >= 2,
