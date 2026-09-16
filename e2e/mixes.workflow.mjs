@@ -203,4 +203,53 @@ export async function run() {
   } finally {
     await pds.close();
   }
+
+  // 10. the card stays a grid when a name is long (owner, 2026-09-16, of the
+  // Home rows on a phone: "I want to see uniform vertically aligned rows and
+  // better to wrap the name on the left inline with itself and keep a clean
+  // row than throw off the entire grid"). The rows were a wrapping flex row
+  // sized by content, so a long title pushed its OWN switch and dial onto a
+  // second line while its neighbours kept theirs on the first: same card,
+  // dials at different x, rows at different heights. What is asserted is the
+  // property, not the layout — every row's controls start at the same x and
+  // are the same width, at a phone width and at a desktop one, with two names
+  // long enough to wrap and two short enough not to.
+  const LONG_FEED = 'Stand Up Comedy and Other Long Winded Feed Names';
+  const long = await scenario('first-visit', { mode: 'bluesky', initScripts: [FAKE_SIGNED_IN], responses: {
+    ...RESPONSES,
+    'getFeedGenerators': { feeds: [
+      { uri: FUNNY, displayName: LONG_FEED, creator: { handle: 'funny.test' }, likeCount: 9000 },
+      { uri: SCIENCE, displayName: 'Supercalifragilisticexpialidociousness', creator: { handle: 'science.test' }, likeCount: 12 },
+    ] },
+  } });
+  try {
+    const { page, origin } = long;
+    for (const width of [320, 390, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(`${origin}/mixes/home`);
+      await page.waitForSelector('[data-mix-row]');
+      const geo = await page.evaluate(() => [...document.querySelectorAll('[data-mix-row]')].map((n) => {
+        const c = n.querySelector('.mixrow-controls').getBoundingClientRect();
+        return { id: n.dataset.mixRow, left: Math.round(c.left), width: Math.round(c.width) };
+      }));
+      assert.equal(geo.length, 4);
+      const [first] = geo;
+      for (const g of geo) {
+        assert.equal(g.left, first.left, `@${width}: ${g.id}'s controls start at ${g.left}, ${first.id}'s at ${first.left}`);
+        assert.equal(g.width, first.width, `@${width}: ${g.id}'s controls are ${g.width} wide, ${first.id}'s ${first.width}`);
+      }
+      // and the long name gave instead: it wrapped inside its own block, which
+      // is the only thing in the row allowed to grow taller
+      const tall = await page.evaluate((needle) => {
+        const row = [...document.querySelectorAll('[data-mix-row]')].find((n) => n.textContent.includes(needle));
+        return Math.round(row.querySelector('.mixrow-name').getBoundingClientRect().height);
+      }, LONG_FEED);
+      assert.ok(tall > 24, `@${width}: the long name is ${tall}px tall — it did not wrap`);
+      const { scrollW, innerW } = await page.evaluate(() => ({
+        scrollW: document.documentElement.scrollWidth, innerW: window.innerWidth }));
+      assert.ok(scrollW <= innerW + 1, `long names @${width}: horizontal overflow (${scrollW} > ${innerW})`);
+    }
+  } finally {
+    await long.close();
+  }
 }

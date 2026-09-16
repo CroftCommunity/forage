@@ -1584,17 +1584,23 @@ export function lensMixEditView(params) {
   const boardHref = (row) => (row.kind === 'hashtag' ? `/h/${encodeURIComponent(row.source.tag)}`
     : row.kind === 'timeline' ? '/f/following' : null);
   const rowEl = (row) => {
+    // `.switch-state` as everywhere else a switch is written: the 2em floor
+    // keeps "On" and "Off" the same width, so the dial beside it does not
+    // shift between an on row and an off one.
     const sw = el('button', { type: 'button', class: 'switch', role: 'switch', 'aria-checked': String(row.on),
-      'data-mix-on': '1', 'aria-label': `${row.on ? 'On' : 'Off'}: ${row.title}` }, row.on ? 'On' : 'Off');
+      'data-mix-on': '1', 'aria-label': `${row.on ? 'On' : 'Off'}: ${row.title}` },
+      el('span', { class: 'switch-state' }, row.on ? 'On' : 'Off'));
+    const sayState = (on) => { sw.querySelector('.switch-state').textContent = on ? 'On' : 'Off'; };
     sw.addEventListener('click', () => {
       const on = sw.getAttribute('aria-checked') !== 'true';
       sw.setAttribute('aria-checked', String(on));
       sw.setAttribute('aria-label', `${on ? 'On' : 'Off'}: ${row.title}`);
-      sw.textContent = on ? 'On' : 'Off';
+      sayState(on);
       setRow(row.id, { on }).catch((e) => {
         // the write failed: the switch goes back to what the record says
         sw.setAttribute('aria-checked', String(!on));
-        sw.textContent = !on ? 'On' : 'Off';
+        sw.setAttribute('aria-label', `${!on ? 'On' : 'Off'}: ${row.title}`);
+        sayState(!on);
         toast(e.message, 'err');
       });
     });
@@ -1606,10 +1612,13 @@ export function lensMixEditView(params) {
       (meta.published ? mixesPds.removePublishedRow(lens, did, slug, row.id) : Promise.resolve(mixesModel.removeRow(slug, row.id)))
         .then(() => rerenderNow()).catch((e) => toast(e.message, 'err'));
     });
-    return el('div', { class: 'row spread wrap', style: 'padding:8px 0;gap:8px;align-items:center', 'data-mix-row': row.id,
+    // .mixrow, not a wrapping .row.spread: the name wraps inside its own block
+    // and the controls keep their column, so one long title does not throw the
+    // card's alignment off (css/app.css § a mix's rows).
+    return el('div', { class: 'mixrow', 'data-mix-row': row.id,
       ...(row.subscribed ? {} : { 'data-unsubscribed': '1' }) },
-      el('div', { class: 'row', style: 'gap:8px;align-items:center;min-width:0' }, name, gone),
-      el('div', { class: 'row', style: 'gap:8px;align-items:center' }, sw, row.subscribed ? weightDial(row) : remove));
+      el('div', { class: 'mixrow-name' }, name, gone),
+      el('div', { class: 'mixrow-controls' }, sw, row.subscribed ? weightDial(row) : remove));
   };
   const KINDS = [['timeline', 'Following'], ['feed', 'Feeds'], ['list', 'Lists'], ['hashtag', 'Hashtags']];
   const nameBox = el('input', { type: 'text', value: meta.name, 'aria-label': 'Mix name', maxlength: '60' });

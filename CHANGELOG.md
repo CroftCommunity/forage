@@ -8,6 +8,14 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-16 **A mix's rows line up.** On *Tune this mix* a source with a long name — *Stand
+  Up Comedy*, *Bluesky Team* — pushed its own switch and weight dial onto a second line while
+  the rows above and below kept theirs on the first, so the dials in one card sat at three
+  different places and no column ran down the page. The name now wraps within its own block
+  and the controls keep their column: every row in a card breaks the same way at the same
+  width, so the switches line up and the dials line up, whatever the sources are called. The
+  switch also reserves the same width for *On* as for *Off*, which it did not before. (owner,
+  from the phone)
 - 2026-09-16 **A picture-only post is its picture.** On a Bluesky board a post with no
   text used to print its picture's alt description above the picture as if the author had
   written it, in link blue, whether or not *Show alt text under pictures* was on. Now the
