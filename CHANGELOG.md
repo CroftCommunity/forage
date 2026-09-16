@@ -8,6 +8,14 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-16 **A GIF is the picture alone unless you ask for its words.** A GIF card printed
+  its title and site under the animation even with *Show alt text under pictures* off, and for
+  nearly every GIF posted from Bluesky the title IS the alt text, so the setting was hiding one
+  copy and printing the other. Off, the GIF now shows nothing under it, the way bsky.app draws
+  it. On, the title, the alt and the site come back under the picture, each once: where the alt
+  is the title it is printed as one line, and an alt the author actually wrote is its own line
+  under the title. Screen readers are unaffected in both states; the name they read never
+  depended on the setting. (owner, from the phone)
 - 2026-09-16 **The like's buzz is one you can feel.** The vibration on a like or promote
   was 12 ms, a length the owner's phone did not register on posts or on comments; it is
   30 ms now, the shortest pulse that reads as a vibration rather than nothing. Off is still
