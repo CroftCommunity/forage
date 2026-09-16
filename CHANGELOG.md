@@ -8,6 +8,14 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-16 **Delete lives in the ⋯ menu.** Deleting your own post or reply used to be a
+  button in the action row, the one control there that was not about answering the post.
+  It is now the last item of the post's or reply's ⋯ menu, named for what it takes
+  (*Delete post*, *Delete reply*, *Delete part 2*), and only ever there when the record is
+  yours. Choosing it opens a sheet that says once more what deleting does and asks; Cancel,
+  Esc and a tap outside all keep it, only the red button takes it. A part's delete, which was
+  a one-tap menu item, asks the same way now. Your own posts can be deleted from their row
+  in a feed too, from the same menu. (owner, from the phone)
 - 2026-09-16 **The like's buzz is one you can feel.** The vibration on a like or promote
   was 12 ms, a length the owner's phone did not register on posts or on comments; it is
   30 ms now, the shortest pulse that reads as a vibration rather than nothing. Off is still
