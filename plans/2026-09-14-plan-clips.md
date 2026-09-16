@@ -1,10 +1,13 @@
-# Plan: Clips — a short-form video presentation of any board, from your ring out to World
+# Plan: View modes — clip and gram, a media-centred showing of any board, from your ring out to World
 
 date: 2026-09-14
 **Status:** DRAFTED, NOT STARTED — a proposal for owner decision. Nothing is built. The
 research half (how Skylight does it, § Prior art) is done and sourced; the forage half
-rests on six live probes (§ Verified assumptions) and six decisions the owner has not
-made (§ Open decisions). Phase 0 is measurement and must run before D2 can be decided.
+rests on six live probes (§ Verified assumptions). **Reframed 2026-09-16 on the mock
+(owner):** the reel is one **mode** of showing a board — *clip* (video-centred) beside a
+*gram* (image-centred) — any mode at any ring stop, chosen by a second pill under the ring
+pill. D6 is decided by that; D7 (placement) and D8 (the word in code) are new; D1–D5 stay
+open. Phase 0 is measurement and must run before D1 can be decided.
 repo: `CroftCommunity/forage`
 baseline: `main` @ `c3a4abe` (follow-all landed, #77)
 branch: `claude/video-view`
@@ -136,13 +139,42 @@ promised "post collections" lexicon shipped.
 
 ## Approach
 
-### A. A reel is a presentation of a board, not a new source
+### A. A mode is a way of showing a board, not a new source
 
 Forage's law is that everything in the nav is a **board**, and boards differ only in
-where the posts come from. Clips keeps that law: **Clips is a way of showing a board**,
-the same posts the board would show, narrowed to the ones carrying a video, laid out one
-clip per screen. The ring scope applies exactly as it does to rows. Moderation applies
-exactly as it does to rows. Nothing is written.
+where the posts come from. A view mode keeps that law: **a mode is a way of showing the
+board you are on** — the same posts, narrowed to the ones carrying the mode's media, laid
+out one post per screen. Three modes (owner, 2026-09-16, on mock v1):
+
+| mode | centred on | kind filter | one screen holds |
+|---|---|---|---|
+| **rows** | nothing — today's board | none | as many rows as fit |
+| **clip** | video | `media.kind === 'video'` | one clip, playing |
+| **gram** | pictures | `media.kind === 'images'` (a GIF is a decision, D9) | one post's pictures — one on a stage, several as the carousel `js/pictures.js` already folds them into — with the alt text a person wrote, readable |
+
+The ring scope applies exactly as it does to rows, **at every stop** — "any mode could be
+used at any ring scale" is the owner's framing and the plan's premise. Moderation applies
+exactly as it does to rows. Nothing is written. The mode is a reader's choice that
+persists like the ring stop does (device-local, `forage.view`, a `DEVICE-LOCAL.md` row),
+and it is chosen where the ring is chosen: **a second block pill under the ring pill** in
+the left nav (D7), so the two dials read as one instrument — how close, and what kind.
+
+```
+   left nav (drawer on a phone)
+   ┌──────────────────────────────┐
+   │ YOUR RING                    │
+   │ [Mutuals][Follows][ World ]  │   ← how close   (js/ring-scope.js, shipped)
+   │ VIEW                         │
+   │ [ Rows ][ Clip ][ Gram ]     │   ← what kind   (this plan)
+   │ FEEDS                        │
+   │ ▦ Discover  ✧ Trending …     │
+   └──────────────────────────────┘
+```
+
+The open half of D7 is the phone: the nav is a drawer there, so switching mode costs a
+drawer open, while clip mode is the one surface a reader flips into and out of most. The
+mock draws the owner's suggestion as stated and asks whether the board strip should also
+carry the current mode as a way back to rows.
 
 ```
                  the same board, two presentations
@@ -163,14 +195,19 @@ exactly as it does to rows. Nothing is written.
 
 Two new pure concerns, and nothing else new in the substrate for World:
 
-- **A kind filter, `video`.** `media.kind === 'video'` on the shaped post (already
-  produced by `shapeLensPost` for `app.bsky.embed.video#view`, `js/substrates/lens.js:268`).
-  A pure `clipsOf(posts)` sibling of the retired posts/replies/reposts classification and
-  of the `/feeds` *video* tick.
-- **A reel renderer, `js/ui/reel.js`.** A vertical scroll-snap stack, one `<section>` per
-  clip, an `IntersectionObserver` that plays the clip on screen and pauses the rest, a
-  preload window of one clip ahead, `mountVideo` reused for playback (Safari native HLS,
-  vendored hls.js elsewhere — the W30 routing decision, untouched).
+- **A kind filter per mode.** `media.kind` on the shaped post is already produced by
+  `shapeLensPost` (`'video'` for `app.bsky.embed.video#view`, `'images'` for
+  `app.bsky.embed.images#view`, `js/substrates/lens.js`). A pure `ofKind(posts, mode)`,
+  sibling of the retired posts/replies/reposts classification and of the `/feeds` *video*
+  tick.
+- **A reel renderer, `js/ui/reel.js`, parameterised by mode.** A vertical scroll-snap
+  stack, one `<section>` per post, an `IntersectionObserver` that activates the section on
+  screen and rests the others, a preload window of one ahead. In clip mode the active
+  section plays (`mountVideo` reused — Safari native HLS, vendored hls.js elsewhere, the
+  W30 routing decision untouched). In gram mode it is the stage or carousel
+  `js/ui/stage.js` already draws, at screen height, with the alt caption shown rather than
+  hidden (the alt-text setting's default is hidden on rows; gram is the one place a
+  picture is the whole point, so the mock proposes visible there — D10).
 
 ### B. Where the clips come from, by scope
 
@@ -188,11 +225,13 @@ screen. "More" is the mix's cursor map, already built.
 
 **The people-scopes** (me · mut · fol · hop) have member lists, and a member list is a
 source list: `fetchSource` already fetches `author` sources. The AppView's
-`getAuthorFeed` takes `filter=posts_with_video` (lexicon, § V1) and it does what it says —
-25 of 25 items on a video-heavy account were clips, unauthenticated, paged (§ V2). So at a
-people-scope the reel can be fed by **fan-out over the scope's members with the video
-filter**, dealt round-robin across people so a prolific poster does not own the reel
-(the retired World board's lesson, recorded in `mix-deal.js`).
+`getAuthorFeed` takes `filter=posts_with_video` **and** `filter=posts_with_media`
+(lexicon, § V1) — one per mode — and the video one does what it says: 25 of 25 items on a
+video-heavy account were clips, unauthenticated, paged (§ V2; `posts_with_media` is a
+Phase 0 probe, 0f — it may include video posts, which the client-side filter then drops).
+So at a people-scope the reel can be fed by **fan-out over the scope's members with the
+mode's filter**, dealt round-robin across people so a prolific poster does not own the
+reel (the retired World board's lesson, recorded in `mix-deal.js`).
 
 ```
 scope = fol                      members = scopeMembersFor('fol')   (rings.js chain)
@@ -331,9 +370,24 @@ present at one tier carries a frontier entry (invariant 8): the ledger row is pa
   Top over the loaded window as the board already offers (proposed). Or New only.
 - **D5 — a clip-posters index.** Park (proposed), or plan a weekly file of accounts that
   post clips (bands, no content) as ADR-005's shape, to seed World with creators.
-- **D6 — the word.** *Clips* (proposed — already what the code calls a Bluesky video;
-  not a competitor's trademark). Alternatives: *Video* (the network's own word,
-  `contentModeVideo`, the feed named *Video*), *Shorts* (a trademark elsewhere).
+- **D6 — the word. DECIDED 2026-09-16 (owner, on mock v1):** it is a **mode** of viewing,
+  *clip* for video-centred and *gram* for image-centred; rows is the mode you have today.
+- **D7 — where the control lives.** Owner's suggestion: a mode pill **under the ring pill**
+  in the left nav, because any mode applies at any ring stop (drawn in mock v2). The open
+  half: on a phone the nav is a drawer, so is the strip also to carry the current mode as
+  the way back to rows, or is the drawer enough?
+- **D8 — the word in code.** `js/mode.js` already means *which population the app is*
+  (Bluesky view vs memory sandbox, `forage.mode`), and `MODES` in `js/config/routing.js`
+  means the substrate routing tables. Proposal: the reader-facing word stays *mode*, and
+  the code and the storage key say `view` (`forage.view`, `?view=clip`) so three things
+  named mode do not become four. Alternative: rename `js/mode.js` to `population.js`
+  first (a sweep with no behaviour change) and let this be `mode` everywhere.
+- **D9 — is a GIF a gram?** A `presentation: gif` video embed and a tenor/klipy GIF card
+  are pictures to a reader and video to the code. Proposal: gram shows them, paused, with
+  the GIF badge, and their own autoplay setting governs; clip does not show them.
+- **D10 — alt text in gram.** Rows hide the alt caption by default (gif-embeds D7). Gram
+  proposes showing it: the picture is the whole screen and the words a person wrote about
+  it are the caption. Or keep one setting everywhere.
 
 ## Phases
 
@@ -351,6 +405,8 @@ record every number in the Review Log. These decide D1's cost and the wave bound
   master playlist declare a subtitle track? (Decides whether the reel can show them.)
 - **0d. The official Video feed.** Is `thevids` auth-gated or down? One `getFeed` through
   the test account's PDS proxy. (Decides whether it is worth naming anywhere.)
+- **0f. `posts_with_media`.** Does the media filter return video posts too, and what
+  share of a follow list answers with ≥1 picture post? (The gram fan-out's yield.)
 - **0e. Device autoplay.** A throwaway page with three muted `playsinline` HLS clips in a
   scroll-snap stack on the Samsung and the Pixel (claim `testbed--samsung` /
   `testbed--pixel` first; seat the device queue): does in-view autoplay start without a
@@ -360,12 +416,15 @@ Disposition: throwaway, numbers into this plan. Exit: D1 and the wave bound deci
 
 ### Phase 1 — Substrate, pure (RED first)
 
-Changes: `js/clips.js` (new: `clipsOf(posts)`, the wave planner over a member list and
-the clip-posters register — pure, takes the register as input); `js/substrates/lens.js`
-(`fetchSource` `author` gains `filter`; a `clips(scope, board, { cursors, ahead })` method
-that fans out per D1 with `withTimeout`, deals, stamps `mixSource`, returns a cursor map
-and a `members` progress); `js/clip-posters.js` (device-local register, `read`/`write`,
-`forage.clip-posters` in `docs/DEVICE-LOCAL.md`).
+Changes: `js/view-mode.js` (new, the `ring-scope.js` shape: `KEY = 'forage.view'`,
+`MODES = rows | clip | gram`, `read`/`write`/`onChange`, and the block pill builder);
+`js/reel-plan.js` (new: `ofKind(posts, mode)`, the wave planner over a member list and the
+media-posters register — pure, takes the register as input); `js/substrates/lens.js`
+(`fetchSource` `author` gains `filter`; a `reel(mode, scope, board, { cursors, ahead })`
+method that fans out per D1 with `withTimeout`, deals, stamps `mixSource`, returns a
+cursor map and a `members` progress); `js/media-posters.js` (device-local register per
+mode, `read`/`write`, `forage.media-posters` in `docs/DEVICE-LOCAL.md`; `forage.view` gets
+its row too).
 Tests: `test/clips.test.js` (filter; deal fairness across people; backpressure — the
 planner asks for wave 2 only when `ahead < N`; a member with no clips is not asked again
 this session), `test/lens-clips.test.js` (a shim `get` recording calls: World issues no
@@ -376,12 +435,17 @@ RED: each test names a module or method that does not exist.
 
 ### Phase 2 — Presentation (RED first, hermetic)
 
-Changes: `js/ui/reel.js` (the stack; `IntersectionObserver`; preload window of one;
-autoplay per D3 and the labeled-clip rule; sound toggle; the controls column — author,
-words, like, reply, repost, share, open thread — every target ≥44px); `js/ui/lens-views.js`
-(the `[Clips]`/`[Rows]` switch on the board toolbar; `?view=clips` per D2; the count
-line); `css/app.css` (scroll-snap, the 9:16 stage, safe-area insets, reduced-motion);
-`ledger/divergence.js` (memory population: Clips is an honest empty page — frontier row).
+Changes: `js/ui/reel.js` (the stack, parameterised by mode; `IntersectionObserver`;
+preload window of one; clip: autoplay per D3 and the labeled-clip rule, sound toggle;
+gram: the stage/carousel at screen height, alt caption per D10; the controls column —
+author, words, like, reply, repost, share, open thread — every target ≥44px);
+`js/ui/nav.js` (the mode pill under the ring pill, D7 — `viewMode.modePill` beside
+`ringScope.ringPill`, the same block variant, drawn signed out too with rows selected and
+the others live, since a guest board has media); `js/ui/lens-views.js` (a board renders
+the reel when the mode is not rows; `?view=` per D2; the count line); `css/app.css`
+(scroll-snap, the screen-height stage, safe-area insets, reduced-motion);
+`ledger/divergence.js` (memory population: clip and gram are honest empty pages —
+frontier rows).
 Tests: `test/reel.test.js` under Node with a stubbed observer (one `data-player` at a
 time; a warn-labeled clip never receives `play()`; autoplay off → no `src` until press);
 `test/css-classes.test.js` sees the new literals.
@@ -433,6 +497,12 @@ than here.
 
 - 2026-09-14 — drafted from the owner's question, the Skylight research (§ Prior art),
   and the probes in § Verified assumptions. Awaiting D1–D6 and Phase 0.
+- 2026-09-16 — the owner on mock v1: *"we are looking at a 'mode' here like 'clip' mode
+  that is vids centered, and we could do a 'gram' mode where it could be images centred …
+  any mode could be used at any ring scale. Maybe we put a mode slider under the ring
+  slider?"* Reframed: § A is now three modes; D6 decided; D7–D10 added; Phases 1–2 name
+  the mode pill and the gram renderer; mock v2 draws the pill under the ring pill and a
+  gram frame.
 - 2026-09-14 — the owner asked to see it: `plans/mocks/clips.html` v1. Current is a capture
   of the engine (`board-lens-media`, phone and desktop, `forage@be82a95` = main's UI tree);
   every Proposed frame is a labelled SKETCH, because nothing is built — Phase 4 replaces
