@@ -419,6 +419,7 @@ h1.posttext { max-width: 68ch; letter-spacing: 0; }
 .switch[aria-checked="true"] { border-color: var(--boost); }
 .switch[aria-checked="true"]::before { background: var(--boost); }
 .switch-state { min-width: 2em; }
+.haptics-silenced { margin-left: 8px; vertical-align: middle; }
 @media (max-width: 480px) { .switch { min-height: 44px; } }
 /* the ⋯ menu (js/ui/menu.js): ONE <dialog> — a popover pinned beside the kebab
    on a desktop, a bottom sheet on a phone. Same element, CSS moves the box. */

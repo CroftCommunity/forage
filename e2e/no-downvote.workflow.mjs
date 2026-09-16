@@ -280,8 +280,22 @@ export async function run() {
     await page.goto(`${mem.origin}/settings`);
     await page.waitForSelector('#pref-haptics');
     assert.equal(await page.locator('#pref-haptics').getAttribute('aria-checked'), 'true', 'default on');
+    // The silenced chip (owner, 2026-09-16): hidden while a buzz would land…
+    const chipShown = () => page.evaluate(() => { const c = document.getElementById('pref-haptics-silenced'); return c && !c.hidden ? c.textContent : null; });
+    assert.equal(await chipShown(), null, 'vibrate present, no reduced motion: nothing to say');
+    // …shown, with the reason, when reduced motion silences it — live, no reload
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.waitForFunction(() => !document.getElementById('pref-haptics-silenced')?.hidden);
+    assert.match(await chipShown(), /silenced — your reduced-motion setting/, 'the chip names the gate');
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.waitForFunction(() => document.getElementById('pref-haptics-silenced')?.hidden);
+    // …and never for Off: off is off, not silenced
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.waitForFunction(() => !document.getElementById('pref-haptics-silenced')?.hidden);
     await page.locator('#pref-haptics').click();
     assert.equal(await page.locator('#pref-haptics').getAttribute('aria-checked'), 'false');
+    assert.equal(await chipShown(), null, 'switched off: the chip goes with it');
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
     assert.equal(await page.evaluate(() => localStorage.getItem('forage.haptics')), 'off');
     await page.goto(`${mem.origin}${threadHref}`);
     await page.waitForSelector(SEL);

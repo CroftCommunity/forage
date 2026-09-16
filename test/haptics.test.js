@@ -3,7 +3,7 @@
 // no vibrate API and degrades to nothing — never a sound, never a toast.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { enabled, set, buzz, PULSE_MS } from '../js/haptics.js';
+import { enabled, set, buzz, silenced, SILENCED_WHY, onSilencedChange, PULSE_MS } from '../js/haptics.js';
 
 // node has no localStorage; the module must read "absent" as the default (on)
 function withStorage(values, fn) {
@@ -58,4 +58,34 @@ test('buzz() (O3): prefers-reduced-motion: reduce → zero calls even when enabl
     withReducedMotion(false, () => withStorage({}, () => assert.equal(buzz(), true)));
     assert.deepEqual(calls, [30]);
   });
+});
+
+test('silenced(): the gates the web can see, hardware first; null when a buzz would land', () => {
+  const noop = () => true;
+  withVibrate(noop, () => {
+    withReducedMotion(false, () => assert.equal(silenced(), null));
+    withReducedMotion(true, () => assert.equal(silenced(), 'reduced-motion'));
+  });
+  withVibrate(null, () => {
+    withReducedMotion(false, () => assert.equal(silenced(), 'no-api'));
+    withReducedMotion(true, () => assert.equal(silenced(), 'no-api', 'no motor outranks a setting: nothing to change would help'));
+  });
+  for (const why of ['no-api', 'reduced-motion']) assert.ok(SILENCED_WHY[why], `every reason has words: ${why}`);
+  // the switch itself is not a reason: silenced() is about the device, enabled() about the choice
+  withVibrate(noop, () => withReducedMotion(false, () => withStorage({ 'forage.haptics': 'off' }, () => assert.equal(silenced(), null))));
+});
+
+test('onSilencedChange(): subscribes to the reduced-motion query and unsubscribes; no matchMedia → a no-op', () => {
+  const prev = globalThis.matchMedia;
+  const listeners = new Set();
+  globalThis.matchMedia = (q) => ({ matches: false, addEventListener: (_, fn) => listeners.add(fn), removeEventListener: (_, fn) => listeners.delete(fn) });
+  try {
+    const fn = () => {};
+    const off = onSilencedChange(fn);
+    assert.equal(listeners.size, 1);
+    off();
+    assert.equal(listeners.size, 0);
+    delete globalThis.matchMedia;
+    assert.doesNotThrow(() => onSilencedChange(fn)());
+  } finally { if (prev === undefined) delete globalThis.matchMedia; else globalThis.matchMedia = prev; }
 });
