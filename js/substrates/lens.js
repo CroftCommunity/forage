@@ -436,6 +436,13 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
   // surfaces that cannot show the media (compact rows, the thread head) —
   // and the shaper says so, because a surface that renders the media itself
   // shows "[image]" above the actual image otherwise (live 2026-08-28).
+  // alt-title (owner, 2026-09-16): an alt-derived title is a stand-in of the
+  // same kind — a name for a surface that cannot show the picture, NOT the
+  // author's words. bsky.app prints no text for a text-less post (social-app
+  // PostFeedItem renders RichText only when `richText.text`) and shows the
+  // alt as a corner "ALT" badge plus the full text in the image viewer; the
+  // shaper marks `titleFromAlt` so a surface that renders the media drops the
+  // stand-in the way it drops "[image]". The picture stands alone, as posted.
   const altTitle = media?.items?.find((i) => i.alt)?.alt;
   const placeholder = !text && !altTitle
     && (media?.kind === 'images' || media?.kind === 'video');
@@ -456,6 +463,7 @@ export function shapeLensPost(post, src, posture = EMPTY_POSTURE) {
     preview: '',
     ...(media ? { media } : {}),
     ...(placeholder ? { placeholderTitle: true } : {}),
+    ...(!text && altTitle ? { titleFromAlt: true } : {}),
     ...(quoted ? { quoted } : {}),
     ...(disp?.mode === 'warn' ? { warnLabels: disp.labels } : {}),
   };

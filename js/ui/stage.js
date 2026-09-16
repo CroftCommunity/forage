@@ -36,6 +36,16 @@ export function forgetMeasured() { MEASURED.clear(); }
 // a button over the picture, no link out — and the caller swaps the player in
 // (a <video> for a Bluesky clip, YouTube's embed for a YouTube link). Nothing
 // is fetched from the video's host until the press.
+// alt-title (owner, 2026-09-16): bsky.app's corner badge — the literal word
+// "ALT" on a picture whose author described it (social-app AutoSizedImage:
+// `hasAlt && <Text>ALT</Text>`, `accessible={false}`). It tells a sighted
+// reader a description exists; the description itself is the <img>'s alt (a
+// screen reader's), and the opt-in caption (js/alt-text.js) prints it. It
+// replaces the alt printed as the post's TITLE, which read as the author's
+// words. `aria-hidden`: the img already carries the alt, a badge that read
+// "ALT" aloud would say it twice.
+export const altBadge = (alt) => alt ? el('span', { class: 'stage-alt', 'data-alt-badge': '1', 'aria-hidden': 'true' }, 'ALT') : null;
+
 export function stage({ kind, thumb, alt = null, aspect = null, link, linkLabel = null, linkAttrs = {}, onPlay = null, playLabel = 'Play' }) {
   alt = alt ?? '';
   aspect = aspect || MEASURED.get(thumb) || null;
@@ -52,7 +62,8 @@ export function stage({ kind, thumb, alt = null, aspect = null, link, linkLabel 
     : el('div', attrs,
         el('a', { class: 'stage-link', href: link, ...(linkLabel ? { 'aria-label': linkLabel } : {}), ...linkAttrs },
           back, fore,
-          kind === 'video' ? el('span', { class: 'stage-play', 'aria-hidden': 'true' }, '▶') : null));
+          kind === 'video' ? el('span', { class: 'stage-play', 'aria-hidden': 'true' }, '▶') : null,
+          kind === 'images' ? altBadge(alt) : null));
   if (onPlay) node.querySelector('[data-play]').addEventListener('click', () => onPlay(node));
   if (!aspect) {
     fore.addEventListener('load', () => {
@@ -81,7 +92,8 @@ export function carousel({ items, linkAttrs = {} }) {
   const slides = items.map((i, idx) => el('div', { class: 'stage-slide', 'data-slide': String(idx + 1) },
     el('a', { class: 'stage-link', href: i.full, draggable: 'false', ...(i.alt ? {} : { 'aria-label': 'Image, opens full size' }), ...linkAttrs },
       el('img', { class: 'stage-back', src: i.thumb, alt: '', 'aria-hidden': 'true', loading: 'lazy', decoding: 'async', draggable: 'false' }),
-      el('img', { class: 'stage-fore', src: i.thumb, alt: i.alt, loading: 'lazy', decoding: 'async', draggable: 'false' }))));
+      el('img', { class: 'stage-fore', src: i.thumb, alt: i.alt, loading: 'lazy', decoding: 'async', draggable: 'false' }),
+      altBadge(i.alt))));
   const track = el('div', { class: 'stage-track' }, ...slides);
   const dots = el('div', { class: 'dots' }, ...items.map((_, idx) =>
     el('button', { type: 'button', 'data-dot': String(idx + 1), 'aria-label': `Picture ${idx + 1}`, 'aria-current': idx === 0 ? 'true' : 'false' })));
@@ -128,7 +140,8 @@ export function carousel({ items, linkAttrs = {} }) {
 export function grid({ items, linkAttrs = {} }) {
   return el('div', { class: 'stage-grid', 'data-count': String(items.length) },
     ...items.map((i) => el('a', { class: 'stage-cell', href: i.full, ...(i.alt ? {} : { 'aria-label': 'Image, opens full size' }), ...linkAttrs },
-      el('img', { class: 'stage-fore', src: i.thumb, alt: i.alt, loading: 'lazy', decoding: 'async' }))));
+      el('img', { class: 'stage-fore', src: i.thumb, alt: i.alt, loading: 'lazy', decoding: 'async' }),
+      altBadge(i.alt))));
 }
 
 // A GIF on its stage (gif-embeds phase 2; owner 2026-09-02: "the gif shuld

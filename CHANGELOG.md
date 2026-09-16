@@ -8,6 +8,14 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-16 **A picture-only post is its picture.** On a Bluesky board a post with no
+  text used to print its picture's alt description above the picture as if the author had
+  written it, in link blue, whether or not *Show alt text under pictures* was on. Now the
+  picture stands alone, on the board and at the head of its thread, the way bsky.app shows
+  it. A picture its author described carries a small *ALT* badge in its corner, as on
+  bsky.app; the description itself is the picture's name for a screen reader and, if you
+  switch the setting on, the caption under it. Real links, tags and mentions in a post's
+  text keep their blue. (owner, from the phone)
 - 2026-09-16 **A GIF is the picture alone unless you ask for its words.** A GIF card printed
   its title and site under the animation even with *Show alt text under pictures* off, and for
   nearly every GIF posted from Bluesky the title IS the alt text, so the setting was hiding one

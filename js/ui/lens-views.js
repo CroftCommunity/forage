@@ -908,10 +908,18 @@ const lensRow = (p, view = 'card') => {
   // external post's words are text too; the card under them is the link. A
   // title with no words (the alt-derived one) stays plain.
   const titleNode = p.maskedRemoved ? undefined
-    : showsMedia && p.placeholderTitle ? null
+    // alt-title (owner, 2026-09-16): with the picture on the row, neither
+    // stand-in prints above it — not "[image]", not the alt. bsky.app shows a
+    // text-less post as its picture alone (the alt is a corner badge, and the
+    // full text lives in the image viewer); until now the alt printed above
+    // the picture as if the author had written it, and as a link at that.
+    : showsMedia && (p.placeholderTitle || p.titleFromAlt) ? null
     // post-text: the row trims the card's own url too — the row shows the card
     // (bodyNode, below), so the raw url would be printed twice there as well
     : p.body ? el('div', { class: 'posttitle posttext' }, ...headWords(p))
+    // a stand-in title on a row that cannot show its media is plain words —
+    // never postRow's default anchor, which `.posttitle.posttext a` paints blue
+    : p.title ? el('div', { class: 'posttitle posttext', 'data-alt-title': '1' }, p.title)
     : undefined;
   return postRow(p, !!session, {
     onVote: lensVote(p),
@@ -4036,7 +4044,9 @@ export function lensThreadView(params, query) {
       //   - it dropped every \n: 30% of live posts carry line structure
       // `pre-wrap` on .posttext keeps the breaks; the h1 stays valid because
       // facetNodes returns phrasing content only (text and anchors).
-      p.placeholderTitle && p.media ? null : el('h1', { class: 'posttext' }, ...headWords(p)),
+      // alt-title (2026-09-16): the alt-derived stand-in drops with the media
+      // on the page too — the picture is the post; its alt is the <img>'s name
+      (p.placeholderTitle || p.titleFromAlt) && p.media ? null : el('h1', { class: 'posttext' }, ...headWords(p)),
       // The post's own media, at full board size — until 2026-08-28 an image
       // post's thread page rendered no image at all.
       p.media && !p.maskedRemoved ? mediaNode(p) : null,
