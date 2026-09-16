@@ -8,6 +8,12 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-16 **Save keeps your place.** Choosing *Save* (or *Unsave*) from a post's ⋯ menu
+  used to repaint the whole board under the sheet, so the stream you were reading jumped
+  and you lost where you were. The bookmark is written the same way as before; the page
+  simply stays put now, and the next press of ⋯ reads *Unsave* as it always did. Nothing
+  on the row shows saved state, so there was never anything to repaint. (owner, from the
+  phone)
 - 2026-09-16 **Delete lives in the ⋯ menu.** Deleting your own post or reply used to be a
   button in the action row, the one control there that was not about answering the post.
   It is now the last item of the post's or reply's ⋯ menu, named for what it takes

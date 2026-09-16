@@ -247,6 +247,36 @@ export async function run() {
   assert.ok(await page.locator('.postrow:has-text("post a1") span[title="Verified on Bluesky"]').count(),
     'the verified author carries the checkmark');
 
+  // Save from a row's ⋯ menu leaves the board exactly where it was. The handler
+  // used to force a full repaint after the bookmark write, which rebuilt every
+  // row under the sheet and lost the reader's place in the stream (owner, from
+  // the phone, 2026-09-16). Nothing on the row shows saved state — only the
+  // menu's own label does, and that is read from the post at press time — so
+  // there is nothing to repaint. The row NODE surviving is the proof: a
+  // rebuild replaces it, whatever the scroll offset then happens to be.
+  const savedRow = page.locator('.postrow', { hasText: 'post a1' });
+  await savedRow.evaluate((r) => { r.dataset.kept = 'yes'; });
+  await page.setViewportSize({ width: 1280, height: 300 }); // taller than the viewport, so there is a place to lose
+  await savedRow.evaluate((r) => r.scrollIntoView({ block: 'center' }));
+  const yBefore = await page.evaluate(() => window.scrollY);
+  assert.ok(yBefore > 0, `the board is scrolled before Save: ${yBefore}`);
+  await savedRow.locator('.byline button.kebab').click();
+  await page.waitForTimeout(150);
+  await page.getByRole('menuitem', { name: 'Save', exact: true }).click();
+  await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('app.bsky.bookmark.createBookmark')
+    && JSON.parse(h.body).uri.endsWith('/a1')));
+  await page.waitForSelector('text=Saved.');
+  assert.equal(await page.locator('.postrow[data-kept="yes"]', { hasText: 'post a1' }).count(), 1,
+    'the row is the same node after Save — the board was not rebuilt under the menu');
+  assert.equal(await page.evaluate(() => window.scrollY), yBefore, 'and the reader has not moved');
+  await savedRow.locator('.byline button.kebab').click();
+  await page.waitForTimeout(150);
+  const afterSave = await page.$$eval('[role="menu"] [role="menuitem"]', (els) => els.map((e) => e.querySelector('span').textContent.trim()));
+  assert.ok(afterSave.includes('Unsave'), `the next press reads Unsave, from the post itself: ${JSON.stringify(afterSave)}`);
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(100);
+  await page.setViewportSize({ width: 1280, height: 720 });
+
   // 3e segment: open b1's thread — reply and quote are ONE continuation;
   // 3i: the poster's own 2/2 reads as the BODY, not a comment
   await page.locator('.postrow', { hasText: 'post b1' }).locator('a[href*="/p?uri="]').first().click();

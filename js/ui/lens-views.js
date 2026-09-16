@@ -1796,8 +1796,13 @@ function lensMenuGroups(p, { kind, onDeleted }) {
   ];
   // board-cards decision 8: the guest's menu ends with the door, behind a rule
   if (!session) return [first, [{ label: 'Sign in to like, save and reply', icon: '\u2192', onSelect: () => openAuthSheet() }]];
+  // No repaint after the write: nothing on the row or the head shows saved
+  // state, and this menu is built fresh per press from `p` itself, so the next
+  // press reads Unsave without one. The rerender() that used to follow rebuilt
+  // the whole board under the sheet and lost the reader's place in the stream
+  // (owner, from the phone, 2026-09-16); Mute thread below never had it.
   first.push({ label: p.saved ? 'Unsave' : 'Save', icon: '☆', onSelect: async () => {
-    try { await lens.bookmark(p.id, p.cid, !p.saved); p.saved = !p.saved; toast(p.saved ? 'Saved.' : 'Removed from saved.', 'ok'); rerender(); }
+    try { await lens.bookmark(p.id, p.cid, !p.saved); p.saved = !p.saved; toast(p.saved ? 'Saved.' : 'Removed from saved.', 'ok'); }
     catch (e) { console.warn('forage: bookmark refused', e); toast(e.message, 'err'); }
   } });
   const rootUri = kind === 'comment' ? (p.postId || p.id) : p.id;
