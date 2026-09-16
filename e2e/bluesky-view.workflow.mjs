@@ -406,40 +406,67 @@ export async function run() {
   // into. The thread genuinely keeps repainting (the reply refetches, the quote
   // cascade repaints again when it lands); a test cannot out-wait that, it can
   // only stop leaving a seam.
+  //
+  // Delete lives in the ⋯ menu now (owner, 2026-09-16), so the settled shape
+  // is what each menu offers: nothing in the action row says Delete any more,
+  // and only your own reply's menu ends in Delete reply. The action rows are
+  // read in one evaluate; the menus are opened one at a time below, and a
+  // menu is built fresh per open, so it cannot be stale.
   const shapeHandle = await page.waitForFunction(() => {
     const mine = document.querySelector('.comment[data-node-id$="/myreply"]');
     const theirs = document.querySelector('.comment[data-node-id$="/reply1"]');
     if (!mine || !theirs) return null;
     const shape = {
-      head: document.querySelectorAll('.card > [data-delete-post]').length,
-      mine: mine.querySelectorAll('[data-delete-post]').length,
-      theirs: theirs.querySelectorAll('[data-delete-post]').length,
+      rowDeletes: [...document.querySelectorAll('.actions button')].filter((b) => /delete/i.test(b.textContent)).length,
+      mineKebab: mine.querySelectorAll(':scope > .comment-body > .byline button.kebab').length,
+      theirsKebab: theirs.querySelectorAll(':scope > .comment-body > .byline button.kebab').length,
     };
-    // Return the shape only once it is the settled one; returning early would
-    // reintroduce exactly the seam this closes.
-    return (shape.head === 0 && shape.mine === 1 && shape.theirs === 0) ? shape : null;
+    return (shape.rowDeletes === 0 && shape.mineKebab === 1 && shape.theirsKebab === 1) ? shape : null;
   }, null, { timeout: 20000 }).catch((e) => {
-    throw new Error(`delete controls never settled to (head 0, mine 1, theirs 0): ${e.message}`);
+    throw new Error(`the thread never settled to (no Delete in any action row, one ⋯ on each reply): ${e.message}`);
   });
-  const deleteShape = await shapeHandle.jsonValue();
+  await shapeHandle.jsonValue();
 
-  assert.equal(deleteShape.head, 0, 'no delete control on a post that is not yours');
-  assert.equal(deleteShape.mine, 1, 'your own reply can be deleted');
-  assert.equal(deleteShape.theirs, 0, 'someone else\u2019s reply cannot');
-  await page.locator('.comment[data-node-id$="/myreply"] [data-delete-post]').click();
-  await page.locator('.comment[data-node-id$="/myreply"] [data-delete-post][data-armed="1"]').click();
+  const menuLabels = () => page.$$eval('[role="menu"] [role="menuitem"] > span:first-child', (els) => els.map((e) => e.textContent.trim()));
+  // the head is not mine: its menu has no Delete
+  await page.locator('.head-byline button.kebab').click();
+  await page.waitForTimeout(150);
+  assert.ok(!(await menuLabels()).some((l) => /delete/i.test(l)), 'no delete on a post that is not yours');
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => !document.querySelector('dialog.menu'));
+
+  // my own reply: no Mute/Block/Report, and the last item is Delete reply
+  const mineKebab = page.locator('.comment[data-node-id$="/myreply"] > .comment-body > .byline button.kebab');
+  await mineKebab.click();
+  await page.waitForTimeout(150);
+  assert.deepEqual(await menuLabels(), ['Copy text', 'Copy link', 'Open on bsky.app', 'Save',
+    'Mute thread', 'Mute words & tags', 'Hide for me', 'Delete reply'], 'your own reply can be deleted, from its menu');
+  // deleting is irreversible, so it takes two deliberate acts: the menu item,
+  // then a sheet that says what deleting does and asks — Cancel keeps it
+  await page.getByRole('menuitem', { name: 'Delete reply', exact: true }).click();
+  await page.waitForSelector('[data-delete-sheet]');
+  await page.locator('[data-delete-cancel]').click();
+  await page.waitForFunction(() => !document.querySelector('[data-delete-sheet]'));
+  assert.ok(!(await page.evaluate(() => window.__shimHits.some((h) => h.url.includes('deleteRecord')
+    && JSON.parse(h.body).collection === 'app.bsky.feed.post'))), 'Cancel deletes nothing');
+  await mineKebab.click();
+  await page.getByRole('menuitem', { name: 'Delete reply', exact: true }).click();
+  await page.waitForSelector('[data-delete-sheet]');
+  assert.match(await page.locator('[data-delete-sheet]').innerText(), /delete this reply\?/i,
+    'the second act is clearly a different act from the first, and names what it takes');
+  await page.locator('[data-delete-confirm]').click();
   await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('deleteRecord')
     && JSON.parse(h.body).rkey === 'myreply'));
   await page.waitForSelector('text=You deleted this reply.');
 
   // Phase 4b (plan 2026-08-29 post-and-thread, decision 3): the ⋯ on someone
   // else's reply carries the whole decided list, in order, destructive last.
-  const menuLabels = () => page.$$eval('[role="menu"] [role="menuitem"] > span:first-child', (els) => els.map((e) => e.textContent.trim()));
   const theirsKebab = page.locator('.comment[data-node-id$="/reply1"] > .comment-body > .byline button.kebab');
   await theirsKebab.click();
   await page.waitForTimeout(150);
   assert.deepEqual(await menuLabels(), ['Copy text', 'Copy link', 'Open on bsky.app', 'Save',
-    'Mute thread', 'Mute words & tags', 'Hide for me', 'Mute account', 'Block account', 'Report']);
+    'Mute thread', 'Mute words & tags', 'Hide for me', 'Mute account', 'Block account', 'Report'],
+    'someone else\u2019s reply cannot be deleted — it can be reported');
   // Save IS the bookmark procedure (4a-i) — the shim records the call
   await page.getByRole('menuitem', { name: 'Save', exact: true }).click();
   await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('app.bsky.bookmark.createBookmark')
@@ -456,16 +483,20 @@ export async function run() {
 
   await page.goto(`${s.origin}/p?uri=${encodeURIComponent('at://did:plc:me/app.bsky.feed.post/mine')}`);
   await page.waitForSelector('text=a post of my own');
-  await page.waitForSelector('[data-delete-post]');
+  await page.waitForSelector('.head-byline button.kebab');
+  assert.equal(await page.locator('.head-actions button', { hasText: /delete/i }).count(), 0,
+    'the action row answers the post; deleting it is in the menu');
 
-  // deleting is irreversible, so it takes two deliberate clicks rather than a
-  // blocking confirm() dialog (which would freeze the whole app)
-  await page.locator('[data-delete-post]').click();
-  await page.waitForSelector('[data-delete-post][data-armed="1"]');
-  assert.match(await page.locator('[data-delete-post]').innerText(), /really|sure|confirm/i,
-    'the second click is clearly a different act from the first');
-  await page.locator('[data-delete-post]').click();
-  await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('deleteRecord')));
+  // my own post: the menu's last item is Delete post, and it takes the same
+  // two deliberate acts as a reply's — the item, then the sheet's red button
+  await page.locator('.head-byline button.kebab').click();
+  await page.waitForTimeout(150);
+  assert.deepEqual((await menuLabels()).slice(-1), ['Delete post'], 'your own post can be deleted, from its menu, last');
+  await page.getByRole('menuitem', { name: 'Delete post', exact: true }).click();
+  await page.waitForSelector('[data-delete-sheet]');
+  await page.locator('[data-delete-confirm]').click();
+  await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('deleteRecord')
+    && JSON.parse(h.body).rkey === 'mine'));
   const deletedBody = await page.evaluate(() => JSON.parse(window.__shimHits
     .filter((h) => h.url.includes('deleteRecord')).at(-1).body));
   assert.deepEqual(deletedBody, { repo: 'did:plc:me', collection: 'app.bsky.feed.post', rkey: 'mine' });

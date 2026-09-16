@@ -33,7 +33,7 @@ export async function run() {
           count: card.querySelector('.postmeta')?.textContent.trim(),
           badges: [...card.querySelectorAll('.part-seam .part-badge')].map((b) => b.textContent.trim()),
           seamMenus: card.querySelectorAll('.part-seam .kebab').length,
-          headDelete: [...card.querySelectorAll('[data-delete-post]')].map((b) => b.textContent.trim()),
+          rowDeletes: [...card.querySelectorAll('.actions button')].filter((b) => /delete/i.test(b.textContent)).length,
           words: card.textContent,
           empty: !!document.querySelector('.empty'),
         };
@@ -48,14 +48,21 @@ export async function run() {
         'the head names the parts and counts only what the list shows');
       assert.ok(!head.count.includes('13'), 'never the appview\'s raw replyCount again');
 
-      // The delete hazard, both halves: a part can delete itself, and the button
+      // The delete hazard, both halves: a part can delete itself, and the item
       // that deletes the POST says so.
       // Owner, 2026-09-03: parts 1, 2, 3 are ONE post read as one narrative, so
       // the seam is a hairline and a number — the part's time, link and its own
       // delete live in its ⋯ menu rather than on a strip through the words.
+      // Owner, 2026-09-16: the post's own delete moved into ITS ⋯ menu too, so
+      // no button on the card reads Delete at all.
       assert.equal(head.seamMenus, 2, 'every part carries its own menu');
-      assert.deepEqual(head.headDelete, ['Delete post'],
-        'and the only button on the card names what it takes');
+      assert.equal(head.rowDeletes, 0, 'and no button in an action row deletes anything');
+      await s.page.click('.head-byline button.kebab');
+      const headItems = await s.page.evaluate(() =>
+        [...document.querySelectorAll('[role="menu"] [role="menuitem"] > span:first-child')].map((b) => b.textContent.trim()));
+      assert.deepEqual(headItems.slice(-1), ['Delete post'],
+        `the post's own delete is the last item of its menu, named for what it takes; menu was ${JSON.stringify(headItems)}`);
+      await s.page.keyboard.press('Escape');
 
       // Oldest-first: the decoy is NEWER than part two and the appview returned
       // it FIRST. It is a comment, not the post's second paragraph.
@@ -88,15 +95,14 @@ export async function run() {
         count: document.querySelector('.postmeta')?.textContent.trim(),
         empty: document.querySelector('.empty')?.textContent || '',
         badges: [...document.querySelectorAll('.part-badge')].map((b) => b.textContent.trim()),
-        deletes: [...document.querySelectorAll('[data-delete-post]')].map((b) => b.textContent.trim()),
+        rowDeletes: [...document.querySelectorAll('.actions button')].filter((b) => /delete/i.test(b.textContent)).length,
         seams: document.querySelectorAll('.part-seam .kebab').length,
       }));
       assert.equal(out.count, '2 parts · 0 replies', 'the head counts what is there');
       assert.ok(!out.count.includes('1 reply'), 'the sentence the owner read is gone');
       assert.ok(out.empty.includes('No replies'), 'and the empty state still says so honestly');
       assert.deepEqual(out.badges, ['2/2'], 'the reply is named as the post\'s second part');
-      assert.deepEqual(out.deletes, ['Delete post'],
-        'one button on the card, and it says what it takes');
+      assert.equal(out.rowDeletes, 0, 'no button on the card deletes; both deletes are in menus');
       assert.equal(out.seams, 1, 'the part\'s own delete is a tap away in its menu, not a second button');
 
       // and the part's delete is really THERE, named for the part — the whole
