@@ -137,6 +137,16 @@ export async function run() {
         replies: [],
       } },
       'getQuotes?uri=at%3A%2F%2Fdid%3Aplc%3Acc%2Fapp.bsky.feed.post%2Ftp4': { posts: [] },
+      // alt-title (2026-09-16): the described picture post opened as a THREAD —
+      // the alt-derived stand-in drops at the head the way '[image]' does
+      'getPostThread?uri=at%3A%2F%2Fdid%3Aplc%3Acc%2Fapp.bsky.feed.post%2Ftp3': { thread: {
+        post: { ...post('tp3', 'did:plc:cc', '2026-08-25T15:30:00Z').post,
+          record: { text: '', createdAt: '2026-08-25T15:30:00Z' },
+          embed: { $type: 'app.bsky.embed.images#view', images: [
+            { thumb: 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==', fullsize: 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==', alt: 'a test image post' } ] } },
+        replies: [],
+      } },
+      'getQuotes?uri=at%3A%2F%2Fdid%3Aplc%3Acc%2Fapp.bsky.feed.post%2Ftp3': { posts: [] },
       // 3r: the cascade fixture. Routing is first-match-wins by substring, so
       // quote1's own thread/quotes must be declared BEFORE the generic keys.
       'getPostThread?uri=at%3A%2F%2Fdid%3Aplc%3Acc%2Fapp.bsky.feed.post%2Fquote1': { thread: {
@@ -709,23 +719,22 @@ export async function run() {
   // 3i segment: media renders in Card (on a STAGE since board-cards Phase 5);
   // image-only titles from alt; Compact drops it
   await page.waitForSelector('.stage img.stage-fore');
-  await page.waitForSelector('text=a test image post');
-  // body-text-link (owner's phone, 2026-09-16): the alt-derived title is WORDS,
-  // like a text post's — not an anchor, not painted link-blue. It had fallen
-  // through to postRow's default title link, so an image-only row's text read
-  // as a link beside a text row's plain words.
+  await page.waitForSelector('.stage img[alt="a test image post"]');
+  // alt-title (owner's phone, 2026-09-16): a text-less picture post is its
+  // PICTURE, as posted. The alt had printed above it as the post's title — as
+  // a link, in link blue, beside text rows whose words sit plain — although
+  // the reader had switched "Show alt text under pictures" off. bsky.app
+  // prints nothing for an empty text and marks a described picture with a
+  // corner "ALT" badge; the description stays the <img>'s name.
   {
-    const altTitle = page.locator('.posttitle[data-alt-title]', { hasText: 'a test image post' }).first();
-    assert.equal(await altTitle.count(), 1, 'the image-only post titles from its alt, as plain words');
-    assert.equal(await altTitle.locator('a').count(), 0, 'the alt-derived title is not a link');
-    const colours = await altTitle.evaluate((t) => {
-      const probe = document.createElement('a'); probe.href = '/x'; t.parentElement.append(probe);
-      const link = getComputedStyle(probe).color; probe.remove();
-      const text = getComputedStyle(t.closest('.postrow')).color;
-      return { got: getComputedStyle(t).color, link, text };
-    });
-    assert.notEqual(colours.got, colours.link, 'the alt-derived title is not link-coloured');
-    assert.equal(colours.got, colours.text, 'it reads in the row\'s text colour');
+    const row = page.locator('.postrow', { has: page.locator('img[alt="a test image post"]') }).first();
+    assert.equal(await row.locator('.posttitle').count(), 0, 'no title line above the picture — not the alt, not a placeholder');
+    assert.equal(await row.locator(':scope .posttext').count(), 0, 'and no text line: the author wrote none');
+    assert.equal(await row.locator('.stage [data-alt-badge]').count(), 1, 'the corner badge says a description exists');
+    assert.equal(await row.locator('.stage [data-alt-badge]').getAttribute('aria-hidden'), 'true', 'the badge is silent — the <img> alt already speaks');
+    assert.equal(await row.locator('[data-alt-text]').count(), 0, 'the caption stays off until the reader switches it on');
+    const noAlt = page.locator('.postrow', { has: page.locator('.stage img.stage-fore[alt=""]') }).first();
+    assert.equal(await noAlt.locator('.stage [data-alt-badge]').count(), 0, 'a picture nobody described gets no badge');
   }
   // The no-alt image post (tp4): its media renders, so the '[image]'
   // placeholder title must NOT print above it — the image is the content.
@@ -756,6 +765,11 @@ export async function run() {
   await page.waitForSelector('.stage img.stage-fore');
   assert.equal(await page.locator('h1', { hasText: '[image]' }).count(), 0,
     'the thread head never prints the literal [image] above the rendered image');
+  // alt-title: the alt-derived stand-in drops at the head the same way
+  await page.goto(`${s.origin}/p?uri=${encodeURIComponent('at://did:plc:cc/app.bsky.feed.post/tp3')}`);
+  await page.waitForSelector('.stage img[alt="a test image post"]');
+  assert.equal(await page.locator('h1.posttext').count(), 0, 'the thread head prints no alt-derived heading above the picture');
+  assert.equal(await page.locator('.stage [data-alt-badge]').count(), 1, 'the head\'s picture carries the ALT badge');
 
   // 3v: a SHARED feed link, opened COLD — a fresh navigation with no prior
   // in-app state, exactly like pasting the URL to someone else. The failure

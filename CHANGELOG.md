@@ -8,13 +8,14 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
-- 2026-09-16 **A picture-only post's words are words, not a link.** On a Bluesky board a
-  post with no text shows its picture's alt description where its text would go. That line
-  rendered as a link in link blue, beside text posts whose words sit plain, so the feed read
-  as if some posts were links and others not when both open the same way. The alt-derived
-  line is plain text now, in the row's own colour; the row still opens its thread on a press,
-  and real links, tags and mentions inside a post's text keep their blue. (owner, from the
-  phone)
+- 2026-09-16 **A picture-only post is its picture.** On a Bluesky board a post with no
+  text used to print its picture's alt description above the picture as if the author had
+  written it, in link blue, whether or not *Show alt text under pictures* was on. Now the
+  picture stands alone, on the board and at the head of its thread, the way bsky.app shows
+  it. A picture its author described carries a small *ALT* badge in its corner, as on
+  bsky.app; the description itself is the picture's name for a screen reader and, if you
+  switch the setting on, the caption under it. Real links, tags and mentions in a post's
+  text keep their blue. (owner, from the phone)
 - 2026-09-16 **The like's buzz is one you can feel.** The vibration on a like or promote
   was 12 ms, a length the owner's phone did not register on posts or on comments; it is
   30 ms now, the shortest pulse that reads as a vibration rather than nothing. Off is still

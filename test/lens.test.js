@@ -736,11 +736,17 @@ test('3i: a real title — text or alt — is never marked as a placeholder', ()
     embed: { $type: 'app.bsky.embed.images#view', images: [{ thumb: 't', fullsize: 'f', alt: 'a heron' }] } }), QSRC);
   assert.equal(fromAlt.title, 'a heron');
   assert.equal(fromAlt.placeholderTitle, undefined, 'an alt-derived title is real');
+  // alt-title (2026-09-16): real words for a surface that cannot show the
+  // picture — but a STAND-IN, and the shaper says so, because a surface that
+  // renders the picture drops it like "[image]": bsky.app prints nothing
+  // for a text-less post, and the alt is the picture's name, not the author's
+  assert.equal(fromAlt.titleFromAlt, true, 'the shaper marks a title that came from alt');
 
   const fromText = shapeLensPost(qPost('t1', 'did:plc:a', '2026-08-26T00:00:00Z', {
     record: { text: 'words', createdAt: '2026-08-26T00:00:00Z' },
     embed: { $type: 'app.bsky.embed.images#view', images: [{ thumb: 't', fullsize: 'f', alt: '' }] } }), QSRC);
   assert.equal(fromText.placeholderTitle, undefined, 'a text title is real');
+  assert.equal(fromText.titleFromAlt, undefined, 'and is the author\'s own — not marked');
 });
 
 test('3i: video-only with no thumb text gets the placeholder mark too', () => {
