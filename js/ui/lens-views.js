@@ -598,23 +598,36 @@ function withAltCaption(picture, items) {
 // gif-embeds phase 2: the GIF CARD (owner, 2026-09-02 — "the gif shuld show a
 // play/pause overlay … not just tha tpost, but that TYPE of post").
 //
-// The stage is a player rather than a still thumbnail with a link out; the
-// caption keeps the card's identity. D8: bsky.app hides the title and host for
-// a GIF (`hideDetails`), forage does not — the owner asked for a player and a
-// setting, not for the card to lose its name. The duplication that prompted
-// the report is gone anyway, because the "ALT: <the title again>" line is what
-// the alt-text setting hides by default.
+// The stage is a player rather than a still thumbnail with a link out. D8
+// (revised 2026-09-16, owner from the phone: "I don't want to this alt text
+// under images or gifs unless the setting is checked"): the caption — the
+// GIF's title, its alt and its host — is printed ONLY when the alt-text
+// setting is on. bsky.app hides the title and host for a GIF (`hideDetails`)
+// and forage now does the same by default: a GIF's title IS its alt for
+// practically every record Bluesky's composer writes ("ALT: <the title>"), so
+// printing the title under the picture was the alt text the setting promised
+// to hide, under another name. With the setting on, the whole caption comes
+// back: title, alt (only when it says something the title does not), host —
+// the link out rides with it.
+//
+// D7 still holds: `<img alt>` / the player's accessible name are written in
+// both states — this governs a VISIBLE caption only.
 function gifCard(p) {
   const { uri, thumb, title, alt, player, sources, src, aspect } = p.media;
   const host = domainOf(uri) || '';
   const name = title || host || 'GIF';
   const linkAttrs = { target: '_blank', rel: 'noopener noreferrer' };
-  return el('div', { class: 'extcard', 'data-extcard': '1', 'data-gifcard': '1', 'data-provider': 'gif' },
+  const captionOn = altText.shown();
+  const altIsTitle = !!alt && alt.trim() === (title || '').trim();
+  const altLine = captionOn && !!alt && !altIsTitle;
+  return el('div', { class: 'extcard', 'data-extcard': '1', 'data-gifcard': '1', 'data-provider': 'gif',
+    'data-gif-caption': captionOn ? 'on' : 'off' },
     gifStage({ player, sources, src, thumb, alt, aspect, autoplay: gifAutoplay.enabled() }),
-    el('a', { class: 'ext-caption', href: uri, ...linkAttrs, 'aria-label': `${name} — opens in a new tab` },
-      el('div', { class: 'ext-title', 'data-ext-title': '1' }, name),
-      altText.shown() && alt ? el('div', { class: 'ext-desc', 'data-alt-text': '1' }, alt) : null,
-      el('div', { class: 'ext-host' }, el('span', { 'data-ext-host': '1' }, host))));
+    captionOn ? el('a', { class: 'ext-caption', href: uri, ...linkAttrs, 'aria-label': `${name} — opens in a new tab` },
+      // the auto-filled duplicate: the title IS the alt, so the one line is both
+      el('div', { class: 'ext-title', 'data-ext-title': '1', 'data-alt-text': altIsTitle ? '1' : null }, name),
+      altLine ? el('div', { class: 'ext-desc', 'data-alt-text': '1' }, alt) : null,
+      el('div', { class: 'ext-host' }, el('span', { 'data-ext-host': '1' }, host))) : null);
 }
 
 // v13 decisions 29 and 31: the EXTERNAL CARD — the picture on a stage (centred,
@@ -3805,7 +3818,7 @@ export function lensProfileView() {
       el('div', { style: 'margin-top:8px' },
         el('h3', { style: 'font-size:var(--t-md);margin:0 0 4px' }, 'Alt text'),
         el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
-          'Alt text is the description an author writes for people who cannot see a picture. Off, it stays where screen readers read it. On, it is printed under the picture too — including on GIFs, where Bluesky often fills it in with the GIF’s own title.'),
+          'Alt text is the description an author writes for people who cannot see a picture. Off, it stays where screen readers read it, and a GIF is just the picture — no title or site under it. On, it is printed under the picture too — and a GIF gets its title, its alt and its site back, where Bluesky often fills the alt in with the GIF’s own title.'),
         el('label', { class: 'seccheck', for: 'pref-alttext' }, altBox, el('span', {}, 'Show alt text under pictures')),
         el('h3', { style: 'font-size:var(--t-md);margin:12px 0 4px' }, 'Deep threads'),
         el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
