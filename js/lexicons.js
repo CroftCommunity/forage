@@ -123,3 +123,61 @@ export const MIX_DEFS = Object.freeze({
     }
   }
 });
+
+/** `lexicons/fyi.forage.feedindex.json` → defs.main.record (plan 2026-09-21 own-index-on-the-pds; the first pin with a `blob`) */
+export const FEEDINDEX_RECORD = Object.freeze({
+  "type": "object",
+  "required": [
+    "kind",
+    "mode",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "kind": {
+      "type": "string",
+      "enum": [
+        "file",
+        "url"
+      ],
+      "description": "Which of file / url carries the index. Exactly one is present; a lexicon cannot say one-of, so the reading client enforces it."
+    },
+    "file": {
+      "type": "blob",
+      "accept": [
+        "application/json"
+      ],
+      "maxSize": 2000000,
+      "description": "For file: the index itself (docs/FEED-INDEX.md, \"v\": 1), uploaded as JSON. The ceiling is the one number that also bounds a pasted file and a fetched link."
+    },
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "maxLength": 2048,
+      "description": "For url: where the index is published. Fetched by the reading client over https only, on demand — never polled — and the host must allow cross-origin reads."
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "add",
+        "replace"
+      ],
+      "description": "add: laid over the app's shipped index, this one winning where both name a thing. replace: this one alone. Off is a device's choice and is not a record value."
+    },
+    "name": {
+      "type": "string",
+      "maxGraphemes": 80,
+      "maxLength": 800,
+      "description": "What the reader calls it."
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "datetime"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "datetime",
+      "description": "Moves on every put — a switch from file to url is a put at the same key."
+    }
+  }
+});

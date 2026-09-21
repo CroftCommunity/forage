@@ -246,7 +246,7 @@ ecosystem plausibly shares yet (it describes *Forage's* index format, `"v": 1`);
 | **D4** | Does `mode` (add / replace) travel? Does `off`? | (a) both in the record; (b) `mode` in the record, `off` device-local; (c) neither | **(b) — CONFIRMED by the owner 2026-09-21 (O2).** *Add over Forage's* vs *instead of it* is part of the choice that should follow Alice to her phone. *Off* is "no index on this device" — a reading preference, E160's batch — and a record whose meaning is "load nothing" is a record for nothing |
 | **D5** | When a link is fetched | (a) on demand — first time on a device, and when the reader presses *Refresh*; (b) every visit; (c) on a timer | **(a).** The feed-index plan already decided *"polling a forager's index URL — they refresh it; we never fetch on our own."* The status line shows the copy's age so "on demand" is visible, not hidden |
 | **D6** | Which half wins when a device holds a file AND the account holds a record | (a) the record; (b) the device; (c) merge | **(a), and make it impossible to ask twice:** publishing MOVES the file out of the device half (the mix pattern), so the two are disjoint by construction; the device keeps only the cache of the account's copy |
-| **D7** | The size ceiling — one number for the blob's `maxSize`, the link's byte counter, and the paste box | (a) 2,000,000 bytes; (b) 5,000,000 (just under the reference PDS's 5 MiB upload default, E3); (c) none | **(a) — DECIDED by the owner 2026-09-21 (O3: *"2MB should be fine"*); the Phase 0 measurement now only confirms the browser holds it.** The copy lands in `localStorage`, whose per-origin quota is on the order of 5 MB and counts UTF-16 units; the shipped index is 1.07 MB. A 5 MB file could be *accepted, uploaded, and then silently not stored* on the device (today `write()` swallows the quota error — Phase 1 fixes that either way). 2 MB gives the harvest ~1.9× headroom and a test pins the shipped index under half of it, so growth is watched rather than discovered. Raising it later is a schema edit; lowering it after records exist is a migration |
+| **D7** | The size ceiling — one number for the blob's `maxSize`, the link's byte counter, and the paste box | (a) 2,000,000 bytes; (b) 5,000,000 (just under the reference PDS's 5 MiB upload default, E3); (c) none | **(a) — DECIDED by the owner 2026-09-21 (O3: *"2MB should be fine"*); the Phase 0 measurement now only confirms the browser holds it — MEASURED 2026-09-21: Chromium and WebKit each stored and read back a 5,000,000-character `forage.feedindex` value beside 100 KB of other `forage.*` keys and refused at 6,000,000 (`QuotaExceededError`), so 2 MB is under half the quota.** The copy lands in `localStorage`, whose per-origin quota is on the order of 5 MB and counts UTF-16 units; the shipped index is 1.07 MB. A 5 MB file could be *accepted, uploaded, and then silently not stored* on the device (today `write()` swallows the quota error — Phase 1 fixes that either way). 2 MB gives the harvest ~1.9× headroom and a test pins the shipped index under half of it, so growth is watched rather than discovered. Raising it later is a schema edit; lowering it after records exist is a migration |
 | **D8** | The type's name | (a) `fyi.forage.feedindex`; (b) `…discoveryindex`; (c) `…index` | **(a).** Matches the storage key `forage.feedindex`, `docs/FEED-INDEX.md`, `data/feed-index.json`, and the harvest — one word for one thing across the code and the docs |
 | **D9** | Does this plan publish `fyi.forage.*`? | (a) no — mint the type, register it as *unpublished (stage)*; (b) yes | **(a)** — the mixes plan's D3, unchanged: publication is one act for the namespace, owed by the register's TODO (the account whose handle is `forage.fyi` + two TXT records), and coupling it to one feature was declined once already |
 | **D10** | A guest, or a reader without a record | — | **As today.** The device half is the default by the owner's decision; nothing here changes a guest's page except one sentence under the new choice |
@@ -494,6 +494,22 @@ a record — not a preference — the right carrier, and only opening `putPrefer
   Named in Not doing; a yes here becomes its own plan after this one lands.
 
 ## Review Log
+
+### Pass 3 — the build (2026-09-21, in progress)
+
+**Phase 0 DONE.** RED first: the collection pinned in `test/lexicons.test.js` (six failures,
+all the right ones), the validator tests for the record, the regenerate pin in
+`test/index-substrate.test.js` (which passed at once — it pins what the store already does,
+which is the point). GREEN: `lexicons/fyi.forage.feedindex.json`, `FEEDINDEX_RECORD` pinned
+in `js/lexicons.js`, `js/lexicon.js` learned `blob` / `accept` / `maxSize` (the
+ENFORCED-vs-declared test forced it, as designed), the register entry, and the reference
+gate. **The gate finding the plan predicted, settled:** `@atproto/lexicon` 0.7 validates a
+blob as "is a `BlobRef` instance" and nothing more — so the JSON side now goes through
+`jsonToLex` before the reference sees it, and a new gate test ASSERTS the reference does
+not enforce `accept`/`maxSize` (the W17 pattern: assert the non-enforcement so the reason
+cannot expire). The mirror is deliberately stricter there because nobody else checks. 41
+unit tests in the three files, the gate 3/3, the whole suite 994/994. Measurement 1 is in
+D7 above: 5 MB fits in both engines, 6 MB is refused, so the 2 MB ceiling has room.
 
 ### Pass 2 — the owner's review, in conversation (2026-09-21)
 
