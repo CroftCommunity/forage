@@ -81,8 +81,11 @@ export function fetchShim({ responses = {}, passThrough = [] } = {}) {
               status: 200, headers: { 'content-type': 'application/json' },
             }));
           }
+          // own-index (2026-09-21): { __status: 400, __body: {...} } declares a failing
+          // route WITH the body the real server sends — a PDS says RecordNotFound in
+          // words, and the lens reads those words to tell "no record" from "broken".
           if (payload && payload.__status) {
-            return Promise.resolve(new Response(JSON.stringify({ error: 'Declared', message: 'fixture declares HTTP ' + payload.__status }), {
+            return Promise.resolve(new Response(JSON.stringify(payload.__body || { error: 'Declared', message: 'fixture declares HTTP ' + payload.__status }), {
               status: payload.__status, headers: { 'content-type': 'application/json' },
             }));
           }
