@@ -49,7 +49,7 @@ const fresh = () => { store.clear(); };
 
 test('index-pds: nothing cached is nothing — and effective() is the device half, signed out or not', async () => {
   fresh();
-  assert.deepEqual(pds.cachedAccount(ME), { did: ME, record: null, cid: null, index: null, fetchedAt: null, error: null, stale: true, known: false });
+  assert.deepEqual(pds.cachedAccount(ME), { did: ME, record: null, index: null, fetchedAt: null, error: null, stale: true, known: false });
   prefs.setOwn({ index: MINE, name: 'mine.json' });
   assert.deepEqual(pds.effective(null), prefs.current(), 'signed out: the device, as today');
   assert.deepEqual(pds.effective(ME), prefs.current(), 'signed in with nothing read yet: still the device');
@@ -64,6 +64,7 @@ test('index-pds: refresh reads the record, fetches the file it names, validates 
   assert.equal(c.known, true);
   assert.deepEqual(c.index.feeds.map((f) => f.uri), [F(2).uri, F(3).uri]);
   assert.equal(c.error, null);
+  assert.equal(c.stale, false, 'freshly read is not stale');
   assert.ok(c.fetchedAt);
   const e = pds.effective(ME);
   assert.equal(e.mode, 'add');
@@ -84,8 +85,11 @@ test('index-pds: a file fetched once is not fetched again until the record chang
   fresh();
   const lens = fakeLens({ record: fileRecord(), blobs: { bafkreiaaa: THEIRS, bafkreibbb: MINE } });
   await pds.refresh(lens, ME);
-  await pds.refresh(lens, ME);
+  const again = await pds.refresh(lens, ME);
   assert.deepEqual(lens.calls.map((x) => x.op), ['get', 'blob', 'get'], 'the second refresh re-reads the record and keeps the file');
+  assert.equal(again.record.kind, 'file');
+  assert.equal(again.index.feeds.length, 2, 'kept, not dropped');
+  assert.equal(again.stale, false);
   await pds.refresh(lens, ME, { force: true });
   assert.deepEqual(lens.calls.map((x) => x.op).slice(-2), ['get', 'blob'], 'Refresh fetches again');
   // the record changed elsewhere: a new blob → the old copy is dropped and the new one fetched
@@ -94,6 +98,21 @@ test('index-pds: a file fetched once is not fetched again until the record chang
   const c = await pds.refresh(lens, ME);
   assert.deepEqual(lens.calls.map((x) => x.op).slice(-2), ['get', 'blob']);
   assert.deepEqual(c.index.feeds.map((f) => f.uri), [F(1).uri]);
+  // and a url record whose LINK changed is a different file too
+  fresh();
+  const urls = { 'https://a.example/i.json': THEIRS, 'https://b.example/i.json': MINE };
+  const lu = fakeLens({ record: urlRecord({ url: 'https://a.example/i.json' }), urls });
+  await pds.refresh(lu, ME);
+  lu.state.record = urlRecord({ url: 'https://b.example/i.json' });
+  const cu = await pds.refresh(lu, ME);
+  assert.deepEqual(lu.calls.map((x) => x.op), ['get', 'url', 'get', 'url']);
+  assert.deepEqual(cu.index.feeds.map((f) => f.uri), [F(1).uri]);
+  // refresh with no session reads nothing and invents nothing
+  const none = fakeLens({ record: fileRecord() });
+  const cn = await pds.refresh(none, null);
+  assert.deepEqual(none.calls, []);
+  assert.equal(cn.known, false);
+  assert.equal(cn.stale, true);
 });
 
 test('index-pds: no record on the account is KNOWN as no record — effective() is the device half, and nothing is invented', async () => {
@@ -151,7 +170,7 @@ test('index-pds: a fetched file that fails the validator is refused with its wor
   const lens = fakeLens({ record: fileRecord(), blobs: { bafkreiaaa: { v: 1, feeds: [{ ...F(1), name: '' }], jumpstarts: [], edges: [], providers: [] } } });
   const c = await pds.refresh(lens, ME);
   assert.equal(c.index, null);
-  assert.match(c.error, /feeds\[0\]: name is empty/);
+  assert.match(c.error, /^your index was refused: feeds\[0\]: name is empty/);
 });
 
 test('index-pds: a record another client wrote badly is REPORTED, never silently repaired — and the device half stands in', async () => {
@@ -183,6 +202,15 @@ test('index-pds: publishFile moves the device\'s file onto the account — uploa
   assert.equal(c.record.kind, 'file');
   assert.deepEqual(c.index.feeds.map((f) => f.uri), [F(1).uri], 'the copy is now the cache of the account\'s file');
   assert.equal(pds.effective(ME).mode, 'replace');
+  // a device on Add (or on Forage's, or Off) publishes as add — Off is not a record value
+  for (const deviceMode of ['add', 'forage', 'off']) {
+    fresh();
+    prefs.setOwn({ index: MINE, name: 'mine.json' });
+    prefs.setMode(deviceMode);
+    const l = fakeLens();
+    await pds.publishFile(l, ME);
+    assert.equal(l.calls[1].value.mode, 'add', `device ${deviceMode} → record add`);
+  }
 });
 
 test('index-pds: publishFile with nothing on the device refuses in words; a refused upload or put leaves the device exactly as it was', async () => {
@@ -206,12 +234,15 @@ test('index-pds: publishUrl fetches and validates the link BEFORE the put — a 
   const bad = fakeLens({ urls: { 'https://gardeners.example/index.json': { v: 2 } } });
   await assert.rejects(() => pds.publishUrl(bad, ME, { url: 'https://gardeners.example/index.json', mode: 'add' }), /version/);
   assert.deepEqual(bad.calls.map((x) => x.op), ['url']);
+  await assert.rejects(() => pds.publishUrl(bad, ME, { url: 'https://gardeners.example/index.json', mode: 'add' }), /the file at gardeners\.example was refused: version/);
+  await assert.rejects(() => pds.publishUrl(fakeLens(), null, { url: 'https://gardeners.example/index.json', mode: 'add' }), /sign in/i);
   prefs.setOwn({ index: MINE, name: 'mine.json' });
   const lens = fakeLens({ urls: { 'https://gardeners.example/index.json': THEIRS } });
   const c = await pds.publishUrl(lens, ME, { url: 'https://gardeners.example/index.json', mode: 'add', name: 'Gardeners', now: '2026-09-21T10:00:00.000Z' });
   assert.deepEqual(lens.calls.map((x) => x.op), ['url', 'put']);
   assert.equal(lens.calls[1].value.kind, 'url');
   assert.equal(lens.calls[1].value.url, 'https://gardeners.example/index.json');
+  assert.equal(lens.calls[1].value.name, 'Gardeners');
   assert.equal(c.index.feeds.length, 2);
   assert.equal(prefs.own(), null, 'where it is kept is where it is: the device file is dropped for the link');
   assert.equal(pds.effective(ME).mode, 'add');
@@ -227,9 +258,13 @@ test('index-pds: setMode rewrites the record in place — createdAt kept, update
   assert.equal(put.value.createdAt, '2026-09-20T00:00:00.000Z');
   assert.equal(put.value.updatedAt, '2026-09-22T00:00:00.000Z');
   assert.deepEqual(put.value.file, BLOB());
+  assert.equal(put.value.name, 'Gardeners', 'the name rides along');
   assert.equal(c.index.feeds.length, 2, 'no refetch');
   assert.equal(pds.effective(ME).mode, 'replace');
   await assert.rejects(() => pds.setMode(lens, ME, 'off'), /mode/);
+  await assert.rejects(() => pds.setMode(lens, null, 'add'), /sign in/i);
+  fresh();
+  await assert.rejects(() => pds.setMode(fakeLens(), ME, 'add'), /no index on your account/);
 });
 
 test('index-pds: unpublish confirms FRESH, brings the file back to the device with the record\'s mode, deletes, and forgets the cache', async () => {
@@ -252,6 +287,7 @@ test('index-pds: unpublish offline refuses in words and changes nothing; unpubli
   const lens = fakeLens({ record: fileRecord(), blobs: { bafkreiaaa: THEIRS } });
   await pds.refresh(lens, ME);
   await assert.rejects(() => pds.unpublish(fakeLens({ offline: true }), ME), /can't reach|cannot reach/i);
+  await assert.rejects(() => pds.unpublish(fakeLens(), null), /sign in/i);
   assert.equal(pds.cachedAccount(ME).record.kind, 'file');
   assert.equal(prefs.own(), null);
   const none = fakeLens({ record: null });
@@ -271,6 +307,26 @@ test('index-pds: unpublish of a record whose file was never cached fetches it fi
   const gone = fakeLens({ record: fileRecord(), blobs: {} });
   await assert.rejects(() => pds.unpublish(gone, ME), /Blob not found/);
   assert.equal(gone.state.record.kind, 'file', 'not deleted');
+  // a fetched file that fails the validator refuses too, with its words
+  const junk = fakeLens({ record: fileRecord(), blobs: { bafkreiaaa: { v: 2 } } });
+  await assert.rejects(() => pds.unpublish(junk, ME), /your index was refused: version/);
+  assert.equal(junk.state.record.kind, 'file', 'not deleted');
+  // the cache holds a DIFFERENT file than the account now names: the live one is fetched, not the stale copy
+  fresh();
+  const changed = fakeLens({ record: fileRecord(), blobs: { bafkreiaaa: THEIRS, bafkreibbb: MINE } });
+  await pds.refresh(changed, ME);
+  changed.state.record = fileRecord({ file: BLOB('bafkreibbb') });
+  await pds.unpublish(changed, ME);
+  assert.deepEqual(changed.calls.map((x) => x.op).slice(-3), ['get', 'blob', 'delete']);
+  assert.deepEqual(prefs.own().index.feeds.map((f) => f.uri), [F(1).uri], 'the file the account named last, not the copy');
+  // a record cached WITHOUT its file (an earlier fetch failed) fetches it on the way back
+  fresh();
+  const late = fakeLens({ record: fileRecord(), blobs: {} });
+  await pds.refresh(late, ME);
+  assert.equal(pds.cachedAccount(ME).index, null);
+  late.fetchIndexBlob = async () => THEIRS;
+  await pds.unpublish(late, ME);
+  assert.equal(prefs.own().index.feeds.length, 2);
 });
 
 test('index-pds: effective() — device Off wins on this device (§ E.4); a record wins over a device file (D6); the cache is per DID', async () => {
