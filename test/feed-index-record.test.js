@@ -24,7 +24,7 @@ test('feed-index-record: a file record round-trips, with $type, createdAt kept a
   const r = toRecord({ kind: 'file', blob: BLOB, mode: 'add', name: 'Gardeners of the PNW', now: NOW });
   assert.equal(r.$type, 'fyi.forage.feedindex');
   assert.deepEqual(r.file, BLOB);
-  assert.equal(r.url, undefined, 'a file record carries no url');
+  assert.equal('url' in r, false, 'a file record carries no url key at all');
   assert.equal(r.createdAt, NOW);
   assert.equal(r.updatedAt, NOW);
   const later = toRecord({ kind: 'file', blob: BLOB, mode: 'replace', name: 'Gardeners', createdAt: NOW, now: '2026-09-22T00:00:00.000Z' });
@@ -35,8 +35,8 @@ test('feed-index-record: a file record round-trips, with $type, createdAt kept a
 
 test('feed-index-record: a url record round-trips, and the blob side is null', () => {
   const r = toRecord({ kind: 'url', url: 'https://gardeners.example/index.json', mode: 'replace', now: NOW });
-  assert.equal(r.file, undefined);
-  assert.equal(r.name, undefined, 'no name is no field, not an empty string');
+  assert.equal('file' in r, false);
+  assert.equal('name' in r, false, 'no name is no field, not an empty string');
   assert.deepEqual(fromRecord(r), { kind: 'url', blob: null, url: 'https://gardeners.example/index.json', mode: 'replace', name: null, createdAt: NOW, updatedAt: NOW });
 });
 
@@ -54,7 +54,9 @@ test('feed-index-record: exactly one of file / url, and it must be the one `kind
 
 test('feed-index-record: https only — the rule the lexicon cannot carry, enforced both ways with words', () => {
   assert.equal(indexUrlProblem('https://gardeners.example/index.json'), null);
-  assert.match(indexUrlProblem('http://gardeners.example/index.json'), /https/);
+  assert.equal(indexUrlProblem('http://gardeners.example/index.json'), 'only https links are fetched — http://gardeners.example/index.json is http');
+  assert.match(indexUrlProblem(undefined), /^"" is not a link/);
+  assert.match(indexUrlProblem(null), /^"" is not a link/);
   assert.match(indexUrlProblem('ftp://gardeners.example/index.json'), /https/);
   assert.match(indexUrlProblem('gardeners.example/index.json'), /not a link|https/);
   assert.match(indexUrlProblem(''), /not a link|https/);
@@ -68,7 +70,7 @@ test('feed-index-record: the schema is consulted — a malformed record is refus
   assert.throws(() => toRecord({ kind: 'file', blob: { ...BLOB, mimeType: 'text/plain' }, mode: 'add', now: NOW }), /file.*application\/json/);
   assert.throws(() => toRecord({ kind: 'file', blob: BLOB, mode: 'off', now: NOW }), /mode/);
   assert.throws(() => toRecord({ kind: 'file', blob: BLOB, mode: 'add', name: 'x'.repeat(81), now: NOW }), /name/);
-  assert.throws(() => fromRecord({ $type: 'fyi.forage.feedindex', kind: 'file', file: BLOB, mode: 'add' }), /createdAt|updatedAt/);
+  assert.throws(() => fromRecord({ $type: 'fyi.forage.feedindex', kind: 'file', file: BLOB, mode: 'add' }), /createdAt: required.*; updatedAt: required/, 'every problem is listed, separated');
   assert.throws(() => fromRecord(null), /object/);
   assert.throws(() => fromRecord('a string'), /object/);
 });

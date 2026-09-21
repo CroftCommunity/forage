@@ -63,9 +63,7 @@ export function toRecord({ kind, blob, url, mode, name, createdAt, now = new Dat
 
 /** Read a record from a repo. Throws with words on anything malformed; unknown fields are ignored. */
 export function fromRecord(value) {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error(`feedindex: expected a record object, got ${value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value}`);
-  }
+  // no guard for a non-object here: validateRecord already refuses one with words
   check(value);
   return {
     kind: value.kind,
