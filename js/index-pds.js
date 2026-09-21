@@ -22,14 +22,14 @@ import { toRecord, fromRecord, indexUrlProblem } from './feed-index-record.js';
 
 export const PDS_CACHE_KEY = 'forage.feedindex.pds';
 
-const UNKNOWN = (did) => ({ did: did || null, record: null, cid: null, index: null, fetchedAt: null, error: null, known: false });
+const UNKNOWN = (did) => ({ did: did || null, record: null, index: null, fetchedAt: null, error: null, known: false });
 
 function readCache(did) {
   if (!did) return UNKNOWN(did);
   try {
     const p = JSON.parse(localStorage.getItem(PDS_CACHE_KEY) || 'null');
     if (!p || p.did !== did || p.known !== true) return UNKNOWN(did);
-    return { did, record: p.record ?? null, cid: p.cid ?? null, index: p.index ?? null, fetchedAt: p.fetchedAt ?? null, error: p.error ?? null, known: true };
+    return { did, record: p.record ?? null, index: p.index ?? null, fetchedAt: p.fetchedAt ?? null, error: p.error ?? null, known: true };
   } catch { return UNKNOWN(did); }
 }
 function writeCache(c) {
@@ -59,21 +59,21 @@ export async function refresh(lens, did, { force = false, now = new Date().toISO
   if (!did) return { ...cached, stale: true };
   let got;
   try { got = await lens.indexRecord(); } catch { return { ...cached, stale: true }; }
-  if (got === null) return writeCache({ did, record: null, cid: null, index: null, fetchedAt: now, error: null });
+  if (got === null) return writeCache({ did, record: null, index: null, fetchedAt: now, error: null });
   let rec;
   try { rec = fromRecord(got.value); } catch (e) {
     // reported, never repaired or silently dropped — a malformed record of ours is our bug to see
-    return writeCache({ did, record: null, cid: got.cid ?? null, index: null, fetchedAt: now, error: e.message });
+    return writeCache({ did, record: null, index: null, fetchedAt: now, error: e.message });
   }
   const sameFile = cached.record && identityOf(cached.record) === identityOf(rec);
   const need = force || !sameFile || !cached.index;
-  if (!need) return writeCache({ did, record: rec, cid: got.cid ?? null, index: cached.index, fetchedAt: cached.fetchedAt, error: null });
+  if (!need) return writeCache({ did, record: rec, index: cached.index, fetchedAt: cached.fetchedAt, error: null });
   try {
     const index = validated(await fetchFile(lens, rec), 'your index');
-    return writeCache({ did, record: rec, cid: got.cid ?? null, index, fetchedAt: now, error: null });
+    return writeCache({ did, record: rec, index, fetchedAt: now, error: null });
   } catch (e) {
     // the record and its mode are untouched; the last good copy of the SAME file stays
-    return writeCache({ did, record: rec, cid: got.cid ?? null, index: sameFile ? cached.index : null, fetchedAt: sameFile ? cached.fetchedAt : null, error: e.message });
+    return writeCache({ did, record: rec, index: sameFile ? cached.index : null, fetchedAt: sameFile ? cached.fetchedAt : null, error: e.message });
   }
 }
 
@@ -87,9 +87,9 @@ export async function publishFile(lens, did, { now = new Date().toISOString() } 
   const blob = await lens.uploadIndex(JSON.stringify(own.index));
   const prior = readCache(did).record;
   const record = toRecord({ kind: 'file', blob, mode, name: own.name || undefined, createdAt: prior?.createdAt, now });
-  const res = await lens.saveIndexRecord(record);
+  await lens.saveIndexRecord(record);
   prefs.clearOwn();
-  return writeCache({ did, record: fromRecord(record), cid: res?.cid ?? null, index: own.index, fetchedAt: now, error: null });
+  return writeCache({ did, record: fromRecord(record), index: own.index, fetchedAt: now, error: null });
 }
 
 /** Keep a LINK on the account. Fetched and validated BEFORE the put: a link that does not answer is never published. */
@@ -100,9 +100,9 @@ export async function publishUrl(lens, did, { url, mode, name, now = new Date().
   const index = validated(await lens.fetchIndexUrl(url), `the file at ${new URL(url).host}`);
   const prior = readCache(did).record;
   const record = toRecord({ kind: 'url', url, mode, name: name || undefined, createdAt: prior?.createdAt, now });
-  const res = await lens.saveIndexRecord(record);
+  await lens.saveIndexRecord(record);
   prefs.clearOwn();
-  return writeCache({ did, record: fromRecord(record), cid: res?.cid ?? null, index, fetchedAt: now, error: null });
+  return writeCache({ did, record: fromRecord(record), index, fetchedAt: now, error: null });
 }
 
 /** Change add ↔ replace on the record in place. The file is untouched; nothing is refetched. */
@@ -112,8 +112,8 @@ export async function setMode(lens, did, mode, { now = new Date().toISOString() 
   if (!c.record) throw new Error('there is no index on your account to change');
   const record = toRecord({ kind: c.record.kind, blob: c.record.blob ?? undefined, url: c.record.url ?? undefined,
     mode, name: c.record.name ?? undefined, createdAt: c.record.createdAt, now });
-  const res = await lens.saveIndexRecord(record);
-  return writeCache({ ...c, record: fromRecord(record), cid: res?.cid ?? c.cid });
+  await lens.saveIndexRecord(record);
+  return writeCache({ ...c, record: fromRecord(record) });
 }
 
 /** Bring the index back to this device and remove the record. Confirmed FRESH, never from the cache. */
@@ -123,7 +123,7 @@ export async function unpublish(lens, did, { now = new Date().toISOString() } = 
   try { live = await lens.indexRecord(); } catch {
     throw new Error("can't reach your account right now — Forage will not remove a record it cannot see first");
   }
-  if (live === null) return writeCache({ did, record: null, cid: null, index: null, fetchedAt: now, error: null });
+  if (live === null) return writeCache({ did, record: null, index: null, fetchedAt: now, error: null });
   const rec = fromRecord(live.value);
   const c = readCache(did);
   const index = (c.index && identityOf(c.record) === identityOf(rec))
@@ -132,7 +132,7 @@ export async function unpublish(lens, did, { now = new Date().toISOString() } = 
   await lens.removeIndexRecord();
   prefs.setOwn({ index, name: nameOf(rec) });
   prefs.setMode(rec.mode);
-  return writeCache({ did, record: null, cid: null, index: null, fetchedAt: now, error: null });
+  return writeCache({ did, record: null, index: null, fetchedAt: now, error: null });
 }
 
 /** What the index store loads: { mode, index, generatedAt, name } — plus `fallback` words when the account's file could not be fetched. */
@@ -143,5 +143,5 @@ export function effective(did) {
   if (!c.known || !c.record) return prefs.current();
   if (c.index) return { mode: c.record.mode, index: c.index, generatedAt: c.fetchedAt, name: nameOf(c.record) };
   return { mode: 'forage', index: null, generatedAt: null, name: nameOf(c.record),
-    fallback: `your index could not be fetched (${c.error || 'no reason given'}) — Forage's until it can` };
+    fallback: `your index could not be fetched (${c.error}) — Forage's until it can` };
 }
