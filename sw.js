@@ -31,7 +31,7 @@ const SHELL = [
   // visit to /feeds or /jumpstarts it is there offline, and a weekly
   // regenerate is picked up on the next visit. (No apostrophes in this
   // comment: test/shell.test.js reads every quoted string in this block.)
-  '/js/feed-index.js', '/js/feed-index-store.js', '/js/index-prefs.js', '/js/feed-index-record.js', '/js/follow-all.js', '/skins/bbs.css', '/skins/usenet.css', '/skins/usenet-dark.css', '/skins/forage-dark.css', '/skins/phpbb.css', '/skins/phpbb-dark.css',
+  '/js/feed-index.js', '/js/feed-index-store.js', '/js/index-prefs.js', '/js/feed-index-record.js', '/js/index-pds.js', '/js/follow-all.js', '/skins/bbs.css', '/skins/usenet.css', '/skins/usenet-dark.css', '/skins/forage-dark.css', '/skins/phpbb.css', '/skins/phpbb-dark.css',
   '/skins/rosewater.css', '/skins/rosewater-dark.css', '/skins/lavender.css', '/skins/lavender-dark.css',
   '/skins/apricot.css', '/skins/apricot-dark.css', '/skins/seaglass.css', '/skins/seaglass-dark.css',
   '/skins/cornflower.css', '/skins/cornflower-dark.css',
