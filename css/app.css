@@ -1294,7 +1294,9 @@ dialog.authsheet::backdrop, dialog.sheet::backdrop { background: var(--scrim); }
    every width (the drawer's `top` uses the same number). */
 .reel { position: relative; height: calc(100dvh - 61px); overflow-y: auto; scroll-snap-type: y mandatory;
   scroll-margin-top: 61px; background: #000; border-radius: var(--radius-card); overscroll-behavior-y: contain; }
-.reel-bar { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; justify-content: space-between;
+/* above the mounted player (.stage-video is z-index 3 inside its stage): the
+   count line and the exit must stay readable over a playing frame (v4 capture) */
+.reel-bar { position: sticky; top: 0; z-index: 6; display: flex; align-items: center; justify-content: space-between;
   gap: var(--s2); padding: var(--s2) var(--s3); color: #fff;
   background: linear-gradient(to bottom, rgba(0,0,0,.72), rgba(0,0,0,0)); pointer-events: none; }
 .reel-bar > * { pointer-events: auto; }
