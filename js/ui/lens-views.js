@@ -841,7 +841,16 @@ function renderBoard(card, posts, { wholeCorpus = false } = {}) {
       row: (p) => lensRow(p, 'compact', { media: false }),
       onExit: () => viewMode.set('forum') });
     reelStop = node._cleanup || null;
+    // Arriving in a mode lands you ON the reel: the board's head card and
+    // sort bar scroll away under the masthead so a frame is the screen (the
+    // first capture showed a frame whose row sat below the fold, 2026-09-21).
+    // Once, on the first paint as a reel — a repaint after More keeps the
+    // reader's place.
+    const arriving = !card.querySelector('.reel');
     card.replaceChildren(node);
+    if (arriving && typeof node.scrollIntoView === 'function') {
+      requestAnimationFrame(() => node.scrollIntoView({ block: 'start' }));
+    }
     return;
   }
   card.replaceChildren(...ordered.map((p) => lensRow(p, view)));

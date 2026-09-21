@@ -42,6 +42,11 @@ export async function run() {
   await s.page.goto(`${s.origin}${BOARD_PATH}`);
   await s.page.waitForSelector('.reel[data-reel="clip"]', { timeout: 15000 });
   assert.deepEqual(await frames(s.page), CLIP_URIS, 'clip reel: exactly the clips');
+  // arriving in a mode lands ON the reel: its top sits under the masthead, and
+  // the first frame's row — the actions — is on screen, not below the fold
+  await s.page.waitForFunction(() => Math.abs(document.querySelector('.reel').getBoundingClientRect().top - 61) < 2, null, { timeout: 5000 });
+  const fold = await s.page.evaluate(() => ({ h: innerHeight, rowBottom: document.querySelector('.reel-item .reel-row').getBoundingClientRect().bottom }));
+  assert.ok(fold.rowBottom <= fold.h + 1, `the first frame's row is on screen (${fold.rowBottom} vs ${fold.h})`);
   // 3: each frame = one stage above, one compact row with the actions below, no second picture in the row
   const shape = await s.page.evaluate(() => [...document.querySelectorAll('.reel-item')].map((it) => ({
     stages: it.querySelectorAll('.reel-stage [data-stage="video"]').length,
