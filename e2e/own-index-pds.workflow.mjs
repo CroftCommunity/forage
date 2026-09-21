@@ -150,12 +150,29 @@ export async function run() {
       hits = await hitsOf(page);
       assert.equal(hits.at(-1).op, 'get', 'the record re-read');
       assert.equal(hits.filter((h) => h.op === 'blob').length, 0, 'the file just published is not fetched again (D5)');
+      // a paste while it is kept on the account REPLACES the file there — the record wins over
+      // the device (D6), so a paste that only touched the device would be a silent nothing
+      await openAdvanced(page, origin);
+      const PASTED = { ...MINE, feeds: [{ ...MINE.feeds[0], name: 'Pasted later' }, MINE.feeds[1]] };
+      await page.fill('[data-feedindex-paste]', JSON.stringify(PASTED));
+      const n1 = (await hitsOf(page)).length;
+      await page.click('[data-feedindex-store]');
+      await page.waitForFunction((n) => { const h = JSON.parse(localStorage.getItem('__indexrepo')).hits; return h.length >= n + 2 && h.at(-1).op === 'put'; }, n1);
+      await reopen(page);
+      hits = await hitsOf(page);
+      assert.deepEqual(hits.slice(-2).map((h) => h.op), ['upload', 'put']);
+      assert.equal(hits.at(-2).text, JSON.stringify(PASTED), 'the pasted bytes went up');
+      assert.equal(hits.at(-1).body.record.kind, 'file');
+      assert.equal(hits.at(-1).body.record.mode, 'add', 'the mode on the record is kept');
+      assert.equal(hits.at(-1).body.record.name, 'pasted');
+      assert.equal((await deviceOf(page)).own, undefined, 'and the device half still holds nothing — where it is kept is where it is');
+      assert.match(await statusText(page), /Yours: pasted — kept on your atmo provider account as the file/);
       // her PHONE: no cache — the record is read, the blob fetched, and browse starts from hers
       await page.evaluate(() => localStorage.removeItem('forage.feedindex.pds'));
       assert.equal(await mineOnJumpstarts(page, origin), 3, 'on a new browser, hers');
       hits = await hitsOf(page);
       assert.deepEqual(hits.slice(-2).map((h) => h.op), ['get', 'blob'], 'read the record, fetched the file it names');
-      assert.equal(hits.at(-1).cid, 'bafkreiup2');
+      assert.equal(hits.at(-1).cid, hits.filter((h) => h.op === 'upload').length === 2 ? 'bafkreiup' + (hits.findIndex((h) => h.op === 'upload' && h.text === JSON.stringify(PASTED)) + 1) : 'bafkreiup2', 'the blob the record names now — the pasted one');
 
       // → a link: http refused before any fetch; a closed host named; then the real one
       await openAdvanced(page, origin);
@@ -166,13 +183,14 @@ export async function run() {
       await page.click('[data-feedindex-keep-link]');
       await page.waitForFunction(() => /https/.test(document.querySelector('[data-feedindex-errors]')?.textContent || ''));
       assert.equal((await hitsOf(page)).length, before, 'an http link costs no request');
+      const putsBefore = (await hitsOf(page)).filter((h) => h.op === 'put').length;
       await page.fill('[data-feedindex-url]', CLOSED);
       await page.click('[data-feedindex-keep-link]');
       await page.waitForFunction(() => /closed\.example/.test(document.querySelector('[data-feedindex-errors]')?.textContent || ''));
       assert.match(await errText(page), /cross-origin|CORS/);
       hits = await hitsOf(page);
       assert.equal(hits.at(-1).op, 'link');
-      assert.equal(hits.filter((h) => h.op === 'put').length, 1, 'the closed host was never published');
+      assert.equal(hits.filter((h) => h.op === 'put').length, putsBefore, 'the closed host was never published');
       await page.fill('[data-feedindex-url]', LINK);
       await page.click('[data-feedindex-keep-link]');
       await page.waitForFunction(() => document.querySelector('[data-index-status]')?.dataset.indexKept === 'account-link', null, { timeout: 15000 });
