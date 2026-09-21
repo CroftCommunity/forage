@@ -1290,6 +1290,18 @@ dialog.authsheet::backdrop, dialog.sheet::backdrop { background: var(--scrim); }
    bar still fits one row at 320px with the burger, the wordmark, the skin
    toggle and the avatar beside it */
 .masthead .viewsel { max-width: 96px; }
+/* At phone widths the bar has to stay ONE row with the dropdown in it (4j's
+   measurement: 61px one row, 113px two — and the reel and the drawer both
+   assume 61). The wordmark keeps its emblem and loses its word (the link's
+   accessible name is still "Forage": font-size 0 hides the glyphs, not the
+   text), the gaps tighten, the dropdown narrows to its word and its arrow. */
+@media (max-width: 480px) {
+  .masthead { gap: var(--s2); }
+  .masthead .who { gap: var(--s2); }
+  .masthead .wordmark { font-size: 0; }
+  .masthead .wordmark-glyph { margin-right: 0; }
+  .masthead .viewsel { max-width: 84px; padding-left: 8px; padding-right: 22px; }
+}
 /* The reel is the board's card shown as a snapping stack: the container is the
    scroller (snap needs the scroller to be the thing with the items), sized to
    the viewport under the masthead, one frame per screen. `dvh` follows the

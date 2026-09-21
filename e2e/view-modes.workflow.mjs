@@ -38,6 +38,20 @@ export async function run() {
   // not a pill in the nav; the ring pill stays alone in the nav
   const sel = guest.page.locator('.masthead select[data-view-select]');
   assert.equal(await sel.count(), 1, 'guest: the View dropdown is in the top bar');
+  // and the bar is still ONE ROW at phone widths with it (4j's measurement: 61px
+  // one row, 113px two — the v5 capture at 390px showed two). A GUEST at 320px
+  // wraps on main already (the Sign in link is the 44px the bar does not have),
+  // so the guest claim is 360 and 390; the signed-in bar is measured at all three
+  // further down.
+  for (const w of [360, 390]) {
+    await guest.page.setViewportSize({ width: w, height: 844 });
+    await guest.page.waitForTimeout(150);
+    const h = await guest.page.evaluate(() => document.querySelector('.masthead').getBoundingClientRect().height);
+    assert.ok(h <= 66, `the top bar is one row at ${w}px with the View dropdown in it (${h}px)`);
+    const sw = await guest.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1);
+    assert.ok(sw, `no horizontal overflow at ${w}px`);
+  }
+  await guest.page.setViewportSize({ width: 1280, height: 900 });
   assert.equal(await guest.page.locator('nav.nav [data-view-pill], nav.nav [data-view-select]').count(), 0, 'and not in the nav');
   assert.deepEqual(await sel.evaluate((s) => [...s.options].map((o) => o.textContent)), ['Forum', 'Clip', 'Gram']);
   assert.equal(await sel.evaluate((s) => s.disabled), false, 'guest: live');
@@ -55,6 +69,15 @@ export async function run() {
   await s.page.goto(`${s.origin}${BOARD_PATH}`);
   await s.page.waitForSelector('.reel[data-reel="clip"]', { timeout: 15000 });
   assert.deepEqual(await frames(s.page), CLIP_URIS, 'clip reel: exactly the clips');
+  // the signed-in bar is one row at every phone width with the dropdown in it
+  for (const w of [320, 360, 390]) {
+    await s.page.setViewportSize({ width: w, height: 844 });
+    await s.page.waitForTimeout(150);
+    const h = await s.page.evaluate(() => document.querySelector('.masthead').getBoundingClientRect().height);
+    assert.ok(h <= 66, `signed in, the top bar is one row at ${w}px with the View dropdown in it (${h}px)`);
+  }
+  await s.page.setViewportSize({ width: 390, height: 844 });
+  await s.page.waitForTimeout(150);
   // arriving in a mode lands ON the reel: its top sits under the masthead, and
   // the first frame's row — the actions — is on screen, not below the fold
   await s.page.waitForFunction(() => Math.abs(document.querySelector('.reel').getBoundingClientRect().top - 61) < 2, null, { timeout: 5000 });
