@@ -1296,9 +1296,11 @@ dialog.authsheet::backdrop, dialog.sheet::backdrop { background: var(--scrim); }
    accessible name is still "Forage": font-size 0 hides the glyphs, not the
    text), the gaps tighten, the dropdown narrows to its word and its arrow. */
 @media (max-width: 480px) {
-  .masthead { gap: var(--s2); }
+  .masthead { gap: var(--s2); padding-left: var(--s2); padding-right: var(--s2); }
   .masthead .who { gap: var(--s2); }
-  .masthead .wordmark { font-size: 0; }
+  /* emblem only, but still a 44px target (MOBILE-FIRST's floor; avatar-nav and
+     mobile-fit both measure it) */
+  .masthead .wordmark { font-size: 0; display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; }
   .masthead .wordmark-glyph { margin-right: 0; }
   .masthead .viewsel { max-width: 84px; padding-left: 8px; padding-right: 22px; }
 }
