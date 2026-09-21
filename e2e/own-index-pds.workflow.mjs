@@ -310,7 +310,9 @@ export async function run() {
       await openAdvanced(page, origin);
       assert.equal(await page.locator('[data-feedindex-where]').count(), 0);
       assert.match(await page.locator('[data-feedindex-guest]').innerText(), /Sign in to keep it on your atmo provider account/);
-      assert.match(await statusText(page), /on this browser only/);
+      // the line repaints once the index has loaded — a guest has no session to trigger a rerender
+      await page.waitForFunction(() => document.querySelector('[data-index-status]')?.dataset.indexStatus !== 'loading', null, { timeout: 15000 });
+      assert.match(await statusText(page), /^Forage's index was built 2026-09-09; yours is laid over it \(\d+ feeds in all\)\. Your file: mine\.json, 2 feeds, 3 jumpstarts — on this browser only\.$/);
       assert.equal(await page.locator('[data-feedindex-mode]').inputValue(), 'add');
       assert.doesNotMatch(await sectionText(page), /\b(null|undefined)\b/);
       assert.deepEqual(await s.shimMisses(), []);

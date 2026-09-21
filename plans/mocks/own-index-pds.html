@@ -6,7 +6,7 @@
 <title>Forage Own Index Kept</title>
 <meta name="mock-version" content="1">
 <meta name="mock-baseline" content="forage@cdc1da1">
-<meta name="mock-proposal" content="forage@PROPOSAL">
+<meta name="mock-proposal" content="forage@d83d992">
 <style>
 :root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
   --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
@@ -49,7 +49,7 @@ code{font-size:.92em}
   <span class="eyebrow">Mock · v1 · 2026-09-21 · plan 2026-09-21-plan-own-index-on-the-pds</span>
   <h1>Your discovery index, kept on your atmo provider account — the Discovery index section in its four states</h1>
   <p class="sub">One surface, sixteen frames. <b>Current</b> is <code>main</code> at <code>cdc1da1</code> (the section as it ships: a file on this browser, a mode dial, paste or choose a file);
-  <b>Proposed</b> is <code>claude/own-index-pds-build</code> at <code>PROPOSAL</code>. Both captured by <code>scripts/mock-snaps.mjs</code> against the same fixtures, in the default skin,
+  <b>Proposed</b> is <code>claude/own-index-pds-build</code> at <code>d83d992</code>. Both captured by <code>scripts/mock-snaps.mjs</code> against the same fixtures, in the default skin,
   at 390×844 and 1280×900 (MOCKS.md), on <code>/me</code> with Advanced open and the section scrolled to. The population is built to stress the status line: a name long enough to wrap
   with an emoji, a link long enough to break, the shipped index's counts in words, and a fetch that fails with the words a real PDS answers. The reader's repo slot, the blob it names and
   the link host are live in the page (the journey's shim), so every Proposed frame is the result of a real read of the record — not a drawing.</p>
@@ -112,7 +112,7 @@ code{font-size:.92em}
   <ul>
     <li>The first Proposed capture of frame 3 showed the fallback sentence instead of a kept link (the mock's long host was not a served link in the journey's shim), a link with no name read its URL twice, and frame 4 leaked the lens' <code>lens:</code> prefix into the reader's sentence. All three fixed, the frames re-captured.</li>
     <li>The same capture showed the paste box doing nothing while the index is kept on the account — open decision 2 above; built as "replaces the file on the account", pinned by the journey.</li>
-    <li>The Current frames are the section as it ships: the record on the account is never read on main, so frames 2–4's Current show <i>No file of yours is stored</i>.</li>
+    <li>The Current frames are the section as it ships: the record on the account is never read on main, so frames 2–4's Current show <i>No file of yours is stored</i> — and every Current frame reads <i>Loading…</i>, because on main the status line is written once, before the index has loaded, and nothing repaints it. The branch repaints it when the store is ready (found by these frames; pinned by the guest journey).</li>
     <li>Not framed: the guest's sentence in place of the dial, a closed host named for CORS, an http link refused before any fetch, a mode change as a put in place, Off on this device, the tap floor at 390 — all held by <code>e2e/own-index-pds.workflow.mjs</code>. The live proof (<code>e2e/own-index-pds-live.workflow.mjs</code>, <code>LIVE=1</code>) is Phase 5's second half.</li>
   </ul>
 </section>
