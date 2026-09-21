@@ -21,7 +21,6 @@ const deps = () => ({
   media: (p) => fakeEl('div', { class: 'media-of', 'data-post': p.id }),
   row: (p) => fakeEl('div', { class: 'row-of', 'data-post': p.id }),
   observe: () => () => {},
-  onExit() {},
 });
 
 test('clip mode: one frame per clip, in the board order, each with its media and its row', () => {
@@ -40,15 +39,11 @@ test('gram mode: the picture posts only', () => {
   assert.deepEqual(byClass(node, 'reel-item').map((i) => i.attrs['data-post']), ['p1']);
 });
 
-test('the exit is one control, named for where it goes, and it is the caller\'s to act on', () => {
-  let left = 0;
-  const node = reel({ ...deps(), posts, mode: 'clip', onExit: () => { left += 1; } });
-  const exits = byClass(node, 'reel-exit');
-  assert.equal(exits.length, 1);
-  assert.equal(exits[0].attrs['data-reel-exit'], 'forum');
-  assert.match(String(exits[0].kids.join('')), /Forum/);
-  exits[0].attrs.onclick();
-  assert.equal(left, 1);
+// D7 (owner, 2026-09-21): the way back is the View dropdown in the top bar,
+// always on screen — so the reel carries no exit of its own. One control, one job.
+test('the reel carries no exit: the top bar\'s dropdown is the way back', () => {
+  const node = reel({ ...deps(), posts, mode: 'clip' });
+  assert.equal(byClass(node, 'reel-exit').length, 0);
 });
 
 test('a board with none of the kind says so in words and still offers the way back', () => {
@@ -57,7 +52,7 @@ test('a board with none of the kind says so in words and still offers the way ba
   const empty = byClass(node, 'reel-empty');
   assert.equal(empty.length, 1);
   assert.match(String(empty[0].kids.join(' ')), /no clips/i);
-  assert.equal(byClass(node, 'reel-exit').length, 1);
+  assert.match(String(empty[0].kids.join(' ')), /Forum/, 'the words name the way back');
 });
 
 test('the count line says how many of the loaded posts are frames', () => {

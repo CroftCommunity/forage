@@ -2,13 +2,13 @@
 // shown as a reel — clip or gram — and the pill under the ring that chooses it.
 //
 // What the frames on plans/mocks/clips.html claim, held here:
-//   1. the View pill stands under the ring pill in the nav, signed in and out
+//   1. the View dropdown stands in the top bar, signed in and out, on every board
 //   2. clip mode frames exactly the board's clips, in the board's order, and
 //      gram mode exactly its picture posts; nothing else is a frame
 //   3. every frame carries the post's own row — the actions a row has — and
 //      the media is drawn ONCE (the frame, not the row again)
 //   4. exactly one frame is active as the reel scrolls
-//   5. the exit returns to the rows and the choice is remembered (the key)
+//   5. choosing Forum on the dropdown returns to the rows and the choice is remembered (the key)
 //   6. a board with none of the kind is an honest empty reel with the way back
 //   7. with autoplay off, nothing leaves the page for a frame that a row would
 //      not have fetched; with it on (the default), the frame on screen mounts a
@@ -32,12 +32,15 @@ export async function run() {
   await guest.page.setViewportSize({ width: 1280, height: 900 });
   await guest.page.goto(`${guest.origin}${BOARD_PATH}`);
   await guest.page.waitForSelector('.postrow', { timeout: 15000 });
-  const order = await guest.page.evaluate(() => [...document.querySelectorAll('nav.nav [data-ring-pill], nav.nav [data-view-pill]')].map((n) => n.dataset.ringPill ? 'ring' : 'view'));
-  assert.deepEqual(order, ['ring', 'view'], 'guest nav: the view pill follows the ring pill');
-  const liveSegs = await guest.page.evaluate(() => [...document.querySelectorAll('nav.nav [data-view-pill] input')].filter((i) => !i.disabled).length);
-  assert.equal(liveSegs, 3, 'guest: every mode is selectable');
-  // picking Clip on the pill repaints the board as a reel, no navigation
-  await guest.page.locator('nav.nav [data-view-pill] label[for$="-clip"]').click();
+  // D7 (owner, 2026-09-21): a dropdown in the top bar — the sort bar's dressing —
+  // not a pill in the nav; the ring pill stays alone in the nav
+  const sel = guest.page.locator('.masthead select[data-view-select]');
+  assert.equal(await sel.count(), 1, 'guest: the View dropdown is in the top bar');
+  assert.equal(await guest.page.locator('nav.nav [data-view-pill], nav.nav [data-view-select]').count(), 0, 'and not in the nav');
+  assert.deepEqual(await sel.evaluate((s) => [...s.options].map((o) => o.textContent)), ['Forum', 'Clip', 'Gram']);
+  assert.equal(await sel.evaluate((s) => s.disabled), false, 'guest: live');
+  // choosing Clip repaints the board as a reel, no navigation
+  await sel.selectOption('clip');
   await guest.page.waitForSelector('.reel[data-reel="clip"]', { timeout: 10000 });
   assert.deepEqual(await frames(guest.page), CLIP_URIS, 'guest clip reel: the board’s clips, in the board’s order');
   assert.equal(await guest.page.evaluate(() => localStorage.getItem('forage.view')), 'clip', 'the choice is written');
@@ -74,13 +77,13 @@ export async function run() {
   assert.equal(await s.page.locator('.reel-item video').count(), 0, 'autoplay off: no <video> before a press');
   assert.deepEqual(await s.page.evaluate(() => window.__hlsSources), [], 'autoplay off: no playlist asked for');
   assert.deepEqual(s.blockedExternals().filter((u) => u.includes('video.cdn.test')), [], 'no playlist is fetched for a frame before a press');
-  // 5: the exit returns to rows and remembers
-  await s.page.locator('.reel-exit').click();
+  // 5: Forum on the dropdown returns to rows and remembers; the reel carries no exit of its own
+  assert.equal(await s.page.locator('.reel-exit').count(), 0, 'no exit on the reel — the dropdown is always on screen');
+  assert.equal(await s.page.locator('.masthead select[data-view-select]').evaluate((x) => x.value), 'clip', 'the dropdown shows the mode');
+  await s.page.locator('.masthead select[data-view-select]').selectOption('forum');
   await s.page.waitForSelector('.postrow', { timeout: 10000 });
   assert.equal(await s.page.locator('.reel').count(), 0, 'Forum: the rows are back');
   assert.equal(await s.page.evaluate(() => localStorage.getItem('forage.view')), 'forum');
-  const checked = await s.page.evaluate(() => document.querySelector('nav.nav [data-view-pill] input:checked')?.dataset.view);
-  assert.equal(checked, 'forum', 'the nav pill agrees');
   await s.close();
 
   // ---- 2. gram mode: the picture posts, the carousel intact -----------------
@@ -107,7 +110,7 @@ export async function run() {
   await e.page.goto(`${e.origin}${BOARD_PATH}`);
   await e.page.waitForSelector('.reel-empty', { timeout: 15000 });
   assert.match(await e.page.locator('.reel-empty').textContent(), /No clips in the loaded posts/);
-  assert.equal(await e.page.locator('.reel-exit').count(), 1, 'the way back is still there');
+  assert.equal(await e.page.locator('.masthead select[data-view-select]').count(), 1, 'the way back is still on screen');
   await e.close();
 
   // ---- 7 (autoplay on, the default): the frame on screen plays, muted; the veil never does

@@ -1286,7 +1286,10 @@ dialog.authsheet::backdrop, dialog.sheet::backdrop { background: var(--scrim); }
 /* ---- View modes: the pill under the ring, and the reel (plan 2026-09-14-plan-clips) ----
    The view pill wears the ring pill's classes (js/view-mode.js) and takes the
    same slot dressing, so the two dials in the nav read as one instrument. */
-.navview { padding: 2px var(--s3) 6px; }
+/* the View dropdown in the top bar: the sort bar's select, kept narrow so the
+   bar still fits one row at 320px with the burger, the wordmark, the skin
+   toggle and the avatar beside it */
+.masthead .viewsel { max-width: 96px; }
 /* The reel is the board's card shown as a snapping stack: the container is the
    scroller (snap needs the scroller to be the thing with the items), sized to
    the viewport under the masthead, one frame per screen. `dvh` follows the
@@ -1301,7 +1304,6 @@ dialog.authsheet::backdrop, dialog.sheet::backdrop { background: var(--scrim); }
   background: linear-gradient(to bottom, rgba(0,0,0,.72), rgba(0,0,0,0)); pointer-events: none; }
 .reel-bar > * { pointer-events: auto; }
 .reel-count { color: #fff; opacity: .9; }
-.reel-exit { flex: none; min-height: 44px; }
 .reel-item { scroll-snap-align: start; scroll-snap-stop: always; height: 100%; display: grid;
   grid-template-rows: minmax(0, 1fr) auto; background: #000; }
 /* The frame: the row's own media node, freed of the row's caps. A picture

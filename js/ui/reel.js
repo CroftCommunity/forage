@@ -9,9 +9,10 @@
 // post changes with how the board is shown, and the writes table in AGENTS.md
 // is untouched.
 //
-// WHAT THE REEL PROMISES. One control to leave (the exit, named for where it
-// goes — Forum — because the reel swallows the board chrome and the nav is a
-// drawer on a phone, D7). A count line that says how many of the LOADED posts
+// WHAT THE REEL PROMISES. No control of its own to leave: the View dropdown
+// in the top bar is on screen over every frame (D7, owner 2026-09-21), and a
+// second control for one job is the shape the nav strip died of. A count line
+// that says how many of the LOADED posts
 // are frames, the same honesty as a window sort. An observer that marks the
 // frame on screen active and rests the others; what "active" does (play a
 // clip, or nothing) is the caller's, through the injected observe(), and the
@@ -47,26 +48,22 @@ const noun = (mode, n) => (mode === 'clip' ? (n === 1 ? 'clip' : 'clips') : (n =
 // (mount a muted player, pause one). `origin` names where the frames came from
 // when the board did not supply them itself (a people-scope reel: "from 701
 // people you follow"), so D1's difference from rows is visible on the surface.
-export function reel({ el, posts, mode, media, row, onExit, observe = viewportObserver, activate = null, rest = null, origin = null }) {
+export function reel({ el, posts, mode, media, row, observe = viewportObserver, activate = null, rest = null, origin = null }) {
   const m = modeFor(mode);
   if (!m || mode === 'forum') throw new Error(`reel: ${mode} is not a reel mode`);
   const frames = ofKind(posts, mode);
 
-  const exit = el('button', {
-    type: 'button', class: 'btn sm reel-exit', 'data-reel-exit': 'forum',
-    title: 'Back to the rows', onclick: () => onExit(),
-  }, '☰ Forum');
   const loaded = `${posts.length} loaded post${posts.length === 1 ? '' : 's'}`;
   const count = el('span', { class: 'xs reel-count' },
     origin ? `${frames.length} ${noun(mode, frames.length)} ${origin} · ${loaded}`
       : `${frames.length} ${noun(mode, frames.length)} of ${loaded}`);
-  const bar = el('div', { class: 'reel-bar' }, count, exit);
+  const bar = el('div', { class: 'reel-bar' }, count);
 
   if (!frames.length) {
     return el('div', { class: 'reel', 'data-reel': mode }, bar,
       el('div', { class: 'reel-empty muted' },
         mode === 'clip' ? 'No clips in the loaded posts.' : 'No picture posts in the loaded posts.',
-        ' Load More below, widen your ring, or go back to the rows.'));
+        ' Load More below, widen your ring, or choose Forum in the top bar for the rows.'));
   }
 
   const items = frames.map((p) => el('section', { class: 'reel-item', 'data-post': p.id, 'data-active': '0' },

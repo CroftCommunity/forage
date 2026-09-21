@@ -8,7 +8,7 @@
 // already means which POPULATION the app is (D8).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MODES, MODE_IDS, DEFAULT_MODE, KEY, active, set, onChange, ofKind, viewPill } from '../js/view-mode.js';
+import { MODES, MODE_IDS, DEFAULT_MODE, KEY, active, set, onChange, ofKind, viewSelect } from '../js/view-mode.js';
 
 function withStorage(seed = {}, fn) {
   const store = { ...seed };
@@ -77,35 +77,29 @@ test('ofKind: forum is every post; clip is the videos; gram is the picture posts
   assert.throws(() => ofKind(posts, 'shorts'), /shorts/);
 });
 
-test('the pill is one radio group with a segment per mode, the active one checked', () => {
+// D7, decided 2026-09-21 (owner): "not really a gradient … basically a content
+// type filter and formatting and it's one at a time" — so not the ring pill's
+// segmented control but a dropdown, the sort bar's own dressing, in the top bar.
+const options = (sel) => walk(sel).filter((n) => n.tag === 'option');
+
+test('the control is one select with an option per mode, the active one selected', () => {
   withStorage({ 'forage.view': 'clip' }, () => {
-    const pill = viewPill(fakeEl, { onPicked() {} });
-    assert.equal(pill.attrs['data-view-pill'], '1');
-    assert.equal(pill.attrs.role, 'radiogroup');
-    assert.deepEqual(inputs(pill).map((i) => i.attrs['data-view']), ['forum', 'clip', 'gram']);
-    const checked = inputs(pill).filter((i) => i.attrs.checked);
-    assert.equal(checked.length, 1);
-    assert.equal(checked[0].attrs['data-view'], 'clip');
-    const names = new Set(inputs(pill).map((i) => i.attrs.name));
-    assert.equal(names.size, 1, 'one group');
+    const sel = viewSelect(fakeEl, { onPicked() {} });
+    assert.equal(sel.tag, 'select');
+    assert.equal(sel.attrs['data-view-select'], '1');
+    assert.match(sel.attrs.class, /pillsel/, 'the sort bar\'s dressing');
+    assert.ok(sel.attrs['aria-label'], 'named for a screen reader');
+    assert.deepEqual(options(sel).map((o) => o.attrs.value), ['forum', 'clip', 'gram']);
+    assert.deepEqual(options(sel).map((o) => o.kids.join('')), ['Forum', 'Clip', 'Gram']);
+    assert.deepEqual(options(sel).filter((o) => o.attrs.selected).map((o) => o.attrs.value), ['clip']);
   });
 });
 
-test('two pills on one page are two radio groups, and the block variant wears the nav dressing', () => {
-  withStorage({}, () => {
-    const a = inputs(viewPill(fakeEl, { onPicked() {} }))[0].attrs.name;
-    const b = inputs(viewPill(fakeEl, { onPicked() {} }))[0].attrs.name;
-    assert.notEqual(a, b);
-    const block = viewPill(fakeEl, { block: true, onPicked() {} });
-    assert.match(block.attrs.class, /ringpill-block/);
-  });
-});
-
-test('picking a segment reports the mode and writes nothing itself (the caller decides)', () => {
+test('choosing reports the mode and writes nothing itself (the caller decides)', () => {
   withStorage({}, (store) => {
     const picked = [];
-    const pill = viewPill(fakeEl, { onPicked: (id) => picked.push(id) });
-    inputs(pill).find((i) => i.attrs['data-view'] === 'gram').attrs.onchange();
+    const sel = viewSelect(fakeEl, { onPicked: (id) => picked.push(id) });
+    sel.attrs.onchange({ target: { value: 'gram' } });
     assert.deepEqual(picked, ['gram']);
     assert.equal(store['forage.view'], undefined);
   });

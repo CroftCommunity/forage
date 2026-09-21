@@ -793,10 +793,7 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
     await vx.page.goto(`${vx.origin}${REEL_BOARD}`);
     await vx.page.waitForSelector(AS === 'current' || mode === 'forum' ? '.postrow' : `.reel[data-reel="${mode}"]`, { timeout: 15000 });
     await vx.page.evaluate(() => document.fonts?.ready);
-    if (route === 'view-nav' && name === 'phone') {
-      await vx.page.click('.navburger');
-      await vx.page.waitForSelector('nav.nav [data-ring-pill]', { timeout: 5000 });
-    }
+    // view-nav: the control in the top bar (D7 v5) — the board's head, no drawer
     if (route !== 'view-nav' && AS !== 'current') {
       await vx.page.waitForFunction(() => document.querySelectorAll('.reel-item[data-active="1"]').length === 1, null, { timeout: 5000 }).catch(() => {});
     }

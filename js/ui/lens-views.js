@@ -858,7 +858,6 @@ function renderBoard(card, posts, { wholeCorpus = false, reelOrigin = null, onNe
             mediaNode(p, { altCaption: mode === 'gram' }))
         : mediaNode(p, { altCaption: mode === 'gram' })),
       row: (p) => lensRow(p, 'compact', { media: false }),
-      onExit: () => viewMode.set('forum'),
       // D3: in Clip mode the frame on screen plays by itself — muted, the
       // reader's switch permitting, never a labeled one, never before it is on
       // screen — and rests when it leaves. Nothing is fetched for a frame the

@@ -110,7 +110,14 @@ function masthead() {
       // The direct-OAuth "Sign in" (3i) stays beside it rather than being
       // folded in — collapsing it would put an extra press between a newcomer
       // and the authorize screen.
-      el('div', { class: 'who' }, themeBtn0,
+      // View (plan 2026-09-14-plan-clips, D7 — owner 2026-09-21): a dropdown,
+      // Forum · Clip · Gram, in the top bar on every board, so it is one press
+      // away on a phone and the way back from a reel is always on screen. A
+      // content-type choice, one at a time — the sort bar's select, not the
+      // ring's segmented pill (the ring is a gradient; this is not).
+      el('div', { class: 'who' },
+        viewMode.viewSelect(el, { onPicked: (id) => viewMode.set(id) }),
+        themeBtn0,
         (() => {
           const name = who && who !== 'connecting' ? String(who).replace(/^@/, '') : null;
           const initials = name

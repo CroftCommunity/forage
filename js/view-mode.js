@@ -66,29 +66,17 @@ export function ofKind(posts, mode) {
 
 // ---- the control ----
 //
-// The same construction as the ring pill (js/ring-scope.js § the control):
-// native radios, visually hidden, the labels as the segments, an injected
-// el() so it is unit-testable with no DOM. It wears the ring pill's classes on
-// purpose — D7 puts it directly under the ring pill, and two controls stacked
-// in one column had better be one family.
-let pillSeq = 0;
-export function viewPill(el, { onPicked, ariaLabel = 'How to show it', block = false } = {}) {
+// A DROPDOWN, not the ring pill's segmented control (D7, owner 2026-09-21:
+// "it's not really a gradient … it's basically a content type filter and
+// formatting and it's one at a time and not really graduated like mutuals to
+// world"). The ring pill is a containment ladder and a segmented control says
+// so; a view is one of three kinds, and a select says that. It wears the sort
+// bar's dressing (.pillsel) and lives in the top bar, on every board, so the
+// way back to the rows is always on screen. Injected el() as everywhere.
+export function viewSelect(el, { onPicked, ariaLabel = 'How to show the board \u2014 rows, clips, or pictures' } = {}) {
   const current = active();
-  const group = `viewpill-${++pillSeq}`;
-  const segs = MODES.flatMap((m) => {
-    const inputId = `${group}-${m.id}`;
-    return [
-      el('input', {
-        type: 'radio', name: group, id: inputId, class: 'ringpill-in',
-        'data-view': m.id, checked: m.id === current || false,
-        onchange: () => onPicked(m.id),
-      }),
-      el('label', { class: 'ringseg', for: inputId, title: `${m.label} — ${m.blurb}` },
-        el('span', { class: 'ringseg-t' }, m.label)),
-    ];
-  });
-  return el('div', {
-    class: block ? 'ringpill ringpill-block' : 'ringpill',
-    'data-view-pill': '1', role: 'radiogroup', 'aria-label': ariaLabel,
-  }, ...segs);
+  return el('select', {
+    class: 'pillsel viewsel', 'data-view-select': '1', 'aria-label': ariaLabel,
+    onchange: (e) => onPicked(e.target.value),
+  }, ...MODES.map((m) => el('option', { value: m.id, selected: m.id === current || false, title: m.blurb }, m.label)));
 }
