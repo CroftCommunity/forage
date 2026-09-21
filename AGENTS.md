@@ -157,7 +157,9 @@ the account's own picture, initials underneath as the not-yet-loaded state (plan
 
 **A board has three VIEW MODES** (plan 2026-09-14-plan-clips; owner 2026-09-16): *Forum*
 (rows), *Clip* (its videos, one per screen) and *Gram* (its picture posts) — `js/view-mode.js`,
-key `forage.view`, the pill directly under the ring pill in the nav (D7), the reel
+keys `forage.viewdefault` (Preferences › Default view, forum unless chosen — what a visit
+opens in) and `forage.view` (sessionStorage, the visit's own choice), a `<select>` in the masthead — a kind, one at a time, so a dropdown and
+not the ring's gradient pill (D7, owner 2026-09-21) — the reel
 `js/ui/reel.js` mounted by `renderBoard` AFTER the ring, the posture, the language filter
 and the sort, so a frame is a row by another layout and never a row the forum would not
 show; each frame carries the post's own compact row, so the writes table below is

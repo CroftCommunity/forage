@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forage Clips v4</title>
-<meta name="mock-version" content="4">
+<title>Forage Clips v5</title>
+<meta name="mock-version" content="5">
 <meta name="mock-baseline" content="forage@c3a4abe">
-<meta name="mock-proposal" content="forage@ccfb0be">
+<meta name="mock-proposal" content="forage@1d6ff4f">
 <style>
 :root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
   --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
@@ -44,11 +44,12 @@ code{font-size:.92em}
 <div class="wrap">
 
 <header style="display:flex;flex-direction:column;gap:10px">
-  <span class="eyebrow">Mock · v4 · 2026-09-21 · plan 2026-09-14-plan-clips</span>
-  <h1>View modes — Forum, Clip, Gram: the pill under the ring, the reel, and the people behind it</h1>
+  <span class="eyebrow">Mock · v5 · 2026-09-21 · plan 2026-09-14-plan-clips</span>
+  <h1>View modes — Forum, Clip, Gram: a dropdown in the top bar, the reel, and the people behind it</h1>
   <p class="sub">Five proposals, twenty-two frames, <b>every one a capture of the engine</b> (MOCKS.md P1). <b>Current</b> is
-  <code>main</code> at <code>c3a4abe</code>; <b>Proposed</b> is <code>claude/video-view</code> at <code>ccfb0be</code> — v4 is the
-  whole scope built: the people-scope reel (D1), autoplay (D3), the veil, GIFs and alt text in Gram (D9, D10). Both captured by <code>scripts/mock-snaps.mjs</code> against the same
+  <code>main</code> at <code>c3a4abe</code>; <b>Proposed</b> is <code>claude/video-view</code> at <code>1d6ff4f</code> — v5 moves the
+  control: a <b>dropdown in the top bar</b> (D7, decided on v4), the reel's own exit gone with it. v4 built the whole scope: the
+  people-scope reel (D1), autoplay (D3), the veil, GIFs and alt text in Gram (D9, D10). Both captured by <code>scripts/mock-snaps.mjs</code> against the same
   hermetic population, in the default skin, at 390×844 and 1280×900. The population (<code>e2e/harness/mock-reel.mjs</code>) is the
   board fixture plus what a reel is judged under: three clips at three shapes — a portrait, a landscape, a square with alt text a
   person wrote and the longest words on the board — beside the board's single picture and its four-picture post, so clip mode has to
@@ -59,10 +60,11 @@ code{font-size:.92em}
 <section class="callout">
   <h3>Open decisions</h3>
   <ol>
-    <li><b>D7 — where the control lives.</b> Built as recommended (2026-09-16): the <i>View</i> pill stands <b>directly under the ring
-      pill</b> in the left nav — the drawer on a phone — and the reel carries <b>one exit</b>, <i>Forum</i>, because a frame swallows the
-      board chrome. Choosing happens in one place; leaving happens on the thing you are leaving. The alternative not built: a
-      thumb-reachable bottom bar on the phone (one tap, 44px off every board). Say which.</li>
+    <li><b>D7 — where the control lives. Decided on v4</b> (owner, 2026-09-21: <i>"not really a gradient … it's basically a content
+      type filter and formatting and it's one at a time and not really graduated like mutuals to world, maybe a drop down in the top
+      bar even?"</i>). Built (v5): a <b>dropdown in the top bar</b>, <i>Forum · Clip · Gram</i>, the sort bar's own select dressing, on
+      every board — one press on a phone, always on screen over a reel, so the reel's own exit is gone. The ring pill stays alone in
+      the nav: it is a gradient, and a segmented control says so; this is a kind, one at a time, and a select says that.</li>
     <li><b>D8 — the word in code.</b> Built as proposed: readers see <i>Forum · Clip · Gram</i>; the code and the key say
       <code>view</code> (<code>forage.view</code>, <code>js/view-mode.js</code>), because <code>js/mode.js</code> already means which
       population the app is.</li>
@@ -74,6 +76,9 @@ code{font-size:.92em}
       eight at a time, the next eight only when the reader reaches the end. The count line names the source. Measured
       (plan, Phase 0): a wave of eight is under a second at Follows and yields dozens of frames; <i>+1</i> is ~262,000 edges for a
       46-mutual account and needs its own cap with words — a follow-up, not built.</li>
+    <li><b>D11 — a default. Decided and built (v5)</b> (owner, 2026-09-21: <i>"add a 'default' setting for it in the user settings
+      and have it be 'forum' by default"</i>). <i>Default view</i> on the account page, Forum unless chosen, is what a fresh visit opens
+      in; the top bar's dropdown is this visit's choice and lasts the visit. Not framed: the account page row (held by the journey).</li>
     <li><b>D9 / D10. Built as proposed (v4).</b> A GIF card is a Gram frame (paused, its own setting); Gram shows the alt text a
       person wrote as the caption whatever the alt-text setting says for rows.</li>
     <li><b>Decided on v1 — D6:</b> it is a mode of viewing; <i>clip</i> and <i>gram</i>, and <i>forum</i> for the rows (owner, 2026-09-16).</li>
@@ -81,17 +86,19 @@ code{font-size:.92em}
 </section>
 
 <section>
-  <h2>1 · The control — View under Your ring</h2>
-  <p class="sub">Current: the nav has the ring pill and the boards. Proposed: a second block pill, <i>Forum · Clip · Gram</i>, in the ring
-  pill's dressing, directly under it — how close, then what kind. On the phone it is in the drawer (opened by the burger for the
-  frame); on the desktop it is in view on every board. Signed out the ring pill locks to World as today; the View pill stays live,
-  because a guest board has pictures and clips too. Picking a segment repaints the board in place — no navigation, the choice
-  remembered like the ring stop.</p>
+  <h2>1 · The control — a View dropdown in the top bar</h2>
+  <p class="sub">Current: the top bar is the burger, the wordmark, the skin toggle and the account button; the ring pill is in the nav.
+  Proposed: a dropdown, <i>Forum · Clip · Gram</i>, in the top bar beside the skin toggle, in the sort bar's dressing, on every board —
+  one press on a phone, and it is on screen over a reel, so the way back is never further than the bar. The ring pill stays where it
+  was, alone in the nav. Signed out the dropdown is live, because a guest board has pictures and clips too. Choosing repaints the
+  board in place — no navigation — and the choice lasts the visit; <i>Default view</i> on the account page (Forum unless chosen) is
+  what the next visit opens in. At 320px the bar still fits one
+  row (the mobile-fit journey holds it).</p>
   <div class="pair">
-    <div class="device"><span class="device-label">Current · phone (drawer)</span><img class="shot phone" src="snaps/clips/view-nav.phone.current.png" alt="the drawer on main: Your ring, then Mixes and Feeds"></div>
-    <div class="device"><span class="device-label">Proposed · phone (drawer)</span><img class="shot phone" src="snaps/clips/view-nav.phone.proposed.png" alt="the drawer on the branch: Your ring, then View — Forum, Clip, Gram — then the boards"></div>
-    <div class="device"><span class="device-label">Current · desktop</span><img class="shot desk" src="snaps/clips/view-nav.desktop.current.png" alt="the board on main, desktop: the ring pill alone at the top of the nav"></div>
-    <div class="device"><span class="device-label">Proposed · desktop</span><img class="shot desk" src="snaps/clips/view-nav.desktop.proposed.png" alt="the board on the branch, desktop: the View pill under the ring pill, Forum selected"></div>
+    <div class="device"><span class="device-label">Current · phone</span><img class="shot phone" src="snaps/clips/view-nav.phone.current.png" alt="the board on main, phone: the top bar without a View control"></div>
+    <div class="device"><span class="device-label">Proposed · phone</span><img class="shot phone" src="snaps/clips/view-nav.phone.proposed.png" alt="the board on the branch, phone: the View dropdown in the top bar, Forum selected"></div>
+    <div class="device"><span class="device-label">Current · desktop</span><img class="shot desk" src="snaps/clips/view-nav.desktop.current.png" alt="the board on main, desktop: the ring pill alone in the nav, no View control"></div>
+    <div class="device"><span class="device-label">Proposed · desktop</span><img class="shot desk" src="snaps/clips/view-nav.desktop.proposed.png" alt="the board on the branch, desktop: the View dropdown in the top bar, the ring pill alone in the nav"></div>
   </div>
 </section>
 
@@ -99,8 +106,8 @@ code{font-size:.92em}
   <h2>2 · Clip mode — the board's clips, one per screen</h2>
   <p class="sub">Current: the same board as rows — a clip is a stage with a ▶ between rows that are not clips (the frame is scrolled
   to the board's head, where the key is unknown). Proposed: arriving with Clip chosen lands <b>on the reel</b>: the head card and the
-  sort bar have scrolled under the masthead, the frame is the screen. The bar says <i>3 clips of 11 loaded posts</i> and carries the
-  one exit. The frame is the row's own media node freed of the row's caps — black bands for the shape — and under it the post's
+  sort bar have scrolled under the masthead, the frame is the screen. The bar says <i>3 clips of 11 loaded posts</i> — the way back is the
+  dropdown in the bar above it. The frame is the row's own media node freed of the row's caps — black bands for the shape — and under it the post's
   own compact row: byline, words, the reply / repost / like / share row, the ⋯ menu. <b>v4: the frame on screen has mounted its
   player, muted</b> (the native controls are the sound press; the player here is the journey's double, so the poster is what the
   capture shows and no playlist left the page). Swipe or scroll snaps to the next clip; one frame is active at a time and the one
@@ -175,6 +182,11 @@ code{font-size:.92em}
       the language filter and the window sort — and narrows by <code>media.kind</code>. A frame is a row by another layout, never a
       row the forum would not have shown. No new write, no new host, no new lexicon; DL-041 in the ledger records that the memory
       sandbox has no reel yet because its posts carry no media.</li>
+    <li><b>v5's capture caught one more:</b> with the dropdown in it, the phone's top bar wrapped to two rows (113px where the
+      reel and the drawer assume 61). Fixed — at phone widths the wordmark keeps its emblem and loses its word, the gaps tighten,
+      the dropdown narrows — measured 61px signed in at 320, 360 and 390, and pinned. A guest at 320 wraps on <code>main</code>
+      already (the Sign in link is the 44px the bar does not have); that is recorded, not hidden. The emblem-only wordmark then
+      measured 28px wide — under the tap floor two journeys hold — so it is a 44px target and the bar's side padding tightens.</li>
     <li><b>v4's capture caught one more:</b> the mounted player painted OVER the count line and the exit (both z-index 3, the
       later sibling wins). Fixed — the bar sits above a playing frame — and re-captured.</li>
     <li><b>Not framed:</b> the empty reel (held by the journey); the active frame moving with the scroll and resting (held); the
@@ -194,6 +206,9 @@ code{font-size:.92em}
 <section class="callout">
   <h3>Revisions</h3>
   <ul>
+    <li><b>v5 — 2026-09-21.</b> D7 decided on v4: the control is a dropdown in the top bar; the pill under the ring and the reel's
+      exit are gone. D11: a Default view setting, forum unless chosen; the dropdown's choice lasts the visit. Every Proposed frame re-captured at <code>1d6ff4f</code>; the top-bar route's Current re-captured too (it no
+      longer opens the drawer).</li>
     <li><b>v4 — 2026-09-21.</b> The rest of the scope built and captured: the people-scope reel (section 4), the veiled frame
       (section 5), the active frame's muted player in every clip frame. Eight new frames; every Proposed frame re-captured at
       <code>ccfb0be</code>. One capture defect (the bar under the player) fixed and re-captured.</li>

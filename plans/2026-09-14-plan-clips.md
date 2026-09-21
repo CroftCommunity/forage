@@ -8,8 +8,10 @@ and 5: `js/view-mode.js`, `js/ui/reel.js`, the pill under the ring pill, `js/ree
 (D9), alt text as Gram's caption (D10); `e2e/view-modes.workflow.mjs` holds nine claims; Phase 0
 measured (below). Mock **v4** — every Proposed frame a capture — is `plans/mocks/clips.html`.
 Owner's word 2026-09-21: "finish building everything that was scoped", the open decisions
-taken the way the plan proposed. Still open: **D7** (the control's place — built as
-recommended: the pill under the ring, one exit on the reel), the phone look
+taken the way the plan proposed. **D7 DECIDED 2026-09-21 (owner, on mock v4):** a dropdown in
+the top bar — the view is a content-type choice, one at a time, not a gradient like the ring;
+built as v5 (`viewSelect()` in the masthead, the nav's pill and the reel's exit gone). Still
+open: the phone look
 `[device: android x2]` (Phase 4's second half, 0e), and Phase 6 (the pds-walker path, its own
 decision). The research half (§ Prior art) is done and sourced.
 repo: `CroftCommunity/forage`
@@ -377,16 +379,24 @@ present at one tier carries a frontier entry (invariant 8): the ledger row is pa
   post clips (bands, no content) as ADR-005's shape, to seed World with creators.
 - **D6 — the word. DECIDED 2026-09-16 (owner, on mock v1):** it is a **mode** of viewing,
   *clip* for video-centred and *gram* for image-centred; rows is the mode you have today.
-- **D7 — where the control lives.** Owner's suggestion: a mode pill **under the ring pill**
-  in the left nav, because any mode applies at any ring stop (drawn in mock v2). The open
-  half: on a phone the nav is a drawer, so is the strip also to carry the current mode as
-  the way back to rows, or is the drawer enough?
+- **D7 — where the control lives. DECIDED 2026-09-21 (owner, on mock v4):** "I'm not
+  loving the pill slider bc it's not really a gradient … it's basically a content type
+  filter and formatting and it's one at a time and not really graduated like mutuals to
+  world, maybe a drop down in the top bar even?" — a **dropdown in the top bar**, the sort
+  bar's select dressing, on every board; the ring pill stays alone in the nav; the reel's own
+  exit goes (the dropdown is on screen over every frame). Built as mock v5. History: the
+  first suggestion (2026-09-16) was a pill under the ring pill, built for v3/v4.
 - **D8 — the word in code.** `js/mode.js` already means *which population the app is*
   (Bluesky view vs memory sandbox, `forage.mode`), and `MODES` in `js/config/routing.js`
   means the substrate routing tables. Proposal: the reader-facing word stays *mode*, and
   the code and the storage key say `view` (`forage.view`, `?view=clip`) so three things
   named mode do not become four. Alternative: rename `js/mode.js` to `population.js`
   first (a sweep with no behaviour change) and let this be `mode` everywhere.
+- **D11 — a default. DECIDED AND BUILT 2026-09-21 (owner):** "add a 'default' setting for it
+  in the user settings and have it be 'forum' by default." Two stores: `forage.viewdefault`
+  (Preferences › Default view, forum unless chosen) is what a fresh visit opens in;
+  `forage.view` (sessionStorage) is the top bar's live choice and lasts the visit. Changing
+  the default does not change the visit you are on.
 - **D9 — is a GIF a gram? BUILT as proposed, 2026-09-21.** A `presentation: gif` video embed and a tenor/klipy GIF card
   are pictures to a reader and video to the code. Proposal: gram shows them, paused, with
   the GIF badge, and their own autoplay setting governs; clip does not show them.
@@ -519,6 +529,17 @@ than here.
 
 ## Review Log
 
+- 2026-09-21 — **the dropdown wrapped the phone's top bar** (v5 capture, 390px: 113px, two
+  rows). Fixed at ≤480px (emblem only, tighter gaps, an 84px select), measured 61px signed in
+  at 320/360/390 and pinned in the journey. Found in passing: a GUEST at 320 wraps on main
+  already — the Sign in link — recorded in the mock, not fixed here.
+- 2026-09-21 — **D11: the default.** The dropdown's choice used to persist like the ring
+  stop; now it lasts the visit, and a Default view setting on the account page (forum unless
+  chosen) is what a fresh visit opens in. Claim 10 in the journey.
+- 2026-09-21 — **D7 re-decided on v4 and built as v5.** The pill under the ring read as a
+  second gradient; a view is a kind, one at a time, so it is a `<select>` in the masthead
+  (96px, the bar still one row at 320px — mobile-fit holds it), and the reel's exit went with
+  the nav pill. Tests rewritten RED first; the journey chooses on the dropdown.
 - 2026-09-21 — **the rest of the scope built** (owner: "why don't we finish building
   everything that was scoped?"). RED first for every module. Four defects the journey found
   that no unit test could, each fixed and pinned: two playlists loaded for one frame (the
