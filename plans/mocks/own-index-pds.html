@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forage Own Index Kept</title>
+<meta name="mock-version" content="1">
+<meta name="mock-baseline" content="forage@cdc1da1">
+<meta name="mock-proposal" content="forage@PROPOSAL">
+<style>
+:root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
+  --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page-bg:#1C1813;--page-card:#262019;--page-ink:#EFE7D9;--page-muted:#B5A88F;--page-line:#3D3527;--page-accent:#A5CD98}}
+:root[data-theme="dark"]{--page-bg:#1C1813;--page-card:#262019;--page-ink:#EFE7D9;--page-muted:#B5A88F;--page-line:#3D3527;--page-accent:#A5CD98}
+*{box-sizing:border-box}
+body{background:var(--page-bg);color:var(--page-ink);font-family:var(--f-body);line-height:1.55;margin:0;padding:32px 20px 72px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:30px}
+h1{font-family:var(--f-display);font-size:30px;font-weight:600;margin:0;letter-spacing:-.01em}
+h2{font-family:var(--f-display);font-size:22px;font-weight:600;margin:0}
+h3{font-family:var(--f-display);font-size:17px;margin:0 0 7px;font-weight:600}
+.sub{color:var(--page-muted);font-size:15px;max-width:78ch;margin:0}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+section{display:flex;flex-direction:column;gap:14px}
+.stage{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap}
+.device{display:flex;flex-direction:column;gap:9px;min-width:0}
+.device-label{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:var(--page-muted);font-weight:600}
+.phone{width:390px;max-width:100%}
+.desk{flex:1 1 460px;min-width:0}
+.shot{max-width:100%;display:block;border:1px solid var(--page-line);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.10),0 8px 24px rgba(0,0,0,.06)}
+.callout{background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:16px 18px}
+.callout p,.callout li{margin:0;font-size:14px;color:var(--page-muted)}
+.callout b,.callout code,td b{color:var(--page-ink);font-weight:600}
+.callout ul,.callout ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+table{border-collapse:collapse;font-size:14px;width:100%}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--page-line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--page-muted)}
+.tablewrap{overflow-x:auto;background:var(--page-card);border:1px solid var(--page-line);border-radius:8px;padding:6px 8px}
+code{font-size:.92em}
+.small{font-size:13px;color:var(--page-muted)}
+.tag{display:inline-block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;padding:1px 8px;border-radius:999px;border:1px solid var(--page-line);color:var(--page-muted)}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:26px}
+@media (max-width:900px){.pair{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header style="display:flex;flex-direction:column;gap:10px">
+  <span class="eyebrow">Mock · v1 · 2026-09-21 · plan 2026-09-21-plan-own-index-on-the-pds</span>
+  <h1>Your discovery index, kept on your atmo provider account — the Discovery index section in its four states</h1>
+  <p class="sub">One surface, sixteen frames. <b>Current</b> is <code>main</code> at <code>cdc1da1</code> (the section as it ships: a file on this browser, a mode dial, paste or choose a file);
+  <b>Proposed</b> is <code>claude/own-index-pds-build</code> at <code>PROPOSAL</code>. Both captured by <code>scripts/mock-snaps.mjs</code> against the same fixtures, in the default skin,
+  at 390×844 and 1280×900 (MOCKS.md), on <code>/me</code> with Advanced open and the section scrolled to. The population is built to stress the status line: a name long enough to wrap
+  with an emoji, a link long enough to break, the shipped index's counts in words, and a fetch that fails with the words a real PDS answers. The reader's repo slot, the blob it names and
+  the link host are live in the page (the journey's shim), so every Proposed frame is the result of a real read of the record — not a drawing.</p>
+</header>
+
+<section class="callout">
+  <h3>Open decisions</h3>
+  <ol>
+    <li><b>The mode dial's words at 390.</b> <i>Add mine — my file laid over Forage's; mine wins where they name the same thing</i> is wider than a phone; the dial is now bounded to the page (it scrolled the account page sideways on main — found by this plan's journey) and its label clips. Shorter words, or the clip? This dial predates the plan.</li>
+    <li><b>The paste box while kept on the account.</b> A pasted or chosen file now replaces the file on the account (a link becomes the file), because the record wins over a device file and a paste that only touched the device was a silent nothing on the first frames. Say if you would rather the paste box hide while the index is kept on the account.</li>
+  </ol>
+</section>
+
+<section>
+  <h2>1 · On this browser only — the default, and what main has today</h2>
+  <p class="sub">A file stored on this browser (<code>gardeners-2026-09-14.json</code>, 2 feeds, 3 jumpstarts), laid over Forage's. Proposed adds one dial under the mode: <b>Where it is kept</b>. The status line says which place is in use.</p>
+  <div class="stage">
+    <div class="device"><span class="device-label">Current · phone</span><img class="shot phone" src="snaps/own-index-pds/own-index-browser.phone.current.png" alt="the Discovery index section on main, phone: a file on this browser, the mode dial, paste or choose"></div>
+    <div class="device"><span class="device-label">Proposed · phone</span><img class="shot phone" src="snaps/own-index-pds/own-index-browser.phone.proposed.png" alt="the section on the branch, phone: the same, plus Where it is kept — On this browser only"></div>
+    <div class="device"><span class="device-label">Current · desktop</span><img class="shot desk" src="snaps/own-index-pds/own-index-browser.desktop.current.png" alt="the section on main, desktop"></div>
+    <div class="device"><span class="device-label">Proposed · desktop</span><img class="shot desk" src="snaps/own-index-pds/own-index-browser.desktop.proposed.png" alt="the section on the branch, desktop"></div>
+  </div>
+</section>
+
+<section>
+  <h2>2 · Kept on your atmo provider account — the file</h2>
+  <p class="sub">The record names a blob in her repo; this browser read the record at sign-in, fetched the file, and browse starts from hers. The status line carries the record's name (long, with an emoji, so it wraps) and when the copy was fetched; <b>Refresh</b> fetches it again; <i>Forget my file</i> is disabled because the device half holds nothing. Current is the same section with no file on this browser — on main the account is not consulted.</p>
+  <div class="stage">
+    <div class="device"><span class="device-label">Current · phone</span><img class="shot phone" src="snaps/own-index-pds/own-index-file.phone.current.png" alt="main, phone: no file of yours is stored — the record on the account is not read"></div>
+    <div class="device"><span class="device-label">Proposed · phone</span><img class="shot phone" src="snaps/own-index-pds/own-index-file.phone.proposed.png" alt="the branch, phone: Yours, kept on your atmo provider account as the file, fetched today; Refresh"></div>
+    <div class="device"><span class="device-label">Current · desktop</span><img class="shot desk" src="snaps/own-index-pds/own-index-file.desktop.current.png" alt="main, desktop"></div>
+    <div class="device"><span class="device-label">Proposed · desktop</span><img class="shot desk" src="snaps/own-index-pds/own-index-file.desktop.proposed.png" alt="the branch, desktop"></div>
+  </div>
+</section>
+
+<section>
+  <h2>3 · Kept on your atmo provider account — a link</h2>
+  <p class="sub">The record holds an https link; the link row is open with it, and <b>Keep this link</b> writes a new one. The mode is Replace, so <i>Yours alone is in use</i>. A link with no name is named by its link, once. Fetched on demand only — never polled (D5).</p>
+  <div class="stage">
+    <div class="device"><span class="device-label">Current · phone</span><img class="shot phone" src="snaps/own-index-pds/own-index-link.phone.current.png" alt="main, phone: no such state"></div>
+    <div class="device"><span class="device-label">Proposed · phone</span><img class="shot phone" src="snaps/own-index-pds/own-index-link.phone.proposed.png" alt="the branch, phone: the link, the link row open, Keep this link"></div>
+    <div class="device"><span class="device-label">Current · desktop</span><img class="shot desk" src="snaps/own-index-pds/own-index-link.desktop.current.png" alt="main, desktop: no such state"></div>
+    <div class="device"><span class="device-label">Proposed · desktop</span><img class="shot desk" src="snaps/own-index-pds/own-index-link.desktop.proposed.png" alt="the branch, desktop"></div>
+  </div>
+</section>
+
+<section>
+  <h2>4 · Kept as the file, and the file cannot be fetched</h2>
+  <p class="sub">The record is read but its blob answers HTTP 500. Forage's index is shown <b>for this load</b> and the status line says so, in the PDS's own words; the two dials still show <i>her</i> choice — nothing was rewritten (§ E). Refresh tries again.</p>
+  <div class="stage">
+    <div class="device"><span class="device-label">Current · phone</span><img class="shot phone" src="snaps/own-index-pds/own-index-fallback.phone.current.png" alt="main, phone: no such state"></div>
+    <div class="device"><span class="device-label">Proposed · phone</span><img class="shot phone" src="snaps/own-index-pds/own-index-fallback.phone.proposed.png" alt="the branch, phone: your index could not be fetched — Forage's until it can; the choice untouched"></div>
+    <div class="device"><span class="device-label">Current · desktop</span><img class="shot desk" src="snaps/own-index-pds/own-index-fallback.desktop.current.png" alt="main, desktop: no such state"></div>
+    <div class="device"><span class="device-label">Proposed · desktop</span><img class="shot desk" src="snaps/own-index-pds/own-index-fallback.desktop.proposed.png" alt="the branch, desktop"></div>
+  </div>
+</section>
+
+<section class="callout">
+  <h3>What the frames hold, and what they cannot</h3>
+  <ul>
+    <li>The first Proposed capture of frame 3 showed the fallback sentence instead of a kept link (the mock's long host was not a served link in the journey's shim), a link with no name read its URL twice, and frame 4 leaked the lens' <code>lens:</code> prefix into the reader's sentence. All three fixed, the frames re-captured.</li>
+    <li>The same capture showed the paste box doing nothing while the index is kept on the account — open decision 2 above; built as "replaces the file on the account", pinned by the journey.</li>
+    <li>The Current frames are the section as it ships: the record on the account is never read on main, so frames 2–4's Current show <i>No file of yours is stored</i>.</li>
+    <li>Not framed: the guest's sentence in place of the dial, a closed host named for CORS, an http link refused before any fetch, a mode change as a put in place, Off on this device, the tap floor at 390 — all held by <code>e2e/own-index-pds.workflow.mjs</code>. The live proof (<code>e2e/own-index-pds-live.workflow.mjs</code>, <code>LIVE=1</code>) is Phase 5's second half.</li>
+  </ul>
+</section>
+
+</div>
+</body>
+</html>
