@@ -1,18 +1,17 @@
 # Plan: View modes — clip and gram, a media-centred showing of any board, from your ring out to World
 
 date: 2026-09-14
-**Status:** **PHASE 2 BUILT FOR THE MOCK (2026-09-21)** — the owner asked for a mock under the
-mock rules, which means the engine: `js/view-mode.js` (the pill, the key `forage.view`, the
-kind filter), `js/ui/reel.js` (the reel), the pill under the ring pill in `js/ui/nav.js`,
-`renderBoard` handing its ordered posts to the reel, the population
-`e2e/harness/mock-reel.mjs`, the journey `e2e/view-modes.workflow.mjs`, three capture routes.
-Mock **v3** — every Proposed frame a capture of `d9a7901` — is
-`plans/mocks/clips.html`. NOT built, on purpose: D1's fan-out (the reel frames the LOADED
-posts and says so), D3's autoplay (a frame waits for the press as a row does), D9/D10.
-Phase 0 (measurement) still precedes D1. The research half (§ Prior art) is done and sourced.
-Reframed 2026-09-16 (owner): the reel is a **mode** — forum · clip · gram — any mode at any
-ring stop, chosen by a second pill under the ring pill (D6 decided; D7 built as recommended,
-awaiting the owner's word; D8 built as proposed).
+**Status:** **BUILT 2026-09-21 — everything scoped except Phase 6 and the phone.** Phases 1–3
+and 5: `js/view-mode.js`, `js/ui/reel.js`, the pill under the ring pill, `js/reel-plan.js` +
+`lens.reel()` (D1 (a), the people-scope fan-out under backpressure), `js/media-posters.js`,
+`js/clip-autoplay.js` + the switch on /me (D3), the veil for a labeled frame, GIF cards in Gram
+(D9), alt text as Gram's caption (D10); `e2e/view-modes.workflow.mjs` holds nine claims; Phase 0
+measured (below). Mock **v4** — every Proposed frame a capture — is `plans/mocks/clips.html`.
+Owner's word 2026-09-21: "finish building everything that was scoped", the open decisions
+taken the way the plan proposed. Still open: **D7** (the control's place — built as
+recommended: the pill under the ring, one exit on the reel), the phone look
+`[device: android x2]` (Phase 4's second half, 0e), and Phase 6 (the pds-walker path, its own
+decision). The research half (§ Prior art) is done and sourced.
 repo: `CroftCommunity/forage`
 baseline: `main` @ `c3a4abe` (follow-all landed, #77)
 branch: `claude/video-view`
@@ -360,7 +359,8 @@ present at one tier carries a frontier entry (invariant 8): the ledger row is pa
 
 ## Open decisions (the owner's)
 
-- **D1 — source by scope.** At a people-scope, does Clips (a) fan out over the scope's
+- **D1 — source by scope. BUILT as (a), 2026-09-21** (owner: finish what was scoped).
+  Original question: at a people-scope, does Clips (a) fan out over the scope's
   members with the video filter (proposed), or (b) strictly narrow the board's own
   sources? (a) is the only one that fills a screen; (b) is the only one where Clips and
   rows read the ring identically. Proposal: (a), with the reel's count line saying
@@ -368,7 +368,7 @@ present at one tier carries a frontier entry (invariant 8): the ledger row is pa
 - **D2 — the address.** `?view=clips` on any board route (proposed), or a route of its
   own. The query keeps one namespace and survives a paste; a route reads better in a
   share sheet. Either way the back button returns to the rows.
-- **D3 — autoplay.** A separate `forage.clipautoplay` key, default on inside Clips only
+- **D3 — autoplay. BUILT as proposed, 2026-09-21.** A separate `forage.clipautoplay` key, default on inside Clips only
   (proposed); or reuse `forage.gifautoplay` (default off) so one switch governs all
   motion; or default off everywhere and let the reel ask once.
 - **D4 — order.** Default = the deal (round-robin across sources or people), with New and
@@ -387,10 +387,10 @@ present at one tier carries a frontier entry (invariant 8): the ledger row is pa
   the code and the storage key say `view` (`forage.view`, `?view=clip`) so three things
   named mode do not become four. Alternative: rename `js/mode.js` to `population.js`
   first (a sweep with no behaviour change) and let this be `mode` everywhere.
-- **D9 — is a GIF a gram?** A `presentation: gif` video embed and a tenor/klipy GIF card
+- **D9 — is a GIF a gram? BUILT as proposed, 2026-09-21.** A `presentation: gif` video embed and a tenor/klipy GIF card
   are pictures to a reader and video to the code. Proposal: gram shows them, paused, with
   the GIF badge, and their own autoplay setting governs; clip does not show them.
-- **D10 — alt text in gram.** Rows hide the alt caption by default (gif-embeds D7). Gram
+- **D10 — alt text in gram. BUILT as proposed, 2026-09-21.** Rows hide the alt caption by default (gif-embeds D7). Gram
   proposes showing it: the picture is the whole screen and the words a person wrote about
   it are the caption. Or keep one setting everywhere.
 
@@ -519,6 +519,16 @@ than here.
 
 ## Review Log
 
+- 2026-09-21 — **the rest of the scope built** (owner: "why don't we finish building
+  everything that was scoped?"). RED first for every module. Four defects the journey found
+  that no unit test could, each fixed and pinned: two playlists loaded for one frame (the
+  guest paint's player, then a detached reel's queued observer entry — now no autoplay before
+  the session settles and never on a frame off the page); the member count read 0 (set in a
+  fetch's `.then` that belonged to a view instance `render()` had already replaced — now on
+  the result and the record); a repaint after More snapped the reader to the first frame
+  (the detached scroller reads 0 — read before the swap); and the mix deal's id tie-break put
+  the tenth follow before the ninth (the reel has its own round-robin). One fixture defect
+  too: a per-member shim key was a substring of another's. Gate in the landing commit.
 - 2026-09-21 — **built for the mock** (owner, 2026-09-17: "I would like a mock of that based
   on our mock rules" — P1: the approved frame is a capture of the engine). RED first
   (`test/view-mode.test.js`, `test/reel.test.js`, `test/nav-view-pill.test.js` failed on

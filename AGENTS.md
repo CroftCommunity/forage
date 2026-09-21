@@ -161,7 +161,12 @@ key `forage.view`, the pill directly under the ring pill in the nav (D7), the re
 `js/ui/reel.js` mounted by `renderBoard` AFTER the ring, the posture, the language filter
 and the sort, so a frame is a row by another layout and never a row the forum would not
 show; each frame carries the post's own compact row, so the writes table below is
-untouched. The code says `view` because `js/mode.js` already means the population (D8).
+untouched. The code says `view` because `js/mode.js` already means the population (D8). At a people
+stop on a board the ring scopes, the reel is the scope's PEOPLE: `lens.reel()` fans out over
+the members with `getAuthorFeed?filter=posts_with_video|posts_with_media` (a READ — no new
+write), eight a wave, the next wave only when the reader reaches the end (`js/reel-plan.js`;
+the device remembers who answered, `js/media-posters.js`). Autoplay in Clip mode is muted, in
+view only, never a labeled frame, never before the session has settled (`js/clip-autoplay.js`).
 
 **Everything in the nav is a BOARD**, and boards differ only in where the posts
 come from: a feed generator, a hashtag, your own graph, or a MIX of those (the

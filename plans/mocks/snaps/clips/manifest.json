@@ -25,7 +25,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@d9a7901",
+      "baseline": "forage@ccfb0be",
       "population": "lens:mock-reel"
     },
     {
@@ -34,7 +34,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@d9a7901",
+      "baseline": "forage@ccfb0be",
       "population": "lens:mock-reel"
     },
     {
@@ -43,7 +43,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@d9a7901",
+      "baseline": "forage@ccfb0be",
       "population": "lens:mock-reel"
     },
     {
@@ -52,7 +52,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@d9a7901",
+      "baseline": "forage@ccfb0be",
       "population": "lens:mock-reel"
     },
     {
@@ -61,7 +61,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@d9a7901",
+      "baseline": "forage@ccfb0be",
       "population": "lens:mock-reel"
     },
     {
@@ -70,7 +70,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@d9a7901",
+      "baseline": "forage@ccfb0be",
       "population": "lens:mock-reel"
     },
     {
@@ -121,6 +121,78 @@
     {
       "file": "view-nav.desktop.current.png",
       "route": "view-nav",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@c3a4abe",
+      "population": "lens:mock-reel"
+    },
+    {
+      "file": "view-clip-fol.phone.proposed.png",
+      "route": "view-clip-fol",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@ccfb0be",
+      "population": "lens:mock-reel"
+    },
+    {
+      "file": "view-clip-veil.phone.proposed.png",
+      "route": "view-clip-veil",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@ccfb0be",
+      "population": "lens:mock-reel"
+    },
+    {
+      "file": "view-clip-fol.desktop.proposed.png",
+      "route": "view-clip-fol",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@ccfb0be",
+      "population": "lens:mock-reel"
+    },
+    {
+      "file": "view-clip-veil.desktop.proposed.png",
+      "route": "view-clip-veil",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@ccfb0be",
+      "population": "lens:mock-reel"
+    },
+    {
+      "file": "view-clip-fol.phone.current.png",
+      "route": "view-clip-fol",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@c3a4abe",
+      "population": "lens:mock-reel"
+    },
+    {
+      "file": "view-clip-veil.phone.current.png",
+      "route": "view-clip-veil",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@c3a4abe",
+      "population": "lens:mock-reel"
+    },
+    {
+      "file": "view-clip-fol.desktop.current.png",
+      "route": "view-clip-fol",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@c3a4abe",
+      "population": "lens:mock-reel"
+    },
+    {
+      "file": "view-clip-veil.desktop.current.png",
+      "route": "view-clip-veil",
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
