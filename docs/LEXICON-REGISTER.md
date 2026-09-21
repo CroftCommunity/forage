@@ -349,3 +349,53 @@ ecosystem** (*"socialize is relative, for now we socialize across our own projec
 work on socializing the whole project widely"*): raised in `CroftC/.claude/LEXICONS.md` § 3
 with one question to arecipe and croft. Outcome so far: none — record it here when one
 arrives. The wide post is drafted in the plan (§ F) for when the project goes wide.
+
+## fyi.forage.feedindex
+
+**Holds:** where this reader's OWN discovery index comes from — the index file itself as a
+`blob` in their repo (`kind: file`), or an https link to one (`kind: url`) — plus whether it
+lays over the app's shipped index or replaces it (`mode: add | replace`), a name, and the
+two stamps. Keyed `self`: one choice per reader. Forage's shipped index is never in it; a
+reader with no record is a reader whose choice lives on the device, as it did before. Plan
+`plans/2026-09-21-plan-own-index-on-the-pds.md`. **Stage: unpublished** — `fyi.forage.*`
+has no `_lexicon` TXT record yet (owed for the namespace, not per type). **Written to a
+real PDS 2026-09-21** (the plan's probe, standing test account, undone): the 1 MB shipped
+index uploaded as `application/json`, a put at `self` referencing it, read back
+unauthenticated with `access-control-allow-origin: *`, a wrong `size` refused
+`InvalidSize`, the old blob gone the moment the record stopped naming it.
+
+**Why ours:** the index is a *directory the reader supplies* — a file in Forage's own
+`"v": 1` shape, or the place such a file is published. Nothing in the ecosystem models a
+reader-supplied data source a client should load on their behalf. The official namespace's
+answer to "what I chose" is a **private, server-side preference blob** (`putPreferences`),
+rewritten whole by the official client on every save — the `mix` finding, again — so a
+record is the only carrier that follows the reader without being overwritten. The file
+rides as a blob because a record cannot carry it: the reference PDS caps a `putRecord` body
+at 150 KiB (`packages/pds/src/index.ts`, `jsonLimit`) and the protocol's guide caps a record
+at 1 MiB with "use a blob instead"; the shipped index is 1,074,115 bytes.
+
+**Ecosystem check (2026-09-21):** eight candidates opened across the three corpora
+LEXICONS.md names.
+
+| Candidate | What it holds | Why it does not fit |
+|---|---|---|
+| `app.bsky.actor.defs#savedFeedsPrefV2` via `app.bsky.actor.putPreferences` | `items[] { id, type: feed \| list \| timeline, value, pinned }` — the reader's saved feeds | the subscription list itself, not a directory of what exists; a private server-side preference, not a record, and anything stored beside it is overwritten on the official client's next save |
+| `app.bsky.actor.defs#interestsPref` | `tags[]` of interest, for onboarding suggestions | a hint to the AppView; same blob; no file, no place |
+| `app.bsky.graph.starterpack` | a `list` + `feeds` ≤ 3 + name and description | a curated **door addressed to others**, three feeds wide; ours is a reader's own choice of source, thousands of rows with tags — the starter pack is one of the things the index *names* |
+| `app.bsky.feed.generator` | the `did` of a feed **service**, `displayName`, `avatar` blob | a pointer to a server answering `getFeedSkeleton`, not to a file; and it is what our rows point at |
+| `app.bsky.actor.profile` (`avatar`), `app.bsky.feed.generator` (`avatar`) | a `blob` field with `accept` + `maxSize` | not a candidate — the **precedent** for a blob referenced from a record, which is exactly this record's shape |
+| `com.atproto.lexicon.schema` | a schema, keyed by NSID | no |
+| `community.lexicon.*` at `tangled.org/lexicon.community/lexicons` (the GitHub mirror archived 2026-07-27): `app`, `bookmarks`, `calendar`, `interaction`, `location`, `payments`, `preference` | app listings; a bookmark = one saved `uri` + tags; events and RSVPs; likes; places; Web Monetization; AI-use consent | none models a data source a client should load on the reader's behalf; `bookmarks.bookmark` is the nearest and points at one thing, not a directory |
+| our own `fyi.forage.mix` | how one reader arranges their subscriptions into a board | a mix composes *subscriptions*; the index is a *directory of what exists* — a directory inside a mix conflates the map with the route |
+
+Namespaces forage consumes are `app.bsky.*` and `com.atproto.*` only, covered above.
+Preference order applied: not `app.bsky.*` (no official client should or could read this —
+it is Forage's discovery surface, invisible there by design); `community.lexicon.*` holds
+no candidate, and the type describes *Forage's* index format rather than something the
+ecosystem shares yet; so `fyi.forage.*`, third choice, with this table as the reason.
+
+**Socialized (2026-09-21) at the scope the owner set — across our own projects:** raised
+in the plan (§ Phase 6) with one question to arecipe and croft — does any of you model *a
+reader's chosen data source*, a file or a link a client should load on their behalf and
+keep across devices? Outcome so far: none — record it here when one arrives. The wide post
+is drafted in the plan for when the project goes wide.
