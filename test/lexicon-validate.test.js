@@ -250,20 +250,27 @@ test('fyi.forage.feedindex: a file record and a url record both pass', () => {
   assert.deepEqual(validateRecord(FEEDINDEX, urlRecord()), { ok: true, errors: [] });
 });
 
-test('fyi.forage.feedindex: a blob must be the PDS\'s shape — $type, ref.$link, mimeType, a positive integer size', () => {
-  for (const [why, bad] of [
-    ['not an object', 'bafkrei…'],
-    ['no $type', { ref: BLOB.ref, mimeType: BLOB.mimeType, size: BLOB.size }],
-    ['no ref', { $type: 'blob', mimeType: BLOB.mimeType, size: BLOB.size }],
-    ['ref without $link', { ...BLOB, ref: {} }],
-    ['no mimeType', { $type: 'blob', ref: BLOB.ref, size: BLOB.size }],
-    ['size a string', { ...BLOB, size: '1074115' }],
-    ['size zero', { ...BLOB, size: 0 }],
-    ['size fractional', { ...BLOB, size: 1.5 }],
+test('fyi.forage.feedindex: a blob must be the PDS\'s shape — $type, ref.$link, mimeType, a positive integer size — and each refusal says which', () => {
+  // The third column is the WORDS: a refusal a person can act on names the part that is
+  // wrong. (Mutation round 2026-09-21: every message here had a surviving mutant until
+  // the words were asserted — "refused with words" is a claim a test has to make.)
+  for (const [why, bad, says] of [
+    ['not an object', 'bafkrei…', /blob reference.*got string/],
+    ['no $type', { ref: BLOB.ref, mimeType: BLOB.mimeType, size: BLOB.size }, /\$type/],
+    ['no ref', { $type: 'blob', mimeType: BLOB.mimeType, size: BLOB.size }, /ref\.\$link/],
+    ['ref without $link', { ...BLOB, ref: {} }, /ref\.\$link/],
+    ['ref.$link not a string', { ...BLOB, ref: { $link: 42 } }, /ref\.\$link/],
+    ['no mimeType', { $type: 'blob', ref: BLOB.ref, size: BLOB.size }, /mimeType/],
+    ['mimeType empty', { ...BLOB, mimeType: '' }, /mimeType/],
+    ['mimeType a number', { ...BLOB, mimeType: 42 }, /mimeType/],
+    ['size a string', { ...BLOB, size: '1074115' }, /positive integer.*"1074115"/],
+    ['size zero', { ...BLOB, size: 0 }, /positive integer/],
+    ['size fractional', { ...BLOB, size: 1.5 }, /positive integer/],
   ]) {
     const r = validateRecord(FEEDINDEX, fileRecord({ file: bad }));
     assert.equal(r.ok, false, `${why} passed as a blob`);
     assert.equal(r.errors[0].field, 'file', `${why}: the blob field is named`);
+    assert.match(r.errors[0].message, says, `${why}: the refusal says what is wrong`);
   }
 });
 
@@ -278,13 +285,20 @@ test('fyi.forage.feedindex: accept and maxSize are enforced with words — JSON 
   assert.equal(validateRecord(FEEDINDEX, fileRecord({ file: { ...BLOB, size: 2_000_000 } })).ok, true, 'the ceiling itself fits');
 });
 
-test('fyi.forage.feedindex: accept globs — image/* admits image/png, and */* admits anything', () => {
+test('fyi.forage.feedindex: accept globs — image/* admits image/png, */* admits anything, an exact type admits only itself, and any entry of a list will do', () => {
   const def = (accept) => ({ type: 'object', required: ['b'], properties: { b: { type: 'blob', accept } } });
   const blob = (mimeType) => ({ b: { ...BLOB, mimeType } });
   assert.equal(validateRecord(def(['image/*']), blob('image/png')).ok, true);
   assert.equal(validateRecord(def(['image/*']), blob('application/json')).ok, false);
+  assert.equal(validateRecord(def(['image/*']), blob('imagex/png')).ok, false, 'the glob is on the slash, not the first letter');
+  assert.equal(validateRecord(def(['image/png']), blob('image/pngx')).ok, false, 'an exact type is exact, not a prefix');
   assert.equal(validateRecord(def(['*/*']), blob('application/octet-stream')).ok, true);
   assert.equal(validateRecord(def(undefined), blob('anything/at-all')).ok, true, 'no accept means any type');
+  const two = def(['image/*', 'application/json']);
+  assert.equal(validateRecord(two, blob('application/json')).ok, true, 'matching ANY listed type is enough');
+  const r = validateRecord(two, blob('text/plain'));
+  assert.equal(r.ok, false);
+  assert.match(r.errors[0].message, /image\/\*, application\/json/, 'the refusal lists every accepted type, separated');
 });
 
 test('fyi.forage.feedindex: kind and mode are words from the schema; the schema alone admits an http: url (the https rule is the codec\'s)', () => {
