@@ -80,12 +80,19 @@ import { readFileSync } from 'node:fs';
 const FIXTURE_INDEX = JSON.parse(readFileSync(new URL('./fixtures/feed-index.json', import.meta.url), 'utf8'));
 const FIXTURE_META = JSON.parse(readFileSync(new URL('./fixtures/feed-index-meta.json', import.meta.url), 'utf8'));
 
+// own-index (2026-09-21): every signed-in session now reads the reader's
+// fyi.forage.feedindex record once at sign-in. Every existing signed-in journey
+// would report that read as a shim miss, so the default answer is the PDS's
+// own "no record" — a workflow that wants a record declares its own fixture
+// (or an init-script repo, as own-index-pds.workflow.mjs does), which wins.
+const NO_INDEX_RECORD = { 'collection=fyi.forage.feedindex&rkey=self': { __status: 400, __body: { error: 'RecordNotFound', message: 'Could not locate record' } } };
+
 export async function scenario(state, { initScripts = [], mode, root, realIndex = false, ...shimOpts } = {}) {
   if (!realIndex) {
-    shimOpts = { ...shimOpts, responses: { '/data/feed-index-meta.json': FIXTURE_META, '/data/feed-index.json': FIXTURE_INDEX, ...(shimOpts.responses || {}) } };
+    shimOpts = { ...shimOpts, responses: { ...NO_INDEX_RECORD, '/data/feed-index-meta.json': FIXTURE_META, '/data/feed-index.json': FIXTURE_INDEX, ...(shimOpts.responses || {}) } };
   } else {
     // the real file: let it through the fence unshimmed by naming it a pass-through
-    shimOpts = { ...shimOpts, responses: { ...(shimOpts.responses || {}) }, passThrough: ['/data/feed-index'] };
+    shimOpts = { ...shimOpts, responses: { ...NO_INDEX_RECORD, ...(shimOpts.responses || {}) }, passThrough: ['/data/feed-index'] };
   }
   if (!STATES.includes(state)) {
     throw new Error(`unknown scenario state: ${state} (known: ${STATES.join(', ')})`);
