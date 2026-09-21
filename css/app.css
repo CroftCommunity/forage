@@ -1282,3 +1282,42 @@ dialog.authsheet::backdrop, dialog.sheet::backdrop { background: var(--scrim); }
   padding: 6px 2px; line-height: 1.7; }
 .tagcloud a { color: var(--link); text-decoration: none; }
 .tagcloud a:hover { text-decoration: underline; }
+
+/* ---- View modes: the pill under the ring, and the reel (plan 2026-09-14-plan-clips) ----
+   The view pill wears the ring pill's classes (js/view-mode.js) and takes the
+   same slot dressing, so the two dials in the nav read as one instrument. */
+.navview { padding: 2px var(--s3) 6px; }
+/* The reel is the board's card shown as a snapping stack: the container is the
+   scroller (snap needs the scroller to be the thing with the items), sized to
+   the viewport under the masthead, one frame per screen. `dvh` follows the
+   phone's collapsing browser chrome; the 61px is the masthead's height at
+   every width (the drawer's `top` uses the same number). */
+.reel { position: relative; height: calc(100dvh - 61px); overflow-y: auto; scroll-snap-type: y mandatory;
+  background: #000; border-radius: var(--radius-card); overscroll-behavior-y: contain; }
+.reel-bar { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; justify-content: space-between;
+  gap: var(--s2); padding: var(--s2) var(--s3); color: #fff;
+  background: linear-gradient(to bottom, rgba(0,0,0,.72), rgba(0,0,0,0)); pointer-events: none; }
+.reel-bar > * { pointer-events: auto; }
+.reel-count { color: #fff; opacity: .9; }
+.reel-exit { flex: none; min-height: 44px; }
+.reel-item { scroll-snap-align: start; scroll-snap-stop: always; height: 100%; display: grid;
+  grid-template-rows: minmax(0, 1fr) auto; background: #000; }
+/* The frame: the row's own media node, freed of the row's caps. A picture
+   contain-fits over its blurred self exactly as on a row; a clip shows its
+   poster and its press. Nothing new is fetched for a frame. */
+.reel-stage { min-height: 0; display: grid; align-items: center; }
+.reel-stage .stage { max-height: none; height: 100%; aspect-ratio: auto; margin: 0; border: 0; border-radius: 0; }
+.reel-stage .stage[data-aspect="none"] { height: 100%; }
+.reel-stage .media-strip { padding: var(--s3); }
+/* The row under the frame is the forum's compact row on the card's own
+   ground, so every action a reader has on a row they have on a frame. */
+.reel-row { background: var(--card); }
+.reel-row .postrow { border-top: 0; }
+.reel-empty { padding: var(--s4); color: #fff; opacity: .85; }
+@media (prefers-reduced-motion: reduce) { .reel { scroll-snap-type: none; } }
+@media (min-width: 801px) {
+  /* Under a desktop's masthead the reel need not be the whole window: a
+     frame taller than a phone reads as a wall, so the column's height is
+     capped and centred like a phone stood on the desk. */
+  .reel { height: min(calc(100dvh - 80px), 860px); }
+}

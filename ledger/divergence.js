@@ -166,6 +166,11 @@ export const LEDGER = [
     reason: 'A week-old hint that saves a round-trip is worth having; pretending it is current is not.',
     tolerance: 'a row may vanish on hydration; a file-hidden row is not re-checked live until the next harvest',
     date: '2026-09-09', status: 'active' },
+  { id: 'DL-041', kind: 'tolerance', capability: 'feeds', tier: 'wide', label: 'A board can be shown as a reel — clip (videos) or gram (pictures) — in the Bluesky population only',
+    description: 'The View pill under the ring pill (js/view-mode.js, js/ui/reel.js) shows the SAME posts a board would show as rows, narrowed to the ones carrying the mode\'s media, one per screen, with the post\'s own compact row and actions under each frame. The ring, the language filter, the window sort and the moderation posture apply first, exactly as for rows. The memory population\'s seeded posts carry no media embeds, so its boards have no reel yet: the pill is drawn (it is one preference, device-local, like density) and a sandbox board in clip or gram mode is an honest empty reel with the way back.',
+    reason: 'Owner, 2026-09-16, on the clips mock: a mode of viewing, video-centred or image-centred, usable at any ring scale, chosen under the ring slider.',
+    tolerance: 'the memory board renders rows whatever the view mode; the reel is Bluesky-only until the sandbox carries media',
+    date: '2026-09-17', status: 'active' },
 ];
 
 export const frontiers = () => LEDGER.filter((e) => e.kind === 'frontier');

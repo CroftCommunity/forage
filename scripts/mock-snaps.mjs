@@ -19,7 +19,8 @@
 //        thread-lens-ring deep-lens-prefs-ring
 //        mix-board mix-tune mix-board-current mix-tune-current
 //        feeds-index jumpstarts-lens jumpstart-lens rail-panels
-//        jumpstart-follow jumpstart-follow-done jumpstart-unfollow jumpstart-follow-guest)
+//        jumpstart-follow jumpstart-follow-done jumpstart-unfollow jumpstart-follow-guest
+//        view-clip view-gram view-nav)
 //   node scripts/mock-snaps.mjs --as current --serve ../../forage
 //       # the same script and fixtures, rendering ANOTHER checkout (main): the
 //       # Current frames come from the tree the owner is running, captured by
@@ -53,6 +54,11 @@
 //                    ranks first, the OP answering someone else, and eleven
 //                    replies at the measured median. Signed in AS the poster,
 //                    because the delete hazard only exists for them.
+//   lens:mock-reel   e2e/harness/mock-reel.mjs — the view-modes load: the board
+//                    fixture plus two more clips (a landscape and a square with
+//                    alt text and the longest words on the board), so clip mode
+//                    frames three aspect ratios and gram mode frames a single
+//                    picture and the four-picture carousel.
 //   lens:mock-newspost e2e/harness/mock-newspost.mjs — the post-text load: a
 //                    verbatim news record (three blocks split by \n\n, a #link
 //                    facet over a truncated display URL, a link card), a
@@ -70,6 +76,7 @@ import { RESPONSES as GIF, BOARD_PATH as GIF_BOARD, THREAD_PATH as GIF_THREAD } 
 import { RESPONSES as SELF, THREAD_PATH as SELF_PATH, ALONE as SELF_ALONE, ALONE_PATH as SELF_ALONE_PATH } from '../e2e/harness/mock-selfthread.mjs';
 import { RESPONSES as MIX, FAKE_SIGNED_IN as MIX_SIGNED_IN, SCIENCE as MIX_SCIENCE } from '../e2e/harness/mock-mix.mjs';
 import { LIVE_FOLLOWS as FOLLOW_REPO, MEMBERS as FOLLOW_MEMBERS, R as FOLLOW_R, seeded as followSeed } from '../e2e/follow-all.workflow.mjs';
+import { RESPONSES as REEL, BOARD_PATH as REEL_BOARD, inMode as reelMode } from '../e2e/harness/mock-reel.mjs';
 import { mergeManifest } from './lib/snaps-manifest.mjs';
 import { SKINS } from '../js/skins.js';
 import { execFileSync } from 'node:child_process';
@@ -757,6 +764,35 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
     await fx.page.evaluate(() => document.fonts?.ready);
     await shoot(fx.page, route, 'lens:follow-all', name, vp);
     await fx.close().catch((e) => console.error(`  (${route} ${name}: ${String(e.message).split('\n')[0]})`));
+  }
+}
+
+// ---- view modes (plan 2026-09-14-plan-clips, mock v3): the board arriving in
+// clip mode and in gram mode, signed in, and the nav with the View pill under
+// the ring pill — on the phone that is the drawer, opened by the burger; on the
+// desktop the nav is in view on every board, so the frame is the forum board.
+// A Current capture serves main, where the key is unknown and the board is
+// rows: that frame is the honest "before".
+const VIEW_ROUTES = ['view-clip', 'view-gram', 'view-nav'];
+for (const [name, vp] of Object.entries(VIEWPORTS)) {
+  for (const route of VIEW_ROUTES) {
+    if (!wanted(route)) continue;
+    const mode = route === 'view-clip' ? 'clip' : route === 'view-gram' ? 'gram' : 'forum';
+    const vx = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN, reelMode(mode)], responses: REEL });
+    await vx.page.setViewportSize({ width: vp.width, height: vp.height });
+    await vx.page.goto(`${vx.origin}${REEL_BOARD}`);
+    await vx.page.waitForSelector(AS === 'current' || mode === 'forum' ? '.postrow' : `.reel[data-reel="${mode}"]`, { timeout: 15000 });
+    await vx.page.evaluate(() => document.fonts?.ready);
+    if (route === 'view-nav' && name === 'phone') {
+      await vx.page.click('.navburger');
+      await vx.page.waitForSelector('nav.nav [data-ring-pill]', { timeout: 5000 });
+    }
+    if (route !== 'view-nav' && AS !== 'current') {
+      await vx.page.waitForFunction(() => document.querySelectorAll('.reel-item[data-active="1"]').length === 1, null, { timeout: 5000 }).catch(() => {});
+    }
+    await vx.page.waitForTimeout(300);
+    await shoot(vx.page, route, 'lens:mock-reel', name, vp);
+    await vx.close().catch((e) => console.error(`  (${route} ${name}: ${String(e.message).split('\n')[0]})`));
   }
 }
 

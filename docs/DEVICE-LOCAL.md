@@ -52,6 +52,7 @@ default.
 | `forage.ringexempt` | localStorage | ring scope: boards exempt from the scope | `undecided` | ring scope is a way of reading the account's graph; whether it follows the reader is the same question as E160, decided with it |
 | `forage.ringopenthreads` | localStorage | ring scope: open threads regardless of scope | `undecided` | as `forage.ringexempt` |
 | `forage.ringscope` | localStorage | the selected ring scope | `undecided` | as `forage.ringexempt` |
+| `forage.view` | localStorage | how a board is shown — forum (rows), clip, or gram | `undecided` | a reading preference like the ring stop; E160 (the preferences-record batch); plan 2026-09-14-plan-clips |
 | `forage.ringstops` | localStorage | the ring pill's stops | `undecided` | as `forage.ringexempt` |
 | `forage.skin` | localStorage | the chosen skin (light and dark are skins too — ADR-003) | `undecided` | a reading preference; E160 (the preferences-record batch) — the one most readers would expect to follow them |
 | `forage.state` | localStorage | the memory population's event log and dev state (the `memory` substrate) | `device` | the bbs/demo dataset is a device-local world by definition; nothing in it is the reader's account |

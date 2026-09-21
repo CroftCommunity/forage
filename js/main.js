@@ -2,6 +2,7 @@
 
 import * as store from './store.js';
 import * as ringScope from './ring-scope.js';
+import * as viewMode from './view-mode.js';
 import * as beta from './beta.js';
 import { createPdsGraphSource } from './substrates/pds-graph.js';
 import * as router from './router.js';
@@ -289,6 +290,10 @@ ringScope.onChange(() => {
     console.warn('forage: ring scope failed to apply', e);
   });
 });
+// The view pill (plan 2026-09-14-plan-clips): a mode is a way of showing the
+// board you are on, so changing it is a repaint and nothing more — no walk to
+// wait for, unlike the ring above.
+viewMode.onChange(() => render());
 // Beta features: rings from the data servers. The source consults the switch at call
 // time (off → null → the AppView path); composed here because the UI layer imports no
 // substrate. The switch changes where the ring's graph comes from; the graph is cached

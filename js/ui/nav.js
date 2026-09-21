@@ -23,6 +23,7 @@
 
 
 import * as ringScope from '../ring-scope.js';
+import * as viewMode from '../view-mode.js';
 
 export function navTree({ el, session, feeds, tags, current, mixes = [] }) {
   const nav = el('nav', { class: 'nav', 'data-nav': '1', 'aria-label': 'Boards' });
@@ -71,6 +72,19 @@ export function navTree({ el, session, feeds, tags, current, mixes = [] }) {
     onPicked: (id) => ringScope.setScope(id),
   });
   if (pill) nav.append(el('div', { class: 'navring' }, pill));
+
+  // "View" stands directly under the ring (owner, 2026-09-16: "any mode could
+  // be used at any ring scale. Maybe we put a mode slider under the ring
+  // slider?"): how close, then what kind — two dials, one instrument, the same
+  // dressing (plan 2026-09-14-plan-clips, D7). Drawn signed out too and NOT
+  // locked: a guest board has pictures and clips, so every segment does
+  // something for a guest, which is the guest-surface rule's own test.
+  section('View');
+  nav.append(el('div', { class: 'navview' }, viewMode.viewPill(el, {
+    block: true,
+    ariaLabel: 'How to show it — rows, clips, or pictures',
+    onPicked: (id) => viewMode.set(id),
+  })));
 
   // Mixes (plan 2026-09-08, § E): the reader's composed boards, Home first,
   // then in the order made — ABOVE the feeds they are made of. Every mix is a

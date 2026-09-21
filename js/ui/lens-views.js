@@ -36,6 +36,8 @@ import * as pictures from '../pictures.js';
 import * as lang from '../lang.js';
 import { density, densityDial } from '../board-density.js';
 import { sortBar, TIMEFRAMES, WALK_TIMEFRAMES, nearestTimeframe } from './sortbar.js';
+import * as viewMode from '../view-mode.js';
+import { reel } from './reel.js';
 import { refreshControl } from './refresh-control.js';
 import * as boardCache from '../board-cache.js';
 import { planFollows, planUnfollows, CHUNK_SIZE } from '../follow-all.js';
@@ -792,6 +794,9 @@ function boardToolbar(onChange, { timeframes = TIMEFRAMES, refresh = null } = {}
   return el('div', { class: 'row wrap', style: 'gap:6px;margin:6px 0;align-items:center', 'data-board-toolbar': '1' }, barHost);
 }
 
+// The live reel's observer, so a repaint can disconnect it (view modes).
+let reelStop = null;
+
 // One board renderer: applies the window sort and the view mode.
 function renderBoard(card, posts, { wholeCorpus = false } = {}) {
   const view = boardView();
@@ -822,6 +827,21 @@ function renderBoard(card, posts, { wholeCorpus = false } = {}) {
   if (!wholeCorpus && !ordered.length && visible.length) {
     card.replaceChildren(el('div', { class: 'xs muted', style: 'padding:10px' },
       `Nothing in the loaded posts falls within “${boardTimeframe === 'all' ? 'all time' : boardTimeframe}”. Try a wider timeframe, or load More.`));
+    return;
+  }
+  // View modes (plan 2026-09-14-plan-clips): clip and gram show the SAME posts
+  // as frames instead of rows — the language filter, the window sort and the
+  // ring have all applied above this line, so a frame is a row by another
+  // layout and never a row the forum would not have shown. The previous
+  // reel's observer is disconnected before the next is built.
+  const mode = viewMode.active();
+  if (mode !== 'forum') {
+    if (reelStop) { reelStop(); reelStop = null; }
+    const node = reel({ el, posts: ordered, mode, media: mediaNode,
+      row: (p) => lensRow(p, 'compact', { media: false }),
+      onExit: () => viewMode.set('forum') });
+    reelStop = node._cleanup || null;
+    card.replaceChildren(node);
     return;
   }
   card.replaceChildren(...ordered.map((p) => lensRow(p, view)));
@@ -872,14 +892,17 @@ function kindContext(p) {
   return null;
 }
 
-const lensRow = (p, view = 'card') => {
+// `media: false` is the reel's row (js/ui/reel.js): the frame above it IS the
+// media, so the row under it carries the words and the actions and not a
+// second copy of the picture. Nowhere else passes it.
+const lensRow = (p, view = 'card', { media = true } = {}) => {
   // feed-row v1 (2026-08-30): the picture shows in BOTH densities. Compact
   // tightens the row — padding, byline, no body preview, no tag chips — but
   // does not take the post's content out of it. The owner's phone runs the
   // phpBB skin, which prefers compact, and showed a feed with no pictures
   // beside a thread page with them; the 40px title-thumb that stood in for a
   // placeholder-titled compact row went with the rule.
-  const showsMedia = !!p.media && !p.maskedRemoved;
+  const showsMedia = media && !!p.media && !p.maskedRemoved;
   // quote-embed (owner, 2026-09-01, on a quote of a video): the row shows what
   // the post QUOTES. Until now p.quoted rendered on the post page alone, so a
   // quote-post's row was the quoter's sentence over nothing — the reader had to
