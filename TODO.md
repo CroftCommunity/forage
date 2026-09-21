@@ -36,8 +36,11 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
   (owner):** browser-local stays the default; a reader who wants it to follow them chooses
   between a whole-file record and a pointer record (both, their choice); Forage's shipped index
   is always available as long as they keep upgrading, but once selected away from it never
-  retakes the default. Plan to write; the pointer is fetched over HTTPS only and goes through
-  the same validator as a pasted file. Registered in `docs/DEVICE-LOCAL.md` as `planned`.
+  retakes the default. **Plan written 2026-09-21** — `plans/2026-09-21-plan-own-index-on-the-pds.md`,
+  DRAFT for the owner's review (D1–D10: the file as a blob the record references — a
+  `putRecord` body is capped at 150 KiB on the reference PDS; one type keyed `self`; the mode
+  travels and Off does not; one size ceiling; the blob path probed live and undone). The pointer
+  is fetched over HTTPS only and goes through the same validator as a pasted file. Registered in `docs/DEVICE-LOCAL.md` as `planned`.
 
 - ~~**The first scheduled harvest is the rate-limit datapoint.**~~ **MEASURED 2026-09-14**
   (plan 2026-09-08-plan-feed-index-and-jumpstarts, Review Log Pass 4): the dispatched run
