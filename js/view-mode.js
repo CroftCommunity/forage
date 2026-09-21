@@ -53,11 +53,15 @@ export function onChange(fn) { listeners.add(fn); return () => listeners.delete(
 // every embed into `media.kind` already, so a mode costs no new field and no
 // new fetch shape). A removed post is never a frame: there is nothing to show
 // full-screen and the row already says why.
-const KIND = Object.freeze({ clip: 'video', gram: 'images' });
+//
+// D9: a GIF card is a picture to a reader and a video to the code. Gram shows
+// it (paused, with its badge — the GIF autoplay setting governs, as on a row);
+// Clip does not: a clip is a post someone filmed.
+const KIND = Object.freeze({ clip: ['video'], gram: ['images', 'gif'] });
 export function ofKind(posts, mode) {
   if (!MODE_IDS.includes(mode)) throw new Error(`view: ${mode} is not a mode`);
   if (mode === 'forum') return posts;
-  return posts.filter((p) => !p.maskedRemoved && p.media?.kind === KIND[mode]);
+  return posts.filter((p) => !p.maskedRemoved && KIND[mode].includes(p.media?.kind));
 }
 
 // ---- the control ----

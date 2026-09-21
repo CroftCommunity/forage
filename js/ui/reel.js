@@ -42,7 +42,12 @@ export function viewportObserver(items, onActive) {
 
 const noun = (mode, n) => (mode === 'clip' ? (n === 1 ? 'clip' : 'clips') : (n === 1 ? 'picture post' : 'picture posts'));
 
-export function reel({ el, posts, mode, media, row, onExit, observe = viewportObserver }) {
+// `activate(post, item)` runs when a frame becomes the one on screen and
+// `rest(post, item)` when it stops being — the caller decides what that means
+// (mount a muted player, pause one). `origin` names where the frames came from
+// when the board did not supply them itself (a people-scope reel: "from 701
+// people you follow"), so D1's difference from rows is visible on the surface.
+export function reel({ el, posts, mode, media, row, onExit, observe = viewportObserver, activate = null, rest = null, origin = null }) {
   const m = modeFor(mode);
   if (!m || mode === 'forum') throw new Error(`reel: ${mode} is not a reel mode`);
   const frames = ofKind(posts, mode);
@@ -51,8 +56,10 @@ export function reel({ el, posts, mode, media, row, onExit, observe = viewportOb
     type: 'button', class: 'btn sm reel-exit', 'data-reel-exit': 'forum',
     title: 'Back to the rows', onclick: () => onExit(),
   }, '☰ Forum');
+  const loaded = `${posts.length} loaded post${posts.length === 1 ? '' : 's'}`;
   const count = el('span', { class: 'xs reel-count' },
-    `${frames.length} ${noun(mode, frames.length)} of ${posts.length} loaded post${posts.length === 1 ? '' : 's'}`);
+    origin ? `${frames.length} ${noun(mode, frames.length)} ${origin} · ${loaded}`
+      : `${frames.length} ${noun(mode, frames.length)} of ${loaded}`);
   const bar = el('div', { class: 'reel-bar' }, count, exit);
 
   if (!frames.length) {
@@ -67,8 +74,19 @@ export function reel({ el, posts, mode, media, row, onExit, observe = viewportOb
     el('div', { class: 'reel-row' }, row(p))));
 
   const node = el('div', { class: 'reel', 'data-reel': mode }, bar, ...items);
+  const postOf = new Map(items.map((it, i) => [it, frames[i]]));
+  let current = null;
   const stop = observe(items, (active) => {
+    if (active === current) return;
+    // An observer's queued entry can land after the reel was replaced (the
+    // session landing repaints the board under it): a frame that is no longer
+    // on the page cannot be active, and activating it mounted a player nobody
+    // could see (journey, 2026-09-21: two playlists loaded for one frame).
+    if (active && active.isConnected === false) return;
     for (const it of items) setAttr(it, 'data-active', it === active ? '1' : '0');
+    if (current && rest) rest(postOf.get(current), current);
+    current = active;
+    if (active && activate) activate(postOf.get(active), active);
   });
   node._cleanup = stop;
   return node;

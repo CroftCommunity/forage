@@ -38,6 +38,8 @@ import { density, densityDial } from '../board-density.js';
 import { sortBar, TIMEFRAMES, WALK_TIMEFRAMES, nearestTimeframe } from './sortbar.js';
 import * as viewMode from '../view-mode.js';
 import { reel } from './reel.js';
+import * as clipAutoplay from '../clip-autoplay.js';
+import * as mediaPosters from '../media-posters.js';
 import { refreshControl } from './refresh-control.js';
 import * as boardCache from '../board-cache.js';
 import { planFollows, planUnfollows, CHUNK_SIZE } from '../follow-all.js';
@@ -531,7 +533,7 @@ function verifiedBadge(p) {
 
 // 3i: media in card mode — images as lazy thumbs (fullsize behind a click),
 // video as its thumbnail linking out (playback is bsky.app's job for now).
-function mediaNode(p) {
+function mediaNode(p, { altCaption = false } = {}) {
   if (!p.media) return null;
   if (p.media.kind === 'images') {
     // board-cards decision 4: every picture stands on a stage (js/ui/stage.js).
@@ -552,7 +554,7 @@ function mediaNode(p) {
     // gif-embeds phase 4: the alt a person wrote, printed where it can be read
     // without a screen reader. Hidden by default (the owner's choice); the
     // <img alt> above is written either way (D7).
-    return withAltCaption(picture, p.media.items);
+    return withAltCaption(picture, p.media.items, { force: altCaption });
   }
   if (p.media.kind === 'video') {
     // v13 decision 30 (owner: "this video seems to open directly on bluesky
@@ -591,8 +593,10 @@ function altCaptionNode(items) {
       // numbered only when there is more than one picture to tell apart
       many ? el('span', { class: 'muted' }, `${n + 1}. `) : null, alt)));
 }
-function withAltCaption(picture, items) {
-  if (!altText.shown()) return picture;
+// `force` is Gram's (plan 2026-09-14-plan-clips, D10): the picture is the
+// whole screen there, and the words a person wrote about it are its caption.
+function withAltCaption(picture, items, { force = false } = {}) {
+  if (!altText.shown() && !force) return picture;
   const caption = altCaptionNode(items);
   return caption ? el('div', { class: 'stages' }, picture, caption) : picture;
 }
@@ -715,8 +719,12 @@ function nativeHlsFirst(video) {
   return 'ManagedMediaSource' in window || !mseHlsSupported();
 }
 
-function mountVideo(node, { playlist, poster, fallback }) {
+function mountVideo(node, { playlist, poster, fallback, muted = false }) {
   const video = el('video', { class: 'stage-video', controls: '', autoplay: '', playsinline: '', poster: poster || '', 'data-playlist': playlist, preload: 'metadata' });
+  // The reel's autoplay (D3): muted is the only way a browser starts a video
+  // nobody pressed, and the property must be set before play() is asked for —
+  // the attribute alone is not honoured everywhere (js/ui/stage.js, GIFs).
+  if (muted) { video.muted = true; video.setAttribute('muted', ''); video.setAttribute('data-muted', '1'); }
   node.replaceChildren(video);
   const viaHls = () => loadHls().then((Hls) => {
     if (!Hls.isSupported()) throw new Error('this browser cannot play HLS video');
@@ -798,7 +806,7 @@ function boardToolbar(onChange, { timeframes = TIMEFRAMES, refresh = null } = {}
 let reelStop = null;
 
 // One board renderer: applies the window sort and the view mode.
-function renderBoard(card, posts, { wholeCorpus = false } = {}) {
+function renderBoard(card, posts, { wholeCorpus = false, reelOrigin = null, onNearEnd = null } = {}) {
   const view = boardView();
   // 3u: the language filter runs BEFORE the window sort, so "Top" ranks what
   // you can actually read. Nothing is hidden silently — the count says so.
@@ -837,20 +845,58 @@ function renderBoard(card, posts, { wholeCorpus = false } = {}) {
   const mode = viewMode.active();
   if (mode !== 'forum') {
     if (reelStop) { reelStop(); reelStop = null; }
-    const node = reel({ el, posts: ordered, mode, media: mediaNode,
+    const prev = card.querySelector('.reel');
+    const link = (p) => `https://bsky.app/profile/${p.author}/post/${p.id.split('/').pop()}`;
+    let items = [];
+    const node = reel({ el, posts: ordered, mode, origin: reelOrigin,
+      // A labeled frame (the posture said warn) is veiled — the label and a
+      // press to show, the media closed behind it — and never autoplays. On a
+      // row a miss is a blurred thumbnail; on a frame it would be a screen.
+      media: (p) => (p.warnLabels
+        ? el('details', { class: 'reel-veil', 'data-warn': p.warnLabels.join(',') },
+            el('summary', {}, el('span', { class: 'tag' }, `content warning: ${p.warnLabels.join(', ')}`), ' press to show'),
+            mediaNode(p, { altCaption: mode === 'gram' }))
+        : mediaNode(p, { altCaption: mode === 'gram' })),
       row: (p) => lensRow(p, 'compact', { media: false }),
-      onExit: () => viewMode.set('forum') });
+      onExit: () => viewMode.set('forum'),
+      // D3: in Clip mode the frame on screen plays by itself — muted, the
+      // reader's switch permitting, never a labeled one, never before it is on
+      // screen — and rests when it leaves. Nothing is fetched for a frame the
+      // reader has not reached, and nothing at all with the switch off.
+      activate: (p, item) => {
+        if (items.length && item === items[items.length - 1] && onNearEnd) onNearEnd();
+        if (mode !== 'clip' || !clipAutoplay.enabled() || p.warnLabels || !p.media?.playlist) return;
+        // Not before we know who is reading: the first paint runs while the
+        // session is still restoring, and is replaced the moment it lands — a
+        // player mounted on that paint is a playlist fetched for nobody
+        // (the journey caught it as two loads for one frame, 2026-09-21).
+        // "Settled" means the paint will not be replaced by the session landing:
+        // the origin has no sign-in, or the manager has answered and — if it
+        // answered signed-in — the view has adopted that session (adoptSession
+        // resolves the handle first, and repaints when it is done).
+        const auth = manager && typeof manager.state === 'function' ? manager.state() : null;
+        const settled = manager === 'unavailable' || (auth && auth !== 'unknown' && (auth !== 'signed-in' || !!session));
+        if (!settled) return;
+        const st = item.querySelector('.reel-stage .stage[data-stage="video"]');
+        if (st && !st.querySelector('video')) mountVideo(st, { playlist: p.media.playlist, poster: p.media.thumb, fallback: link(p), muted: true });
+        else st?.querySelector('video')?.play?.()?.catch?.(() => {});
+      },
+      rest: (p, item) => { item.querySelector('video')?.pause(); },
+    });
+    items = [...node.querySelectorAll('.reel-item')];
     reelStop = node._cleanup || null;
     // Arriving in a mode lands you ON the reel: the board's head card and
     // sort bar scroll away under the masthead so a frame is the screen (the
     // first capture showed a frame whose row sat below the fold, 2026-09-21).
     // Once, on the first paint as a reel — a repaint after More keeps the
-    // reader's place.
-    const arriving = !card.querySelector('.reel');
+    // reader's place: the frames before the new ones are the same frames, so
+    // the same scroll offset shows the same frame.
+    // read BEFORE the swap: a detached scroller reports 0 (the first More in a
+    // reel snapped the reader back to the first frame, 2026-09-21)
+    const prevTop = prev ? prev.scrollTop : null;
     card.replaceChildren(node);
-    if (arriving && typeof node.scrollIntoView === 'function') {
-      requestAnimationFrame(() => node.scrollIntoView({ block: 'start' }));
-    }
+    if (prevTop !== null) node.scrollTop = prevTop;
+    else if (typeof node.scrollIntoView === 'function') requestAnimationFrame(() => node.scrollIntoView({ block: 'start' }));
     return;
   }
   card.replaceChildren(...ordered.map((p) => lensRow(p, view)));
@@ -1194,8 +1240,32 @@ export function lensFeedView(params) {
   return { main: host, side };
 }
 
+// Where a reel's frames come from (plan 2026-09-14-plan-clips, D1 (a)). At
+// World, or on a board the ring exempts (a feed or a hashtag opened by name,
+// while feeds are exempt), the board's own posts are the reel, narrowed. At a
+// people-scope on a board the ring DOES scope — a mix, or a feed once the
+// reader turned the exemption off — the scope's people are the source, and
+// lens.reel() fans out over them. Null means "the board is the reel".
+function reelScopeFor(feedKind) {
+  const mode = viewMode.active();
+  if (mode === 'forum' || !session) return null;
+  const scope = ringScope.scope();
+  if (scope === 'world') return null;
+  if (ringScope.exemptsFeeds() && ringScope.EXEMPT_KINDS.includes(feedKind)) return null;
+  return { mode, scope };
+}
+const originWords = ({ scope }, n) => (scope === 'me' ? 'from you'
+  : scope === 'mut' ? `from your ${n} mutuals` : scope === 'hop' ? `from ${n} people, one hop out` : `from ${n} people you follow`);
+// One fetch shape for both roads: a page of the board, or a wave of the reel.
+function reelPage(rs, { cursor = null, title = null } = {}) {
+  return lens.reel(rs.mode, rs.scope, { cursor, known: [...mediaPosters.known(rs.mode)], title })
+    .then((r) => { if (r.posters.length) mediaPosters.remember(rs.mode, r.posters); return r; });
+}
+
 function feedBoardView(entry, preInfo) {
   const main = el('div', {});
+  const rs = reelScopeFor(entry.source.kind);
+  let reelMembers = 0;
   // Remember this board as the one to come back to. The only writer of the
   // last-board memory left with the ring boards on 2026-09-03, so `/` has
   // landed on Following for everyone since; a mix board remembers itself the
@@ -1206,22 +1276,36 @@ function feedBoardView(entry, preInfo) {
   // phases 0/2/4: what this board was showing when you left it. Read BEFORE
   // anything is drawn, because a hit paints synchronously and a miss must not
   // have drawn a skeleton it is about to replace.
-  const cacheKey = boardCache.keyOf(entry);
+  // a reel over the scope's people is a different board from the feed's rows,
+  // so it remembers itself under its own key (and forgets with the scope)
+  const cacheKey = rs ? `${boardCache.keyOf(entry)}:reel:${rs.mode}:${rs.scope}` : boardCache.keyOf(entry);
   const cached = boardCache.read(cacheKey);
   let lastInfo = cached?.info ?? null;
+  const fetchPage = (cursor) => (rs ? reelPage(rs, { cursor, title: entry.title }) : lens.feed(entry.source, { title: entry.title, cursor }));
+  // read off the RESULT (and kept in the record), never set in a fetch's .then:
+  // render() can rebuild this view while the first fetch is in flight, and the
+  // rebuilt view shares the promise but not the closure that would have set it
+  const takeMembers = (r) => { if (rs && Number.isInteger(r?.members)) reelMembers = r.members; };
+  reelMembers = cached?.members ?? 0;
   const remember = () => boardCache.write(cacheKey,
-    { posts: allPosts.slice(), cursor: nextCursor, info: lastInfo, at: Date.now() });
+    { posts: allPosts.slice(), cursor: nextCursor, info: lastInfo, at: Date.now(), ...(rs ? { members: reelMembers } : {}) });
   const card = el('div', { class: 'card' });
   const moreHost = el('div', {});
+  let fetchingMore = false;
   const repaint = () => {
-    renderBoard(card, allPosts);
+    renderBoard(card, allPosts, { reelOrigin: rs ? originWords(rs, reelMembers) : null,
+      // backpressure: reaching the last frame is the ask for the next wave
+      onNearEnd: () => moreHost.querySelector('button')?.click() });
     moreHost.replaceChildren();
     if (nextCursor) {
       const more = el('button', { class: 'btn sm', style: 'margin:8px' }, 'More');
       more.addEventListener('click', () => {
-        lens.feed(entry.source, { title: entry.title, cursor: nextCursor })
-          .then((next) => { allPosts.push(...next.posts); nextCursor = next.cursor || null; repaint(); remember(); })
-          .catch((e) => toast('More failed: ' + e.message, 'err'));
+        if (fetchingMore) return;
+        fetchingMore = true;
+        fetchPage(nextCursor)
+          .then((next) => { takeMembers(next); allPosts.push(...next.posts); nextCursor = next.cursor || null; repaint(); remember(); })
+          .catch((e) => toast('More failed: ' + e.message, 'err'))
+          .finally(() => { fetchingMore = false; });
       });
       moreHost.append(more);
     }
@@ -1252,6 +1336,7 @@ function feedBoardView(entry, preInfo) {
     },
   });
   const checkForNew = () => {
+    if (rs) return Promise.resolve(); // a reel has no "newer than the top" — its top is a deal
     const top = allPosts[0]?.id;
     return lens.feed(entry.source, { title: entry.title })
       .then((f) => {
@@ -1288,7 +1373,7 @@ function feedBoardView(entry, preInfo) {
   //   "Hot · today" and "Top · today" two different promises under one control.
   const WINDOWED = ['hot', 'top'];
   const deepen = () => {
-    if (deepening || !WINDOWED.includes(boardSort)) { deepNote.replaceChildren(''); return; }
+    if (rs || deepening || !WINDOWED.includes(boardSort)) { deepNote.replaceChildren(''); return; }
     const hours = { day: 24, week: 168, month: 720, year: 8760, all: Infinity }[boardTimeframe];
     const span = boardTimeframe === 'all' ? 'as far back as it goes' : `the last ${boardTimeframe}`;
     deepening = true;
@@ -1377,13 +1462,14 @@ function feedBoardView(entry, preInfo) {
       el('div', { class: 'row spread wrap' }, el('h1', {}, entry.title)),
       skeleton(6));
     const flight = boardCache.inflight(cacheKey)
-      || boardCache.track(cacheKey, Promise.all([infoReady, lens.feed(entry.source, { title: entry.title })]));
+      || boardCache.track(cacheKey, Promise.all([infoReady, fetchPage(null)]));
     flight.then(([info, f]) => {
       if (info?.hidden) {
         main.replaceChildren(emptyState('This feed is hidden by your moderation settings',
           'It carries an adult content label and your Bluesky account has adult content turned off. Forage mirrors that setting and adds no switch of its own — change it in your Bluesky settings if you want it back.'));
         return;
       }
+      takeMembers(f);
       allPosts.push(...f.posts);
       nextCursor = f.cursor || null;
       paint(info);
@@ -1452,7 +1538,11 @@ export function lensMixView(params) {
   }
   setLastBoard(`m/${slug}`);
   const main = el('div', {});
-  const cacheKey = `mix:${slug}`;
+  // a mix is never exempt from the ring (E159), so at a people-scope a mix's
+  // reel is the scope's people (plan 2026-09-14-plan-clips, D1 (a))
+  const rs = reelScopeFor('mix');
+  let reelMembers = 0;
+  const cacheKey = rs ? `mix:${slug}:reel:${rs.mode}:${rs.scope}` : `mix:${slug}`;
   const cached = boardCache.read(cacheKey);
   // per-source queues, so More can refill one and the deal re-runs over all
   const queues = new Map();
@@ -1462,9 +1552,16 @@ export function lensMixView(params) {
   let allPosts = [];
   const remember = () => boardCache.write(cacheKey, {
     posts: allPosts.slice(), cursor: cursors, at: Date.now(),
-    info: { queues: [...queues.values()], failures, rowCount: rows.length },
+    info: { queues: [...queues.values()], failures, rowCount: rows.length, members: reelMembers },
   });
   const absorb = (r) => {
+    if (rs) { // a wave, not a deal of sources: append, keep the one cursor
+      allPosts = [...allPosts, ...r.posts];
+      cursors = r.cursor ? { reel: r.cursor } : {};
+      failures = r.failures.map((f) => ({ id: f.did, title: f.did, error: f.error }));
+      reelMembers = r.members;
+      return;
+    }
     for (const src of r.sources) {
       const q = queues.get(src.id) || { id: src.id, weight: src.weight, posts: [] };
       q.posts = [...q.posts, ...src.posts];
@@ -1477,16 +1574,22 @@ export function lensMixView(params) {
   const card = el('div', { class: 'card' });
   const moreHost = el('div', {});
   const infoHost = el('div', {});
+  const fetchNext = () => (rs ? reelPage(rs, { cursor: cursors.reel || null, title: meta.name }) : lens.mix(rows, { slug, name: meta.name, cursors }));
+  let fetchingMore = false;
   const repaint = () => {
-    renderBoard(card, allPosts);
-    infoHost.replaceChildren(mixInfoLine({ sourceCount: rows.length, failures, sort: boardSort }));
+    renderBoard(card, allPosts, { reelOrigin: rs ? originWords(rs, reelMembers) : null,
+      onNearEnd: () => moreHost.querySelector('button')?.click() });
+    infoHost.replaceChildren(rs ? '' : mixInfoLine({ sourceCount: rows.length, failures, sort: boardSort }));
     moreHost.replaceChildren();
     if (Object.keys(cursors).length) {
       const more = el('button', { class: 'btn sm', style: 'margin:8px' }, 'More');
       more.addEventListener('click', () => {
-        lens.mix(rows, { slug, name: meta.name, cursors })
+        if (fetchingMore) return;
+        fetchingMore = true;
+        fetchNext()
           .then((next) => { absorb(next); repaint(); remember(); })
-          .catch((e) => toast('More failed: ' + e.message, 'err'));
+          .catch((e) => toast('More failed: ' + e.message, 'err'))
+          .finally(() => { fetchingMore = false; });
       });
       moreHost.append(more);
     }
@@ -1510,13 +1613,14 @@ export function lensMixView(params) {
         el('a', { class: 'btn primary', href: `/mixes/${encodeURIComponent(slug)}` }, 'Open Mixes')));
       return;
     }
-    return lens.mix(rows, { slug, name: meta.name }).then((r) => { absorb(r); paint(); remember(); });
+    return fetchNext().then((r) => { absorb(r); paint(); remember(); });
   }).catch((e) => main.replaceChildren(emptyState('Could not build this mix', e.message)));
   if (cached && navKind() === 'pop') {
     for (const q of cached.info?.queues || []) queues.set(q.id, q);
     cursors = cached.cursor || {};
     failures = cached.info?.failures || [];
     rows = { length: cached.info?.rowCount || queues.size };
+    reelMembers = cached.info?.members || 0;
     allPosts = cached.posts;
     paint();
     // the rows are needed for More; resolve them quietly

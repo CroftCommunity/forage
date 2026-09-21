@@ -20,7 +20,7 @@
 //        mix-board mix-tune mix-board-current mix-tune-current
 //        feeds-index jumpstarts-lens jumpstart-lens rail-panels
 //        jumpstart-follow jumpstart-follow-done jumpstart-unfollow jumpstart-follow-guest
-//        view-clip view-gram view-nav)
+//        view-clip view-gram view-nav view-clip-fol view-clip-veil)
 //   node scripts/mock-snaps.mjs --as current --serve ../../forage
 //       # the same script and fixtures, rendering ANOTHER checkout (main): the
 //       # Current frames come from the tree the owner is running, captured by
@@ -76,7 +76,7 @@ import { RESPONSES as GIF, BOARD_PATH as GIF_BOARD, THREAD_PATH as GIF_THREAD } 
 import { RESPONSES as SELF, THREAD_PATH as SELF_PATH, ALONE as SELF_ALONE, ALONE_PATH as SELF_ALONE_PATH } from '../e2e/harness/mock-selfthread.mjs';
 import { RESPONSES as MIX, FAKE_SIGNED_IN as MIX_SIGNED_IN, SCIENCE as MIX_SCIENCE } from '../e2e/harness/mock-mix.mjs';
 import { LIVE_FOLLOWS as FOLLOW_REPO, MEMBERS as FOLLOW_MEMBERS, R as FOLLOW_R, seeded as followSeed } from '../e2e/follow-all.workflow.mjs';
-import { RESPONSES as REEL, BOARD_PATH as REEL_BOARD, inMode as reelMode } from '../e2e/harness/mock-reel.mjs';
+import { RESPONSES as REEL, PEOPLE_RESPONSES as REEL_PEOPLE, BOARD_PATH as REEL_BOARD, LABELED as REEL_LABELED, FOL_WAVE_ONE, inMode as reelMode, inScope as reelScope, HLS_DOUBLE as REEL_HLS } from '../e2e/harness/mock-reel.mjs';
 import { mergeManifest } from './lib/snaps-manifest.mjs';
 import { SKINS } from '../js/skins.js';
 import { execFileSync } from 'node:child_process';
@@ -773,12 +773,22 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
 // desktop the nav is in view on every board, so the frame is the forum board.
 // A Current capture serves main, where the key is unknown and the board is
 // rows: that frame is the honest "before".
-const VIEW_ROUTES = ['view-clip', 'view-gram', 'view-nav'];
+// v4 adds the people-scope reel (view-clip-fol: Follows, the count line naming
+// the source, the active frame's muted player mounted — the player is W30's
+// double, so the poster is what the capture shows) and the veiled frame
+// (view-clip-veil: the labeled clip scrolled to, closed, never playing). Both
+// need the ring's exemption OFF for a /f/ board (the fixture board is a feed),
+// which is what a reader who wants a feed scoped sets; a mix needs nothing.
+const VIEW_ROUTES = ['view-clip', 'view-gram', 'view-nav', 'view-clip-fol', 'view-clip-veil'];
+const RING_UNEXEMPT = `try { localStorage.setItem('forage.ringexempt', '0'); } catch {}`;
 for (const [name, vp] of Object.entries(VIEWPORTS)) {
   for (const route of VIEW_ROUTES) {
     if (!wanted(route)) continue;
-    const mode = route === 'view-clip' ? 'clip' : route === 'view-gram' ? 'gram' : 'forum';
-    const vx = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN, reelMode(mode)], responses: REEL });
+    const people = route === 'view-clip-fol' || route === 'view-clip-veil';
+    const mode = route === 'view-gram' ? 'gram' : route === 'view-nav' ? 'forum' : 'clip';
+    const vx = await scenario('first-visit', { root: SERVE, mode: 'bluesky',
+      initScripts: [...SKIN_INIT, FAKE_SIGNED_IN, reelMode(mode), REEL_HLS, ...(people ? [reelScope('fol'), RING_UNEXEMPT] : [])],
+      responses: people ? REEL_PEOPLE : REEL });
     await vx.page.setViewportSize({ width: vp.width, height: vp.height });
     await vx.page.goto(`${vx.origin}${REEL_BOARD}`);
     await vx.page.waitForSelector(AS === 'current' || mode === 'forum' ? '.postrow' : `.reel[data-reel="${mode}"]`, { timeout: 15000 });
@@ -789,6 +799,11 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
     }
     if (route !== 'view-nav' && AS !== 'current') {
       await vx.page.waitForFunction(() => document.querySelectorAll('.reel-item[data-active="1"]').length === 1, null, { timeout: 5000 }).catch(() => {});
+    }
+    if (route === 'view-clip-veil' && AS !== 'current') {
+      const i = FOL_WAVE_ONE.indexOf(REEL_LABELED.uri);
+      await vx.page.evaluate((n) => { const r = document.querySelector('.reel'); r.scrollTop = r.clientHeight * n; }, i);
+      await vx.page.waitForFunction((uri) => document.querySelector(`.reel-item[data-post="${uri}"]`)?.dataset.active === '1', REEL_LABELED.uri, { timeout: 5000 }).catch(() => {});
     }
     await vx.page.waitForTimeout(300);
     await shoot(vx.page, route, 'lens:mock-reel', name, vp);

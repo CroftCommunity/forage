@@ -53,6 +53,8 @@ default.
 | `forage.ringopenthreads` | localStorage | ring scope: open threads regardless of scope | `undecided` | as `forage.ringexempt` |
 | `forage.ringscope` | localStorage | the selected ring scope | `undecided` | as `forage.ringexempt` |
 | `forage.view` | localStorage | how a board is shown — forum (rows), clip, or gram | `undecided` | a reading preference like the ring stop; E160 (the preferences-record batch); plan 2026-09-14-plan-clips |
+| `forage.clipautoplay` | localStorage | whether a clip starts on its own in Clip mode (muted, in view) | `undecided` | a reading preference like `forage.gifautoplay`; E160; plan 2026-09-14-plan-clips D3 |
+| `forage.media-posters` | localStorage | who answered a reel with a frame before, per mode — a hint for which members to ask first | `device` | a cache of this device's own reading, never the account's; plan 2026-09-14-plan-clips § B |
 | `forage.ringstops` | localStorage | the ring pill's stops | `undecided` | as `forage.ringexempt` |
 | `forage.skin` | localStorage | the chosen skin (light and dark are skins too — ADR-003) | `undecided` | a reading preference; E160 (the preferences-record batch) — the one most readers would expect to follow them |
 | `forage.state` | localStorage | the memory population's event log and dev state (the `memory` substrate) | `device` | the bbs/demo dataset is a device-local world by definition; nothing in it is the reader's account |

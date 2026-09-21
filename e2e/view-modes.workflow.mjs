@@ -10,11 +10,18 @@
 //   4. exactly one frame is active as the reel scrolls
 //   5. the exit returns to the rows and the choice is remembered (the key)
 //   6. a board with none of the kind is an honest empty reel with the way back
-//   7. nothing leaves the page for a frame that a row would not have fetched
+//   7. with autoplay off, nothing leaves the page for a frame that a row would
+//      not have fetched; with it on (the default), the frame on screen mounts a
+//      MUTED player and only that frame does; a labeled frame is veiled and
+//      never plays
+//   8. at a people-scope (Follows) the reel is the scope's people: one ask per
+//      member with the mode's filter, a wave at a time, the count line naming
+//      the source; reaching the last frame asks for the next wave
+//   9. gram shows the alt text a person wrote as the caption
 import assert from 'node:assert/strict';
 import { scenario } from './harness/scenario.mjs';
 import { FAKE_SIGNED_IN } from './harness/mock-thread.mjs';
-import { RESPONSES, BOARD_PATH, CLIP_URIS, GRAM_URIS, inMode } from './harness/mock-reel.mjs';
+import { RESPONSES, PEOPLE_RESPONSES, BOARD_PATH, CLIP_URIS, GRAM_URIS, FOL_WAVE_ONE, FOL_WAVE_TWO, LABELED, GRAPH, inMode, inScope, autoplay, HLS_DOUBLE } from './harness/mock-reel.mjs';
 
 const frames = (page) => page.evaluate(() => [...document.querySelectorAll('.reel-item')].map((s) => s.dataset.post));
 const active = (page) => page.evaluate(() => [...document.querySelectorAll('.reel-item')].map((s) => s.dataset.active));
@@ -37,7 +44,7 @@ export async function run() {
   await guest.close();
 
   // ---- 2–5. signed in, arriving in clip mode -------------------------------
-  const s = await scenario('first-visit', { mode: 'bluesky', initScripts: [FAKE_SIGNED_IN, inMode('clip')], responses: RESPONSES });
+  const s = await scenario('first-visit', { mode: 'bluesky', initScripts: [FAKE_SIGNED_IN, inMode('clip'), autoplay(false), HLS_DOUBLE], responses: RESPONSES });
   await s.page.setViewportSize({ width: 390, height: 844 });
   await s.page.goto(`${s.origin}${BOARD_PATH}`);
   await s.page.waitForSelector('.reel[data-reel="clip"]', { timeout: 15000 });
@@ -63,7 +70,9 @@ export async function run() {
   await s.page.evaluate(() => { const r = document.querySelector('.reel'); r.scrollTop = r.clientHeight * 1; });
   await s.page.waitForFunction(() => document.querySelector('.reel-item:nth-of-type(2)')?.dataset.active === '1', null, { timeout: 5000 });
   assert.deepEqual(await active(s.page), ['0', '1', '0'], 'scrolling one screen moves the active frame');
-  // 7: the frames fetched nothing a row would not — the fenced playlist host was never asked
+  // 7 (autoplay off): no player was mounted and the playlist host was never asked
+  assert.equal(await s.page.locator('.reel-item video').count(), 0, 'autoplay off: no <video> before a press');
+  assert.deepEqual(await s.page.evaluate(() => window.__hlsSources), [], 'autoplay off: no playlist asked for');
   assert.deepEqual(s.blockedExternals().filter((u) => u.includes('video.cdn.test')), [], 'no playlist is fetched for a frame before a press');
   // 5: the exit returns to rows and remembers
   await s.page.locator('.reel-exit').click();
@@ -86,6 +95,9 @@ export async function run() {
   })));
   assert.deepEqual(gramShape, [{ stage: 1, carousel: false }, { stage: 1, carousel: true }], 'a single picture is a stage; four fold into the carousel, as on a row');
   assert.match(await g.page.locator('.reel-count').textContent(), /^2 picture posts of \d+ loaded posts$/);
+  // 9: the alt a person wrote is the caption in gram, whatever the alt-text setting (D10)
+  assert.equal(await g.page.evaluate(() => localStorage.getItem('forage.alttext')), null, 'the alt-text setting is at its default (hidden on rows)');
+  assert.ok(await g.page.locator('.reel-item .reel-stage .stages').count() >= 1, 'a gram frame carries the alt caption under the picture');
   await g.close();
 
   // ---- 6. a board with no clips is an honest empty reel ---------------------
@@ -97,4 +109,46 @@ export async function run() {
   assert.match(await e.page.locator('.reel-empty').textContent(), /No clips in the loaded posts/);
   assert.equal(await e.page.locator('.reel-exit').count(), 1, 'the way back is still there');
   await e.close();
+
+  // ---- 7 (autoplay on, the default): the frame on screen plays, muted; the veil never does
+  // the fixture board is a FEED, and feeds are exempt from the ring by default
+  // (a feed opened by name arrives whole) — so this reader turned the exemption
+  // off, which is what makes Follows scope the feed and its reel the people
+  const unexempt = `try { localStorage.setItem('forage.ringexempt', '0'); } catch {}`;
+  const a = await scenario('first-visit', { mode: 'bluesky', initScripts: [FAKE_SIGNED_IN, inMode('clip'), inScope('fol'), unexempt, HLS_DOUBLE], responses: PEOPLE_RESPONSES });
+  await a.page.setViewportSize({ width: 390, height: 844 });
+  await a.page.goto(`${a.origin}${BOARD_PATH}`);
+  await a.page.waitForSelector('.reel[data-reel="clip"]', { timeout: 15000 });
+  // 8: the people-scope reel — the first wave, dealt across people
+  assert.deepEqual(await frames(a.page), FOL_WAVE_ONE, 'Follows: the scope\u2019s people, one frame per person per round');
+  assert.match(await a.page.locator('.reel-count').textContent(), /^5 clips from 11 people you follow · \d+ loaded posts$/, 'the count line names the source (ten follows and me)');
+  const asks = () => a.page.evaluate(() => window.__shimHits.filter((h) => h.url.includes('getAuthorFeed')).map((h) => new URL(h.url).searchParams.get('actor')));
+  const wave1 = await asks();
+  assert.equal(wave1.length, 8, 'one wave: eight asks, not eleven');
+  assert.ok(await a.page.evaluate(() => window.__shimHits.filter((h) => h.url.includes('getAuthorFeed')).every((h) => h.url.includes('filter=posts_with_video'))), 'every ask carries the video filter');
+  assert.ok([7, 8, 9].every((i) => !wave1.includes(GRAPH.follows[i])), 'the eighth, ninth and tenth follows wait for the next wave');
+  // 7: the active frame mounted a muted player; only it
+  await a.page.waitForSelector('.reel-item[data-active="1"] video[data-muted="1"]', { timeout: 5000 });
+  assert.equal(await a.page.locator('.reel-item video').count(), 1, 'exactly one player on the page');
+  assert.equal(await a.page.evaluate(() => document.querySelector('.reel-item[data-active="1"] video').muted), true, 'muted');
+  assert.deepEqual(await a.page.evaluate(() => window.__hlsSources.length), 1, 'the active frame\u2019s playlist, and no other');
+  // the labeled frame is veiled and does not play when it becomes active
+  const veilIndex = FOL_WAVE_ONE.indexOf(LABELED.uri);
+  assert.ok(veilIndex > 0);
+  await a.page.evaluate((i) => { const r = document.querySelector('.reel'); r.scrollTop = r.clientHeight * i; }, veilIndex);
+  await a.page.waitForFunction((uri) => document.querySelector(`.reel-item[data-post="${uri}"]`)?.dataset.active === '1', LABELED.uri, { timeout: 5000 });
+  const veil = a.page.locator(`.reel-item[data-post="${LABELED.uri}"] .reel-veil`);
+  assert.equal(await veil.count(), 1, 'the labeled frame is veiled');
+  assert.equal(await veil.evaluate((d) => d.open), false, 'closed until pressed');
+  assert.match(await veil.locator('summary').textContent(), /graphic-media/);
+  assert.equal(await a.page.locator(`.reel-item[data-post="${LABELED.uri}"] video`).count(), 0, 'and it never mounted a player');
+  assert.equal(await a.page.evaluate(() => [...document.querySelectorAll('.reel-item video')].every((v) => v.paused || v.closest('[data-active="1"]'))), true, 'the frame that left is at rest');
+  // 8: reaching the last frame is the ask for the next wave — the three unasked follows
+  await a.page.evaluate((i) => { const r = document.querySelector('.reel'); r.scrollTop = r.clientHeight * i; }, FOL_WAVE_ONE.length - 1);
+  await a.page.waitForFunction((n) => document.querySelectorAll('.reel-item').length === n, FOL_WAVE_ONE.length + FOL_WAVE_TWO.length, { timeout: 10000 });
+  assert.deepEqual(await frames(a.page), [...FOL_WAVE_ONE, ...FOL_WAVE_TWO], 'the second wave appended, the first untouched');
+  const wave2 = (await asks()).slice(wave1.length);
+  assert.deepEqual(wave2.sort(), [GRAPH.follows[7], GRAPH.follows[8], GRAPH.follows[9]].sort(), 'the next wave asked exactly the three unasked follows (nobody had a cursor to continue)');
+  assert.ok((await a.page.evaluate(() => localStorage.getItem('forage.media-posters'))).includes(GRAPH.follows[0]), 'who answered with a frame is remembered on this device');
+  await a.close();
 }

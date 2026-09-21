@@ -51,3 +51,67 @@ export const RESPONSES = { ...BOARD_RESPONSES, 'getFeed?': FEED, 'getFeed': FEED
 // A page arriving already in a mode — the reader's stored choice, the way
 // the skin and the ring stop arrive.
 export const inMode = (mode) => `try { localStorage.setItem('forage.view', '${mode}'); } catch {}`;
+
+// ---- the people-scope population (D1 (a)): a Follows reel is the scope's
+// people, asked a wave at a time. Ten follows (so one wave of eight leaves two
+// for the next), two of them mutuals; six answer the video filter with clips,
+// one answers with text (the network's filter is not trusted alone), three
+// answer nothing. One clip carries a label the reader's settings say WARN on —
+// the frame the veil rule exists for. The graph and the author feeds are
+// keyed by actor so the shim answers each member its own page.
+const MEMBERS = Array.from({ length: 10 }, (_, i) => `did:plc:m${i + 1}`);
+export const GRAPH = { follows: MEMBERS, followers: [MEMBERS[0], MEMBERS[1]] };
+const memberClip = (did, n, shape, text, extra = {}) => ({
+  ...clip(`${did.split(':').pop()}c${n}`, `${did.split(':').pop()}.member.test`, text, shape, extra),
+  author: { did, handle: `${did.split(':').pop()}.member.test`, avatar: AV },
+  uri: `at://${did}/app.bsky.feed.post/c${n}`, cid: `cid-${did}-c${n}`,
+});
+export const LABELED = { ...memberClip(MEMBERS[3], 1, { width: 1080, height: 1920 }, 'the aftermath — not for everyone'),
+  labels: [{ src: 'did:plc:labeler', uri: `at://${MEMBERS[3]}/app.bsky.feed.post/c1`, val: 'graphic-media', cts: '2026-08-30T00:00:00Z' }] };
+const MEMBER_FEEDS = {
+  [MEMBERS[0]]: [memberClip(MEMBERS[0], 1, { width: 1080, height: 1920 }, 'first light on the sphagnum'), memberClip(MEMBERS[0], 2, { width: 1920, height: 1080 }, 'the whole bog from the ridge')],
+  [MEMBERS[1]]: [memberClip(MEMBERS[1], 1, { width: 1080, height: 1080 }, 'sundew, four seconds a frame')],
+  [MEMBERS[2]]: [{ ...memberClip(MEMBERS[2], 1, { width: 1, height: 1 }, 'just words, no clip — the filter answered anyway'), embed: undefined }],
+  [MEMBERS[3]]: [LABELED],
+  [MEMBERS[6]]: [memberClip(MEMBERS[6], 1, { width: 1080, height: 1920 }, 'carrying the peat cores back')],
+  [MEMBERS[8]]: [memberClip(MEMBERS[8], 1, { width: 1080, height: 1920 }, 'the ninth follow, the second wave')],
+  [MEMBERS[9]]: [memberClip(MEMBERS[9], 1, { width: 1920, height: 1080 }, 'the tenth follow, the second wave')],
+};
+const feedPage = (posts) => ({ feed: posts.map((p) => ({ post: p })) });
+// The shim answers the FIRST key the url contains and a spread keeps the first
+// insertion's position, so the people's keys come first and the board's map
+// follows minus anything overridden here (its own empty getPreferences would
+// otherwise win, silently, and the veil would never show — 2026-09-21).
+const PEOPLE = {
+  // the `&` closes the actor: `actor=did%3Aplc%3Am1` is a substring of m10's url
+  ...Object.fromEntries(MEMBERS.map((did) => [`getAuthorFeed?actor=${encodeURIComponent(did)}&`, feedPage(MEMBER_FEEDS[did] || [])])),
+  'getAuthorFeed?actor=did%3Aplc%3Ame&': feedPage([]),
+  'getFollows': { follows: GRAPH.follows.map((did) => ({ did, handle: `${did.split(':').pop()}.member.test` })) },
+  'getFollowers': { followers: GRAPH.followers.map((did) => ({ did, handle: `${did.split(':').pop()}.member.test` })) },
+  // the reader's settings: warn on graphic media — the veil's case
+  'getPreferences': { preferences: [{ $type: 'app.bsky.actor.defs#contentLabelPref', label: 'graphic-media', visibility: 'warn' }] },
+};
+export const PEOPLE_RESPONSES = { ...PEOPLE, ...Object.fromEntries(Object.entries(RESPONSES).filter(([k]) => !(k in PEOPLE))) };
+// the first wave's frames, dealt one per person per round in scope order
+// (me, m1..m8): m1c1, m2c1, m4c1 (labeled), m7c1, then m1c2
+export const FOL_WAVE_ONE = [
+  `at://${MEMBERS[0]}/app.bsky.feed.post/c1`, `at://${MEMBERS[1]}/app.bsky.feed.post/c1`,
+  `at://${MEMBERS[3]}/app.bsky.feed.post/c1`, `at://${MEMBERS[6]}/app.bsky.feed.post/c1`,
+  `at://${MEMBERS[0]}/app.bsky.feed.post/c2`,
+];
+export const FOL_WAVE_TWO = [`at://${MEMBERS[8]}/app.bsky.feed.post/c1`, `at://${MEMBERS[9]}/app.bsky.feed.post/c1`];
+export const inScope = (scope) => `try { localStorage.setItem('forage.ringscope', '${scope}'); } catch {}`;
+export const autoplay = (on) => `try { localStorage.setItem('forage.clipautoplay', '${on ? 'on' : 'off'}'); } catch {}`;
+// The player, doubled (W30's shape): present, so nothing vendored loads and no
+// playlist leaves the page; what it was asked to load is recorded.
+export const HLS_DOUBLE = `(() => {
+  window.__hlsSources = [];
+  window.Hls = class {
+    static isSupported() { return true; }
+    static get Events() { return { ERROR: 'hlsError' }; }
+    on() {}
+    loadSource(url) { window.__hlsSources.push(url); }
+    attachMedia() {}
+    destroy() {}
+  };
+})();`;

@@ -1321,3 +1321,11 @@ dialog.authsheet::backdrop, dialog.sheet::backdrop { background: var(--scrim); }
      capped and centred like a phone stood on the desk. */
   .reel { height: min(calc(100dvh - 80px), 860px); }
 }
+/* A labeled frame: the label and a press, the media closed behind it (view
+   modes, the reel's rule for a warn verdict — stricter than the row's blur,
+   because a frame is a screen). */
+.reel-veil { height: 100%; display: grid; place-items: center; color: #fff; }
+.reel-veil > summary { list-style: none; cursor: pointer; text-align: center; padding: var(--s4); min-height: 44px; }
+.reel-veil > summary::-webkit-details-marker { display: none; }
+.reel-veil[open] { display: block; }
+.reel-veil[open] > summary { position: absolute; top: 48px; left: 0; right: 0; z-index: 2; }

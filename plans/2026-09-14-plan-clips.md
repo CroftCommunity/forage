@@ -398,6 +398,25 @@ present at one tier carries a frontier entry (invariant 8): the ledger row is pa
 
 ### Phase 0 — Discovery (measure; the Discovery Exemption applies, throwaway scripts)
 
+**MEASURED 2026-09-21** (throwaway probe, public AppView, unauthenticated; a public account
+with 909 follows stood in for the reader — the test account follows nobody real):
+
+| # | measure | result |
+|---|---|---|
+| 0a | Discover, 10 pages (300 posts) | **66 clips, 152 picture posts** — 22% / 51%; clips per page ranged 3–13 |
+| 0b | fan-out, 120 follows × `posts_with_video` limit 25, 6 in flight | **8.0 s, 0 errors; 84 of 120 answered with ≥1 clip; 1,292 clips**; 83 items were not clips (the filter is the network's; the client narrows again); ≈ **1.9 requests per 20 clips**; the first 20 members in cold order alone gave 253 clips |
+| 0f | the same × `posts_with_media` | 7.5 s; 106 of 120 with ≥1 picture post, **1,774 picture posts, and 444 clips among them** — so gram's client-side filter is mandatory |
+| hop | mutuals of that account: 46; the sum of their follow counts | **≈ 262,000 edges** — `+1` is not a fan-out any reel can make; it needs its own cap with words, or the walker's stored graph (Phase 6) |
+| 0c | 60 clip records read from their PDSes | **none carried `captions`**; whether the master playlist declares a subtitle track is still unmeasured |
+| 0d | bsky.app's *Video* feed, unauthenticated | **HTTP 502**, a week after the first probe |
+| 0e | device autoplay | **owed** `[device: android x2]` — the phones were not on the bench |
+
+What the numbers decide: **D1 (a) is cheap at Follows** — a wave of eight members is under a
+second and yields dozens of frames — and `hop` is out of reach without an index (the reel
+refuses nothing there, but its wave will take a long time to reach a second frame; a cap with
+words is the follow-up). The board path at World (0a) fills a screen from one page of a
+general feed, and a reel needs about five pages of Discover for thirty clips.
+
 Run against the standing test account (`TESTBED.md` § Accounts; never the owner's) and
 record every number in the Review Log. These decide D1's cost and the wave bounds.
 

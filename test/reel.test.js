@@ -79,6 +79,24 @@ test('the observer is handed every frame once, and its callback marks exactly on
   assert.deepEqual(items.map((i) => i.attrs['data-active'] || '0'), ['1', '0']);
 });
 
+test('the active frame is handed to activate() with its post, and the one it replaced to rest()', () => {
+  let cb = null;
+  const observe = (items, onActive) => { cb = onActive; return () => {}; };
+  const seen = [];
+  const node = reel({ ...deps(), posts, mode: 'clip', observe,
+    activate: (p, item) => seen.push(['on', p.id, item.attrs['data-post']]),
+    rest: (p, item) => seen.push(['off', p.id, item.attrs['data-post']]) });
+  const items = byClass(node, 'reel-item');
+  cb(items[0]);
+  cb(items[1]);
+  assert.deepEqual(seen, [['on', 'v1', 'v1'], ['off', 'v1', 'v1'], ['on', 'v2', 'v2']]);
+});
+
+test('the count line names where the frames came from when the caller says (a people-scope reel)', () => {
+  const node = reel({ ...deps(), posts, mode: 'clip', origin: 'from 12 people you follow' });
+  assert.match(String(byClass(node, 'reel-count')[0].kids.join(' ')), /2 clips from 12 people you follow · 4 loaded/);
+});
+
 test('an unknown mode refuses by name', () => {
   assert.throws(() => reel({ ...deps(), posts, mode: 'shorts' }), /shorts/);
 });

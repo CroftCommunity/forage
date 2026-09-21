@@ -70,10 +70,10 @@ const posts = [
   { id: 'e', media: { kind: 'gif' } },
   { id: 'f', media: { kind: 'video' }, maskedRemoved: true },
 ];
-test('ofKind: forum is every post; clip is the videos; gram is the picture posts; a removed post is never a frame', () => {
+test('ofKind: forum is every post; clip is the videos; gram is the picture posts AND GIF cards (D9); a removed post is never a frame', () => {
   assert.deepEqual(ofKind(posts, 'forum').map((p) => p.id), ['a', 'b', 'c', 'd', 'e', 'f']);
   assert.deepEqual(ofKind(posts, 'clip').map((p) => p.id), ['a']);
-  assert.deepEqual(ofKind(posts, 'gram').map((p) => p.id), ['b']);
+  assert.deepEqual(ofKind(posts, 'gram').map((p) => p.id), ['b', 'e']);
   assert.throws(() => ofKind(posts, 'shorts'), /shorts/);
 });
 
