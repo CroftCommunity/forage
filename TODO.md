@@ -28,19 +28,16 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
   `plans/mocks/jumpstart-follow.html` (v2: every member a row with its own button — flip all
   or flip any, owner on the mock). Left open on the plan: O3 (the buttons' words).
 
-- **Your discovery index on the PDS** (D-own's named follow-up, plan
-  `2026-09-08-plan-feed-index-and-jumpstarts.md` Phase 2b). Today a forager's own index is
-  device-local (`js/index-prefs.js`); the mixes arc says what comes next — a `fyi.forage.*`
-  record that follows the reader between devices and survives forage.fyi (LEXICONS four acts;
-  `plans/2026-09-08-plan-mixes-on-the-pds.md` is the template). **Shape DECIDED 2026-09-14
-  (owner):** browser-local stays the default; a reader who wants it to follow them chooses
-  between a whole-file record and a pointer record (both, their choice); Forage's shipped index
-  is always available as long as they keep upgrading, but once selected away from it never
-  retakes the default. **Plan written 2026-09-21** — `plans/2026-09-21-plan-own-index-on-the-pds.md`,
-  DRAFT for the owner's review (D1–D10: the file as a blob the record references — a
-  `putRecord` body is capped at 150 KiB on the reference PDS; one type keyed `self`; the mode
-  travels and Off does not; one size ceiling; the blob path probed live and undone). The pointer
-  is fetched over HTTPS only and goes through the same validator as a pasted file. Registered in `docs/DEVICE-LOCAL.md` as `planned`.
+- [x] **Your discovery index on the PDS** — _shipped 2026-09-21_ as
+  `plans/2026-09-21-plan-own-index-on-the-pds.md` (Phases 0–7; owner-reviewed: the noun is
+  *your atmo provider account*, Off stays per device, the ceiling is 2 MB): `fyi.forage.feedindex`
+  at `self` — the file as a blob in the repo or an https link, plus add/replace — the account
+  half `js/index-pds.js`, the where-dial under *Advanced → Discovery index*, the journey
+  `e2e/own-index-pds.workflow.mjs`, the live proof `e2e/own-index-pds-live.workflow.mjs`, mock
+  `plans/mocks/own-index-pds.html`. Shape DECIDED 2026-09-14 (owner): browser-local stays the
+  default; Forage's shipped index is always available and never retakes a choice made away
+  from it. Left open on the mock: the mode dial's clipped words at 390 (pre-existing); whether
+  the paste box hides while the index is kept on the account. Registered in `docs/DEVICE-LOCAL.md` as `planned`.
 
 - ~~**The first scheduled harvest is the rate-limit datapoint.**~~ **MEASURED 2026-09-14**
   (plan 2026-09-08-plan-feed-index-and-jumpstarts, Review Log Pass 4): the dispatched run

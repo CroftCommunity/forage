@@ -794,8 +794,9 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
       await ox.page.waitForSelector('[data-advanced]', { timeout: 15000 });
       await ox.page.evaluate(() => { document.querySelector('[data-advanced]').open = true; });
       await ox.page.waitForSelector('[data-index-status]', { timeout: 15000 });
-      // the store has loaded — a frame reading "Loading…" is not a state a reader sees for long
-      await ox.page.waitForFunction(() => document.querySelector('[data-index-status]')?.dataset.indexStatus !== 'loading', null, { timeout: 15000 });
+      // the store has loaded — on the branch. On main the line is written once, before the
+      // index loads, and nothing repaints it: "Loading…" IS the Current frame, honestly.
+      if (AS !== 'current') await ox.page.waitForFunction(() => document.querySelector('[data-index-status]')?.dataset.indexStatus !== 'loading', null, { timeout: 15000 });
       // the branch: wait for the account half to land (the record read, the file fetched or refused)
       if (AS !== 'current') await ox.page.waitForFunction((k) => document.querySelector('[data-index-status]')?.dataset.indexKept === k, KEPT[route], { timeout: 15000 });
     } catch (e) {

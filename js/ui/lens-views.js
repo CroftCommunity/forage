@@ -3180,8 +3180,13 @@ function discoveryIndexSection() {
         : 'No file of yours is stored.';
     const fallback = eff.fallback ? ` ${eff.fallback.charAt(0).toUpperCase()}${eff.fallback.slice(1)}.` : '';
     status.textContent = `${now} ${yours}${fallback}`;
+    status.dataset.indexStatus = s.status;
   };
   say();
+  // the line is written before the index has loaded on a cold page, and on main
+  // nothing repainted it — a guest read "Loading…" until they pressed something
+  // (the mock's Current frames say so). Repaint once the store is ready.
+  if (st.status === 'loading') indexStore.ready().then(say).catch(() => {});
   const errBox = el('div', { class: 'xs', 'data-feedindex-errors': '1', style: 'white-space:pre-wrap;color:var(--danger,#b00)' });
   const settle = () => indexStore.reload(indexPds.effective(did)).then(() => rerenderNow());
   // One `.pillsel` dial, the same dressing as the thread dials above it: a

@@ -1,7 +1,7 @@
 # Plan: your discovery index on the PDS — the file, or a link to it, follows you
 
 date: 2026-09-21
-**Status:** REVIEWED 2026-09-21 (owner, Pass 2: O1–O3 decided, D4 and D7 confirmed) — ready for Phase 0 on the owner's go; **no code before it**.
+**Status:** BUILT 2026-09-21 (Phases 0–7; RED-first throughout, the journey written before the surface). Hermetic journey green (`e2e/own-index-pds.workflow.mjs`); the live proof (`e2e/own-index-pds-live.workflow.mjs`, `LIVE=1`) — see the Review Log for its run; mock `plans/mocks/own-index-pds.html` (v1) captured both sides. Open on the mock: the mode dial's clipped words at 390 (pre-existing), whether the paste box hides while kept on the account.
 The evidence below was probed against the real lexicons, the PDS source, and a live write
 to the standing test account (undone), so the decisions rest on measurements rather than
 on readings.
@@ -521,6 +521,57 @@ undefined` → equivalent (`n > undefined` is always false); the `default:` bran
 unreachable by design while the ENFORCED test holds. The other 57 survivors are on lines
 this plan did not touch (format regexes, message strings) — pre-existing, out of scope,
 noted.
+
+**Phase 1 DONE.** `js/feed-index-record.js` (codec; 98.8% after its round — the one survivor
+is `String(url ?? …)` inside a `try` whose `catch` answers the same words); `index-prefs`
+refuses a file the browser will not hold with the byte count (E10's silent *Stored* closed)
+and a paste over the ceiling before parsing.
+
+**Phase 2 DONE.** The lens: `indexRecord` (`RecordNotFound` is null, not an error),
+`saveIndexRecord` (validated first; the https rule applied), `removeIndexRecord`,
+`uploadIndex` (the ceiling BEFORE the upload; the PDS's blob object returned verbatim),
+`fetchIndexBlob` (my PDS, my did), `fetchIndexUrl` (the plain transport, never the DPoP
+fetch; https only; a CORS failure named for the host; bounded by `content-length` before a
+byte and by a counter mid-stream, the stream cancelled). `test/invariants.test.js` moved
+with its arguments: two `putRecord`, two `uploadBlob` each with its gate ahead of it, eight
+`deleteRecord`, one `getBlob`. One catch: the pin counts the WORD, and a comment saying
+"the SECOND putRecord" made three.
+
+**Phase 3 DONE.** `js/index-pds.js` (96.6% after its round; the survivors are the
+`readCache` guards a corrupt cache already exercises and two optional chains on a blob that
+always has a ref). Every row of § C's table is a test, including the two § E rows. The
+`cid` field was dead weight and went. Register row `forage.feedindex.pds` (`cache`).
+
+**Phases 4–5 (hermetic) DONE — the journey first, RED, then the surface.** Four catches on
+the way, none in the plan: an init-script seed rewrote the device half on EVERY navigation
+(a seed must be idempotent — the failure read as "Off is not off" until the device store was
+printed); the pre-existing mode dial was 581px wide at 390 and scrolled the account page
+sideways (both dials bounded to the page); the file picker had no label (axe, scoped to the
+section; four page-level findings on `/me` predate the plan and are filed in TODO § Small);
+and a paste while the index is kept on the account was a silent nothing, because the record
+wins over a device file by design (D6) — it now replaces the file on the account, pinned. The
+first Proposed frames caught three more: the mock's long host was not a served link (the
+frame showed the fallback), a link with no name read its URL twice, and the fallback
+sentence leaked the lens' `lens:` prefix. Mock `plans/mocks/own-index-pds.html` (v1),
+Current `cdc1da1` beside Proposed, four states × two widths.
+
+**Phase 5 (live) DONE — green against bsky.social, 2026-09-21, under claim, undone.**
+`uploadIndex`: the real shipped file, 1,074,785 bytes as `application/json`, in 1.2 s;
+`saveIndexRecord` at `self`, read back and validated; the blob read back through the app's
+door AND unauthenticated with `Origin: https://forage.fyi` — 200, `access-control-allow-
+origin: *`, byte-equal; the same key switched to a link at Forage's own file with
+`createdAt` kept; the blob the record no longer named answered HTTP 400 at once; the record
+removed, read-back empty as the last assertion. One more catch from the Current frames: on
+main the status line is written once before the index loads and never repainted, so a
+guest read *Loading…* until they pressed something — the branch repaints on `ready()`,
+pinned by the guest journey; the Current frames show main as it is.
+
+**Phase 6 DONE (internally, per the owner's scope)** — the register entry carries the
+question to arecipe and croft; the wide post is § Phase 6.
+
+**Phase 7 DONE** — `docs/FEED-INDEX.md` § Where it is kept, `docs/DEVICE-LOCAL.md` (`record`
++ the cache row), `docs/LEXICON-REGISTER.md`, `AGENTS.md` (three rows), `CHANGELOG.md`,
+`docs/adr/0005-feed-index.md` Consequences, `TODO.md` item closed.
 
 ### Pass 2 — the owner's review, in conversation (2026-09-21)
 
