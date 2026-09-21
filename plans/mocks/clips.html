@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forage Clips v2</title>
-<meta name="mock-version" content="2">
-<meta name="mock-baseline" content="forage@be82a95">
-<!-- no mock-proposal: nothing is built. Every Proposed frame on this page is a SKETCH. -->
+<title>Forage Clips v3</title>
+<meta name="mock-version" content="3">
+<meta name="mock-baseline" content="forage@c3a4abe">
+<meta name="mock-proposal" content="forage@d9a7901">
 <style>
 :root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
   --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
@@ -38,369 +38,127 @@ code{font-size:.92em}
 .small{font-size:13px;color:var(--page-muted)}
 .pair{display:grid;grid-template-columns:1fr 1fr;gap:26px}
 @media (max-width:900px){.pair{grid-template-columns:1fr}}
-.wide{width:calc(100vw - 40px);margin-left:calc((100% - (100vw - 40px)) / 2);overflow-x:auto;padding-bottom:6px}
-.sketchtag{display:inline-block;font-size:11px;text-transform:uppercase;letter-spacing:.10em;font-weight:700;padding:2px 9px;border-radius:999px;background:#C99A3C;color:#2B251C;margin-left:8px;vertical-align:middle}
-
-/* ---- the SKETCH frames: forage's default (light) palette copied by value so the drawing sits
-   beside the capture like-for-like; own CSS, invented content — never approved as a sketch ---- */
-.sk{position:relative;background:#F8F4EC;color:#2B251C;font-family:var(--f-body);font-size:15px;line-height:1.4;border:1px solid var(--page-line);border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.10),0 8px 24px rgba(0,0,0,.06);flex:none}
-.sk *{box-sizing:border-box}
-.sk-phone{width:390px;height:844px}
-.sk-desk{width:1280px;height:900px}
-.sk .badge{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:9;font-size:10px;letter-spacing:.14em;font-weight:800;text-transform:uppercase;background:#C99A3C;color:#2B251C;padding:2px 10px;border-radius:999px;box-shadow:0 1px 3px rgba(0,0,0,.3)}
-.sk .mast{height:60px;display:flex;align-items:center;gap:10px;padding:0 12px;border-bottom:1px solid #E3DCCD;background:#F8F4EC}
-.sk .mast .ham{width:44px;height:44px;border:1px solid #E3DCCD;border-radius:8px;display:grid;place-items:center;font-size:18px;background:#fff}
-.sk .mast .wm{font-family:var(--f-display);font-weight:700;font-size:22px;color:#33623A}
-.sk .mast .sp{flex:1}
-.sk .mast .moon{width:44px;height:44px;border:1px solid #E3DCCD;border-radius:999px;display:grid;place-items:center;background:#fff}
-.sk .mast .av{width:44px;height:44px;border-radius:999px;background:#41724A;color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700}
-.sk .strip{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid #E3DCCD;background:#fff;font-size:13px;color:#68604F}
-.sk .strip b{color:#2B251C;font-weight:600}
-.sk .rows{margin-left:auto;height:36px;padding:0 12px;border:1px solid #E3DCCD;border-radius:999px;background:#fff;color:#2B251C;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600}
-.sk .pill{display:inline-flex;border:1px solid #E3DCCD;border-radius:999px;overflow:hidden;background:#fff}
-.sk .pill span{padding:0 9px;height:32px;display:grid;place-items:center;font-size:12px;color:#68604F;border-right:1px solid #E3DCCD}
-.sk .pill span:last-child{border-right:0}
-.sk .pill span.on{background:#EAEFDF;color:#33623A;font-weight:700}
-.sk .reel{position:absolute;left:0;right:0;bottom:0;background:#000;overflow:hidden}
-.sk-phone .reel{top:150px}
-.sk-phone .pill{order:3;flex-basis:100%;justify-content:stretch}
-.sk-phone .pill span{flex:1}
-.sk .clip{position:absolute;inset:0}
-.sk .poster{position:absolute;inset:0;background:radial-gradient(circle at 60% 40%,hsl(243,50%,70%) 0 22%,transparent 22.5%),linear-gradient(135deg,hsl(63,45%,55%),hsl(123,40%,30%))}
-.sk .poster.land{background:radial-gradient(circle at 60% 40%,hsl(48,50%,70%) 0 16%,transparent 16.5%),linear-gradient(135deg,hsl(228,45%,55%),hsl(288,40%,30%));top:22%;bottom:22%}
-.sk .bands{position:absolute;inset:0;background:#000;z-index:-1}
-.sk .shade{position:absolute;left:0;right:0;bottom:0;height:46%;background:linear-gradient(to top,rgba(0,0,0,.72),transparent);pointer-events:none}
-.sk .meta{position:absolute;left:14px;right:78px;bottom:64px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6)}
-.sk .meta .who{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px}
-.sk .meta .who i{width:34px;height:34px;border-radius:999px;background:#B99B7B;display:inline-block;flex:none}
-.sk .meta .who small{font-weight:400;opacity:.85;font-size:13px}
-.sk .meta .words{margin-top:6px;font-size:15px;line-height:1.35}
-.sk .meta .words a{color:#DDEBD2}
-.sk .meta .alt{margin-top:6px;font-size:12px;opacity:.8}
-.sk .col{position:absolute;right:8px;bottom:64px;display:flex;flex-direction:column;gap:6px;align-items:center}
-.sk .col button{width:56px;height:52px;border:0;background:transparent;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:20px;text-shadow:0 1px 2px rgba(0,0,0,.6);font-family:inherit}
-.sk .col button small{font-size:11px;font-weight:700}
-.sk .sound{position:absolute;top:10px;right:10px;width:44px;height:44px;border-radius:999px;background:rgba(0,0,0,.55);color:#fff;display:grid;place-items:center;font-size:18px;border:0}
-.sk .count{position:absolute;top:10px;left:12px;color:#fff;font-size:12px;background:rgba(0,0,0,.45);padding:4px 9px;border-radius:999px}
-.sk .foot{position:absolute;left:0;right:0;bottom:0;height:56px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;opacity:.85;gap:8px}
-.sk .peek{position:absolute;left:0;right:0;bottom:-2px;height:8px;background:linear-gradient(135deg,hsl(200,45%,55%),hsl(260,40%,30%));border-top:2px solid rgba(255,255,255,.35)}
-.sk .play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:72px;height:72px;border-radius:999px;background:rgba(0,0,0,.55);color:#fff;font-size:28px;display:grid;place-items:center;border:0}
-.sk .blur{position:absolute;inset:0;backdrop-filter:blur(28px) brightness(.5);-webkit-backdrop-filter:blur(28px) brightness(.5);background:rgba(0,0,0,.35)}
-.sk .warn{position:absolute;left:24px;right:24px;top:40%;color:#fff;text-align:center}
-.sk .warn .tag{display:inline-block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;border:1px solid rgba(255,255,255,.6);padding:2px 10px;border-radius:999px;margin-bottom:10px}
-.sk .warn p{margin:0 0 14px;font-size:15px}
-.sk .warn button{height:44px;padding:0 18px;border-radius:999px;border:0;background:#fff;color:#2B251C;font-weight:700;font-size:14px}
-.sk .offnote{position:absolute;left:0;right:0;top:12px;text-align:center;color:#fff;font-size:12px;opacity:.9}
-/* desktop */
-.sk-desk .mast{height:60px}
-.sk-desk .nav{position:absolute;top:60px;left:0;bottom:0;width:240px;border-right:1px solid #E3DCCD;background:#F8F4EC;padding:14px 12px;font-size:14px}
-.sk-desk .nav .h{font-size:11px;letter-spacing:.10em;text-transform:uppercase;color:#68604F;margin:10px 0 6px;font-weight:600}
-.sk-desk .nav a{display:block;padding:7px 10px;border-radius:8px;color:#2B251C}
-.sk-desk .nav a.on{background:#EAEFDF;color:#33623A;font-weight:600}
-.sk-desk .main{position:absolute;top:60px;left:240px;right:0;bottom:0;background:#F8F4EC}
-.sk-desk .strip{position:absolute;top:0;left:0;right:0;height:46px;flex-wrap:nowrap;white-space:nowrap}
-.sk-desk .reel{top:46px;left:0;right:0;bottom:0;background:#F2EDE2;display:grid;place-items:center}
-.sk-desk .frame{position:relative;width:432px;height:768px;background:#000;border-radius:14px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.25)}
-.sk-desk .beside{position:absolute;left:calc(50% + 232px);top:120px;width:250px;color:#2B251C;font-size:14px}
-.sk-desk .beside .who{font-weight:700;display:flex;gap:8px;align-items:center}
-.sk-desk .beside .who i{width:34px;height:34px;border-radius:999px;background:#B99B7B;display:inline-block}
-.sk-desk .beside .words{margin-top:10px;line-height:1.45}
-.sk-desk .beside .words a{color:#38683F}
-.sk-desk .beside .acts{display:flex;gap:6px;margin-top:14px}
-.sk-desk .beside .acts span{height:44px;padding:0 12px;border:1px solid #E3DCCD;border-radius:999px;background:#fff;display:flex;align-items:center;gap:6px;font-size:13px}
-.sk-desk .beside .keys{margin-top:18px;font-size:12px;color:#68604F}
-.sk .navpill{display:flex;border:1px solid #E3DCCD;border-radius:999px;overflow:hidden;background:#fff;margin:4px 0 6px}
-.sk .navpill span{flex:1;height:36px;display:grid;place-items:center;font-size:12px;color:#68604F;border-right:1px solid #E3DCCD}
-.sk .navpill span:last-child{border-right:0}
-.sk .navpill span.on{background:#41724A;color:#fff;font-weight:700}
-.sk .navpill span.dim{opacity:.45}
-.sk .navh{font-size:11px;letter-spacing:.10em;text-transform:uppercase;color:#68604F;margin:10px 0 4px;font-weight:600}
-.sk .drawer{position:absolute;top:60px;left:0;bottom:0;width:300px;background:#F8F4EC;border-right:1px solid #E3DCCD;padding:14px 12px;z-index:5;box-shadow:12px 0 30px rgba(0,0,0,.25);font-size:14px}
-.sk .drawer a{display:block;padding:8px 10px;border-radius:8px;color:#2B251C}
-.sk .drawer a.on{background:#EAEFDF;color:#33623A;font-weight:600}
-.sk .scrim{position:absolute;top:60px;left:0;right:0;bottom:0;background:rgba(0,0,0,.35);z-index:4}
-.sk .gram{position:absolute;inset:0;background:radial-gradient(circle at 40% 45%,hsl(20,60%,72%) 0 24%,transparent 24.5%),linear-gradient(160deg,hsl(140,35%,45%),hsl(200,40%,22%))}
-.sk .dots{position:absolute;left:0;right:0;top:12px;display:flex;justify-content:center;gap:6px}
-.sk .dots i{width:8px;height:8px;border-radius:999px;background:rgba(255,255,255,.45)}
-.sk .dots i.on{background:#fff}
-.sk .cap{position:absolute;left:14px;right:78px;bottom:64px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6)}
-.sk .cap .altq{font-size:14px;line-height:1.35;border-left:3px solid rgba(255,255,255,.6);padding-left:10px;margin-top:8px;opacity:.95}
-.sk-desk .arrows{position:absolute;left:calc(50% - 300px);top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px}
-.sk-desk .arrows span{width:44px;height:44px;border-radius:999px;background:#fff;border:1px solid #E3DCCD;display:grid;place-items:center;color:#2B251C}
 </style>
 </head>
 <body>
 <div class="wrap">
 
 <header style="display:flex;flex-direction:column;gap:10px">
-  <span class="eyebrow">Mock · v2 · 2026-09-16 · plan 2026-09-14-plan-clips</span>
-  <h1>View modes — clip and gram, a board shown one post per screen <span class="sketchtag">Proposed is a sketch</span></h1>
-  <p class="sub">Three proposals, nine frames. v2 after the owner's reading of v1 (2026-09-16): the reel is a <b>mode</b> —
-  <i>clip</i> (video-centred) beside a <i>gram</i> (image-centred), any mode at any ring stop — and the control is a second
-  pill <b>under the ring pill</b>.  <b>Current</b> is a capture of the engine: <code>be82a95</code> on
-  <code>claude/video-view</code>, whose UI tree is <code>main</code> at <code>c3a4abe</code> exactly (the branch adds a plan
-  file and nothing else), captured by <code>scripts/mock-snaps.mjs</code> against <code>lens:mock-board</code> — the
-  board-cards fixture that carries a native clip, a quoted clip, a YouTube card and a portrait picture — in the default
-  skin, at 390×844 and 1280×900 (MOCKS.md). <b>Proposed is a SKETCH</b>, drawn in this page's own CSS with the fixture's
-  own content (the clip by <code>tiredactor.bsky.social</code>, its words and its counts), because nothing is built:
-  <code>js/ui/reel.js</code> does not exist. Nothing here is approvable as pixels; the sketch is a direction to talk
-  about, and Phase 4 of the plan replaces every Proposed frame with a capture of the engine before any decision is
-  called locked.</p>
+  <span class="eyebrow">Mock · v3 · 2026-09-21 · plan 2026-09-14-plan-clips</span>
+  <h1>View modes — Forum, Clip, Gram: the pill under the ring, and the reel</h1>
+  <p class="sub">Three proposals, fourteen frames, <b>every one a capture of the engine</b> (MOCKS.md P1 — the v1 and v2
+  sketches are retired). <b>Current</b> is <code>main</code> at <code>c3a4abe</code>; <b>Proposed</b> is
+  <code>claude/video-view</code> at <code>d9a7901</code>. Both captured by <code>scripts/mock-snaps.mjs</code> against the same
+  hermetic population, in the default skin, at 390×844 and 1280×900. The population (<code>e2e/harness/mock-reel.mjs</code>) is the
+  board fixture plus what a reel is judged under: three clips at three shapes — a portrait, a landscape, a square with alt text a
+  person wrote and the longest words on the board — beside the board's single picture and its four-picture post, so clip mode has to
+  frame three aspect ratios and gram mode a carousel; the text posts, link cards, the reply and the repost are what the kind filter
+  must drop. Signed in as the test session. Every claim a frame makes is held by <code>e2e/view-modes.workflow.mjs</code>.</p>
 </header>
 
 <section class="callout">
-  <h3>Open decisions (the plan's D1–D6, as this sketch reads them)</h3>
+  <h3>Open decisions</h3>
   <ol>
-    <li><b>D1 — where the clips come from at a people-scope.</b> The sketch's count line reads <i>clips from 701 people you
-      follow</i>: it sources from the scope's members with the video-only author feed, not from Home's feeds narrowed. The
-      strict reading would say <i>clips in Home by people you follow</i> and show one clip per page.</li>
-    <li><b>D2 — the address.</b> Drawn as <code>/m/home?view=clips</code>, with a <i>Rows</i> control on the strip that returns to
-      <code>/m/home</code> at the same scroll position. Alternative: a route of its own.</li>
-    <li><b>D3 — autoplay.</b> Drawn ON by default inside Clips (muted, in view only), with the second frame showing the OFF state.
-      The GIF autoplay setting is not reused; a clip is a video post.</li>
-    <li><b>D4 — order.</b> Drawn with the deal (round-robin across people or sources). The strip's <i>2 of 9</i> is the loaded
-      window, not a total — the reel says what it has, as a board's window sort does.</li>
-    <li><b>D5 — a clip-posters index.</b> Not drawn. World's reel here is the composition only.</li>
-    <li><b>D6 — the word. Decided on v1</b> (owner, 2026-09-16: <i>"we are looking at a 'mode' here like 'clip' mode that is vids centered, and we could do a 'gram' mode where it could be images centred"</i>). Rows · Clip · Gram.</li>
-    <li><b>D7 — where the control lives.</b> Drawn as the owner suggested: a mode pill under the ring pill in the left nav (<i>"any mode could be used at any ring scale. Maybe we put a mode slider under the ring slider?"</i>). The open half: on a phone the nav is a drawer, so the strip keeps <i>Rows</i> as the way back in the sketch — is that wanted, or is the drawer enough?</li>
-    <li><b>D8 — the word in code.</b> <code>js/mode.js</code> already means which population the app is (Bluesky view / memory sandbox). Proposal: readers say <i>mode</i>; the code and the key say <code>view</code> (<code>forage.view</code>, <code>?view=clip</code>).</li>
-    <li><b>D9 — is a GIF a gram?</b> Proposal: gram shows GIFs paused with their badge; clip does not show them.</li>
-    <li><b>D10 — alt text in gram.</b> Drawn visible (the picture is the screen; the words a person wrote about it are the caption). Rows keep the hidden default.</li>
+    <li><b>D7 — where the control lives.</b> Built as recommended (2026-09-16): the <i>View</i> pill stands <b>directly under the ring
+      pill</b> in the left nav — the drawer on a phone — and the reel carries <b>one exit</b>, <i>Forum</i>, because a frame swallows the
+      board chrome. Choosing happens in one place; leaving happens on the thing you are leaving. The alternative not built: a
+      thumb-reachable bottom bar on the phone (one tap, 44px off every board). Say which.</li>
+    <li><b>D8 — the word in code.</b> Built as proposed: readers see <i>Forum · Clip · Gram</i>; the code and the key say
+      <code>view</code> (<code>forage.view</code>, <code>js/view-mode.js</code>), because <code>js/mode.js</code> already means which
+      population the app is.</li>
+    <li><b>D3 — autoplay.</b> Not built, on purpose: a frame shows the clip's poster and its press, exactly as a row does, and fetches
+      nothing until pressed. Muted in-view autoplay is a second step with its own setting (the plan's proposal: on inside Clip only).</li>
+    <li><b>D1 — where clips come from at a people-scope.</b> Not built: the reel frames the board's <b>loaded</b> posts, and the count
+      line says so (<i>3 clips of 11 loaded posts</i>). Fan-out over the scope's members with the video filter is the plan's Phase 0/1.</li>
+    <li><b>D9 / D10.</b> A GIF is not a frame in either mode yet; gram shows the row's alt caption as the row does (hidden by default).</li>
+    <li><b>Decided on v1 — D6:</b> it is a mode of viewing; <i>clip</i> and <i>gram</i>, and <i>forum</i> for the rows (owner, 2026-09-16).</li>
   </ol>
 </section>
 
 <section>
-  <h2>1 · Home as rows, and Home as clips</h2>
-  <p class="sub">Current: a clip is a row like any other — a stage with a ▶, which plays in place when pressed, between rows that are
-  not clips. Proposed: the same board with <i>Clips</i> pressed on the strip. The masthead stays; the strip says which board,
-  that it is Clips, and the scope pill's answer as a sentence (<i>clips from 701 people you follow</i>); the clip fills the
-  rest, black bands for its shape, the poster from the record, playing muted with one control to unmute. The author and the
-  post's words sit over the bottom shade; the action column is the row's own actions at 44px — like, reply, repost, share,
-  the ⋯ menu — and the thread is one press on the words. The next clip's edge peeks at the bottom; a swipe snaps to it.</p>
+  <h2>1 · The control — View under Your ring</h2>
+  <p class="sub">Current: the nav has the ring pill and the boards. Proposed: a second block pill, <i>Forum · Clip · Gram</i>, in the ring
+  pill's dressing, directly under it — how close, then what kind. On the phone it is in the drawer (opened by the burger for the
+  frame); on the desktop it is in view on every board. Signed out the ring pill locks to World as today; the View pill stays live,
+  because a guest board has pictures and clips too. Picking a segment repaints the board in place — no navigation, the choice
+  remembered like the ring stop.</p>
   <div class="pair">
-    <div class="device"><span class="device-label">Current · phone</span><img class="shot phone" src="snaps/clips/board-lens-media.phone.current.png" alt="Home on main, phone: a quoted clip and a YouTube card as rows"></div>
-    <div class="device"><span class="device-label">Proposed · phone · SKETCH</span>
-      <div class="sk sk-phone" aria-label="sketch: the reel on a phone">
-        <span class="badge">Sketch</span>
-        <div class="mast"><span class="ham">≡</span><span class="wm">Forage</span><span class="sp"></span><span class="moon">☾</span><span class="av">CP</span></div>
-        <div class="strip"><b>Home</b> · Clips · <span class="pill"><span>Me</span><span>Mutuals</span><span class="on">Follows</span><span>+1</span><span>World</span></span><span class="rows">☰ Rows</span></div>
-        <div class="reel">
-          <div class="clip">
-            <div class="poster"></div>
-            <div class="shade"></div>
-            <span class="count">2 of 9 loaded · clips from 701 people you follow</span>
-            <button class="sound" aria-label="Unmute">🔇</button>
-            <div class="meta">
-              <div class="who"><i></i>tiredactor.bsky.social <small>· 2h</small></div>
-              <div class="words">That's my job 😉 <a>#comedy</a> <a>#funny</a> <a>#relatable</a> <a>#smile</a></div>
-              <div class="alt">no alt text written</div>
-            </div>
-            <div class="col">
-              <button>▲<small>30</small></button>
-              <button>↩<small>0</small></button>
-              <button>⟳<small>1</small></button>
-              <button>⤴<small>share</small></button>
-              <button>⋯</button>
-            </div>
-            <div class="foot">▲ swipe for the next</div>
-            <div class="peek"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="device"><span class="device-label">Current · desktop</span><img class="shot desk" src="snaps/clips/board-lens-media.desktop.current.png" alt="Home on main, desktop: the same rows with the left nav and the rail"></div>
-  </div>
-  <div class="device"><span class="device-label">Proposed · desktop · SKETCH (true size, scrolls sideways)</span>
-    <div class="wide">
-      <div class="sk sk-desk" aria-label="sketch: the reel on a desktop">
-        <span class="badge">Sketch</span>
-        <div class="mast"><span class="ham">≡</span><span class="wm">Forage</span><span class="sp"></span><span class="moon">☾</span><span class="av">CP</span></div>
-        <div class="nav">
-          <div class="h">Your ring</div>
-          <div class="navpill"><span>Mutuals</span><span class="on">Follows</span><span>World</span></div>
-          <div class="h">View</div>
-          <div class="navpill"><span>Rows</span><span class="on">Clip</span><span>Gram</span></div>
-          <div class="h">Mixes</div><a class="on">Home</a><a>Garden mix</a>
-          <div class="h">Feeds</div><a>Discover</a><a>Gardening</a><a>SkyTok</a>
-          <div class="h">Hashtags</div><a>#peatland</a><a>#bog</a>
-          <div class="h">You</div><a>Me</a><a>Frontiers</a>
-        </div>
-        <div class="main">
-          <div class="strip"><b>Home</b> · Clips · <span class="pill"><span>Me</span><span>Mutuals</span><span class="on">Follows</span><span>+1</span><span>World</span></span> · 2 of 9 loaded · clips from 701 people you follow<span class="rows">☰ Rows</span></div>
-          <div class="reel">
-            <div class="arrows"><span>↑</span><span>↓</span></div>
-            <div class="frame">
-              <div class="poster"></div>
-              <div class="shade"></div>
-              <button class="sound" aria-label="Unmute">🔇</button>
-              <div class="foot">↑ ↓ or J / K · space pauses</div>
-            </div>
-            <div class="beside">
-              <div class="who"><i></i>tiredactor.bsky.social <span class="small">· 2h</span></div>
-              <div class="words">That's my job 😉 <a>#comedy</a> <a>#funny</a> <a>#relatable</a> <a>#smile</a><br><span class="small">no alt text written</span></div>
-              <div class="acts"><span>▲ 30</span><span>↩ 0</span><span>⟳ 1</span><span>⤴</span><span>⋯</span></div>
-              <div class="keys">Open the thread ↗ · muted until you press 🔇</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <div class="device"><span class="device-label">Current · phone (drawer)</span><img class="shot phone" src="snaps/clips/view-nav.phone.current.png" alt="the drawer on main: Your ring, then Mixes and Feeds"></div>
+    <div class="device"><span class="device-label">Proposed · phone (drawer)</span><img class="shot phone" src="snaps/clips/view-nav.phone.proposed.png" alt="the drawer on the branch: Your ring, then View — Forum, Clip, Gram — then the boards"></div>
+    <div class="device"><span class="device-label">Current · desktop</span><img class="shot desk" src="snaps/clips/view-nav.desktop.current.png" alt="the board on main, desktop: the ring pill alone at the top of the nav"></div>
+    <div class="device"><span class="device-label">Proposed · desktop</span><img class="shot desk" src="snaps/clips/view-nav.desktop.proposed.png" alt="the board on the branch, desktop: the View pill under the ring pill, Forum selected"></div>
   </div>
 </section>
 
 <section>
-  <h2>2 · What never autoplays — a labeled clip, and autoplay off</h2>
-  <p class="sub">Left: a clip the reader's moderation posture marks <i>warn</i>. On a row that is a blurred thumbnail; in a reel a miss
-  would be a full-screen video playing, so the reel's rule is stricter than the row's — blur, the label, a press to show, and no
-  autoplay whatever the setting. Right: the reader turned Clips autoplay off (D3). The reel is posters with a ▶, nothing is
-  fetched until the press, and the strip says so once. Current has no counterpart for either: the row already blurs a labeled
-  post and already waits for the press on every clip — these frames are what changes when a clip fills the screen.</p>
+  <h2>2 · Clip mode — the board's clips, one per screen</h2>
+  <p class="sub">Current: the same board as rows — a clip is a stage with a ▶ between rows that are not clips (the frame is scrolled
+  to the board's head, where the key is unknown). Proposed: arriving with Clip chosen lands <b>on the reel</b>: the head card and the
+  sort bar have scrolled under the masthead, the frame is the screen. The bar says <i>3 clips of 11 loaded posts</i> and carries the
+  one exit. The frame is the row's own media node freed of the row's caps — the poster, black bands for the shape, the press — and
+  under it the post's own compact row: byline, words, the reply / repost / like / share row, the ⋯ menu. Nothing is fetched for a
+  frame that a row would not fetch; the playlist host was never asked (the journey holds it). Swipe or scroll snaps to the next clip;
+  one frame is active at a time.</p>
   <div class="pair">
-    <div class="device"><span class="device-label">Proposed · phone · SKETCH — a labeled clip</span>
-      <div class="sk sk-phone" aria-label="sketch: a labeled clip, blurred, not playing">
-        <span class="badge">Sketch</span>
-        <div class="mast"><span class="ham">≡</span><span class="wm">Forage</span><span class="sp"></span><span class="moon">☾</span><span class="av">CP</span></div>
-        <div class="strip"><b>Home</b> · Clips · <span class="pill"><span>Me</span><span>Mutuals</span><span>Follows</span><span>+1</span><span class="on">World</span></span><span class="rows">☰ Rows</span></div>
-        <div class="reel">
-          <div class="clip">
-            <div class="poster land"></div>
-            <div class="blur"></div>
-            <span class="count">5 of 12 loaded · everything in your composition</span>
-            <div class="warn"><span class="tag">Adult content</span><p>Hidden by your moderation settings. It will not play until you show it.</p><button>Show this clip</button></div>
-            <div class="meta">
-              <div class="who"><i></i>thefrostwarning.bsky.social <small>· 3h</small></div>
-              <div class="words">Council leader, at this morning's flood briefing: "The drainage board throw out all these fearmongels…"</div>
-            </div>
-            <div class="col">
-              <button>▲<small>812</small></button>
-              <button>↩<small>96</small></button>
-              <button>⟳<small>240</small></button>
-              <button>⤴<small>share</small></button>
-              <button>⋯</button>
-            </div>
-            <div class="foot">▲ swipe past it</div>
-            <div class="peek"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="device"><span class="device-label">Proposed · phone · SKETCH — autoplay off</span>
-      <div class="sk sk-phone" aria-label="sketch: the reel with autoplay off, poster and a play button">
-        <span class="badge">Sketch</span>
-        <div class="mast"><span class="ham">≡</span><span class="wm">Forage</span><span class="sp"></span><span class="moon">☾</span><span class="av">CP</span></div>
-        <div class="strip"><b>Home</b> · Clips · <span class="pill"><span>Me</span><span>Mutuals</span><span class="on">Follows</span><span>+1</span><span>World</span></span><span class="rows">☰ Rows</span></div>
-        <div class="reel">
-          <div class="clip">
-            <div class="poster" style="filter:brightness(.8)"></div>
-            <div class="shade"></div>
-            <div class="offnote">Clips autoplay is off — press to play (Preferences)</div>
-            <button class="play" aria-label="Play clip">▶</button>
-            <div class="meta">
-              <div class="who"><i></i>tiredactor.bsky.social <small>· 2h</small></div>
-              <div class="words">That's my job 😉 <a>#comedy</a> <a>#funny</a> <a>#relatable</a> <a>#smile</a></div>
-            </div>
-            <div class="col">
-              <button>▲<small>30</small></button>
-              <button>↩<small>0</small></button>
-              <button>⟳<small>1</small></button>
-              <button>⤴<small>share</small></button>
-              <button>⋯</button>
-            </div>
-            <div class="foot">▲ swipe for the next</div>
-            <div class="peek"></div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <div class="device"><span class="device-label">Current · phone</span><img class="shot phone" src="snaps/clips/view-clip.phone.current.png" alt="the board on main, phone: rows"></div>
+    <div class="device"><span class="device-label">Proposed · phone</span><img class="shot phone" src="snaps/clips/view-clip.phone.proposed.png" alt="clip mode on the branch, phone: the first clip filling the screen, Forum at the top, the post's row and actions under it"></div>
+    <div class="device"><span class="device-label">Current · desktop</span><img class="shot desk" src="snaps/clips/view-clip.desktop.current.png" alt="the board on main, desktop: rows"></div>
+    <div class="device"><span class="device-label">Proposed · desktop</span><img class="shot desk" src="snaps/clips/view-clip.desktop.proposed.png" alt="clip mode on the branch, desktop: the reel in the board column, Clip selected on the nav pill"></div>
   </div>
 </section>
 
 <section>
-  <h2>3 · The control under the ring, and gram mode</h2>
-  <p class="sub">Left: the phone's drawer open on the reel — <i>Your ring</i> and, under it, <i>View</i>: Rows · Clip · Gram, the same
-  block pill, the same 44px rows (D7). Signed out the ring pill locks to World as it does today; the view pill stays live,
-  because a guest board has pictures and clips too. Right: <b>gram</b> mode on Home at Follows — one post's pictures per
-  screen. A single picture stands on its stage at screen height; a post with several is the carousel the rows already fold
-  them into, with dots; the alt text a person wrote is the caption (D10). Nothing plays. Swipe for the next.</p>
+  <h2>3 · Gram mode — the board's pictures, one per screen</h2>
+  <p class="sub">The same reel with the other kind filter: the board's picture posts. A single picture stands on its stage at screen
+  height, contain-fit over its blurred self as on a row; the four-picture post is the carousel the rows already fold it into. The bar
+  says <i>2 picture posts of 11 loaded posts</i>. Nothing plays; nothing new is fetched.</p>
   <div class="pair">
-    <div class="device"><span class="device-label">Proposed · phone · SKETCH — the drawer, both pills</span>
-      <div class="sk sk-phone" aria-label="sketch: the drawer open with the ring pill and the view pill">
-        <span class="badge">Sketch</span>
-        <div class="mast"><span class="ham">✕</span><span class="wm">Forage</span><span class="sp"></span><span class="moon">☾</span><span class="av">CP</span></div>
-        <div class="strip"><b>Home</b> · Clips · <span class="pill"><span>Me</span><span>Mutuals</span><span class="on">Follows</span><span>+1</span><span>World</span></span><span class="rows">☰ Rows</span></div>
-        <div class="reel"><div class="clip"><div class="poster"></div><div class="shade"></div></div></div>
-        <div class="scrim"></div>
-        <div class="drawer">
-          <div class="navh">Your ring</div>
-          <div class="navpill"><span>Mutuals</span><span class="on">Follows</span><span>World</span></div>
-          <div class="navh">View</div>
-          <div class="navpill"><span>Rows</span><span class="on">Clip</span><span>Gram</span></div>
-          <div class="navh">Mixes</div><a class="on">Home</a><a>Garden mix</a>
-          <div class="navh">Feeds</div><a>Discover</a><a>Gardening</a><a>SkyTok</a><a>Trending</a>
-          <div class="navh">Hashtags</div><a>#peatland</a><a>#bog</a>
-          <div class="navh">You</div><a>Me</a>
-        </div>
-      </div>
-    </div>
-    <div class="device"><span class="device-label">Proposed · phone · SKETCH — gram mode</span>
-      <div class="sk sk-phone" aria-label="sketch: gram mode, one post's pictures per screen">
-        <span class="badge">Sketch</span>
-        <div class="mast"><span class="ham">≡</span><span class="wm">Forage</span><span class="sp"></span><span class="moon">☾</span><span class="av">CP</span></div>
-        <div class="strip"><b>Home</b> · Gram · <span class="pill"><span>Me</span><span>Mutuals</span><span class="on">Follows</span><span>+1</span><span>World</span></span><span class="rows">☰ Rows</span></div>
-        <div class="reel">
-          <div class="clip">
-            <div class="gram"></div>
-            <div class="shade"></div>
-            <div class="dots"><i class="on"></i><i></i><i></i><i></i></div>
-            <span class="count" style="top:30px">3 of 14 loaded · pictures from 701 people you follow</span>
-            <div class="cap">
-              <div class="who" style="display:flex;align-items:center;gap:8px;font-weight:700"><i style="width:34px;height:34px;border-radius:999px;background:#B99B7B;display:inline-block"></i>misterhooperspecial.bsky.social <small style="font-weight:400;opacity:.85;font-size:13px">· 4h</small></div>
-              <div class="words" style="margin-top:6px">four from the allotment</div>
-              <div class="altq">1 of 4 — a wooden crate of muddy carrots and two leeks on a potting bench, morning light</div>
-            </div>
-            <div class="col">
-              <button>▲<small>0</small></button>
-              <button>↩<small>0</small></button>
-              <button>⟳<small>0</small></button>
-              <button>⤴<small>share</small></button>
-              <button>⋯</button>
-            </div>
-            <div class="foot">◀ ▶ the post's pictures · ▲ swipe for the next post</div>
-            <div class="peek"></div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <div class="device"><span class="device-label">Current · phone</span><img class="shot phone" src="snaps/clips/view-gram.phone.current.png" alt="the board on main, phone: rows"></div>
+    <div class="device"><span class="device-label">Proposed · phone</span><img class="shot phone" src="snaps/clips/view-gram.phone.proposed.png" alt="gram mode on the branch, phone: the portrait picture filling the screen over its row"></div>
+    <div class="device"><span class="device-label">Current · desktop</span><img class="shot desk" src="snaps/clips/view-gram.desktop.current.png" alt="the board on main, desktop: rows"></div>
+    <div class="device"><span class="device-label">Proposed · desktop</span><img class="shot desk" src="snaps/clips/view-gram.desktop.proposed.png" alt="gram mode on the branch, desktop: the picture in the board column, Gram selected on the nav pill"></div>
+  </div>
+</section>
+
+<section>
+  <h2>Reference · the board as it ships, with a clip in it</h2>
+  <p class="sub">The v1 baseline frames, re-captured at <code>c3a4abe</code>: Home on <code>main</code> scrolled to the quoted clip, the row a clip is today.</p>
+  <div class="pair">
+    <div class="device"><span class="device-label">Current · phone</span><img class="shot phone" src="snaps/clips/board-lens-media.phone.current.png" alt="a quoted clip and a YouTube card as rows, phone"></div>
+    <div class="device"><span class="device-label">Current · desktop</span><img class="shot desk" src="snaps/clips/board-lens-media.desktop.current.png" alt="the same rows, desktop"></div>
   </div>
 </section>
 
 <section class="callout">
-  <h3>What the sketch claims, and what only a capture can</h3>
+  <h3>What the frames hold, and what they cannot</h3>
   <ul>
-    <li><b>Same posts, same policy.</b> The reel is the board's own posts narrowed to <code>media.kind === 'video'</code>, after blocks,
-      mutes, labels and the ring — the order the shape layer already applies. Nothing on this page needs a new write, a new host,
-      or a lexicon.</li>
-    <li><b>The count line is the honest one.</b> <i>2 of 9 loaded</i> is the loaded window; at a people-scope the sentence names the
-      source (<i>clips from 701 people you follow</i>) so D1's difference from rows is visible on the surface, not buried.</li>
-    <li><b>The fan-out is bounded by the reader, not a cap.</b> The next wave of author feeds is asked for when the reel is within a few
-      clips of its end. Whether that holds at <code>fol</code> (701 follows) and at <code>hop</code> is Phase 0's number, and no drawing
-      can show it — which is exactly why this is a sketch.</li>
-    <li><b>Not drawn:</b> the empty reel (<i>no clips in this board's loaded posts — More?</i>), the hashtag reel signed out (a worded
-      refusal, as <code>/h/</code> boards give), reduced motion (no autoplay; the frames are otherwise identical), the memory population
-      (an honest empty page — a frontier row).</li>
-    <li><b>v2 reframing:</b> one renderer, parameterised by mode; the kind filter is <code>media.kind</code>, already on every shaped post. Gram adds no player and no new fetch shape — at a people-scope it is the same fan-out with <code>filter=posts_with_media</code> (lexicon-verified; its yield is Phase 0f).</li>
-    <li><b>Mapping to the plan:</b> the mode pill → Phase 2 (<code>js/ui/nav.js</code>, <code>js/view-mode.js</code>); the strip and the switch → Phase 2 (<code>js/ui/lens-views.js</code>); the stack, the observer, the
-      labeled-clip rule, the sound control → Phase 2 (<code>js/ui/reel.js</code>); the count line's source sentence → Phase 1
-      (<code>lens.clips()</code>); the frames' promises → Phase 3 (<code>e2e/clips.workflow.mjs</code>); these sketches → replaced by
-      captures in Phase 4.</li>
+    <li><b>The first capture caught a real defect.</b> The reel began under the head card and the sort bar, so a frame's row sat below
+      the fold on a phone (the whole point of a frame is that the row is with it). Fixed: arriving in a mode lands on the reel (it
+      scrolls itself under the masthead, once); the journey now holds the landing. A drawing would not have shown this — it is why P1 exists.</li>
+    <li><b>Same posts, same policy.</b> The reel is handed the board's ordered, filtered posts — after blocks, mutes, labels, the ring,
+      the language filter and the window sort — and narrows by <code>media.kind</code>. A frame is a row by another layout, never a
+      row the forum would not have shown. No new write, no new host, no new lexicon; DL-041 in the ledger records that the memory
+      sandbox has no reel yet because its posts carry no media.</li>
+    <li><b>Not framed:</b> the empty reel (<i>No clips in the loaded posts …</i> with the way back — held by the journey); the active
+      frame moving with the scroll (held); the press that plays a clip (unchanged from a row, <code>e2e/video-playback.workflow.mjs</code>);
+      a labeled clip; reduced motion (snap off, otherwise identical). Not on a phone yet: <code>[device: android x2]</code> for the snap
+      and the drawer.</li>
+    <li><b>Mapping to code:</b> the pill and the key → <code>js/view-mode.js</code>, drawn in <code>js/ui/nav.js</code>; the reel →
+      <code>js/ui/reel.js</code>, mounted by <code>renderBoard</code> in <code>js/ui/lens-views.js</code>; the styles at the end of
+      <code>css/app.css</code>; the population <code>e2e/harness/mock-reel.mjs</code>; the claims <code>e2e/view-modes.workflow.mjs</code>;
+      the captures <code>scripts/mock-snaps.mjs</code> routes <code>view-clip view-gram view-nav</code>.</li>
   </ul>
 </section>
 
 <section class="callout">
   <h3>Revisions</h3>
   <ul>
-    <li><b>v2 — 2026-09-16.</b> After the owner's reading of v1: the reel is a mode (D6 decided); the mode pill drawn under the ring pill on the desktop nav and in the phone drawer (D7); a gram frame; D8–D10 raised. Current frames unchanged (same baseline).</li>
-    <li><b>v1 — 2026-09-14.</b> Two Current frames captured from the engine (<code>board-lens-media</code>, phone and desktop); four Proposed frames drawn as sketches. Plan drafted the same day, nothing built.</li>
+    <li><b>v3 — 2026-09-21.</b> Built. Every Proposed frame is a capture of <code>claude/video-view</code> at <code>d9a7901</code>; the
+      sketches are gone. Twelve new frames (three routes, two viewports, Current and Proposed), the v1 reference frames re-captured at
+      <code>c3a4abe</code>. The first capture's below-the-fold row fixed and pinned.</li>
+    <li><b>v2 — 2026-09-16.</b> After the owner's reading of v1: the reel is a mode (D6 decided); the mode pill drawn under the ring pill
+      as a sketch; a gram frame; D8–D10 raised.</li>
+    <li><b>v1 — 2026-09-14.</b> Two Current frames captured from the engine; four Proposed frames drawn as sketches.</li>
   </ul>
 </section>
 

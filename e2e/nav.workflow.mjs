@@ -107,7 +107,9 @@ export async function run() {
       // control rather than a list of destinations. That empty items array is
       // the shape of the whole change: the section kept its place at the top
       // and stopped being five places to go.
-      [['Your ring', []], ['Feeds', ['whats-hot', 'directory']], ['—', ['feeds', 'jumpstarts', 'hashtags']]],
+      // "View" is the second control section (plan 2026-09-14-plan-clips, D7):
+      // the mode pill directly under the ring pill, no items either.
+      [['Your ring', []], ['View', []], ['Feeds', ['whats-hot', 'directory']], ['—', ['feeds', 'jumpstarts', 'hashtags']]],
       `a guest's nav: the ring pill, then Discover and Trending under Feeds, then the browse surfaces (${JSON.stringify(groups)})`);
     assert.equal(await guest.page.locator('[data-nav-item="directory"]').count(), 1,
       'Trending appears ONCE — it moved up, it was not copied');

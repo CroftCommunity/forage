@@ -8,6 +8,19 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-21 **View modes: Forum, Clip, Gram.** Under *Your ring* in the left nav there is a
+  second pill, *View*: **Forum** is the rows you have today; **Clip** shows the board you are
+  on as its clips, one per screen; **Gram** shows its picture posts the same way. A mode is a
+  way of showing a board, not a different board: the same posts, after your ring, your
+  moderation settings, your content languages and the sort, narrowed to the ones carrying a
+  video or pictures. Each frame is the post's own media at screen height with the post's own
+  row under it — byline, words, reply, repost, like, share, the menu — so nothing you can do
+  to a post changes with how the board is shown. Arriving in a mode lands you on the reel;
+  *Forum* at the top of it is the way back. A clip still waits for your press (nothing is
+  fetched for a frame that a row would not fetch), and the count line says how many of the
+  loaded posts are frames. The choice is remembered on this device like the ring stop. The
+  memory sandbox has no reel yet (its posts carry no media). (plan 2026-09-14-plan-clips;
+  mock `plans/mocks/clips.html` v3, every Proposed frame a capture)
 - 2026-09-14 **Follow everyone in a jumpstart — from Forage.** A jumpstart's page used to
   send you to bsky.app to follow its people; now *Follow everyone in it* leads to a confirm
   page that reads the list live and says what will happen first: how many follow records

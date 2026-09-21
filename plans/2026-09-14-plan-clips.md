@@ -1,13 +1,18 @@
 # Plan: View modes — clip and gram, a media-centred showing of any board, from your ring out to World
 
 date: 2026-09-14
-**Status:** DRAFTED, NOT STARTED — a proposal for owner decision. Nothing is built. The
-research half (how Skylight does it, § Prior art) is done and sourced; the forage half
-rests on six live probes (§ Verified assumptions). **Reframed 2026-09-16 on the mock
-(owner):** the reel is one **mode** of showing a board — *clip* (video-centred) beside a
-*gram* (image-centred) — any mode at any ring stop, chosen by a second pill under the ring
-pill. D6 is decided by that; D7 (placement) and D8 (the word in code) are new; D1–D5 stay
-open. Phase 0 is measurement and must run before D1 can be decided.
+**Status:** **PHASE 2 BUILT FOR THE MOCK (2026-09-21)** — the owner asked for a mock under the
+mock rules, which means the engine: `js/view-mode.js` (the pill, the key `forage.view`, the
+kind filter), `js/ui/reel.js` (the reel), the pill under the ring pill in `js/ui/nav.js`,
+`renderBoard` handing its ordered posts to the reel, the population
+`e2e/harness/mock-reel.mjs`, the journey `e2e/view-modes.workflow.mjs`, three capture routes.
+Mock **v3** — every Proposed frame a capture of `d9a7901` — is
+`plans/mocks/clips.html`. NOT built, on purpose: D1's fan-out (the reel frames the LOADED
+posts and says so), D3's autoplay (a frame waits for the press as a row does), D9/D10.
+Phase 0 (measurement) still precedes D1. The research half (§ Prior art) is done and sourced.
+Reframed 2026-09-16 (owner): the reel is a **mode** — forum · clip · gram — any mode at any
+ring stop, chosen by a second pill under the ring pill (D6 decided; D7 built as recommended,
+awaiting the owner's word; D8 built as proposed).
 repo: `CroftCommunity/forage`
 baseline: `main` @ `c3a4abe` (follow-all landed, #77)
 branch: `claude/video-view`
@@ -495,6 +500,15 @@ than here.
 
 ## Review Log
 
+- 2026-09-21 — **built for the mock** (owner, 2026-09-17: "I would like a mock of that based
+  on our mock rules" — P1: the approved frame is a capture of the engine). RED first
+  (`test/view-mode.test.js`, `test/reel.test.js`, `test/nav-view-pill.test.js` failed on
+  missing modules), then the modules; the journey written against the mock's seven claims and
+  green first run. The FIRST capture caught a defect no sketch could: the reel began under the
+  head card and the sort bar, so a frame's row sat below the fold on a phone — fixed (arriving
+  in a mode lands on the reel, once) and pinned in the journey. `nav.workflow.mjs`'s section
+  list gained `View`. Gate: `npm test` 1002, conformance, workflows, reference-gate — see the
+  landing commit. DL-041 records the memory sandbox has no reel. Mock v3 captured both sides.
 - 2026-09-14 — drafted from the owner's question, the Skylight research (§ Prior art),
   and the probes in § Verified assumptions. Awaiting D1–D6 and Phase 0.
 - 2026-09-16 — the owner on mock v1: *"we are looking at a 'mode' here like 'clip' mode
