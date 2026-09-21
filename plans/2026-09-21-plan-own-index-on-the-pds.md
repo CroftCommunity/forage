@@ -1,7 +1,7 @@
 # Plan: your discovery index on the PDS — the file, or a link to it, follows you
 
 date: 2026-09-21
-**Status:** DRAFT — Pass 1 written 2026-09-21 for the owner's review; **no code until reviewed**.
+**Status:** REVIEWED 2026-09-21 (owner, Pass 2: O1–O3 decided, D4 and D7 confirmed) — ready for Phase 0 on the owner's go; **no code before it**.
 The evidence below was probed against the real lexicons, the PDS source, and a live write
 to the standing test account (undone), so the decisions rest on measurements rather than
 on readings.
@@ -177,7 +177,7 @@ the thing that is true — except `off`, which is a device's "no index here" (D4
 
 Current: a mode dial (Forage's · Add mine · Replace with mine · Off), a paste box, a file
 picker, *Forget my file*, and a status line. Proposed adds ONE more choice under it —
-**where it is kept** — with three plain-noun options (copy is O1):
+**where it is kept** — with three plain-noun options (the noun is *your atmo provider account*, owner 2026-09-21, O1):
 
 ```
 Discovery index
@@ -186,14 +186,14 @@ Discovery index
   Which index    [ Add mine — my file laid over Forage's … ▾ ]
   Where it is kept
     (•) on this browser only
-    ( ) on your account — the file           ← uploads what is stored here
-    ( ) on your account — a link  [https://…            ] [Fetch]
+    ( ) on your atmo provider account — the file     ← uploads what is stored here
+    ( ) on your atmo provider account — a link  [https://…            ] [Fetch]
   [Store pasted file] [Choose file] [Forget my file] [Refresh]
 ```
 
 *Refresh* re-fetches a link (D5) or re-reads the record; the status line always says which
 place is in use and how old the copy is. A guest sees the first option only and the
-sentence *sign in to keep it on your account*. Every control keeps the 44px floor at 390
+sentence *sign in to keep it on your atmo provider account*. Every control keeps the 44px floor at 390
 (the dial already learned this the hard way — `mobile-fit.workflow.mjs`).
 
 ### G. Where it lands, what it changes
@@ -243,10 +243,10 @@ ecosystem plausibly shares yet (it describes *Forage's* index format, `"v": 1`);
 | **D1** | The whole-file record's carrier | (a) the index JSON inline in the record; (b) a **blob** the record references | **(b) — and (a) is not available.** The reference PDS caps a `putRecord` body at 150 KiB (E2) and the protocol's own guide caps a record at 1 MiB with "use a blob instead" (E1); the shipped index is 1,074,115 bytes. Measured end to end in the probe (E5): upload, put, public read-back, byte-equal |
 | **D2** | One type or two | (a) one `fyi.forage.feedindex` with `kind: file \| url`; (b) `…feedindex.file` and `…feedindex.url` | **(a).** One choice per reader is one record at one key; two types would need a rule about what two records at once mean. `kind` + the field it needs is the `mix` row's shape, which the mirror validator already speaks |
 | **D3** | The record key | (a) `literal:self`; (b) `tid` | **(a).** The reader has one discovery index; `self` makes "is there one?" a single `getRecord` and "switch file → link" a put at the same key, never an orphan |
-| **D4** | Does `mode` (add / replace) travel? Does `off`? | (a) both in the record; (b) `mode` in the record, `off` device-local; (c) neither | **(b).** *Add over Forage's* vs *instead of it* is part of the choice that should follow Alice to her phone. *Off* is "no index on this device" — a reading preference, E160's batch — and a record whose meaning is "load nothing" is a record for nothing |
+| **D4** | Does `mode` (add / replace) travel? Does `off`? | (a) both in the record; (b) `mode` in the record, `off` device-local; (c) neither | **(b) — CONFIRMED by the owner 2026-09-21 (O2).** *Add over Forage's* vs *instead of it* is part of the choice that should follow Alice to her phone. *Off* is "no index on this device" — a reading preference, E160's batch — and a record whose meaning is "load nothing" is a record for nothing |
 | **D5** | When a link is fetched | (a) on demand — first time on a device, and when the reader presses *Refresh*; (b) every visit; (c) on a timer | **(a).** The feed-index plan already decided *"polling a forager's index URL — they refresh it; we never fetch on our own."* The status line shows the copy's age so "on demand" is visible, not hidden |
 | **D6** | Which half wins when a device holds a file AND the account holds a record | (a) the record; (b) the device; (c) merge | **(a), and make it impossible to ask twice:** publishing MOVES the file out of the device half (the mix pattern), so the two are disjoint by construction; the device keeps only the cache of the account's copy |
-| **D7** | The size ceiling — one number for the blob's `maxSize`, the link's byte counter, and the paste box | (a) 2,000,000 bytes; (b) 5,000,000 (just under the reference PDS's 5 MiB upload default, E3); (c) none | **(a), pending the Phase 0 measurement.** The copy lands in `localStorage`, whose per-origin quota is on the order of 5 MB and counts UTF-16 units; the shipped index is 1.07 MB. A 5 MB file could be *accepted, uploaded, and then silently not stored* on the device (today `write()` swallows the quota error — Phase 1 fixes that either way). 2 MB gives the harvest ~1.9× headroom and a test pins the shipped index under half of it, so growth is watched rather than discovered. Raising it later is a schema edit; lowering it after records exist is a migration |
+| **D7** | The size ceiling — one number for the blob's `maxSize`, the link's byte counter, and the paste box | (a) 2,000,000 bytes; (b) 5,000,000 (just under the reference PDS's 5 MiB upload default, E3); (c) none | **(a) — DECIDED by the owner 2026-09-21 (O3: *"2MB should be fine"*); the Phase 0 measurement now only confirms the browser holds it.** The copy lands in `localStorage`, whose per-origin quota is on the order of 5 MB and counts UTF-16 units; the shipped index is 1.07 MB. A 5 MB file could be *accepted, uploaded, and then silently not stored* on the device (today `write()` swallows the quota error — Phase 1 fixes that either way). 2 MB gives the harvest ~1.9× headroom and a test pins the shipped index under half of it, so growth is watched rather than discovered. Raising it later is a schema edit; lowering it after records exist is a migration |
 | **D8** | The type's name | (a) `fyi.forage.feedindex`; (b) `…discoveryindex`; (c) `…index` | **(a).** Matches the storage key `forage.feedindex`, `docs/FEED-INDEX.md`, `data/feed-index.json`, and the harvest — one word for one thing across the code and the docs |
 | **D9** | Does this plan publish `fyi.forage.*`? | (a) no — mint the type, register it as *unpublished (stage)*; (b) yes | **(a)** — the mixes plan's D3, unchanged: publication is one act for the namespace, owed by the register's TODO (the account whose handle is `forage.fyi` + two TXT records), and coupling it to one feature was declined once already |
 | **D10** | A guest, or a reader without a record | — | **As today.** The device half is the default by the owner's decision; nothing here changes a guest's page except one sentence under the new choice |
@@ -479,19 +479,33 @@ a record — not a preference — the right carrier, and only opening `putPrefer
 
 ## Open questions — owner
 
-- **O1 — the three places' words.** Built as *on this browser only* / *on your account —
-  the file* / *on your account — a link*. The mixes page says *Save to PDS* / *Remove from
-  PDS*; DESIGN.md's noun for the sign-in surface is *atmo provider*. Which noun here —
-  *your account*, *PDS*, or *your atmo provider*? Changeable on the mock.
-- **O2 — D4:** should *Off* follow the reader after all? Recommended no (a device
-  preference; E160's batch). Say so if you want it in the record.
-- **O3 — D7:** the ceiling is recommended at 2,000,000 bytes pending the Phase 0
-  measurement. If you would rather the store move (IndexedDB) and the ceiling sit near the
-  PDS's 5 MiB, that is a bigger plan; say which.
+- ~~**O1 — the three places' words.**~~ **DECIDED 2026-09-21** (owner: *"your account = atmo
+  provider account"*): *on this browser only* / *on your atmo provider account — the file* /
+  *on your atmo provider account — a link*. The mixes page's *Save to PDS* is a drift from the
+  same noun, noted for its own thread.
+- ~~**O2 — D4:** should *Off* follow the reader after all?~~ **DECIDED 2026-09-21** — no.
+  Explained to the owner as: with a record, every browser she signs in on uses her index
+  automatically; *Off* flipped on the laptop stays on the laptop, the phone still shows her
+  index. Owner: *"great"*.
+- ~~**O3 — D7:** the ceiling.~~ **DECIDED 2026-09-21** — 2,000,000 bytes (owner: *"2MB should
+  be fine"*). The store stays in `localStorage`; the Phase 0 measurement confirms it holds
+  the ceiling rather than choosing the number.
 - **O4 — later:** *use @curator's index* (another reader's record, one `getRecord` away).
   Named in Not doing; a yes here becomes its own plan after this one lands.
 
 ## Review Log
+
+### Pass 2 — the owner's review, in conversation (2026-09-21)
+
+The owner's first reading took the plan for *"the base index of feeds in a PDS record"* —
+the clarification that landed: Forage's index stays a CI-built file served from the domain,
+unchanged; the record is the reader's own note (*my file*, or *a link*) so their bring-your-
+own choice follows them between browsers instead of living in one. Then the three open
+questions: O1 the noun is *your atmo provider account*; O3 the ceiling is 2 MB; O2 was the
+one that needed the distinction drawn — "does the same reader on another browser
+automatically use their own index?" Yes, always, with a record; O2 asked only whether the
+*Off* dial position also travels, and it does not. D4 and D7 are confirmed; the schema is
+unchanged by the review. Phase 0 starts on the owner's go.
 
 ### Pass 1 — the plan (2026-09-21)
 
