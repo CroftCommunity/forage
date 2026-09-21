@@ -781,7 +781,7 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
   const SEED = {
     'own-index-browser': [DEVICE, OWN_INDEX_REPO()],
     'own-index-file': [OWN_INDEX_REPO({ record: { $type: 'fyi.forage.feedindex', kind: 'file', file: BLOB, mode: 'add', name: LONG_NAME, ...STAMP }, blobs: { bafkreimock: JSON.stringify(OWN_INDEX) } })],
-    'own-index-link': [OWN_INDEX_REPO({ record: { $type: 'fyi.forage.feedindex', kind: 'url', url: LONG_LINK, mode: 'replace', ...STAMP } })],
+    'own-index-link': [OWN_INDEX_REPO({ record: { $type: 'fyi.forage.feedindex', kind: 'url', url: LONG_LINK, mode: 'replace', ...STAMP }, links: { [LONG_LINK]: OWN_INDEX } })],
     'own-index-fallback': [OWN_INDEX_REPO({ record: { $type: 'fyi.forage.feedindex', kind: 'file', file: BLOB, mode: 'add', name: LONG_NAME, ...STAMP } }), "try { localStorage.setItem('__blobfail', '1'); } catch {}"],
   };
   const KEPT = { 'own-index-browser': 'browser', 'own-index-file': 'account-file', 'own-index-link': 'account-link', 'own-index-fallback': 'account-file' };

@@ -3171,8 +3171,11 @@ function discoveryIndexSection() {
       missing: 'Forage\'s index did not load; browse shows the live list alone.',
       invalid: `Forage's index was refused (${s.errors[0] || 'malformed'}); browse shows the live list alone.`,
       loading: 'Loading…' }[s.status] || '';
+    const fetched = acct?.fetchedAt ? `, fetched ${day(acct.fetchedAt)}` : '';
     const yours = rec
-      ? `Yours: ${rec.name || rec.url} — kept on your atmo provider account as ${rec.kind === 'file' ? 'the file' : `a link (${rec.url})`}${acct.fetchedAt ? `, fetched ${day(acct.fetchedAt)}` : ''}.`
+      ? (rec.kind === 'file'
+        ? `Yours: ${rec.name || 'your file'} — kept on your atmo provider account as the file${fetched}.`
+        : `Yours: ${rec.name ? `${rec.name} — ` : ''}the link ${rec.url}, kept on your atmo provider account${fetched}.`)
       : own ? `Your file: ${own.name || 'unnamed'}, ${own.index.feeds.length} feeds, ${own.index.jumpstarts.length} jumpstarts — on this browser only.`
         : 'No file of yours is stored.';
     const fallback = eff.fallback ? ` ${eff.fallback.charAt(0).toUpperCase()}${eff.fallback.slice(1)}.` : '';
