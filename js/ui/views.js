@@ -17,6 +17,7 @@ import * as cardSize from '../card-size.js';
 import * as pictures from '../pictures.js';
 import * as gifAutoplay from '../gif-autoplay.js';
 import * as clipAutoplay from '../clip-autoplay.js';
+import * as viewMode from '../view-mode.js';
 import * as rail from '../rail.js';
 import * as providerMark from '../provider-mark.js';
 import { sortBar } from './sortbar.js';
@@ -763,6 +764,12 @@ export function settingsView() {
     el('div', { style: 'margin:-4px 0 8px 0' }, ...panelRows),
     el('div', { class: 'field-row' }, el('label', { for: 'pref-gifautoplay' }, 'Play GIFs automatically'),
       el('span', {}, gifBox, gifWhy)),
+    // plan 2026-09-14-plan-clips (owner, 2026-09-21): the DEFAULT view — what a
+    // board opens in — Forum unless chosen. The top bar's dropdown is this
+    // visit's choice and does not change this.
+    el('div', { class: 'field-row' }, el('label', { for: 'pref-viewdefault' }, 'Default view'),
+      el('span', {}, viewMode.viewSelect(el, { which: 'default', onPicked: (id) => viewMode.setDefault(id) }),
+        el('span', { class: 'xs muted', style: 'margin-left:8px' }, 'how a board opens — Forum is the rows; Clip and Gram are one post per screen. The View dropdown in the top bar changes it for this visit only'))),
     el('div', { class: 'field-row' }, el('label', { for: 'pref-clipautoplay' }, 'Play clips automatically in Clip mode'),
       el('span', {}, clipBox, clipWhy)),
     el('div', { class: 'field-row' }, el('label', { for: 'pref-providermark' }, 'Provider mark'),

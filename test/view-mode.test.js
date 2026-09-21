@@ -8,17 +8,21 @@
 // already means which POPULATION the app is (D8).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MODES, MODE_IDS, DEFAULT_MODE, KEY, active, set, onChange, ofKind, viewSelect } from '../js/view-mode.js';
+import { MODES, MODE_IDS, DEFAULT_MODE, KEY, DEFAULT_KEY, active, set, defaultMode, setDefault, onChange, ofKind, viewSelect } from '../js/view-mode.js';
 
-function withStorage(seed = {}, fn) {
-  const store = { ...seed };
-  const saved = globalThis.localStorage;
-  globalThis.localStorage = {
-    getItem: (k) => (k in store ? store[k] : null),
-    setItem: (k, v) => { store[k] = String(v); },
-  };
-  try { return fn(store); } finally {
+// Two stores (owner, 2026-09-21: "add a 'default' setting for it in the user
+// settings and have it be 'forum' by default"): the DEFAULT is a device
+// preference (localStorage, forage.viewdefault); the LIVE choice on the top
+// bar's dropdown lasts the visit (sessionStorage, forage.view). `seed` is the
+// local store, `session` the session store.
+function withStorage(seed = {}, fn, session = {}) {
+  const store = { ...seed }; const sess = { ...session };
+  const saved = globalThis.localStorage; const savedS = globalThis.sessionStorage;
+  globalThis.localStorage = { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } };
+  globalThis.sessionStorage = { getItem: (k) => (k in sess ? sess[k] : null), setItem: (k, v) => { sess[k] = String(v); }, removeItem: (k) => { delete sess[k]; } };
+  try { return fn(store, sess); } finally {
     if (saved === undefined) delete globalThis.localStorage; else globalThis.localStorage = saved;
+    if (savedS === undefined) delete globalThis.sessionStorage; else globalThis.sessionStorage = savedS;
   }
 }
 
@@ -26,38 +30,50 @@ const fakeEl = (tag, attrs = {}, ...kids) => ({ tag, attrs, kids: kids.flat().fi
 const walk = (n, out = []) => { if (n && n.tag) { out.push(n); (n.kids || []).forEach((k) => walk(k, out)); } return out; };
 const inputs = (pill) => walk(pill).filter((n) => n.tag === 'input');
 
-test('three modes, forum first and the default; the key is forage.view', () => {
+test('three modes, forum first and the default; the live key is forage.view, the default key forage.viewdefault', () => {
   assert.deepEqual(MODE_IDS, ['forum', 'clip', 'gram']);
   assert.equal(DEFAULT_MODE, 'forum');
   assert.equal(KEY, 'forage.view');
+  assert.equal(DEFAULT_KEY, 'forage.viewdefault');
   for (const m of MODES) { assert.ok(m.label && m.blurb, `${m.id} has a label and a blurb`); }
 });
 
-test('a stored mode is read back; garbage and a missing key read as forum', () => {
-  withStorage({}, () => assert.equal(active(), 'forum'));
-  withStorage({ 'forage.view': 'gram' }, () => assert.equal(active(), 'gram'));
-  withStorage({ 'forage.view': 'reels' }, () => assert.equal(active(), 'forum'));
+test('nothing chosen anywhere reads as forum; the default is a device preference; the live choice wins for the visit', () => {
+  withStorage({}, () => { assert.equal(defaultMode(), 'forum'); assert.equal(active(), 'forum'); });
+  withStorage({ 'forage.viewdefault': 'gram' }, () => { assert.equal(defaultMode(), 'gram'); assert.equal(active(), 'gram', 'a fresh visit opens in the default'); });
+  withStorage({ 'forage.viewdefault': 'gram' }, () => assert.equal(active(), 'clip', 'the visit\'s own choice wins'), { 'forage.view': 'clip' });
+  withStorage({ 'forage.viewdefault': 'reels' }, () => assert.equal(active(), 'forum', 'garbage reads as forum'), { 'forage.view': 'shorts' });
 });
 
-test('set writes the key and notifies; an unknown mode refuses by name', () => {
-  withStorage({}, (store) => {
+test('set writes the LIVE key (this visit) and notifies; setDefault writes the device preference; an unknown mode refuses by name', () => {
+  withStorage({}, (store, sess) => {
     const seen = [];
     const off = onChange((m) => seen.push(m));
     set('clip');
-    assert.equal(store['forage.view'], 'clip');
+    assert.equal(sess['forage.view'], 'clip');
+    assert.equal(store['forage.view'], undefined, 'the live choice does not touch the device store');
     assert.deepEqual(seen, ['clip']);
+    setDefault('gram');
+    assert.equal(store['forage.viewdefault'], 'gram');
+    assert.equal(active(), 'clip', 'changing the default does not change this visit');
     off();
     assert.throws(() => set('shorts'), /shorts/);
+    assert.throws(() => setDefault('shorts'), /shorts/);
   });
 });
 
 test('with no storage at all (private mode throws) reads fall to forum and writes do not throw', () => {
-  const saved = globalThis.localStorage;
-  globalThis.localStorage = { getItem() { throw new Error('denied'); }, setItem() { throw new Error('denied'); } };
+  const saved = globalThis.localStorage; const savedS = globalThis.sessionStorage;
+  const denied = { getItem() { throw new Error('denied'); }, setItem() { throw new Error('denied'); } };
+  globalThis.localStorage = denied; globalThis.sessionStorage = denied;
   try {
     assert.equal(active(), 'forum');
     assert.doesNotThrow(() => set('gram'));
-  } finally { if (saved === undefined) delete globalThis.localStorage; else globalThis.localStorage = saved; }
+    assert.doesNotThrow(() => setDefault('gram'));
+  } finally {
+    if (saved === undefined) delete globalThis.localStorage; else globalThis.localStorage = saved;
+    if (savedS === undefined) delete globalThis.sessionStorage; else globalThis.sessionStorage = savedS;
+  }
 });
 
 // The kind filter is over the SHAPED post's media, which the lens already
@@ -83,7 +99,7 @@ test('ofKind: forum is every post; clip is the videos; gram is the picture posts
 const options = (sel) => walk(sel).filter((n) => n.tag === 'option');
 
 test('the control is one select with an option per mode, the active one selected', () => {
-  withStorage({ 'forage.view': 'clip' }, () => {
+  withStorage({}, () => {
     const sel = viewSelect(fakeEl, { onPicked() {} });
     assert.equal(sel.tag, 'select');
     assert.equal(sel.attrs['data-view-select'], '1');
@@ -92,6 +108,16 @@ test('the control is one select with an option per mode, the active one selected
     assert.deepEqual(options(sel).map((o) => o.attrs.value), ['forum', 'clip', 'gram']);
     assert.deepEqual(options(sel).map((o) => o.kids.join('')), ['Forum', 'Clip', 'Gram']);
     assert.deepEqual(options(sel).filter((o) => o.attrs.selected).map((o) => o.attrs.value), ['clip']);
+  }, { 'forage.view': 'clip' });
+});
+
+test('the settings control picks the DEFAULT, forum unless chosen, and writes the device preference', () => {
+  withStorage({}, (store) => {
+    const sel = viewSelect(fakeEl, { which: 'default', onPicked: (id) => setDefault(id) });
+    assert.equal(sel.attrs['data-view-default'], '1');
+    assert.deepEqual(options(sel).filter((o) => o.attrs.selected).map((o) => o.attrs.value), ['forum']);
+    sel.attrs.onchange({ target: { value: 'clip' } });
+    assert.equal(store['forage.viewdefault'], 'clip');
   });
 });
 
@@ -102,5 +128,6 @@ test('choosing reports the mode and writes nothing itself (the caller decides)',
     sel.attrs.onchange({ target: { value: 'gram' } });
     assert.deepEqual(picked, ['gram']);
     assert.equal(store['forage.view'], undefined);
+    assert.equal(store['forage.viewdefault'], undefined);
   });
 });

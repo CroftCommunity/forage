@@ -50,7 +50,9 @@ export const RESPONSES = { ...BOARD_RESPONSES, 'getFeed?': FEED, 'getFeed': FEED
 
 // A page arriving already in a mode — the reader's stored choice, the way
 // the skin and the ring stop arrive.
-export const inMode = (mode) => `try { localStorage.setItem('forage.view', '${mode}'); } catch {}`;
+export const inMode = (mode) => `try { sessionStorage.setItem('forage.view', '${mode}'); } catch {}`;
+// the DEFAULT view — the account-page setting (owner, 2026-09-21), a device preference
+export const defaultMode = (mode) => `try { localStorage.setItem('forage.viewdefault', '${mode}'); } catch {}`;
 
 // ---- the people-scope population (D1 (a)): a Follows reel is the scope's
 // people, asked a wave at a time. Ten follows (so one wave of eight leaves two

@@ -18,10 +18,12 @@
 //      member with the mode's filter, a wave at a time, the count line naming
 //      the source; reaching the last frame asks for the next wave
 //   9. gram shows the alt text a person wrote as the caption
+//  10. a Default view setting on the account page, forum unless chosen; a fresh
+//      visit opens in the default and the dropdown's choice lasts the visit
 import assert from 'node:assert/strict';
 import { scenario } from './harness/scenario.mjs';
 import { FAKE_SIGNED_IN } from './harness/mock-thread.mjs';
-import { RESPONSES, PEOPLE_RESPONSES, BOARD_PATH, CLIP_URIS, GRAM_URIS, FOL_WAVE_ONE, FOL_WAVE_TWO, LABELED, GRAPH, inMode, inScope, autoplay, HLS_DOUBLE } from './harness/mock-reel.mjs';
+import { RESPONSES, PEOPLE_RESPONSES, BOARD_PATH, CLIP_URIS, GRAM_URIS, FOL_WAVE_ONE, FOL_WAVE_TWO, LABELED, GRAPH, inMode, defaultMode, inScope, autoplay, HLS_DOUBLE } from './harness/mock-reel.mjs';
 
 const frames = (page) => page.evaluate(() => [...document.querySelectorAll('.reel-item')].map((s) => s.dataset.post));
 const active = (page) => page.evaluate(() => [...document.querySelectorAll('.reel-item')].map((s) => s.dataset.active));
@@ -43,7 +45,8 @@ export async function run() {
   await sel.selectOption('clip');
   await guest.page.waitForSelector('.reel[data-reel="clip"]', { timeout: 10000 });
   assert.deepEqual(await frames(guest.page), CLIP_URIS, 'guest clip reel: the board’s clips, in the board’s order');
-  assert.equal(await guest.page.evaluate(() => localStorage.getItem('forage.view')), 'clip', 'the choice is written');
+  assert.equal(await guest.page.evaluate(() => sessionStorage.getItem('forage.view')), 'clip', 'the choice is written — for this visit');
+  assert.equal(await guest.page.evaluate(() => localStorage.getItem('forage.viewdefault')), null, 'and does not become the default');
   await guest.close();
 
   // ---- 2–5. signed in, arriving in clip mode -------------------------------
@@ -83,7 +86,7 @@ export async function run() {
   await s.page.locator('.masthead select[data-view-select]').selectOption('forum');
   await s.page.waitForSelector('.postrow', { timeout: 10000 });
   assert.equal(await s.page.locator('.reel').count(), 0, 'Forum: the rows are back');
-  assert.equal(await s.page.evaluate(() => localStorage.getItem('forage.view')), 'forum');
+  assert.equal(await s.page.evaluate(() => sessionStorage.getItem('forage.view')), 'forum');
   await s.close();
 
   // ---- 2. gram mode: the picture posts, the carousel intact -----------------
@@ -154,4 +157,24 @@ export async function run() {
   assert.deepEqual(wave2.sort(), [GRAPH.follows[7], GRAPH.follows[8], GRAPH.follows[9]].sort(), 'the next wave asked exactly the three unasked follows (nobody had a cursor to continue)');
   assert.ok((await a.page.evaluate(() => localStorage.getItem('forage.media-posters'))).includes(GRAPH.follows[0]), 'who answered with a frame is remembered on this device');
   await a.close();
+
+  // ---- 10. the default (owner, 2026-09-21): a setting on the account page ----
+  const d = await scenario('first-visit', { mode: 'bluesky', initScripts: [FAKE_SIGNED_IN, defaultMode('gram')], responses: RESPONSES });
+  await d.page.setViewportSize({ width: 390, height: 844 });
+  await d.page.goto(`${d.origin}${BOARD_PATH}`);
+  await d.page.waitForSelector('.reel[data-reel="gram"]', { timeout: 15000 });
+  assert.equal(await d.page.locator('.masthead select[data-view-select]').evaluate((x) => x.value), 'gram', 'a fresh visit opens in the default, and the dropdown says so');
+  await d.page.goto(`${d.origin}/me`);
+  const pref = d.page.locator('select[data-view-default]');
+  await pref.waitFor({ timeout: 15000 });
+  assert.equal(await pref.evaluate((x) => x.value), 'gram', 'the account page shows the default');
+  await pref.selectOption('forum');
+  assert.equal(await d.page.evaluate(() => localStorage.getItem('forage.viewdefault')), 'forum', 'choosing writes the device preference');
+  await d.close();
+  // and with nothing chosen anywhere, forum
+  const f = await scenario('first-visit', { mode: 'bluesky', initScripts: [FAKE_SIGNED_IN], responses: RESPONSES });
+  await f.page.goto(`${f.origin}/me`);
+  await f.page.locator('select[data-view-default]').waitFor({ timeout: 15000 });
+  assert.equal(await f.page.locator('select[data-view-default]').evaluate((x) => x.value), 'forum', 'forum by default');
+  await f.close();
 }

@@ -52,7 +52,8 @@ default.
 | `forage.ringexempt` | localStorage | ring scope: boards exempt from the scope | `undecided` | ring scope is a way of reading the account's graph; whether it follows the reader is the same question as E160, decided with it |
 | `forage.ringopenthreads` | localStorage | ring scope: open threads regardless of scope | `undecided` | as `forage.ringexempt` |
 | `forage.ringscope` | localStorage | the selected ring scope | `undecided` | as `forage.ringexempt` |
-| `forage.view` | localStorage | how a board is shown — forum (rows), clip, or gram | `undecided` | a reading preference like the ring stop; E160 (the preferences-record batch); plan 2026-09-14-plan-clips |
+| `forage.view` | sessionStorage | how a board is shown THIS VISIT — forum (rows), clip, or gram; the top bar's dropdown | `device` | lasts the tab, never the account: the default below is the preference; plan 2026-09-14-plan-clips |
+| `forage.viewdefault` | localStorage | the view a board opens in — forum unless chosen (Preferences › Default view) | `undecided` | a reading preference like the ring stop; E160 (the preferences-record batch); plan 2026-09-14-plan-clips, owner 2026-09-21 |
 | `forage.clipautoplay` | localStorage | whether a clip starts on its own in Clip mode (muted, in view) | `undecided` | a reading preference like `forage.gifautoplay`; E160; plan 2026-09-14-plan-clips D3 |
 | `forage.media-posters` | localStorage | who answered a reel with a frame before, per mode — a hint for which members to ask first | `device` | a cache of this device's own reading, never the account's; plan 2026-09-14-plan-clips § B |
 | `forage.ringstops` | localStorage | the ring pill's stops | `undecided` | as `forage.ringexempt` |

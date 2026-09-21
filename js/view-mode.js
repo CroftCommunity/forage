@@ -17,10 +17,17 @@
 // sandbox) and `MODES` in js/config/routing.js means the substrate tables.
 // Three things named mode should not become four (plan D8).
 //
-// Device-local, on js/ring-scope.js's tenet: one module read by everything, a
-// read that repairs (garbage reads as forum) and a write that refuses by name.
+// TWO STORES (owner, 2026-09-21: "add a 'default' setting for it in the user
+// settings and have it be 'forum' by default"). The DEFAULT is a device
+// preference on the account page — forum unless the reader chooses — and is
+// what a fresh visit opens in. The LIVE choice is the top bar's dropdown, and
+// it lasts the visit (sessionStorage): a reader who switched to Clip for an
+// evening gets Forum back tomorrow unless they made Clip their default. Both
+// on js/ring-scope.js's tenet: a read that repairs (garbage reads as forum), a
+// write that refuses by name.
 
-export const KEY = 'forage.view';
+export const KEY = 'forage.view';            // this visit's choice (sessionStorage)
+export const DEFAULT_KEY = 'forage.viewdefault'; // the device's default (localStorage)
 
 export const MODES = Object.freeze([
   { id: 'forum', label: 'Forum', blurb: 'posts as rows' },
@@ -30,20 +37,36 @@ export const MODES = Object.freeze([
 export const MODE_IDS = Object.freeze(MODES.map((m) => m.id));
 export const DEFAULT_MODE = 'forum';
 
-const read = () => { try { return localStorage.getItem(KEY); } catch { return null; } };
-const write = (v) => { try { localStorage.setItem(KEY, String(v)); } catch { /* private mode: forum stands */ } };
+const readLive = () => { try { return sessionStorage.getItem(KEY); } catch { return null; } };
+const writeLive = (v) => { try { sessionStorage.setItem(KEY, String(v)); } catch { /* private mode: the default stands */ } };
+const readDefault = () => { try { return localStorage.getItem(DEFAULT_KEY); } catch { return null; } };
+const writeDefault = (v) => { try { localStorage.setItem(DEFAULT_KEY, String(v)); } catch { /* private mode: forum stands */ } };
 
 export const modeFor = (id) => MODES.find((m) => m.id === id) || null;
+const check = (id) => { if (!MODE_IDS.includes(id)) throw new Error(`view: ${id} is not a mode (modes: ${MODE_IDS.join(', ')})`); };
 
-export function active() {
-  const v = read();
+export function defaultMode() {
+  const v = readDefault();
   return MODE_IDS.includes(v) ? v : DEFAULT_MODE;
 }
 
+export function active() {
+  const v = readLive();
+  return MODE_IDS.includes(v) ? v : defaultMode();
+}
+
 export function set(id) {
-  if (!MODE_IDS.includes(id)) throw new Error(`view: ${id} is not a mode (modes: ${MODE_IDS.join(', ')})`);
-  write(id);
+  check(id);
+  writeLive(id);
   for (const fn of listeners) fn(id);
+}
+
+// The account-page setting. It changes what the NEXT visit opens in, not this
+// one: a reader on a reel who sets their default to Forum is not thrown out of
+// the reel they are watching.
+export function setDefault(id) {
+  check(id);
+  writeDefault(id);
 }
 
 const listeners = new Set();
@@ -73,10 +96,15 @@ export function ofKind(posts, mode) {
 // so; a view is one of three kinds, and a select says that. It wears the sort
 // bar's dressing (.pillsel) and lives in the top bar, on every board, so the
 // way back to the rows is always on screen. Injected el() as everywhere.
-export function viewSelect(el, { onPicked, ariaLabel = 'How to show the board \u2014 rows, clips, or pictures' } = {}) {
-  const current = active();
+//
+// `which: 'default'` is the account page's copy of the same control, showing
+// and picking the DEFAULT rather than this visit's choice.
+export function viewSelect(el, { onPicked, which = 'live', ariaLabel = null } = {}) {
+  const isDefault = which === 'default';
+  const current = isDefault ? defaultMode() : active();
   return el('select', {
-    class: 'pillsel viewsel', 'data-view-select': '1', 'aria-label': ariaLabel,
+    class: 'pillsel viewsel', ...(isDefault ? { 'data-view-default': '1', id: 'pref-viewdefault' } : { 'data-view-select': '1' }),
+    'aria-label': ariaLabel || (isDefault ? 'Default view \u2014 how a board opens' : 'How to show the board \u2014 rows, clips, or pictures'),
     onchange: (e) => onPicked(e.target.value),
   }, ...MODES.map((m) => el('option', { value: m.id, selected: m.id === current || false, title: m.blurb }, m.label)));
 }
