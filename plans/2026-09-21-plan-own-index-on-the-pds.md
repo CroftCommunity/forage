@@ -510,6 +510,17 @@ not enforce `accept`/`maxSize` (the W17 pattern: assert the non-enforcement so t
 cannot expire). The mirror is deliberately stricter there because nobody else checks. 41
 unit tests in the three files, the gate 3/3, the whole suite 994/994. Measurement 1 is in
 D7 above: 5 MB fits in both engines, 6 MB is refused, so the 2 MB ceiling has room.
+**Mutation round** (stryker, `js/lexicon.js` against the two lexicon test files; committed
+first): 78.13% → 82.22% after the blob refusals were made to assert their WORDS (every
+message in the new branch had a surviving mutant until then — "refused with words" is a
+claim a test has to make) and `accept` got three more cases (an exact type is not a prefix;
+`image/*` globs on the slash, not the first letter; any listed type will do, and the
+refusal lists them all). Survivors left in the new code, triaged: `typeof size !==
+'number'` → equivalent (`Number.isInteger` is false for every non-number); `maxSize !==
+undefined` → equivalent (`n > undefined` is always false); the `default:` branch →
+unreachable by design while the ENFORCED test holds. The other 57 survivors are on lines
+this plan did not touch (format regexes, message strings) — pre-existing, out of scope,
+noted.
 
 ### Pass 2 — the owner's review, in conversation (2026-09-21)
 
