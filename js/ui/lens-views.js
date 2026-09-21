@@ -3263,12 +3263,23 @@ function discoveryIndexSection() {
       await settle();
     });
   }
-  const takeText = (text, name) => {
+  // A pasted or chosen file lands where the index is KEPT: on this browser, as
+  // before; on the account, it replaces the file there (a link becomes the
+  // file) — the record wins over a device file (D6), so a paste that only
+  // touched the device would be a silent nothing (caught on the first mock
+  // frames, 2026-09-21).
+  const takeText = async (text, name) => {
     const r = indexPrefs.parseOwnText(text);
     if (!r.ok) { errBox.textContent = `Not stored — ${r.errors.slice(0, 6).join('\n')}`; return; }
     try { indexPrefs.setOwn({ index: r.index, name }); } catch (e) { errBox.textContent = e.message; return; }
     errBox.textContent = '';
-    toast(`Stored ${name || 'your index'}: ${r.index.feeds.length} feeds, ${r.index.jumpstarts.length} jumpstarts. Added over Forage's.`, 'ok');
+    if (rec && did) {
+      busy(true);
+      try { await indexPds.publishFile(lens, did); } catch (e) { errBox.textContent = e.message; indexPrefs.clearOwn(); busy(false); return; }
+      toast(`Stored ${name || 'your index'}: ${r.index.feeds.length} feeds, ${r.index.jumpstarts.length} jumpstarts — kept on your atmo provider account as the file.`, 'ok');
+    } else {
+      toast(`Stored ${name || 'your index'}: ${r.index.feeds.length} feeds, ${r.index.jumpstarts.length} jumpstarts. Added over Forage's.`, 'ok');
+    }
     settle();
   };
   const paste = el('textarea', { rows: 3, placeholder: 'Paste an index file here (JSON, "v": 1)…', 'data-feedindex-paste': '1',

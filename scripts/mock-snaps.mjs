@@ -794,6 +794,8 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
       await ox.page.waitForSelector('[data-advanced]', { timeout: 15000 });
       await ox.page.evaluate(() => { document.querySelector('[data-advanced]').open = true; });
       await ox.page.waitForSelector('[data-index-status]', { timeout: 15000 });
+      // the store has loaded — a frame reading "Loading…" is not a state a reader sees for long
+      await ox.page.waitForFunction(() => document.querySelector('[data-index-status]')?.dataset.indexStatus !== 'loading', null, { timeout: 15000 });
       // the branch: wait for the account half to land (the record read, the file fetched or refused)
       if (AS !== 'current') await ox.page.waitForFunction((k) => document.querySelector('[data-index-status]')?.dataset.indexKept === k, KEPT[route], { timeout: 15000 });
     } catch (e) {
@@ -802,7 +804,13 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
       throw e;
     }
     await ox.page.evaluate(() => document.fonts?.ready);
-    await ox.page.evaluate(() => { (document.querySelector('[data-feedindex-section]') || document.querySelector('[data-index-status]'))?.scrollIntoView({ block: 'start' }); window.scrollBy(0, -72); });
+    await ox.page.evaluate(() => {
+      // the section on the branch; on main, the heading above the status line
+      const st = document.querySelector('[data-index-status]');
+      const head = [...(st?.parentElement?.children || [])].find((c) => c.tagName === 'H3' && /Discovery index/.test(c.textContent));
+      (document.querySelector('[data-feedindex-section]') || head || st)?.scrollIntoView({ block: 'start' });
+      window.scrollBy(0, -72);
+    });
     await ox.page.evaluate(() => document.activeElement?.blur());
     await ox.page.waitForTimeout(300);
     await shoot(ox.page, route, 'lens:own-index', name, vp);
