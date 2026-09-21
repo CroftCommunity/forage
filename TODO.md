@@ -353,6 +353,12 @@ Found by capturing the engine beside the drawing (`plans/mocks/post-and-thread.h
 
 ## Small
 
+- **`/me` fails axe at page level** (found 2026-09-21 by `e2e/own-index-pds.workflow.mjs`, which
+  scans its own section only because of this): `heading-order` (an `h3` directly under the Advanced
+  `<details>`), `landmark-one-main` (no `<main>` landmark on the page), `region` (the profile
+  header and the panels sit outside any landmark). Structural, not this plan's; the fix is the
+  page's, once.
+
 - Wrong-node `engine-strict` refusal recorded untested (only v22.23.2 + broken system
   node installed locally).
 - One trivial mutation-audit residual: the rising-dispatch fixture's input order

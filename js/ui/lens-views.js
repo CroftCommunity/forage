@@ -42,6 +42,7 @@ import { planFollows, planUnfollows, CHUNK_SIZE } from '../follow-all.js';
 import { sortItems } from '../engines/rank.js';
 import { createIndexStore } from '../feed-index-store.js';
 import * as indexPrefs from '../index-prefs.js';
+import * as indexPds from '../index-pds.js';
 import * as rail from '../rail.js';
 import { POST_LIMITS, IMAGE_LIMITS, graphemes, withTag } from '../compose.js';
 import { cardSizeDial } from '../card-size.js';
@@ -372,6 +373,13 @@ async function adoptSession(s) {
   } catch { /* keep the did */ }
   session = { did: s.did, handle, fetchHandler: (p, i) => manager.fetch(p, i) };
   lens = createLens({ session, hiddenUris, graphSource: betaGraphSource });
+  // Your discovery index on the account (plan 2026-09-21): read the record and
+  // the file it names, then the store starts from HER index with HER mode.
+  // Fire-and-forget for the same reason the ring warm-up is: a failure here
+  // must never break sign-in — it leaves the words on the settings page.
+  indexPds.refresh(lens, s.did)
+    .then(() => { if (session?.did === s.did) return indexStore.reload(indexPds.effective(s.did)).then(() => rerender()); })
+    .catch((e) => console.warn('forage: your discovery index on your account did not load', e));
   sessionAvatarUrl = null;
   lens.profile(s.did).then((p) => { if (session?.did === s.did) { sessionAvatarUrl = p.avatar; rerender(); } })
     .catch((e) => console.warn('forage: could not load your profile picture', e));
@@ -2379,6 +2387,7 @@ export function accountMenu() {
     try { await manager.signOut(); } catch (e) { toast(e.message, 'err'); }
     if (did) roster.forget(did);
     session = null; lens = createLens({ hiddenUris }); savedFeedUris.clear(); pinnedFeedUris.clear(); savedFeedsPromise = null; publishedMixesPromise = null;
+    indexStore.reload(indexPds.effective(null)).catch(() => {});
     toast('Signed out.', 'ok');
     rerender();
   });
@@ -3136,14 +3145,25 @@ export const lensJumpstartUnfollowView = (params) => jumpstartFollowPage(params,
 // row and why and leaves the previous good one standing. Device-local; the
 // PDS record that follows you is the named follow-up.
 function discoveryIndexSection() {
-  const cur = indexPrefs.current();
+  // Plan 2026-09-21 own-index-on-the-pds, Phase 4: the same section, with ONE
+  // more choice under the dial — where the file is kept. On this browser
+  // (the default), on your atmo provider account as the file (a blob in your
+  // repo), or as a link Forage fetches when you ask. The account half is
+  // js/index-pds.js; the words on the status line say which place is in use
+  // and how old the copy is, and a fetch that failed says so without touching
+  // the choice (§ E). A guest reads the first option only, in a sentence.
+  const did = session?.did || null;
+  const acct = did ? indexPds.cachedAccount(did) : null;
+  const rec = acct?.record || null;
   const own = indexPrefs.own();
+  const eff = indexPds.effective(did);
+  const kept = rec ? (rec.kind === 'file' ? 'account-file' : 'account-link') : 'browser';
   const st = indexStore.status();
-  const status = el('div', { class: 'xs muted', 'data-index-status': st.status, style: 'margin-bottom:6px' });
+  const status = el('div', { class: 'xs muted', 'data-index-status': st.status, 'data-index-kept': rec ? kept : (own ? 'browser' : 'none'), style: 'margin-bottom:6px' });
+  const day = (iso) => (iso ? String(iso).slice(0, 10) : '');
   const say = () => {
     const s = indexStore.status();
-    const shipped = s.generatedAt ? `Forage's index was built ${s.generatedAt.slice(0, 10)}` : 'Forage\'s index';
-    const mine = own ? `Your file: ${own.name || 'unnamed'}, ${own.index.feeds.length} feeds, ${own.index.jumpstarts.length} jumpstarts.` : 'No file of yours is stored.';
+    const shipped = s.generatedAt ? `Forage's index was built ${day(s.generatedAt)}` : 'Forage\'s index';
     const now = { forage: `${shipped} — ${s.counts.feeds} feeds, ${s.counts.jumpstarts} jumpstarts. In use.`,
       merged: `${shipped}; yours is laid over it (${s.counts.feeds} feeds in all).`,
       mine: `Yours alone is in use (${s.counts.feeds} feeds, ${s.counts.jumpstarts} jumpstarts).`,
@@ -3151,61 +3171,137 @@ function discoveryIndexSection() {
       missing: 'Forage\'s index did not load; browse shows the live list alone.',
       invalid: `Forage's index was refused (${s.errors[0] || 'malformed'}); browse shows the live list alone.`,
       loading: 'Loading…' }[s.status] || '';
-    status.textContent = `${now} ${mine}`;
+    const yours = rec
+      ? `Yours: ${rec.name || rec.url} — kept on your atmo provider account as ${rec.kind === 'file' ? 'the file' : `a link (${rec.url})`}${acct.fetchedAt ? `, fetched ${day(acct.fetchedAt)}` : ''}.`
+      : own ? `Your file: ${own.name || 'unnamed'}, ${own.index.feeds.length} feeds, ${own.index.jumpstarts.length} jumpstarts — on this browser only.`
+        : 'No file of yours is stored.';
+    const fallback = eff.fallback ? ` ${eff.fallback.charAt(0).toUpperCase()}${eff.fallback.slice(1)}.` : '';
+    status.textContent = `${now} ${yours}${fallback}`;
   };
   say();
-  const apply = async (mode) => {
-    indexPrefs.setMode(mode);
-    await indexStore.reload(indexPrefs.current());
-    say();
-  };
+  const errBox = el('div', { class: 'xs', 'data-feedindex-errors': '1', style: 'white-space:pre-wrap;color:var(--danger,#b00)' });
+  const settle = () => indexStore.reload(indexPds.effective(did)).then(() => rerenderNow());
   // One `.pillsel` dial, the same dressing as the thread dials above it: a
   // 44px control on a phone. (Radios were tried first; a closed <details>
   // does not hide a display:flex label, and Chrome kept them at 13px under
   // the tap floor — mobile-fit.workflow.mjs caught it.)
+  const modeValue = indexPrefs.mode() === 'off' ? 'off' : rec ? rec.mode : indexPrefs.mode();
   const MODES = [['forage', 'Forage\'s index — the file that ships with the app'],
     ['add', 'Add mine — my file laid over Forage\'s; mine wins where they name the same thing'],
     ['replace', 'Replace with mine — my file alone'],
     ['off', 'Off — no index; the live popular list only']];
-  const modeSel = el('select', { class: 'pillsel', id: 'feedindex-mode', 'data-feedindex-mode': '1', 'aria-label': 'Which discovery index to use' },
-    ...MODES.map(([id, label]) => el('option', { value: id, selected: indexPrefs.mode() === id || false,
-      disabled: (id === 'replace' || id === 'add') && !own ? true : false }, label)));
-  modeSel.addEventListener('change', () => apply(modeSel.value));
-  const errBox = el('div', { class: 'xs', 'data-feedindex-errors': '1', style: 'white-space:pre-wrap;color:var(--danger,#b00)' });
+  // max-width: a select is as wide as its longest option, and "Add mine — my
+  // file laid over Forage's; …" is wider than a phone (own-index journey,
+  // 2026-09-21: the dial reached 581px at 390 and the page scrolled sideways)
+  const modeSel = el('select', { class: 'pillsel', id: 'feedindex-mode', 'data-feedindex-mode': '1', 'aria-label': 'Which discovery index to use', style: 'max-width:100%' },
+    ...MODES.map(([id, label]) => el('option', { value: id, selected: modeValue === id || false,
+      disabled: (id === 'replace' || id === 'add') && !own && !rec ? true : false }, label)));
+  modeSel.addEventListener('change', async () => {
+    const mode = modeSel.value;
+    errBox.textContent = '';
+    modeSel.disabled = true;
+    try {
+      if (rec && did) {
+        // with a record: add/replace edit it in place; Off is this device's (D4);
+        // Forage's brings the file back here first, so nothing is lost
+        if (mode === 'add' || mode === 'replace') { await indexPds.setMode(lens, did, mode); indexPrefs.setMode(mode); }
+        else if (mode === 'off') indexPrefs.setMode('off');
+        else { await indexPds.unpublish(lens, did); indexPrefs.setMode('forage'); }
+      } else {
+        indexPrefs.setMode(mode);
+      }
+      await settle();
+    } catch (e) { errBox.textContent = e.message; modeSel.value = modeValue; modeSel.disabled = false; }
+  });
+  // Where it is kept — the plan's one addition. The put for a link happens on
+  // its own button, because a link has to be typed first.
+  const WHERE = [['browser', 'On this browser only'],
+    ['account-file', 'On your atmo provider account — the file'],
+    ['account-link', 'On your atmo provider account — a link']];
+  const whereSel = did ? el('select', { class: 'pillsel', id: 'feedindex-where', 'data-feedindex-where': '1', 'aria-label': 'Where your index is kept', style: 'max-width:100%' },
+    ...WHERE.map(([id, label]) => el('option', { value: id, selected: kept === id || false,
+      disabled: id === 'account-file' && !own && rec?.kind !== 'file' ? true : false }, label))) : null;
+  const linkInput = el('input', { type: 'url', id: 'feedindex-url', 'data-feedindex-url': '1', placeholder: 'https://…/index.json',
+    value: rec?.kind === 'url' ? rec.url : '', 'aria-label': 'The link to your index', style: 'min-height:44px;width:100%;box-sizing:border-box' });
+  const keepLink = el('button', { type: 'button', class: 'btn sm', 'data-feedindex-keep-link': '1' }, 'Keep this link');
+  const linkRow = el('div', { hidden: kept === 'account-link' ? false : true, style: 'margin:6px 0' },
+    el('label', { class: 'xs', for: 'feedindex-url' }, 'The link — https only; fetched now, and again whenever you press Refresh'),
+    linkInput, el('div', { style: 'margin-top:6px' }, keepLink));
+  const busy = (on) => { if (whereSel) whereSel.disabled = on; keepLink.disabled = on; };
+  keepLink.addEventListener('click', async () => {
+    errBox.textContent = '';
+    busy(true);
+    try {
+      await indexPds.publishUrl(lens, did, { url: linkInput.value.trim(), mode: rec?.mode || (indexPrefs.mode() === 'replace' ? 'replace' : 'add') });
+      await settle();
+    } catch (e) { errBox.textContent = e.message; busy(false); }
+  });
+  if (whereSel) {
+    whereSel.addEventListener('change', async () => {
+      const v = whereSel.value;
+      errBox.textContent = '';
+      if (v === 'account-link') { linkRow.hidden = false; linkInput.focus(); return; }
+      linkRow.hidden = true;
+      busy(true);
+      try {
+        if (v === 'account-file') await indexPds.publishFile(lens, did);
+        else if (v === 'browser' && rec) await indexPds.unpublish(lens, did);
+        await settle();
+      } catch (e) { errBox.textContent = e.message; whereSel.value = kept; busy(false); }
+    });
+  }
+  const refresh = rec ? el('button', { type: 'button', class: 'btn sm', 'data-feedindex-refresh': '1' }, 'Refresh') : null;
+  if (refresh) {
+    refresh.addEventListener('click', async () => {
+      errBox.textContent = '';
+      refresh.disabled = true;
+      const c = await indexPds.refresh(lens, did, { force: true });
+      if (c.error) errBox.textContent = c.error;
+      await settle();
+    });
+  }
   const takeText = (text, name) => {
     const r = indexPrefs.parseOwnText(text);
     if (!r.ok) { errBox.textContent = `Not stored — ${r.errors.slice(0, 6).join('\n')}`; return; }
     try { indexPrefs.setOwn({ index: r.index, name }); } catch (e) { errBox.textContent = e.message; return; }
     errBox.textContent = '';
     toast(`Stored ${name || 'your index'}: ${r.index.feeds.length} feeds, ${r.index.jumpstarts.length} jumpstarts. Added over Forage's.`, 'ok');
-    indexStore.reload(indexPrefs.current()).then(() => rerenderNow());
+    settle();
   };
   const paste = el('textarea', { rows: 3, placeholder: 'Paste an index file here (JSON, "v": 1)…', 'data-feedindex-paste': '1',
     style: 'width:100%;font-family:monospace;font-size:12px' });
   const pasteBtn = el('button', { type: 'button', class: 'btn sm', 'data-feedindex-store': '1' }, 'Store pasted file');
   pasteBtn.addEventListener('click', () => { if (paste.value.trim()) takeText(paste.value, 'pasted'); });
-  const file = el('input', { type: 'file', accept: 'application/json,.json', 'data-feedindex-file': '1', style: 'min-height:44px' });
+  const file = el('input', { type: 'file', accept: 'application/json,.json', 'data-feedindex-file': '1', 'aria-label': 'Choose an index file', style: 'min-height:44px' });
   file.addEventListener('change', async () => {
     const f = file.files && file.files[0];
     if (!f) return;
     takeText(await f.text(), f.name);
   });
   const clear = el('button', { type: 'button', class: 'btn sm', 'data-feedindex-clear': '1', disabled: !own || undefined }, 'Forget my file');
-  clear.addEventListener('click', () => { indexPrefs.clearOwn(); indexStore.reload(indexPrefs.current()).then(() => rerenderNow()); });
+  clear.addEventListener('click', () => { indexPrefs.clearOwn(); settle(); });
   return [
-    el('h3', { style: 'font-size:var(--t-md);margin:12px 0 4px' }, 'Discovery index'),
-    el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
-      'Browse feeds and Browse jumpstarts start from an index — a file that ships with Forage naming thousands of feeds and jumpstarts, built weekly from the network. ' +
-      'It is an editorial choice, so it is yours to change: lay your own file over it, use yours instead, or switch it off and browse the live list alone. ' +
-      'The format is documented in docs/FEED-INDEX.md, and a file that does not fit it is refused with the reason.'),
-    status,
-    el('label', { style: 'display:flex;flex-direction:column;align-items:flex-start;gap:4px', for: 'feedindex-mode' },
-      el('span', { class: 'xs' }, 'Which index'), modeSel),
-    el('div', { style: 'margin:8px 0 4px' }, paste),
-    // NOT class="row" (see the hashtag sections above): `.row` is display:flex,
-    // which overrides the UA rule hiding a closed <details>'s children
-    el('div', { style: 'margin-top:6px' }, pasteBtn, ' ', file, ' ', clear),
-    errBox,
+    el('div', { 'data-feedindex-section': '1' },
+      el('h3', { style: 'font-size:var(--t-md);margin:12px 0 4px' }, 'Discovery index'),
+      el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
+        'Browse feeds and Browse jumpstarts start from an index — a file that ships with Forage naming thousands of feeds and jumpstarts, built weekly from the network. ' +
+        'It is an editorial choice, so it is yours to change: lay your own file over it, use yours instead, or switch it off and browse the live list alone. ' +
+        'Kept on your atmo provider account, your file follows you to every browser you sign in on — as the file itself, or as a link Forage fetches when you ask. ' +
+        'The format is documented in docs/FEED-INDEX.md, and a file that does not fit it is refused with the reason.'),
+      status,
+      el('label', { style: 'display:flex;flex-direction:column;align-items:flex-start;gap:4px', for: 'feedindex-mode' },
+        el('span', { class: 'xs' }, 'Which index'), modeSel),
+      whereSel
+        ? el('label', { style: 'display:flex;flex-direction:column;align-items:flex-start;gap:4px;margin-top:6px', for: 'feedindex-where' },
+          el('span', { class: 'xs' }, 'Where it is kept'), whereSel)
+        : el('div', { class: 'xs muted', 'data-feedindex-guest': '1', style: 'margin-top:6px' },
+          'Sign in to keep it on your atmo provider account — it follows you to every browser you sign in on.'),
+      linkRow,
+      el('div', { style: 'margin:8px 0 4px' }, paste),
+      // NOT class="row" (see the hashtag sections above): `.row` is display:flex,
+      // which overrides the UA rule hiding a closed <details>'s children
+      el('div', { style: 'margin-top:6px' }, ...[pasteBtn, ' ', file, ' ', clear, refresh ? ' ' : null, refresh].filter(Boolean)),
+      errBox),
   ];
 }
 
