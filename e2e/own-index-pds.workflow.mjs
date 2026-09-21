@@ -34,11 +34,12 @@ export const MINE = { v: 1,
 };
 const BIG_LINK_INDEX = { ...MINE, feeds: [{ ...MINE.feeds[0], name: 'From the link' }, MINE.feeds[1]] };
 
-// (seed) — the repo slot, the blobs it can serve, the link hosts
-export const LIVE_INDEX = ({ record = null, blobs = {} } = {}) => `(() => {
+// (seed) — the repo slot, the blobs it can serve, the link hosts (mock-snaps adds its own)
+export const LIVE_INDEX = ({ record = null, blobs = {}, links = {} } = {}) => `(() => {
   const K = ${JSON.stringify(REPO_KEY)}, BLOBFAIL = ${JSON.stringify(BLOBFAIL_KEY)};
   if (localStorage.getItem(K) === null) localStorage.setItem(K, JSON.stringify({ record: ${JSON.stringify(record)}, blobs: ${JSON.stringify(blobs)}, hits: [] }));
-  const LINKS = { ${JSON.stringify(LINK)}: ${JSON.stringify(BIG_LINK_INDEX)} };
+  const LINKS = ${JSON.stringify({ [LINK]: BIG_LINK_INDEX, ...links })};
+  const LINK_HOSTS = new Set(['gardeners.example', 'closed.example', ...Object.keys(LINKS).map((u) => new URL(u).host)]);
   const read = () => JSON.parse(localStorage.getItem(K));
   const write = (v) => localStorage.setItem(K, JSON.stringify(v));
   const hit = (op, extra) => { const r = read(); r.hits.push({ op, ...extra }); write(r); return r; };
@@ -73,7 +74,7 @@ export const LIVE_INDEX = ({ record = null, blobs = {} } = {}) => `(() => {
       return t === undefined ? json({ error: 'InvalidRequest', message: 'Blob not found' }, 400)
         : Promise.resolve(new Response(t, { status: 200, headers: { 'content-type': 'application/json' } }));
     }
-    if (host === 'gardeners.example' || host === 'closed.example') {
+    if (LINK_HOSTS.has(host)) {
       hit('link', { url });
       if (host === 'closed.example') throw new TypeError('Failed to fetch');
       if (url in LINKS) return Promise.resolve(new Response(JSON.stringify(LINKS[url]), { status: 200, headers: { 'content-type': 'application/json' } }));
@@ -183,7 +184,7 @@ export async function run() {
       assert.equal(linkPut.url, LINK);
       assert.equal('file' in linkPut, false);
       assert.equal(linkPut.createdAt, put.record.createdAt, 'a switch from file to link keeps the birth date');
-      assert.match(await statusText(page), /kept on your atmo provider account as a link \(https:\/\/gardeners\.example\/index\.json\)/);
+      assert.match(await statusText(page), /Yours: the link https:\/\/gardeners\.example\/index\.json, kept on your atmo provider account, fetched 20\d\d-\d\d-\d\d\./);
       assert.equal(await errText(page), '');
       // Refresh fetches the link again
       await page.click('[data-feedindex-refresh]');
@@ -249,7 +250,7 @@ export async function run() {
       await openAdvanced(page, origin);
       const text = await statusText(page);
       assert.match(text, /Yours: Gardeners — kept on your atmo provider account as the file/);
-      assert.match(text, /could not be fetched \(.*500.*\) — Forage's until it can/i);
+      assert.match(text, /could not be fetched \(your index file could not be read HTTP 500\) — Forage's until it can/i);
       assert.equal(await page.locator('[data-feedindex-where]').inputValue(), 'account-file', 'the choice is still hers');
       assert.equal(await page.locator('[data-feedindex-mode]').inputValue(), 'add');
       let hits = await hitsOf(page);

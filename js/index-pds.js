@@ -143,5 +143,5 @@ export function effective(did) {
   if (!c.known || !c.record) return prefs.current();
   if (c.index) return { mode: c.record.mode, index: c.index, generatedAt: c.fetchedAt, name: nameOf(c.record) };
   return { mode: 'forage', index: null, generatedAt: null, name: nameOf(c.record),
-    fallback: `your index could not be fetched (${c.error}) — Forage's until it can` };
+    fallback: `your index could not be fetched (${String(c.error).replace(/^lens: /, '')}) — Forage's until it can` };
 }
