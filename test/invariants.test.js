@@ -55,9 +55,16 @@ test('the lens exception holds: writes are records-none, likes-one-pair, prefere
   // slug, so a second publish IS an edit of our own record, and create-or-
   // replace at a known rkey is what that means. Bound to its constant so a
   // second caller cannot borrow it.
-  assert.equal((src.match(/putRecord/g) || []).length, 1, 'exactly one putRecord — the mix, our own record, keyed by slug');
+  // Plan 2026-09-21 own-index-on-the-pds: the SECOND putRecord — fyi.forage.feedindex
+  // at the literal key `self`, one per reader, so "keep it on my account" twice is one
+  // record and "switch file → link" is a put at the same key. Same argument as the mix:
+  // a known key is our own record, and create-or-replace is what an edit of it means.
+  assert.equal((src.match(/putRecord/g) || []).length, 2, 'exactly two putRecord — the mix (keyed by slug) and the feedindex (keyed self), both our own records');
   assert.match(src, /MIX_COLLECTION = 'fyi\.forage\.mix'/, 'the mix collection is a named constant');
   assert.equal((src.match(/collection: MIX_COLLECTION/g) || []).length, 3, 'list, save and remove bind to it');
+  assert.match(src, /import \{[^}]*FEEDINDEX_COLLECTION[^}]*\} from '\.\.\/feed-index-record\.js'/, 'the feedindex collection is the codec\'s constant, not restated here');
+  assert.equal((src.match(/collection: FEEDINDEX_COLLECTION/g) || []).length, 3, 'get, save and remove bind to it');
+  assert.equal((src.match(/rkey: FEEDINDEX_RKEY/g) || []).length, 3, 'and all three address the one key');
   // the SECOND write (3j/3s): preferences, not records. Two callers now —
   // join/leave and favorite/unfavorite — because Bluesky models saved and
   // pinned separately and Forage must not conflate them. Both live under the
@@ -94,7 +101,7 @@ test('the lens exception holds: writes are records-none, likes-one-pair, prefere
   // The count alone is weak, so every occurrence is inspected: the OLD version
   // of this check read src.indexOf('deleteRecord'), which with two deletes
   // would have silently examined only the first (caught in Pass 2 review).
-  assert.equal((src.match(/deleteRecord/g) || []).length, 7, 'exactly seven deleteRecord (the unlike, the post delete, the tagsub delete, the unblock, the unrepost, the unfollow, the mix delete)');
+  assert.equal((src.match(/deleteRecord/g) || []).length, 8, 'exactly eight deleteRecord (the unlike, the post delete, the tagsub delete, the unblock, the unrepost, the unfollow, the mix delete, the feedindex delete)');
   assert.match(src, /FOLLOW_COLLECTION = 'app\.bsky\.graph\.follow'/, 'the follow collection is a named constant');
   // Plan 2026-09-14 jumpstart-follow-all: Follow all / Unfollow all — the FIRST
   // bulk write, and a new KIND of write: com.atproto.repo.applyWrites is neither
@@ -161,10 +168,19 @@ test('the lens exception holds: writes are records-none, likes-one-pair, prefere
   // the same way: one caller, and the size/type gate lives BEFORE it, because
   // the PDS accepts an oversized blob with a 200 and only refuses at reference
   // time (probe-verified). A second uploadBlob caller means arguing here first.
-  assert.equal((src.match(/uploadBlob/g) || []).length, 1, 'exactly one uploadBlob caller');
-  const upAt = src.indexOf('uploadBlob');
-  assert.match(src.slice(Math.max(0, upAt - 700), upAt), /IMAGE_LIMITS\.bytes/,
-    'the size gate precedes the upload, not the record');
+  // Plan 2026-09-21 own-index-on-the-pds: the SECOND caller, argued here first — the
+  // reader's own index file, JSON the app already validated, bounded by the ONE
+  // ceiling (the schema's maxSize) before the upload for the same reason, and the
+  // returned blob used verbatim in the record (a ref whose size disagrees with the
+  // store is refused InvalidSize — probe-verified 2026-09-21).
+  const uploads = [...src.matchAll(/uploadBlob/g)].map((m) => m.index);
+  assert.equal(uploads.length, 2, 'exactly two uploadBlob callers: the image, and the index file');
+  assert.match(src.slice(Math.max(0, uploads[0] - 700), uploads[0]), /IMAGE_LIMITS\.bytes/,
+    'the image size gate precedes its upload, not the record');
+  assert.match(src.slice(Math.max(0, uploads[1] - 700), uploads[1]), /INDEX_BYTES_MAX/,
+    'the index ceiling precedes its upload, not the record');
+  // and the reads of the index are bounded by the same ceiling, named once
+  assert.equal((src.match(/com\.atproto\.sync\.getBlob/g) || []).length, 1, 'one getBlob caller — the reader\'s own index from their own PDS');
 });
 
 // A source file containing a raw NUL byte is BINARY to git, and the consequences are
