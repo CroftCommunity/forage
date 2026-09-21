@@ -13,7 +13,8 @@ import { RUNG_IDS, scopeMembers } from '../rings.js';
 import { sortItems, mixWeight } from '../engines/rank.js';
 import { deal } from '../mix-deal.js';
 import { validateRecord } from '../lexicon.js';
-import { MIX_DEFS } from '../lexicons.js';
+import { MIX_DEFS, FEEDINDEX_RECORD } from '../lexicons.js';
+import { FEEDINDEX_COLLECTION, FEEDINDEX_RKEY, INDEX_BYTES_MAX, indexUrlProblem } from '../feed-index-record.js';
 import { gifOf, parseAlt } from '../gif.js';
 import { followRecord, chunk } from '../follow-all.js';
 
@@ -1231,6 +1232,38 @@ const POST_COLLECTION = 'app.bsky.feed.post';
 // repo, this one collection, create and delete only — it edits nothing.
 const TAGSUB_COLLECTION = 'fyi.forage.tagsub';
 const MIX_COLLECTION = 'fyi.forage.mix';
+
+// Read a response body as text, refusing past `max` bytes — by content-length
+// before a byte is read when the server says, and by a counter mid-stream when
+// it does not (a wrong link must not pull a gigabyte onto a phone before the
+// validator sees the first byte). Plan 2026-09-21 own-index-on-the-pds, § D.
+async function readBounded(res, max, what) {
+  const declared = Number(res.headers?.get?.('content-length'));
+  if (Number.isFinite(declared) && declared > max) throw new Error(`${what} is ${declared} bytes; the ceiling is ${max}`);
+  if (res.body?.getReader) {
+    const reader = res.body.getReader();
+    const chunks = [];
+    let total = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > max) { await reader.cancel(); throw new Error(`${what} is over ${max} bytes; the ceiling is ${max}`); }
+      chunks.push(value);
+    }
+    const all = new Uint8Array(total);
+    let at = 0;
+    for (const c of chunks) { all.set(c, at); at += c.byteLength; }
+    return new TextDecoder().decode(all);
+  }
+  const text = await res.text();
+  const bytes = new TextEncoder().encode(text).length;
+  if (bytes > max) throw new Error(`${what} is ${bytes} bytes; the ceiling is ${max}`);
+  return text;
+}
+const parseIndexText = (text, what) => {
+  try { return JSON.parse(text); } catch (e) { throw new Error(`${what} is not JSON: ${e.message}`); }
+};
 // Phase 4a (plan 2026-08-29 post-and-thread, decision 3): the ⋯ menu's writes.
 // A block is a RECORD — public, visible to the blocked account, which is why
 // the menu item's copy says so — where a mute is a private procedure.
@@ -1987,6 +2020,90 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
       return post('com.atproto.repo.deleteRecord', {
         repo: session.did, collection: MIX_COLLECTION, rkey,
       }, 'remove mix');
+    },
+
+    // ---- fyi.forage.feedindex (plan 2026-09-21 own-index-on-the-pds, Phase 2) ----
+    //
+    // Where the reader's OWN discovery index comes from — the file as a blob in
+    // their repo, or an https link — one record at the literal key `self`.
+    // The second put and the second upload caller, both argued in
+    // test/invariants.test.js; every read is bounded by the ONE ceiling the
+    // schema declares (INDEX_BYTES_MAX), and the record is validated BEFORE
+    // the request (a PDS accepts anything, W17). The link is fetched through
+    // the plain transport, never the DPoP session fetch: that fetch is bound
+    // to the reader's PDS, and a third-party host must never see it.
+    async indexRecord() {
+      if (!session) throw new Error('lens: reading your saved index needs a session — sign in first');
+      const qs = new URLSearchParams({ repo: session.did, collection: FEEDINDEX_COLLECTION, rkey: FEEDINDEX_RKEY });
+      const res = await session.fetchHandler(`/xrpc/com.atproto.repo.getRecord?${qs}`);
+      if (res.status === 400) {
+        const body = await res.json().catch(() => ({}));
+        if (body.error === 'RecordNotFound') return null;
+      }
+      if (!res.ok) throw new Error(`lens: reading your saved index failed HTTP ${res.status}`);
+      const data = await res.json();
+      return { value: data.value, cid: data.cid };
+    },
+    async saveIndexRecord(record) {
+      if (!session) throw new Error('lens: saving your index needs a session — sign in first');
+      const v = validateRecord(FEEDINDEX_RECORD, record);
+      if (!v.ok) throw new Error(`lens: refusing to write an index record that fails its own lexicon — ${v.errors.map((e) => `${e.field}: ${e.message}`).join('; ')}`);
+      if (record.kind === 'url') {
+        const bad = indexUrlProblem(record.url);
+        if (bad) throw new Error(`lens: ${bad}`);
+      }
+      return post('com.atproto.repo.putRecord', {
+        repo: session.did, collection: FEEDINDEX_COLLECTION, rkey: FEEDINDEX_RKEY, record: { ...record, $type: FEEDINDEX_COLLECTION },
+      }, 'save index');
+    },
+    async removeIndexRecord() {
+      if (!session) throw new Error('lens: removing your saved index needs a session — sign in first');
+      return post('com.atproto.repo.deleteRecord', {
+        repo: session.did, collection: FEEDINDEX_COLLECTION, rkey: FEEDINDEX_RKEY,
+      }, 'remove index');
+    },
+    // The index file's bytes into MY repo. The ceiling is checked HERE, before
+    // the upload, for the image's reason: the PDS accepts an oversized blob
+    // with a 200 and refuses only when the record references it.
+    async uploadIndex(text) {
+      if (!session) throw new Error('lens: keeping your index on your account needs a session — sign in first');
+      const bytes = new TextEncoder().encode(String(text));
+      if (bytes.length > INDEX_BYTES_MAX) {
+        throw new Error(`your index is ${bytes.length} bytes and the ceiling is ${INDEX_BYTES_MAX} bytes`);
+      }
+      const res = await session.fetchHandler('/xrpc/com.atproto.repo.uploadBlob', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: bytes,
+      });
+      if (!res.ok) throw new Error(`lens: index upload failed HTTP ${res.status}`);
+      const data = await res.json();
+      if (!data.blob) throw new Error('lens: the upload returned no blob');
+      return data.blob;
+    },
+    // MY blob from MY PDS — public and CORS-open once a record names it
+    // (probe-verified), read through the session fetch because it is my host.
+    async fetchIndexBlob(cid) {
+      if (!session) throw new Error('lens: reading your saved index needs a session — sign in first');
+      const qs = new URLSearchParams({ did: session.did, cid: String(cid) });
+      const res = await session.fetchHandler(`/xrpc/com.atproto.sync.getBlob?${qs}`);
+      if (!res.ok) throw new Error(`lens: your index file could not be read HTTP ${res.status}`);
+      return parseIndexText(await readBounded(res, INDEX_BYTES_MAX, 'your index file'), 'your index file');
+    },
+    // A link, on demand, https only, through the PLAIN transport. A host that
+    // does not allow cross-origin reads fails as a TypeError with no status —
+    // that is what the words name, because it is the thing the host's owner
+    // has to change.
+    async fetchIndexUrl(url) {
+      const bad = indexUrlProblem(url);
+      if (bad) throw new Error(`lens: ${bad}`);
+      const host = new URL(url).host;
+      let res;
+      try {
+        res = await transport(url, { headers: {} });
+      } catch (e) {
+        throw new Error(`could not fetch ${host} — the host must allow cross-origin reads (CORS) and be reachable: ${e.message}`);
+      }
+      if (!res.ok) throw new Error(`${host} answered HTTP ${res.status}`);
+      return parseIndexText(await readBounded(res, INDEX_BYTES_MAX, `the file at ${host}`), `the file at ${host}`);
     },
 
     // 3g: content streams — one abstraction, two keys. 'feed' opens any

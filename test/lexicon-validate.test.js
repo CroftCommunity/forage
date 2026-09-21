@@ -231,3 +231,81 @@ test('a ref to a sibling def is followed, and an external ref is refused rather 
   assert.throws(() => validateRecord({ type: 'object', properties: { x: { type: 'ref', ref: 'com.example.other#thing' } } }, { x: {} }, { defs: {} }), /external|com\.example\.other/);
   assert.throws(() => validateRecord({ type: 'object', properties: { x: { type: 'ref', ref: '#missing' } } }, { x: {} }, { defs: {} }), /#missing/);
 });
+
+// ── fyi.forage.feedindex (plan 2026-09-21 own-index-on-the-pds, Phase 0) ────
+// The first of our types to carry a `blob`: the reader's own index file, as a
+// blob the record references (D1 — a putRecord body is capped at 150 KiB on the
+// reference PDS and the file is ~1 MB). So the validator learns `blob`,
+// `accept` and `maxSize` here, and the ENFORCED-vs-declared test above is what
+// forced it to.
+const FEEDINDEX = lex('fyi.forage.feedindex').defs.main.record;
+const BLOB = { $type: 'blob', ref: { $link: 'bafkreickuvtsju23dhiawuufk2e5pk3kqsyhvxfzqasdjxagnuwbj4ua6i' }, mimeType: 'application/json', size: 1074115 };
+const fileRecord = (over = {}) => ({ kind: 'file', file: BLOB, mode: 'add', name: 'Gardeners of the PNW',
+  createdAt: '2026-09-21T00:00:00.000Z', updatedAt: '2026-09-21T00:00:00.000Z', ...over });
+const urlRecord = (over = {}) => ({ kind: 'url', url: 'https://gardeners.example/index.json', mode: 'replace',
+  createdAt: '2026-09-21T00:00:00.000Z', updatedAt: '2026-09-21T00:00:00.000Z', ...over });
+
+test('fyi.forage.feedindex: a file record and a url record both pass', () => {
+  assert.deepEqual(validateRecord(FEEDINDEX, fileRecord()), { ok: true, errors: [] });
+  assert.deepEqual(validateRecord(FEEDINDEX, urlRecord()), { ok: true, errors: [] });
+});
+
+test('fyi.forage.feedindex: a blob must be the PDS\'s shape — $type, ref.$link, mimeType, a positive integer size — and each refusal says which', () => {
+  // The third column is the WORDS: a refusal a person can act on names the part that is
+  // wrong. (Mutation round 2026-09-21: every message here had a surviving mutant until
+  // the words were asserted — "refused with words" is a claim a test has to make.)
+  for (const [why, bad, says] of [
+    ['not an object', 'bafkrei…', /blob reference.*got string/],
+    ['no $type', { ref: BLOB.ref, mimeType: BLOB.mimeType, size: BLOB.size }, /\$type/],
+    ['no ref', { $type: 'blob', mimeType: BLOB.mimeType, size: BLOB.size }, /ref\.\$link/],
+    ['ref without $link', { ...BLOB, ref: {} }, /ref\.\$link/],
+    ['ref.$link not a string', { ...BLOB, ref: { $link: 42 } }, /ref\.\$link/],
+    ['no mimeType', { $type: 'blob', ref: BLOB.ref, size: BLOB.size }, /mimeType/],
+    ['mimeType empty', { ...BLOB, mimeType: '' }, /mimeType/],
+    ['mimeType a number', { ...BLOB, mimeType: 42 }, /mimeType/],
+    ['size a string', { ...BLOB, size: '1074115' }, /positive integer.*"1074115"/],
+    ['size zero', { ...BLOB, size: 0 }, /positive integer/],
+    ['size fractional', { ...BLOB, size: 1.5 }, /positive integer/],
+  ]) {
+    const r = validateRecord(FEEDINDEX, fileRecord({ file: bad }));
+    assert.equal(r.ok, false, `${why} passed as a blob`);
+    assert.equal(r.errors[0].field, 'file', `${why}: the blob field is named`);
+    assert.match(r.errors[0].message, says, `${why}: the refusal says what is wrong`);
+  }
+});
+
+test('fyi.forage.feedindex: accept and maxSize are enforced with words — JSON only, 2,000,000 bytes at most', () => {
+  const mime = validateRecord(FEEDINDEX, fileRecord({ file: { ...BLOB, mimeType: 'text/plain' } }));
+  assert.equal(mime.ok, false);
+  assert.match(mime.errors[0].message, /application\/json/, 'says what it accepts');
+  assert.match(mime.errors[0].message, /text\/plain/, 'and what arrived');
+  const big = validateRecord(FEEDINDEX, fileRecord({ file: { ...BLOB, size: 2_000_001 } }));
+  assert.equal(big.ok, false);
+  assert.match(big.errors[0].message, /2000000/, 'names the ceiling');
+  assert.equal(validateRecord(FEEDINDEX, fileRecord({ file: { ...BLOB, size: 2_000_000 } })).ok, true, 'the ceiling itself fits');
+});
+
+test('fyi.forage.feedindex: accept globs — image/* admits image/png, */* admits anything, an exact type admits only itself, and any entry of a list will do', () => {
+  const def = (accept) => ({ type: 'object', required: ['b'], properties: { b: { type: 'blob', accept } } });
+  const blob = (mimeType) => ({ b: { ...BLOB, mimeType } });
+  assert.equal(validateRecord(def(['image/*']), blob('image/png')).ok, true);
+  assert.equal(validateRecord(def(['image/*']), blob('application/json')).ok, false);
+  assert.equal(validateRecord(def(['image/*']), blob('imagex/png')).ok, false, 'the glob is on the slash, not the first letter');
+  assert.equal(validateRecord(def(['image/png']), blob('image/pngx')).ok, false, 'an exact type is exact, not a prefix');
+  assert.equal(validateRecord(def(['*/*']), blob('application/octet-stream')).ok, true);
+  assert.equal(validateRecord(def(undefined), blob('anything/at-all')).ok, true, 'no accept means any type');
+  const two = def(['image/*', 'application/json']);
+  assert.equal(validateRecord(two, blob('application/json')).ok, true, 'matching ANY listed type is enough');
+  const r = validateRecord(two, blob('text/plain'));
+  assert.equal(r.ok, false);
+  assert.match(r.errors[0].message, /image\/\*, application\/json/, 'the refusal lists every accepted type, separated');
+});
+
+test('fyi.forage.feedindex: kind and mode are words from the schema; the schema alone admits an http: url (the https rule is the codec\'s)', () => {
+  assert.equal(validateRecord(FEEDINDEX, fileRecord({ kind: 'paste' })).ok, false);
+  assert.equal(validateRecord(FEEDINDEX, fileRecord({ mode: 'off' })).ok, false, 'Off is not a record value (D4)');
+  assert.equal(validateRecord(FEEDINDEX, urlRecord({ url: 'not a url' })).ok, false);
+  assert.equal(validateRecord(FEEDINDEX, urlRecord({ url: 'http://gardeners.example/index.json' })).ok, true,
+    'a lexicon uri admits any scheme (E6) — https-only lives in js/feed-index-record.js, not here');
+  assert.equal(validateRecord(FEEDINDEX, urlRecord({ url: 'x'.repeat(2049) })).ok, false, 'a link is bounded');
+});

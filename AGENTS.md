@@ -200,6 +200,9 @@ adding another means arguing for it there first:
 | `deleteRecord` → `app.bsky.feed.repost` | Un-repost | post-and-thread 4a |
 | `putRecord` → `fyi.forage.mix` | save a mix to your repo, or edit one already there — the ONE put the lens makes; the record's key is the mix's slug, so a second save is the same record | mixes-on-the-pds |
 | `deleteRecord` → `fyi.forage.mix` | remove a mix from your repo (it comes back to the device) | mixes-on-the-pds |
+| `uploadBlob` | your own discovery index file into your repo, as JSON, under the one 2,000,000-byte ceiling checked BEFORE the upload; the returned blob object used verbatim | own-index-on-the-pds |
+| `putRecord` → `fyi.forage.feedindex` | keep where your discovery index comes from on your account — the file as a blob, or an https link, plus add/replace — at the key `self`, so keeping it twice or switching file ↔ link is one record | own-index-on-the-pds |
+| `deleteRecord` → `fyi.forage.feedindex` | bring it back to this browser (read fresh first, never from the cache) | own-index-on-the-pds |
 | `applyWrites` `#create` → `app.bsky.graph.follow` | **Follow all** on a jumpstart — up to 50 follow records per call, each carrying `via` (the jumpstart), skipping you / already following / blocked / muted / posture-hidden, every skip counted on the page; the ONE bulk write, and the one `applyWrites` caller — a single row's Follow on the same page is this call with one op | jumpstart-follow-all |
 | `applyWrites` `#delete` → `app.bsky.graph.follow` | **Unfollow all** — the mirror; the list is the unit: every member you follow, whenever you followed them, from uris the live list's viewer state names | jumpstart-follow-all |
 

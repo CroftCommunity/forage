@@ -8,6 +8,19 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-21 **Your discovery index can follow you.** Under *Advanced → Discovery index* a
+  second dial says where your own index is kept: on this browser (the default, as before), or
+  on your atmo provider account — as the file itself, or as a link Forage fetches when you ask.
+  Kept on your account, every browser you sign in on reads it and browse starts from yours, with
+  your Add or Replace. A pasted or chosen file lands wherever it is kept. Forage's own index
+  stays a file that ships with the app, is never written to anyone's account, and never takes
+  back over a choice you made away from it: a file that cannot be fetched shows Forage's for
+  that load and says why, and your choice stands. Off stays on the browser you flipped it on.
+  Also found and fixed on the way: a file too big for this browser used to be announced as
+  *Stored* while nothing was stored; the mode dial was wider than a phone and scrolled the
+  account page sideways. (plan 2026-09-21-plan-own-index-on-the-pds; record
+  `fyi.forage.feedindex`, one per reader, keyed `self`)
+
 - 2026-09-16 **A picture-only post is its picture.** On a Bluesky board a post with no
   text used to print its picture's alt description above the picture as if the author had
   written it, in link blue, whether or not *Show alt text under pictures* was on. Now the

@@ -86,5 +86,11 @@ device-local first, PDS next).
   `/j/<handle>/<rkey>/follow` and `/unfollow` read the list LIVE — the index still carries no
   members — and write through the lens' one `applyWrites` caller. The link-out stays as the
   network's own page, not the only place to follow.
+- The forager's own index follows them (2026-09-21, `plans/2026-09-21-plan-own-index-on-the-pds.md`):
+  decision 5's "named follow-up" is built — one record in the reader's repo,
+  `fyi.forage.feedindex` at `self`, naming the file as a blob or an https link plus the mode.
+  Browser-local stays the default; Forage's index is never in the record and never retakes a
+  choice made away from it (a failed fetch shows it for that load with words and rewrites
+  nothing). A record cannot carry the file: the reference PDS caps a record write at 150 KiB.
 - Offline, both pages answer from the file: `/feeds` fell back to *Discovery failed* until a
   phone showed it (2026-09-14); it now shows the index alone and says Bluesky did not answer.

@@ -1,0 +1,149 @@
+{
+  "capturedAt": "2026-09-21",
+  "files": [
+    {
+      "file": "own-index-browser.phone.proposed.png",
+      "route": "own-index-browser",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@cb3897f",
+      "population": "lens:own-index"
+    },
+    {
+      "file": "own-index-file.phone.proposed.png",
+      "route": "own-index-file",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@cb3897f",
+      "population": "lens:own-index"
+    },
+    {
+      "file": "own-index-link.phone.proposed.png",
+      "route": "own-index-link",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@cb3897f",
+      "population": "lens:own-index"
+    },
+    {
+      "file": "own-index-fallback.phone.proposed.png",
+      "route": "own-index-fallback",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@cb3897f",
+      "population": "lens:own-index"
+    },
+    {
+      "file": "own-index-browser.desktop.proposed.png",
+      "route": "own-index-browser",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@cb3897f",
+      "population": "lens:own-index"
+    },
+    {
+      "file": "own-index-file.desktop.proposed.png",
+      "route": "own-index-file",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@cb3897f",
+      "population": "lens:own-index"
+    },
+    {
+      "file": "own-index-link.desktop.proposed.png",
+      "route": "own-index-link",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@cb3897f",
+      "population": "lens:own-index"
+    },
+    {
+      "file": "own-index-fallback.desktop.proposed.png",
+      "route": "own-index-fallback",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@cb3897f",
+      "population": "lens:own-index"
+    },
+    {
+      "file": "own-index-browser.phone.current.png",
+      "route": "own-index-browser",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@cdc1da1",
+      "population": "lens:own-index"
+    },
+    {
+      "file": "own-index-file.phone.current.png",
+      "route": "own-index-file",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@cdc1da1",
+      "population": "lens:own-index"
+    },
+    {
+      "file": "own-index-link.phone.current.png",
+      "route": "own-index-link",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@cdc1da1",
+      "population": "lens:own-index"
+    },
+    {
+      "file": "own-index-fallback.phone.current.png",
+      "route": "own-index-fallback",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@cdc1da1",
+      "population": "lens:own-index"
+    },
+    {
+      "file": "own-index-browser.desktop.current.png",
+      "route": "own-index-browser",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@cdc1da1",
+      "population": "lens:own-index"
+    },
+    {
+      "file": "own-index-file.desktop.current.png",
+      "route": "own-index-file",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@cdc1da1",
+      "population": "lens:own-index"
+    },
+    {
+      "file": "own-index-link.desktop.current.png",
+      "route": "own-index-link",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@cdc1da1",
+      "population": "lens:own-index"
+    },
+    {
+      "file": "own-index-fallback.desktop.current.png",
+      "route": "own-index-fallback",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@cdc1da1",
+      "population": "lens:own-index"
+    }
+  ]
+}

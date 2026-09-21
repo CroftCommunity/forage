@@ -124,3 +124,25 @@ test('createIndexStore: ready() is idempotent and reload() takes a new own-index
   assert.equal(store.status().status, 'mine');
   assert.equal(store.feeds().length, 1);
 });
+
+// Plan 2026-09-21 own-index-on-the-pds, § E.1 — pinned before anything else moves:
+// a newer shipped index NEVER changes what the reader chose. "Forage's index is
+// always available as long as they keep upgrading, but once selected away from it
+// never retakes the default" (owner, 2026-09-14).
+test('loadIndex: a regenerate of Forage\'s index (a newer generatedAt, more rows) leaves the reader\'s choice in force', async () => {
+  const mine = { v: INDEX_VERSION, feeds: [F(9)], jumpstarts: [], edges: [], providers: [] };
+  const before = fetchOf({ '/data/feed-index.json': ours, '/data/feed-index-meta.json': meta });
+  const regenerated = fetchOf({ '/data/feed-index.json': { ...ours, feeds: [F(1), F(2), F(3)] },
+    '/data/feed-index-meta.json': { ...meta, generatedAt: '2026-09-21T05:23:00Z' } });
+  for (const mode of ['replace', 'add']) {
+    const own = { mode, index: mine, generatedAt: '2026-09-20T00:00:00Z', name: 'mine.json' };
+    const a = await loadIndex({ fetchImpl: before, own });
+    const b = await loadIndex({ fetchImpl: regenerated, own });
+    assert.equal(b.status, a.status, `${mode}: the status did not move with the regenerate`);
+    assert.equal(b.status, mode === 'replace' ? 'mine' : 'merged');
+    assert.ok(b.index.feeds.some((f) => f.uri === F(9).uri && f.source === 'mine'), `${mode}: hers is still in`);
+    if (mode === 'add') assert.equal(b.generatedAt, '2026-09-21T05:23:00Z', 'the newer shipped file IS used under hers — available, not the default');
+  }
+  const off = await loadIndex({ fetchImpl: regenerated, own: { mode: 'off', index: null } });
+  assert.equal(off.status, 'off', 'off stays off through a regenerate');
+});

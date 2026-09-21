@@ -88,3 +88,36 @@ test('index-prefs: parseOwnText turns a pasted or uploaded file into an index or
   assert.equal(bad.ok, false);
   assert.match(bad.errors[0], /version/);
 });
+
+// Plan 2026-09-21 own-index-on-the-pds, Phase 1: two fixes the device half was
+// owed. (1) A file the browser cannot hold was toasted as "Stored" while the
+// quota error was swallowed (E10) — a refusal must be words, never a silent
+// nothing. (2) The one ceiling (D7) bounds a pasted file BEFORE it is parsed.
+test('index-prefs: a file the browser will not hold is refused in words that say how big it is, and nothing changes', async () => {
+  store.clear();
+  prefs.setOwn({ index: good, name: 'small.json', now: 1_700_000_000_000 });
+  const before = JSON.stringify(prefs.own());
+  const real = globalThis.localStorage.setItem;
+  globalThis.localStorage.setItem = (k, v) => {
+    if (String(v).length > 50_000) { const e = new Error('The quota has been exceeded.'); e.name = 'QuotaExceededError'; throw e; }
+    return real(k, v);
+  };
+  try {
+    // rows sorted by uri as STRINGS (the validator's rule), hence the zero-padded ids
+    const big = { ...good, feeds: Array.from({ length: 400 }, (_, i) => ({ ...F(String(i + 10).padStart(4, '0')), desc: 'd'.repeat(150) })) };
+    assert.throws(() => prefs.setOwn({ index: big, name: 'big.json' }), (e) => /will not hold/.test(e.message) && /\d{5,} bytes/.test(e.message));
+    assert.equal(JSON.stringify(prefs.own()), before, 'the previous file stays');
+    assert.equal(prefs.own().name, 'small.json');
+  } finally {
+    globalThis.localStorage.setItem = real;
+  }
+});
+
+test('index-prefs: parseOwnText refuses a paste over the ceiling before parsing it, naming both numbers', async () => {
+  const { INDEX_BYTES_MAX } = await import('../js/feed-index-record.js');
+  const r = prefs.parseOwnText('x'.repeat(INDEX_BYTES_MAX + 1));
+  assert.equal(r.ok, false);
+  assert.match(r.errors[0], new RegExp(`${INDEX_BYTES_MAX + 1}`));
+  assert.match(r.errors[0], new RegExp(`${INDEX_BYTES_MAX}`));
+  assert.doesNotMatch(r.errors[0], /not JSON/, 'the size is the reason, not the parse');
+});

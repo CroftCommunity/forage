@@ -70,6 +70,7 @@ import { RESPONSES as GIF, BOARD_PATH as GIF_BOARD, THREAD_PATH as GIF_THREAD } 
 import { RESPONSES as SELF, THREAD_PATH as SELF_PATH, ALONE as SELF_ALONE, ALONE_PATH as SELF_ALONE_PATH } from '../e2e/harness/mock-selfthread.mjs';
 import { RESPONSES as MIX, FAKE_SIGNED_IN as MIX_SIGNED_IN, SCIENCE as MIX_SCIENCE } from '../e2e/harness/mock-mix.mjs';
 import { LIVE_FOLLOWS as FOLLOW_REPO, MEMBERS as FOLLOW_MEMBERS, R as FOLLOW_R, seeded as followSeed } from '../e2e/follow-all.workflow.mjs';
+import { LIVE_INDEX as OWN_INDEX_REPO, MINE as OWN_INDEX, OWN_R } from '../e2e/own-index-pds.workflow.mjs';
 import { mergeManifest } from './lib/snaps-manifest.mjs';
 import { SKINS } from '../js/skins.js';
 import { execFileSync } from 'node:child_process';
@@ -757,6 +758,64 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
     await fx.page.evaluate(() => document.fonts?.ready);
     await shoot(fx.page, route, 'lens:follow-all', name, vp);
     await fx.close().catch((e) => console.error(`  (${route} ${name}: ${String(e.message).split('\n')[0]})`));
+  }
+}
+
+// ---- lens:own-index — your discovery index on the atmo provider account ----
+// (plan 2026-09-21 own-index-on-the-pds, Phase 4). The Discovery index section
+// under Advanced on /me in its four states: a file on this browser (what main
+// has today — the Current frame is the same section without the second dial),
+// kept on the account as the file, kept as a link (the link row open), and a
+// kept file whose blob cannot be fetched (the fallback sentence, the choice
+// untouched). The population STRESSES the status line: her index carries the
+// shipped counts' order of magnitude in words, a name long enough to wrap, and
+// a link long enough to break.
+for (const [name, vp] of Object.entries(VIEWPORTS)) {
+  const OWN_ROUTES = ['own-index-browser', 'own-index-file', 'own-index-link', 'own-index-fallback'];
+  if (!OWN_ROUTES.some(wanted)) continue;
+  const LONG_NAME = 'Gardeners of the Pacific Northwest and the Salish Sea — the 2026 harvest list 🌱';
+  const LONG_LINK = 'https://gardeners-of-the-pacific-northwest.example/indexes/2026/discovery-index-v1.json';
+  const BLOB = { $type: 'blob', ref: { $link: 'bafkreimock' }, mimeType: 'application/json', size: 1074115 };
+  const STAMP = { createdAt: '2026-09-14T20:19:42.065Z', updatedAt: '2026-09-21T09:00:00.000Z' };
+  const DEVICE = `try { if (localStorage.getItem('forage.feedindex') === null) localStorage.setItem('forage.feedindex', ${JSON.stringify(JSON.stringify({ mode: 'add', own: { index: OWN_INDEX, name: 'gardeners-2026-09-14.json', generatedAt: '2026-09-14T20:19:42.065Z' } }))}); } catch {}`;
+  const SEED = {
+    'own-index-browser': [DEVICE, OWN_INDEX_REPO()],
+    'own-index-file': [OWN_INDEX_REPO({ record: { $type: 'fyi.forage.feedindex', kind: 'file', file: BLOB, mode: 'add', name: LONG_NAME, ...STAMP }, blobs: { bafkreimock: JSON.stringify(OWN_INDEX) } })],
+    'own-index-link': [OWN_INDEX_REPO({ record: { $type: 'fyi.forage.feedindex', kind: 'url', url: LONG_LINK, mode: 'replace', ...STAMP }, links: { [LONG_LINK]: OWN_INDEX } })],
+    'own-index-fallback': [OWN_INDEX_REPO({ record: { $type: 'fyi.forage.feedindex', kind: 'file', file: BLOB, mode: 'add', name: LONG_NAME, ...STAMP } }), "try { localStorage.setItem('__blobfail', '1'); } catch {}"],
+  };
+  const KEPT = { 'own-index-browser': 'browser', 'own-index-file': 'account-file', 'own-index-link': 'account-link', 'own-index-fallback': 'account-file' };
+  for (const route of OWN_ROUTES) {
+    if (!wanted(route)) continue;
+    const ox = await scenario('first-visit', { root: SERVE, mode: 'bluesky', initScripts: [...SKIN_INIT, FAKE_SIGNED_IN, ...SEED[route]], responses: OWN_R });
+    await ox.page.setViewportSize({ width: vp.width, height: vp.height });
+    await ox.page.goto(`${ox.origin}/me`);
+    try {
+      await ox.page.waitForSelector('[data-advanced]', { timeout: 15000 });
+      await ox.page.evaluate(() => { document.querySelector('[data-advanced]').open = true; });
+      await ox.page.waitForSelector('[data-index-status]', { timeout: 15000 });
+      // the store has loaded — on the branch. On main the line is written once, before the
+      // index loads, and nothing repaints it: "Loading…" IS the Current frame, honestly.
+      if (AS !== 'current') await ox.page.waitForFunction(() => document.querySelector('[data-index-status]')?.dataset.indexStatus !== 'loading', null, { timeout: 15000 });
+      // the branch: wait for the account half to land (the record read, the file fetched or refused)
+      if (AS !== 'current') await ox.page.waitForFunction((k) => document.querySelector('[data-index-status]')?.dataset.indexKept === k, KEPT[route], { timeout: 15000 });
+    } catch (e) {
+      const seen = await ox.page.evaluate(() => ({ url: location.pathname, status: document.querySelector('[data-index-status]')?.textContent?.slice(0, 200), misses: (window.__shimMisses || []).slice(0, 5) })).catch(() => null);
+      console.error(`${route} ${name}: page held ${JSON.stringify(seen)}`);
+      throw e;
+    }
+    await ox.page.evaluate(() => document.fonts?.ready);
+    await ox.page.evaluate(() => {
+      // the section on the branch; on main, the heading above the status line
+      const st = document.querySelector('[data-index-status]');
+      const head = [...(st?.parentElement?.children || [])].find((c) => c.tagName === 'H3' && /Discovery index/.test(c.textContent));
+      (document.querySelector('[data-feedindex-section]') || head || st)?.scrollIntoView({ block: 'start' });
+      window.scrollBy(0, -72);
+    });
+    await ox.page.evaluate(() => document.activeElement?.blur());
+    await ox.page.waitForTimeout(300);
+    await shoot(ox.page, route, 'lens:own-index', name, vp);
+    await ox.close().catch((e) => console.error(`  (${route} ${name}: ${String(e.message).split('\n')[0]})`));
   }
 }
 
