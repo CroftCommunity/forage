@@ -2,6 +2,7 @@
 
 import * as store from './store.js';
 import * as ringScope from './ring-scope.js';
+import * as viewMode from './view-mode.js';
 import * as beta from './beta.js';
 import { createPdsGraphSource } from './substrates/pds-graph.js';
 import * as router from './router.js';
@@ -109,7 +110,14 @@ function masthead() {
       // The direct-OAuth "Sign in" (3i) stays beside it rather than being
       // folded in — collapsing it would put an extra press between a newcomer
       // and the authorize screen.
-      el('div', { class: 'who' }, themeBtn0,
+      // View (plan 2026-09-14-plan-clips, D7 — owner 2026-09-21): a dropdown,
+      // Forum · Clip · Gram, in the top bar on every board, so it is one press
+      // away on a phone and the way back from a reel is always on screen. A
+      // content-type choice, one at a time — the sort bar's select, not the
+      // ring's segmented pill (the ring is a gradient; this is not).
+      el('div', { class: 'who' },
+        viewMode.viewSelect(el, { onPicked: (id) => viewMode.set(id) }),
+        themeBtn0,
         (() => {
           const name = who && who !== 'connecting' ? String(who).replace(/^@/, '') : null;
           const initials = name
@@ -289,6 +297,10 @@ ringScope.onChange(() => {
     console.warn('forage: ring scope failed to apply', e);
   });
 });
+// The view pill (plan 2026-09-14-plan-clips): a mode is a way of showing the
+// board you are on, so changing it is a repaint and nothing more — no walk to
+// wait for, unlike the ring above.
+viewMode.onChange(() => render());
 // Beta features: rings from the data servers. The source consults the switch at call
 // time (off → null → the AppView path); composed here because the UI layer imports no
 // substrate. The switch changes where the ring's graph comes from; the graph is cached

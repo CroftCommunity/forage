@@ -10,6 +10,8 @@
 // never dead buttons — the UI renders these as deferred, invariant 7).
 import { buildPost, withTag, IMAGE_LIMITS } from '../compose.js';
 import { RUNG_IDS, scopeMembers } from '../rings.js';
+import { FILTER as REEL_FILTER, orderMembers, nextWave, encodeCursor, decodeCursor, roundRobin } from '../reel-plan.js';
+import { ofKind } from '../view-mode.js';
 import { sortItems, mixWeight } from '../engines/rank.js';
 import { deal } from '../mix-deal.js';
 import { validateRecord } from '../lexicon.js';
@@ -1467,6 +1469,55 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
         ...src, scope: `lens:m:${slug}`, sort: 'lens', timeframe: 'all', perms: LENS_PERMS,
         posts: deal(queues), sources, cursors: nextCursors,
         failures: sources.filter((s) => !s.ok).map((s) => ({ id: s.id, title: s.title, error: s.error })),
+      };
+    },
+
+    // The people-scope REEL (plan 2026-09-14-plan-clips, § B, D1 (a)): at me,
+    // mutuals, follows or one hop out, the scope's members are the source
+    // list. Each member in the wave is asked for their author feed with the
+    // mode's filter — the network's own `posts_with_video` / `posts_with_media`
+    // — behind the mix's per-source timeout; the answers are shaped under a
+    // 'reel' src (not an exempt kind, so the ring still tests authorship, which
+    // is a no-op by construction: every author is a member), narrowed again by
+    // the client's kind filter (the media filter returns clips too), and dealt
+    // round-robin across people so a prolific poster does not own the reel.
+    //
+    // Feed-shaped on purpose: `posts` and a string `cursor`, so the board's
+    // More and repaint need nothing new. The cursor is the wave state
+    // (js/reel-plan.js). A member who answered with no frames is never asked
+    // again on this cursor, even with a page cursor of their own: a page of
+    // text posts from someone who films nothing is the cost the plan exists to
+    // avoid. `known` (the device's register) is asked first on a cold wave.
+    //
+    // World is refused: there the board's own posts are the reel.
+    async reel(mode, scope, { cursor = null, waveSize = 8, timeoutMs = 8000, known = [], title = null } = {}) {
+      const filter = REEL_FILTER[mode];
+      if (!filter) throw new Error(`lens: ${mode} is not a reel mode`);
+      if (scope === 'world') throw new Error('lens: at world the board is the reel — nothing to fan out over');
+      const { members } = await this.scopeMembersFor(scope);
+      const state = cursor ? decodeCursor(cursor) : { order: orderMembers(members, new Set(known)), at: 0, cursors: {} };
+      const wave = nextWave(state, waveSize);
+      const src = { feedId: `lens:reel:${scope}`, feedSlug: `reel:${scope}`, feedTitle: title || `Reel · ${scope}`, feedKind: 'reel' };
+      const answers = await Promise.all(wave.asks.map(async (ask) => {
+        try {
+          const data = await withTimeout(get('app.bsky.feed.getAuthorFeed', { actor: ask.did, filter, limit: 25, ...(ask.cursor ? { cursor: ask.cursor } : {}) }), timeoutMs);
+          const shaped = shapeLensFeed(data, src, {}, posture);
+          return { did: ask.did, ok: true, posts: ofKind(shaped.posts, mode), cursor: data.cursor || null };
+        } catch (e) {
+          return { did: ask.did, ok: false, error: e.message, posts: [], cursor: null };
+        }
+      }));
+      // one frame per person per round, in the order they were asked
+      const queues = answers.map((a) => ({ id: a.did, posts: a.posts }));
+      const nextCursors = Object.fromEntries(answers.filter((a) => a.ok && a.posts.length && a.cursor).map((a) => [a.did, a.cursor]));
+      const more = wave.at < state.order.length || Object.keys(nextCursors).length > 0;
+      return {
+        ...src, scope: `lens:reel:${scope}`, sort: 'lens', timeframe: 'all', perms: LENS_PERMS,
+        posts: roundRobin(queues),
+        cursor: more ? encodeCursor({ order: state.order, at: wave.at, cursors: nextCursors }) : null,
+        members: members.length, asked: wave.asks.length,
+        posters: answers.filter((a) => a.posts.length).map((a) => a.did),
+        failures: answers.filter((a) => !a.ok).map((a) => ({ did: a.did, error: a.error })),
       };
     },
 

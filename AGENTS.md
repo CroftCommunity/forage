@@ -155,6 +155,21 @@ the account's own picture, initials underneath as the not-yet-loaded state (plan
 2026-08-29 post-and-thread, decision 8) — because the bar fits a single row at
 320px only just.
 
+**A board has three VIEW MODES** (plan 2026-09-14-plan-clips; owner 2026-09-16): *Forum*
+(rows), *Clip* (its videos, one per screen) and *Gram* (its picture posts) — `js/view-mode.js`,
+keys `forage.viewdefault` (Preferences › Default view, forum unless chosen — what a visit
+opens in) and `forage.view` (sessionStorage, the visit's own choice), a `<select>` in the masthead — a kind, one at a time, so a dropdown and
+not the ring's gradient pill (D7, owner 2026-09-21) — the reel
+`js/ui/reel.js` mounted by `renderBoard` AFTER the ring, the posture, the language filter
+and the sort, so a frame is a row by another layout and never a row the forum would not
+show; each frame carries the post's own compact row, so the writes table below is
+untouched. The code says `view` because `js/mode.js` already means the population (D8). At a people
+stop on a board the ring scopes, the reel is the scope's PEOPLE: `lens.reel()` fans out over
+the members with `getAuthorFeed?filter=posts_with_video|posts_with_media` (a READ — no new
+write), eight a wave, the next wave only when the reader reaches the end (`js/reel-plan.js`;
+the device remembers who answered, `js/media-posters.js`). Autoplay in Clip mode is muted, in
+view only, never a labeled frame, never before the session has settled (`js/clip-autoplay.js`).
+
 **Everything in the nav is a BOARD**, and boards differ only in where the posts
 come from: a feed generator, a hashtag, your own graph, or a MIX of those (the
 Mixes section sits above Feeds; Home is the mix of everything you subscribed to). There

@@ -8,6 +8,26 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-21 **View modes: Forum, Clip, Gram.** In the top bar, beside the skin toggle, there
+  is a dropdown, *View*: **Forum** is the rows you have today; **Clip** shows the board you are
+  on as its clips, one per screen; **Gram** shows its picture posts (and GIF cards) the same
+  way, with the alt text a person wrote as the caption. A mode is a way of showing a board,
+  not a different board: the same posts, after your ring, your moderation settings, your
+  content languages and the sort. Each frame is the post's own media at screen height with
+  the post's own row under it — byline, words, reply, repost, like, share, the menu. Arriving
+  in a mode lands you on the reel; the dropdown stays in the bar above it, so *Forum* is
+  always one press away. The dropdown's choice lasts your visit; **Default view** on your
+  account page (Forum unless you choose) is what a board opens in next time. **At a people stop** — Me, Mutuals, Follows,
+  +1 — on a board your ring scopes (a mix, or a feed with the exemption off), the reel is the
+  people themselves: Forage asks each of them for their clips or pictures, eight at a time,
+  and asks for the next eight only when you reach the end; the count line says so (*5 clips
+  from 11 people you follow*), and people who have answered with a frame before are asked
+  first next time. **In Clip mode the clip on screen plays by itself, muted** — a new switch
+  on your account page, *Play clips automatically in Clip mode*, following your device's
+  "reduce motion" until you choose; a clip your moderation settings mark *warn* is veiled
+  behind its label and never plays; with the switch off nothing is downloaded until you
+  press. The memory sandbox has no reel yet (its posts carry no media). (plan
+  2026-09-14-plan-clips; mock `plans/mocks/clips.html` v4, every Proposed frame a capture)
 - 2026-09-16 **A picture-only post is its picture.** On a Bluesky board a post with no
   text used to print its picture's alt description above the picture as if the author had
   written it, in link blue, whether or not *Show alt text under pictures* was on. Now the

@@ -72,6 +72,7 @@ export function navTree({ el, session, feeds, tags, current, mixes = [] }) {
   });
   if (pill) nav.append(el('div', { class: 'navring' }, pill));
 
+
   // Mixes (plan 2026-09-08, § E): the reader's composed boards, Home first,
   // then in the order made — ABOVE the feeds they are made of. Every mix is a
   // row; hiding one from here is deliberately not offered until someone has

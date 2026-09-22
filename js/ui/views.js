@@ -16,6 +16,8 @@ import { densityDial, isCompact } from '../board-density.js';
 import * as cardSize from '../card-size.js';
 import * as pictures from '../pictures.js';
 import * as gifAutoplay from '../gif-autoplay.js';
+import * as clipAutoplay from '../clip-autoplay.js';
+import * as viewMode from '../view-mode.js';
 import * as rail from '../rail.js';
 import * as providerMark from '../provider-mark.js';
 import { sortBar } from './sortbar.js';
@@ -747,6 +749,25 @@ export function settingsView() {
     gifBox.querySelector('.switch-state').textContent = on ? 'On' : 'Off';
     sayGif();
   });
+  // plan 2026-09-14-plan-clips, D3: a clip in CLIP mode starts on its own —
+  // muted, only the frame on screen, never a labeled one — unless the reader
+  // says otherwise here. Its own switch: GIFs on rows are a different question.
+  const clipBox = el('button', { type: 'button', class: 'switch', id: 'pref-clipautoplay', role: 'switch',
+    'aria-checked': String(clipAutoplay.enabled()) }, el('span', { class: 'switch-state' }, clipAutoplay.enabled() ? 'On' : 'Off'));
+  const clipWhy = el('span', { class: 'xs muted', style: 'margin-left:8px' });
+  const sayClip = () => {
+    clipWhy.textContent = clipAutoplay.stored() === null && !clipAutoplay.deviceDefault()
+      ? 'in Clip mode the clip on screen plays by itself, muted; off, every clip waits for a press — following your device’s “reduce motion” setting until you choose here'
+      : 'in Clip mode the clip on screen plays by itself, muted; off, every clip waits for a press and nothing is downloaded until you make one';
+  };
+  sayClip();
+  clipBox.addEventListener('click', () => {
+    const on = clipBox.getAttribute('aria-checked') !== 'true';
+    clipAutoplay.set(on);
+    clipBox.setAttribute('aria-checked', String(on));
+    clipBox.querySelector('.switch-state').textContent = on ? 'On' : 'Off';
+    sayClip();
+  });
   const themeCard = el('div', { class: 'card' },
     fieldRow('Skin', skinSel),
     notchRow('pref-cardsize', 'Card size', sizeNotches, 'how much room a post takes — 1 is small, 4 is the full picture'),
@@ -756,6 +777,14 @@ export function settingsView() {
     el('div', { style: 'margin:-4px 0 8px 0' }, ...panelRows),
     el('div', { class: 'field-row' }, el('label', { for: 'pref-gifautoplay' }, 'Play GIFs automatically'),
       el('span', {}, gifBox, gifWhy)),
+    // plan 2026-09-14-plan-clips (owner, 2026-09-21): the DEFAULT view — what a
+    // board opens in — Forum unless chosen. The top bar's dropdown is this
+    // visit's choice and does not change this.
+    el('div', { class: 'field-row' }, el('label', { for: 'pref-viewdefault' }, 'Default view'),
+      el('span', {}, viewMode.viewSelect(el, { which: 'default', onPicked: (id) => viewMode.setDefault(id) }),
+        el('span', { class: 'xs muted', style: 'margin-left:8px' }, 'how a board opens — Forum is the rows; Clip and Gram are one post per screen. The View dropdown in the top bar changes it for this visit only'))),
+    el('div', { class: 'field-row' }, el('label', { for: 'pref-clipautoplay' }, 'Play clips automatically in Clip mode'),
+      el('span', {}, clipBox, clipWhy)),
     el('div', { class: 'field-row' }, el('label', { for: 'pref-providermark' }, 'Provider mark'),
       el('span', {}, markBox, el('span', { class: 'xs muted', style: 'margin-left:8px' }, 'a small mark beside each name saying which atmo provider they post from; the handle is always in the name’s tooltip'))),
     // Say where the other half of the choice lives. Without this the picker
