@@ -6,7 +6,7 @@ and 5: `js/view-mode.js`, `js/ui/reel.js`, the pill under the ring pill, `js/ree
 `lens.reel()` (D1 (a), the people-scope fan-out under backpressure), `js/media-posters.js`,
 `js/clip-autoplay.js` + the switch on /me (D3), the veil for a labeled frame, GIF cards in Gram
 (D9), alt text as Gram's caption (D10); `e2e/view-modes.workflow.mjs` holds nine claims; Phase 0
-measured (below). Mock **v4** — every Proposed frame a capture — is `plans/mocks/clips.html`.
+measured (below). Mock **v5** — every Proposed frame a capture — is `plans/mocks/clips.html`.
 Owner's word 2026-09-21: "finish building everything that was scoped", the open decisions
 taken the way the plan proposed. **D7 DECIDED 2026-09-21 (owner, on mock v4):** a dropdown in
 the top bar — the view is a content-type choice, one at a time, not a gradient like the ring;
