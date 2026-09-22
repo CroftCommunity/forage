@@ -1,0 +1,51 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Forage · haptics probe</title>
+<!--
+  D4 (plan 2026-08-29 post-and-thread): the one-page probe for a phone in the hand.
+  Open it on the device (forage.fyi/scripts/probe-haptics.html, or over the LAN from
+  `npm run preview`), tap a length, read the lines. It reports the four things that
+  decide whether a like can be felt, and the raw return value of navigator.vibrate —
+  the number js/haptics.js sends is PULSE_MS there. Throwaway by design: no imports,
+  no service worker, nothing of the app.
+-->
+<style>
+  body { font: 16px/1.5 system-ui, sans-serif; margin: 16px; max-width: 40rem; }
+  button { font: inherit; padding: 12px 18px; margin: 4px 6px 4px 0; min-width: 5.5rem; }
+  pre { background: #eee; padding: 12px; white-space: pre-wrap; }
+  .yes { color: #1a7f37; } .no { color: #b3261e; }
+</style>
+<h1>Haptics probe</h1>
+<p>Tap a length. Each tap calls <code>navigator.vibrate(ms)</code> inside the click and prints what came back.</p>
+<p>
+  <button data-ms="12">12 ms</button>
+  <button data-ms="30">30 ms</button>
+  <button data-ms="50">50 ms</button>
+  <button data-ms="100">100 ms</button>
+  <button data-ms="0">cancel</button>
+</p>
+<pre id="env"></pre>
+<pre id="log">(nothing tapped yet)</pre>
+<script>
+  const env = document.getElementById('env'), log = document.getElementById('log');
+  const line = (k, v, ok) => `${k}: ${ok === undefined ? v : `<span class="${ok ? 'yes' : 'no'}">${v}</span>`}`;
+  let key = null; try { key = localStorage.getItem('forage.haptics'); } catch {}
+  const hasApi = typeof navigator.vibrate === 'function';
+  const reduced = !!matchMedia('(prefers-reduced-motion: reduce)').matches;
+  env.innerHTML = [
+    line('typeof navigator.vibrate', typeof navigator.vibrate, hasApi),
+    line('prefers-reduced-motion: reduce', reduced, !reduced) + (reduced ? '  ← the app buzzes nothing while this is on' : ''),
+    line('forage.haptics (this origin)', key === null ? 'absent = on' : key, key !== 'off'),
+    line('userAgent', navigator.userAgent),
+    'not measurable from here: the ringer on silent (Chromium skips the call), a per-app or system haptics intensity of zero',
+  ].join('\n');
+  const lines = [];
+  document.querySelectorAll('button[data-ms]').forEach((b) => b.addEventListener('click', () => {
+    const ms = Number(b.dataset.ms);
+    let out;
+    try { out = hasApi ? navigator.vibrate(ms) : 'no vibrate API on this device'; } catch (e) { out = `threw: ${e.message}`; }
+    lines.unshift(`${new Date().toLocaleTimeString()}  vibrate(${ms}) → ${out}`);
+    log.textContent = lines.slice(0, 12).join('\n');
+  }));
+</script>

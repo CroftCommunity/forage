@@ -78,6 +78,12 @@ export async function run() {
     // ---- claim 6 (structure): alt is HIDDEN by default, everywhere ---------
     assert.equal(await page.locator('[data-alt-text]').count(), 0,
       'nothing prints alt text until the reader asks for it');
+    // D8 revised (owner, 2026-09-16, from the phone): a GIF's title is its
+    // alt under another name, so the card's caption — title, host, the link
+    // out — is hidden with it. The GIF is the picture alone.
+    assert.equal(await page.locator('[data-gifcard] [data-ext-title], [data-gifcard] [data-ext-host], [data-gifcard] .ext-caption').count(), 0,
+      'a GIF card prints no title or site under the picture until the reader asks for it');
+    assert.equal(await card.getAttribute('data-gif-caption'), 'off');
     // ...but the accessible name is written anyway (D7)
     const label = await stage.locator('video').getAttribute('aria-label');
     assert.equal(label, 'Warrior Nun Ava Running Through Water',
@@ -145,6 +151,16 @@ export async function run() {
     // asserted rather than merely drawn.
     const dup = (await page.locator(`${REPLY(0)} [data-gifcard] [data-alt-text]`).textContent()).trim();
     assert.equal(dup, 'Warrior Nun Ava Running Through Water');
+    // ...printed ONCE: the title is the alt, so the one line is both, and the
+    // caption the default hides — title, host, the link out — is back with it
+    const onCard = page.locator(`${REPLY(0)} [data-gifcard]`);
+    assert.equal(await onCard.locator('[data-alt-text]').count(), 1, 'the auto-filled alt is not printed twice');
+    assert.equal(await onCard.locator('[data-ext-title]').count(), 1, 'the card has its name back');
+    assert.equal((await onCard.locator('[data-ext-host]').textContent()).trim(), 'static.klipy.com', 'and its host');
+    assert.equal(await onCard.getAttribute('data-gif-caption'), 'on');
+    // an authored alt that says something the title does not is its own line
+    // under the title
+    assert.equal(await page.locator(`${REPLY(2)} [data-gifcard] [data-ext-title]`).count(), 1);
 
     alt.consoleErrors(); alt.errors();
   } finally { await alt.close(); }

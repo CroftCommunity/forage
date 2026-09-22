@@ -604,23 +604,36 @@ function withAltCaption(picture, items, { force = false } = {}) {
 // gif-embeds phase 2: the GIF CARD (owner, 2026-09-02 — "the gif shuld show a
 // play/pause overlay … not just tha tpost, but that TYPE of post").
 //
-// The stage is a player rather than a still thumbnail with a link out; the
-// caption keeps the card's identity. D8: bsky.app hides the title and host for
-// a GIF (`hideDetails`), forage does not — the owner asked for a player and a
-// setting, not for the card to lose its name. The duplication that prompted
-// the report is gone anyway, because the "ALT: <the title again>" line is what
-// the alt-text setting hides by default.
+// The stage is a player rather than a still thumbnail with a link out. D8
+// (revised 2026-09-16, owner from the phone: "I don't want to this alt text
+// under images or gifs unless the setting is checked"): the caption — the
+// GIF's title, its alt and its host — is printed ONLY when the alt-text
+// setting is on. bsky.app hides the title and host for a GIF (`hideDetails`)
+// and forage now does the same by default: a GIF's title IS its alt for
+// practically every record Bluesky's composer writes ("ALT: <the title>"), so
+// printing the title under the picture was the alt text the setting promised
+// to hide, under another name. With the setting on, the whole caption comes
+// back: title, alt (only when it says something the title does not), host —
+// the link out rides with it.
+//
+// D7 still holds: `<img alt>` / the player's accessible name are written in
+// both states — this governs a VISIBLE caption only.
 function gifCard(p) {
   const { uri, thumb, title, alt, player, sources, src, aspect } = p.media;
   const host = domainOf(uri) || '';
   const name = title || host || 'GIF';
   const linkAttrs = { target: '_blank', rel: 'noopener noreferrer' };
-  return el('div', { class: 'extcard', 'data-extcard': '1', 'data-gifcard': '1', 'data-provider': 'gif' },
+  const captionOn = altText.shown();
+  const altIsTitle = !!alt && alt.trim() === (title || '').trim();
+  const altLine = captionOn && !!alt && !altIsTitle;
+  return el('div', { class: 'extcard', 'data-extcard': '1', 'data-gifcard': '1', 'data-provider': 'gif',
+    'data-gif-caption': captionOn ? 'on' : 'off' },
     gifStage({ player, sources, src, thumb, alt, aspect, autoplay: gifAutoplay.enabled() }),
-    el('a', { class: 'ext-caption', href: uri, ...linkAttrs, 'aria-label': `${name} — opens in a new tab` },
-      el('div', { class: 'ext-title', 'data-ext-title': '1' }, name),
-      altText.shown() && alt ? el('div', { class: 'ext-desc', 'data-alt-text': '1' }, alt) : null,
-      el('div', { class: 'ext-host' }, el('span', { 'data-ext-host': '1' }, host))));
+    captionOn ? el('a', { class: 'ext-caption', href: uri, ...linkAttrs, 'aria-label': `${name} — opens in a new tab` },
+      // the auto-filled duplicate: the title IS the alt, so the one line is both
+      el('div', { class: 'ext-title', 'data-ext-title': '1', 'data-alt-text': altIsTitle ? '1' : null }, name),
+      altLine ? el('div', { class: 'ext-desc', 'data-alt-text': '1' }, alt) : null,
+      el('div', { class: 'ext-host' }, el('span', { 'data-ext-host': '1' }, host))) : null);
 }
 
 // v13 decisions 29 and 31: the EXTERNAL CARD — the picture on a stage (centred,
@@ -972,10 +985,18 @@ const lensRow = (p, view = 'card', { media = true } = {}) => {
   // external post's words are text too; the card under them is the link. A
   // title with no words (the alt-derived one) stays plain.
   const titleNode = p.maskedRemoved ? undefined
-    : showsMedia && p.placeholderTitle ? null
+    // alt-title (owner, 2026-09-16): with the picture on the row, neither
+    // stand-in prints above it — not "[image]", not the alt. bsky.app shows a
+    // text-less post as its picture alone (the alt is a corner badge, and the
+    // full text lives in the image viewer); until now the alt printed above
+    // the picture as if the author had written it, and as a link at that.
+    : showsMedia && (p.placeholderTitle || p.titleFromAlt) ? null
     // post-text: the row trims the card's own url too — the row shows the card
     // (bodyNode, below), so the raw url would be printed twice there as well
     : p.body ? el('div', { class: 'posttitle posttext' }, ...headWords(p))
+    // a stand-in title on a row that cannot show its media is plain words —
+    // never postRow's default anchor, which `.posttitle.posttext a` paints blue
+    : p.title ? el('div', { class: 'posttitle posttext', 'data-alt-title': '1' }, p.title)
     : undefined;
   return postRow(p, !!session, {
     onVote: lensVote(p),
@@ -985,7 +1006,12 @@ const lensRow = (p, view = 'card', { media = true } = {}) => {
     // press, so it is a link navigation (scroll to the top, history) and not go()'s
     // popstate, which keeps the scroll the way back/forward must
     open: (wrap) => wrap.querySelector('.actions a.replies')?.click(),
-    menuGroups: (row) => lensMenuGroups(row, { kind: 'post' }), // 4b
+    menuGroups: (row) => lensMenuGroups(row, { kind: 'post', onDeleted: () => {
+      // your own post, deleted from its row's ⋯: the row leaves the list in
+      // place rather than the whole feed refetching around it
+      const node = document.querySelector(`[data-uri="${CSS.escape(row.id)}"]`);
+      if (node) node.remove(); else rerender();
+    } }), // 4b
     aboveNode: kindContext(p),
     // 3i: never duplicate the text. Card mode carries the media or the link card;
     // compact is dense (the picture stays — feed-row v1). No chip row (v13).
@@ -1869,8 +1895,10 @@ function repostSheet(p, { onChange } = {}) {
 // the view only draws.
 // ---- the ⋯ menu on the lens (4b; decision 3) ------------------------------
 // post · thread · account groups, separators only, destructive last; a guest
-// gets only what a guest can do. Own posts carry no Mute/Block/Report (Delete
-// stays the two-press control in the action row, which bluesky-view pins).
+// gets only what a guest can do. Own posts carry no Mute/Block/Report: the
+// last group is Delete instead (owner, 2026-09-16 — it used to be a button in
+// the action row, the one control there that was not about answering the
+// post; bluesky-view pins it in the menu now).
 async function copyText(text, what) {
   try { await navigator.clipboard.writeText(text); toast(`${what} copied.`, 'ok'); }
   catch (e) { console.warn('forage: clipboard write failed', e); toast(`Could not copy the ${what.toLowerCase()} — your browser refused the clipboard.`, 'err'); }
@@ -1909,7 +1937,7 @@ function muteWordSheet() {
   input.focus();
 }
 
-function lensMenuGroups(p, { kind }) {
+function lensMenuGroups(p, { kind, onDeleted }) {
   const rkey = String(p.id).split('/').pop();
   const app = appFor(session?.serverMetadata?.issuer ?? null); // v13 decision 28
   // decision 10: a comment's link is its root's thread, focused on it
@@ -1924,8 +1952,13 @@ function lensMenuGroups(p, { kind }) {
   ];
   // board-cards decision 8: the guest's menu ends with the door, behind a rule
   if (!session) return [first, [{ label: 'Sign in to like, save and reply', icon: '\u2192', onSelect: () => openAuthSheet() }]];
+  // No repaint after the write: nothing on the row or the head shows saved
+  // state, and this menu is built fresh per press from `p` itself, so the next
+  // press reads Unsave without one. The rerender() that used to follow rebuilt
+  // the whole board under the sheet and lost the reader's place in the stream
+  // (owner, from the phone, 2026-09-16); Mute thread below never had it.
   first.push({ label: p.saved ? 'Unsave' : 'Save', icon: '☆', onSelect: async () => {
-    try { await lens.bookmark(p.id, p.cid, !p.saved); p.saved = !p.saved; toast(p.saved ? 'Saved.' : 'Removed from saved.', 'ok'); rerender(); }
+    try { await lens.bookmark(p.id, p.cid, !p.saved); p.saved = !p.saved; toast(p.saved ? 'Saved.' : 'Removed from saved.', 'ok'); }
     catch (e) { console.warn('forage: bookmark refused', e); toast(e.message, 'err'); }
   } });
   const rootUri = kind === 'comment' ? (p.postId || p.id) : p.id;
@@ -1946,7 +1979,15 @@ function lensMenuGroups(p, { kind }) {
   const posture = lens.posture();
   const muted = posture.mutedDids.has(p.authorId);
   const blockUri = posture.blockUriByDid.get(p.authorId);
-  const account = own ? [] : [
+  // Your own post or reply: the last group is the one destructive act that is
+  // yours to take. Named for what it takes (post vs reply), because two items
+  // reading "Delete" on one page is the ambiguity that cost the owner a post
+  // on 2026-09-03. canDelete, not `own`: it also checks the uri parses and
+  // its repo is this session's, the same gate deletePost applies.
+  const account = own ? (canDelete(p, session) ? [
+    { label: kind === 'comment' ? 'Delete reply' : 'Delete post', icon: '🗑', danger: true,
+      onSelect: () => deleteSheet(p, { what: kind === 'comment' ? 'reply' : 'post', onDone: onDeleted }) },
+  ] : []) : [
     { label: muted ? 'Unmute account' : 'Mute account', icon: '🔇', onSelect: async () => {
       try { await lens.muteActor(p.authorId, !muted); await afterPostureWrite(muted ? `Unmuted @${p.author}.` : `Muted @${p.author}. Their posts disappear here and on Bluesky.`); }
       catch (e) { console.warn('forage: mute refused', e); toast(e.message, 'err'); }
@@ -2081,56 +2122,49 @@ function partMenuGroups(part, onDeleted) {
   if (!canDelete(part, session)) return [first];
   // Destructive last and behind its own rule, the way every other menu here
   // ends — and it names the PART, because the post has a Delete of its own
-  // four lines below and the two were indistinguishable once already.
-  return [first, [{ label: `Delete part ${part.part}`, icon: '🗑', onSelect: async () => {
-    try {
-      await lens.deletePost(part.id);
-      toast('Part deleted — it is gone from your Bluesky account too.', 'ok');
-      onDeleted?.();
-    } catch (e) { toast('Delete failed: ' + e.message, 'err'); }
-  } }]];
+  // in its own ⋯ menu and the two were indistinguishable once already. The
+  // same sheet asks before it goes: a one-tap delete from a menu is the same
+  // hazard as a one-tap button.
+  return [first, [{ label: `Delete part ${part.part}`, icon: '🗑', danger: true,
+    onSelect: () => deleteSheet(part, { what: `part ${part.part}`, onDone: onDeleted }) }]];
 }
 
-// Phase 2: the delete control. Deleting is irreversible and federated — the
-// record leaves your repo but copies may already be elsewhere — so it takes
-// two deliberate clicks. NOT a confirm() dialog: a modal dialog freezes the
-// whole page, and this is a small enough act that arming the button in place
-// reads better than interrupting everything.
-// `label` because a post with continuation parts now shows more than one of
-// these on one card — the post's and each part's. Two buttons reading "Delete"
-// side by side is the ambiguity that cost the owner a post on 2026-09-03.
-function deleteControl(post, onDone, { label = 'Delete' } = {}) {
-  if (!canDelete(post, session)) return null;
-  let armed = false;
-  const b = el('button', { class: 'btn sm', 'data-delete-post': '1',
-    title: 'Delete this post from your Bluesky account' }, label);
-  const disarm = () => {
-    armed = false;
-    b.removeAttribute('data-armed');
-    b.classList.remove('danger');
-    b.replaceChildren(label);
-  };
-  b.addEventListener('click', async () => {
-    if (!armed) {
-      armed = true;
-      b.setAttribute('data-armed', '1');
-      b.classList.add('danger');
-      b.replaceChildren('Really delete?');
-      setTimeout(() => { if (armed) disarm(); }, 6000); // an unanswered arm relaxes
-      return;
-    }
-    b.disabled = true;
+// Phase 2: deleting. Deleting is irreversible and federated — the record
+// leaves your repo but copies may already be elsewhere — so it takes two
+// deliberate acts. It used to be a button in the action row that armed itself
+// in place ("Delete" → "Really delete?"); the owner moved it into the ⋯ menu
+// (2026-09-16), so the second act is this sheet: the menu item names what it
+// takes, and the sheet says once more what deleting does and asks. A native
+// <dialog>, the report and mute-word sheets' pattern — the menu it opens from
+// is one already, so nothing is frozen that was not. Cancel, Esc and the
+// scrim all keep the post; only the red button takes it.
+function deleteSheet(post, { what = 'post', onDone } = {}) {
+  if (!canDelete(post, session)) return;
+  const confirm = el('button', { type: 'button', class: 'btn danger', 'data-delete-confirm': '1' }, `Delete ${what}`);
+  const cancel = el('button', { type: 'button', class: 'btn', 'data-delete-cancel': '1' }, 'Cancel');
+  const dialog = el('dialog', { class: 'sheet', 'data-delete-sheet': '1', 'aria-label': `Delete this ${what}?` },
+    el('div', { class: 'row spread' }, el('strong', {}, `Delete this ${what}?`),
+      el('button', { type: 'button', class: 'sheet-x', 'aria-label': 'Close' }, '✕')),
+    el('p', { class: 'small muted' }, 'It is removed from your Bluesky account, here and in every app. Anyone who already saw it may still have a copy — deleting removes the record, it does not un-send it.'),
+    el('div', { class: 'sheet-actions' }, cancel, confirm));
+  dialog.querySelector('.sheet-x').addEventListener('click', () => dialog.close());
+  cancel.addEventListener('click', () => dialog.close());
+  confirm.addEventListener('click', async () => {
+    confirm.disabled = true;
     try {
       await lens.deletePost(post.id);
-      toast('Deleted — it is gone from your Bluesky account too.', 'ok');
+      dialog.close();
+      toast(`Deleted — the ${what} is gone from your Bluesky account too.`, 'ok');
       onDone?.();
     } catch (e) {
+      confirm.disabled = false;
       toast('Delete failed: ' + e.message, 'err');
-      b.disabled = false;
-      disarm();
     }
   });
-  return b;
+  dialog.addEventListener('close', () => dialog.remove());
+  document.body.append(dialog);
+  dialog.showModal();
+  cancel.focus(); // the safe answer is the one under the finger
 }
 
 // 3w: the composer. The pure module owns what a post IS — the two limits, the
@@ -3927,7 +3961,7 @@ export function lensProfileView() {
       el('div', { style: 'margin-top:8px' },
         el('h3', { style: 'font-size:var(--t-md);margin:0 0 4px' }, 'Alt text'),
         el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
-          'Alt text is the description an author writes for people who cannot see a picture. Off, it stays where screen readers read it. On, it is printed under the picture too — including on GIFs, where Bluesky often fills it in with the GIF’s own title.'),
+          'Alt text is the description an author writes for people who cannot see a picture. Off, it stays where screen readers read it, and a GIF is just the picture — no title or site under it. On, it is printed under the picture too — and a GIF gets its title, its alt and its site back, where Bluesky often fills the alt in with the GIF’s own title.'),
         el('label', { class: 'seccheck', for: 'pref-alttext' }, altBox, el('span', {}, 'Show alt text under pictures')),
         el('h3', { style: 'font-size:var(--t-md);margin:12px 0 4px' }, 'Deep threads'),
         el('div', { class: 'xs muted', style: 'margin-bottom:6px' },
@@ -4117,7 +4151,14 @@ export function lensThreadView(params, query) {
             el('a', { href: `/f/${src.feedSlug}`, class: 'xs head-crumb' }, `f/${src.feedSlug}`),
             p.nsfw ? el('span', { class: 'chip badge-nsfw' }, 'NSFW') : null,
           ],
-          menu: () => lensMenuGroups(p, { kind: 'post' }) })),
+          // phase 2: Delete post, in the menu's last group, only ever for a
+          // post that is genuinely yours; the thread says the post is gone
+          // rather than silently navigating away
+          menu: () => lensMenuGroups(p, { kind: 'post', onDeleted: () => {
+            main.replaceChildren(emptyState('This post was deleted',
+              'It is gone from your Bluesky account. Anyone who already saw it may still have a copy — deleting removes the record, it does not un-send it.',
+              el('a', { class: 'btn', href: `/f/${src.feedSlug}` }, 'Back to the board')));
+          } }) })),
       // The placeholder heading ('[image]', '[video]') drops when the media
       // renders below — the picture is the thing the heading stood in for.
       // A real title (text or alt-derived) keeps its heading above the media.
@@ -4138,7 +4179,9 @@ export function lensThreadView(params, query) {
       //   - it dropped every \n: 30% of live posts carry line structure
       // `pre-wrap` on .posttext keeps the breaks; the h1 stays valid because
       // facetNodes returns phrasing content only (text and anchors).
-      p.placeholderTitle && p.media ? null : el('h1', { class: 'posttext' }, ...headWords(p)),
+      // alt-title (2026-09-16): the alt-derived stand-in drops with the media
+      // on the page too — the picture is the post; its alt is the <img>'s name
+      (p.placeholderTitle || p.titleFromAlt) && p.media ? null : el('h1', { class: 'posttext' }, ...headWords(p)),
       // The post's own media, at full board size — until 2026-08-28 an image
       // post's thread page rendered no image at all.
       p.media && !p.maskedRemoved ? mediaNode(p) : null,
@@ -4185,16 +4228,7 @@ export function lensThreadView(params, query) {
           : plural(t.replyCount, 'reply', 'replies')), // the author and the time moved up into the byline (v6)
         repostControl(p), // v12 decision 25: ⟳ on the head too
         vote('post', p.id, p, !!session, { onVote: lensVote(p), onGuest: session ? null : openAuthSheet }), // Phase 6c: the head's pill
-        replyLink),
-      // phase 2: only ever rendered for a post that is genuinely yours
-      // It says "Delete post" now, not "Delete". When a part was drawn as body
-      // with no control of its own, this was the only button on the card and
-      // it read as the comment's (owner, 2026-09-03 — it deleted the post).
-      deleteControl(p, () => {
-        main.replaceChildren(emptyState('This post was deleted',
-          'It is gone from your Bluesky account. Anyone who already saw it may still have a copy — deleting removes the record, it does not un-send it.',
-          el('a', { class: 'btn', href: `/f/${src.feedSlug}` }, 'Back to the board')));
-      }, { label: 'Delete post' })));
+        replyLink)));
     const ctx = { ...LENS_PERMS,
       // post-text: a reply's words, faceted — its links, #tags and @mentions are
       // as live as the head's. The node shape carries `facets` as of this change.
@@ -4223,23 +4257,22 @@ export function lensThreadView(params, query) {
       // signed in, the comment arrow did nothing — it was the guest span).
       canVote: !!session, onVote: (n) => lensVote(n),
       onGuest: session ? null : openAuthSheet, // board-cards decision 1: a guest's vote stack is the door too
-      menuGroups: (n) => lensMenuGroups(n, { kind: 'comment' }), // 4b: the ⋯ on every reply
+      // 4b: the ⋯ on every reply. phase 2: a reply you regret is the commoner
+      // case than a post you regret, so your own replies carry Delete reply in
+      // its last group; the node simply says so when it is gone.
+      menuGroups: (n) => lensMenuGroups(n, { kind: 'comment', onDeleted: () => {
+        const host = commentsCard.querySelector(`[data-node-id="${CSS.escape(n.id)}"]`);
+        if (host) host.replaceChildren(el('div', { class: 'xs muted', style: 'padding:6px 0' }, 'You deleted this reply.'));
+        else rerender();
+      } }),
       permalink: (n) => `${location.origin}/p?uri=${encodeURIComponent(p.id)}&focus=${encodeURIComponent(n.id)}`, // decision 10
       authorHref: (n) => `/u/${encodeURIComponent(n.author)}`, // 3k: authors reach OUR profile page (which links out)
       // feed-row v2: the provider mark on comments too, unless switched off
       providerOf: providerMark.enabled() ? providerMark.providerOf : null,
       providerLabel: (h) => providerMark.markLabel(providerMark.providerOf(h), h),
       nodeRenderer: (n, c) => lensNode(n, c), // 3r: a quote nested under a reply is still a quote
-      // phase 2: a reply you regret is the commoner case than a post you
-      // regret, so your own replies carry the same control. Same guard, same
-      // two-click arming; the node simply removes itself when it is gone.
-      // v12 decision 25: ⟳ on every node, between Reply and the like; then the
-      // delete-your-own control where it applies
-      extraActions: (n) => [repostControl(n), deleteControl(n, () => {
-        const host = commentsCard.querySelector(`[data-node-id="${CSS.escape(n.id)}"]`);
-        if (host) host.replaceChildren(el('div', { class: 'xs muted', style: 'padding:6px 0' }, 'You deleted this reply.'));
-        else rerender();
-      })] };
+      // v12 decision 25: ⟳ on every node, between Reply and the like
+      extraActions: (n) => [repostControl(n)] };
     const commentsCard = el('div', { class: 'card' });
     // Phase 11c: the thread's sort bar — the top-level replies re-sorted
     // CLIENT-SIDE (the thread is already loaded whole; nothing to re-query),

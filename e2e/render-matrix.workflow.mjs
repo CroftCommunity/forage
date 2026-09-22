@@ -195,11 +195,14 @@ const SHAPES = [
     row: { ...NOTHING, words: true }, post: { ...NOTHING, words: true },
     reply: { ...NOTHING, words: true } },
 
-  { key: 'altonly', why: 'a wordless picture WITH alt text titles from the alt — the surface has words to show, so it shows them',
+  // alt-title (owner, 2026-09-16): a wordless picture is its picture on EVERY
+  // surface. The row and the post head used to print the alt as the post's
+  // words (the reply never did); bsky.app prints nothing for an empty text,
+  // and the alt is the img's name plus a corner ALT badge, not a caption the
+  // author wrote. The three surfaces agree now.
+  { key: 'altonly', why: 'a wordless picture WITH alt text shows the picture alone — the alt names it to a screen reader and is not the author\'s words',
     text: '', embed: images(img('alt', { width: 1600, height: 1200 })),
-    row: { ...NOTHING, ownStage: 1, words: true }, post: { ...NOTHING, ownStage: 1, words: true },
-    // a reply has no heading to fall back into: the alt text names the picture
-    // to a screen reader (it is the img's alt) and is not a caption the author wrote
+    row: { ...NOTHING, ownStage: 1, words: false }, post: { ...NOTHING, ownStage: 1, words: false },
     reply: { ...NOTHING, ownStage: 1, words: false } },
 
   { key: 'noalt', why: 'no words and no alt: the title is a PLACEHOLDER ("[image]") and drops where the picture itself shows — "[image]" above the actual image names nothing (live 2026-08-28)',

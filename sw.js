@@ -7,7 +7,7 @@
 // Bump CACHE whenever you want to force a clean re-cache on the very next load
 // (asset URLs are hashless, so the name is the version).
 
-const CACHE = 'forage-v85';
+const CACHE = 'forage-v86';
 const SHELL = [
   // pds-walker (vendored ESM tree; plan 2026-09-08-plan-beta-pds-walker) — the rings-from-the-
   // data-servers beta; every runtime file listed, per test/shell.test.js.

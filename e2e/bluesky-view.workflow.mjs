@@ -137,6 +137,16 @@ export async function run() {
         replies: [],
       } },
       'getQuotes?uri=at%3A%2F%2Fdid%3Aplc%3Acc%2Fapp.bsky.feed.post%2Ftp4': { posts: [] },
+      // alt-title (2026-09-16): the described picture post opened as a THREAD —
+      // the alt-derived stand-in drops at the head the way '[image]' does
+      'getPostThread?uri=at%3A%2F%2Fdid%3Aplc%3Acc%2Fapp.bsky.feed.post%2Ftp3': { thread: {
+        post: { ...post('tp3', 'did:plc:cc', '2026-08-25T15:30:00Z').post,
+          record: { text: '', createdAt: '2026-08-25T15:30:00Z' },
+          embed: { $type: 'app.bsky.embed.images#view', images: [
+            { thumb: 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==', fullsize: 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==', alt: 'a test image post' } ] } },
+        replies: [],
+      } },
+      'getQuotes?uri=at%3A%2F%2Fdid%3Aplc%3Acc%2Fapp.bsky.feed.post%2Ftp3': { posts: [] },
       // 3r: the cascade fixture. Routing is first-match-wins by substring, so
       // quote1's own thread/quotes must be declared BEFORE the generic keys.
       'getPostThread?uri=at%3A%2F%2Fdid%3Aplc%3Acc%2Fapp.bsky.feed.post%2Fquote1': { thread: {
@@ -246,6 +256,36 @@ export async function run() {
     'and the board says nothing about a mute — naming it is still a tell');
   assert.ok(await page.locator('.postrow:has-text("post a1") span[title="Verified on Bluesky"]').count(),
     'the verified author carries the checkmark');
+
+  // Save from a row's ⋯ menu leaves the board exactly where it was. The handler
+  // used to force a full repaint after the bookmark write, which rebuilt every
+  // row under the sheet and lost the reader's place in the stream (owner, from
+  // the phone, 2026-09-16). Nothing on the row shows saved state — only the
+  // menu's own label does, and that is read from the post at press time — so
+  // there is nothing to repaint. The row NODE surviving is the proof: a
+  // rebuild replaces it, whatever the scroll offset then happens to be.
+  const savedRow = page.locator('.postrow', { hasText: 'post a1' });
+  await savedRow.evaluate((r) => { r.dataset.kept = 'yes'; });
+  await page.setViewportSize({ width: 1280, height: 300 }); // taller than the viewport, so there is a place to lose
+  await savedRow.evaluate((r) => r.scrollIntoView({ block: 'center' }));
+  const yBefore = await page.evaluate(() => window.scrollY);
+  assert.ok(yBefore > 0, `the board is scrolled before Save: ${yBefore}`);
+  await savedRow.locator('.byline button.kebab').click();
+  await page.waitForTimeout(150);
+  await page.getByRole('menuitem', { name: 'Save', exact: true }).click();
+  await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('app.bsky.bookmark.createBookmark')
+    && JSON.parse(h.body).uri.endsWith('/a1')));
+  await page.waitForSelector('text=Saved.');
+  assert.equal(await page.locator('.postrow[data-kept="yes"]', { hasText: 'post a1' }).count(), 1,
+    'the row is the same node after Save — the board was not rebuilt under the menu');
+  assert.equal(await page.evaluate(() => window.scrollY), yBefore, 'and the reader has not moved');
+  await savedRow.locator('.byline button.kebab').click();
+  await page.waitForTimeout(150);
+  const afterSave = await page.$$eval('[role="menu"] [role="menuitem"]', (els) => els.map((e) => e.querySelector('span').textContent.trim()));
+  assert.ok(afterSave.includes('Unsave'), `the next press reads Unsave, from the post itself: ${JSON.stringify(afterSave)}`);
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(100);
+  await page.setViewportSize({ width: 1280, height: 720 });
 
   // 3e segment: open b1's thread — reply and quote are ONE continuation;
   // 3i: the poster's own 2/2 reads as the BODY, not a comment
@@ -406,40 +446,67 @@ export async function run() {
   // into. The thread genuinely keeps repainting (the reply refetches, the quote
   // cascade repaints again when it lands); a test cannot out-wait that, it can
   // only stop leaving a seam.
+  //
+  // Delete lives in the ⋯ menu now (owner, 2026-09-16), so the settled shape
+  // is what each menu offers: nothing in the action row says Delete any more,
+  // and only your own reply's menu ends in Delete reply. The action rows are
+  // read in one evaluate; the menus are opened one at a time below, and a
+  // menu is built fresh per open, so it cannot be stale.
   const shapeHandle = await page.waitForFunction(() => {
     const mine = document.querySelector('.comment[data-node-id$="/myreply"]');
     const theirs = document.querySelector('.comment[data-node-id$="/reply1"]');
     if (!mine || !theirs) return null;
     const shape = {
-      head: document.querySelectorAll('.card > [data-delete-post]').length,
-      mine: mine.querySelectorAll('[data-delete-post]').length,
-      theirs: theirs.querySelectorAll('[data-delete-post]').length,
+      rowDeletes: [...document.querySelectorAll('.actions button')].filter((b) => /delete/i.test(b.textContent)).length,
+      mineKebab: mine.querySelectorAll(':scope > .comment-body > .byline button.kebab').length,
+      theirsKebab: theirs.querySelectorAll(':scope > .comment-body > .byline button.kebab').length,
     };
-    // Return the shape only once it is the settled one; returning early would
-    // reintroduce exactly the seam this closes.
-    return (shape.head === 0 && shape.mine === 1 && shape.theirs === 0) ? shape : null;
+    return (shape.rowDeletes === 0 && shape.mineKebab === 1 && shape.theirsKebab === 1) ? shape : null;
   }, null, { timeout: 20000 }).catch((e) => {
-    throw new Error(`delete controls never settled to (head 0, mine 1, theirs 0): ${e.message}`);
+    throw new Error(`the thread never settled to (no Delete in any action row, one ⋯ on each reply): ${e.message}`);
   });
-  const deleteShape = await shapeHandle.jsonValue();
+  await shapeHandle.jsonValue();
 
-  assert.equal(deleteShape.head, 0, 'no delete control on a post that is not yours');
-  assert.equal(deleteShape.mine, 1, 'your own reply can be deleted');
-  assert.equal(deleteShape.theirs, 0, 'someone else\u2019s reply cannot');
-  await page.locator('.comment[data-node-id$="/myreply"] [data-delete-post]').click();
-  await page.locator('.comment[data-node-id$="/myreply"] [data-delete-post][data-armed="1"]').click();
+  const menuLabels = () => page.$$eval('[role="menu"] [role="menuitem"] > span:first-child', (els) => els.map((e) => e.textContent.trim()));
+  // the head is not mine: its menu has no Delete
+  await page.locator('.head-byline button.kebab').click();
+  await page.waitForTimeout(150);
+  assert.ok(!(await menuLabels()).some((l) => /delete/i.test(l)), 'no delete on a post that is not yours');
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => !document.querySelector('dialog.menu'));
+
+  // my own reply: no Mute/Block/Report, and the last item is Delete reply
+  const mineKebab = page.locator('.comment[data-node-id$="/myreply"] > .comment-body > .byline button.kebab');
+  await mineKebab.click();
+  await page.waitForTimeout(150);
+  assert.deepEqual(await menuLabels(), ['Copy text', 'Copy link', 'Open on bsky.app', 'Save',
+    'Mute thread', 'Mute words & tags', 'Hide for me', 'Delete reply'], 'your own reply can be deleted, from its menu');
+  // deleting is irreversible, so it takes two deliberate acts: the menu item,
+  // then a sheet that says what deleting does and asks — Cancel keeps it
+  await page.getByRole('menuitem', { name: 'Delete reply', exact: true }).click();
+  await page.waitForSelector('[data-delete-sheet]');
+  await page.locator('[data-delete-cancel]').click();
+  await page.waitForFunction(() => !document.querySelector('[data-delete-sheet]'));
+  assert.ok(!(await page.evaluate(() => window.__shimHits.some((h) => h.url.includes('deleteRecord')
+    && JSON.parse(h.body).collection === 'app.bsky.feed.post'))), 'Cancel deletes nothing');
+  await mineKebab.click();
+  await page.getByRole('menuitem', { name: 'Delete reply', exact: true }).click();
+  await page.waitForSelector('[data-delete-sheet]');
+  assert.match(await page.locator('[data-delete-sheet]').innerText(), /delete this reply\?/i,
+    'the second act is clearly a different act from the first, and names what it takes');
+  await page.locator('[data-delete-confirm]').click();
   await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('deleteRecord')
     && JSON.parse(h.body).rkey === 'myreply'));
   await page.waitForSelector('text=You deleted this reply.');
 
   // Phase 4b (plan 2026-08-29 post-and-thread, decision 3): the ⋯ on someone
   // else's reply carries the whole decided list, in order, destructive last.
-  const menuLabels = () => page.$$eval('[role="menu"] [role="menuitem"] > span:first-child', (els) => els.map((e) => e.textContent.trim()));
   const theirsKebab = page.locator('.comment[data-node-id$="/reply1"] > .comment-body > .byline button.kebab');
   await theirsKebab.click();
   await page.waitForTimeout(150);
   assert.deepEqual(await menuLabels(), ['Copy text', 'Copy link', 'Open on bsky.app', 'Save',
-    'Mute thread', 'Mute words & tags', 'Hide for me', 'Mute account', 'Block account', 'Report']);
+    'Mute thread', 'Mute words & tags', 'Hide for me', 'Mute account', 'Block account', 'Report'],
+    'someone else\u2019s reply cannot be deleted — it can be reported');
   // Save IS the bookmark procedure (4a-i) — the shim records the call
   await page.getByRole('menuitem', { name: 'Save', exact: true }).click();
   await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('app.bsky.bookmark.createBookmark')
@@ -456,16 +523,20 @@ export async function run() {
 
   await page.goto(`${s.origin}/p?uri=${encodeURIComponent('at://did:plc:me/app.bsky.feed.post/mine')}`);
   await page.waitForSelector('text=a post of my own');
-  await page.waitForSelector('[data-delete-post]');
+  await page.waitForSelector('.head-byline button.kebab');
+  assert.equal(await page.locator('.head-actions button', { hasText: /delete/i }).count(), 0,
+    'the action row answers the post; deleting it is in the menu');
 
-  // deleting is irreversible, so it takes two deliberate clicks rather than a
-  // blocking confirm() dialog (which would freeze the whole app)
-  await page.locator('[data-delete-post]').click();
-  await page.waitForSelector('[data-delete-post][data-armed="1"]');
-  assert.match(await page.locator('[data-delete-post]').innerText(), /really|sure|confirm/i,
-    'the second click is clearly a different act from the first');
-  await page.locator('[data-delete-post]').click();
-  await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('deleteRecord')));
+  // my own post: the menu's last item is Delete post, and it takes the same
+  // two deliberate acts as a reply's — the item, then the sheet's red button
+  await page.locator('.head-byline button.kebab').click();
+  await page.waitForTimeout(150);
+  assert.deepEqual((await menuLabels()).slice(-1), ['Delete post'], 'your own post can be deleted, from its menu, last');
+  await page.getByRole('menuitem', { name: 'Delete post', exact: true }).click();
+  await page.waitForSelector('[data-delete-sheet]');
+  await page.locator('[data-delete-confirm]').click();
+  await page.waitForFunction(() => window.__shimHits.some((h) => h.url.includes('deleteRecord')
+    && JSON.parse(h.body).rkey === 'mine'));
   const deletedBody = await page.evaluate(() => JSON.parse(window.__shimHits
     .filter((h) => h.url.includes('deleteRecord')).at(-1).body));
   assert.deepEqual(deletedBody, { repo: 'did:plc:me', collection: 'app.bsky.feed.post', rkey: 'mine' });
@@ -709,7 +780,23 @@ export async function run() {
   // 3i segment: media renders in Card (on a STAGE since board-cards Phase 5);
   // image-only titles from alt; Compact drops it
   await page.waitForSelector('.stage img.stage-fore');
-  await page.waitForSelector('text=a test image post');
+  await page.waitForSelector('.stage img[alt="a test image post"]');
+  // alt-title (owner's phone, 2026-09-16): a text-less picture post is its
+  // PICTURE, as posted. The alt had printed above it as the post's title — as
+  // a link, in link blue, beside text rows whose words sit plain — although
+  // the reader had switched "Show alt text under pictures" off. bsky.app
+  // prints nothing for an empty text and marks a described picture with a
+  // corner "ALT" badge; the description stays the <img>'s name.
+  {
+    const row = page.locator('.postrow', { has: page.locator('img[alt="a test image post"]') }).first();
+    assert.equal(await row.locator('.posttitle').count(), 0, 'no title line above the picture — not the alt, not a placeholder');
+    assert.equal(await row.locator(':scope .posttext').count(), 0, 'and no text line: the author wrote none');
+    assert.equal(await row.locator('.stage [data-alt-badge]').count(), 1, 'the corner badge says a description exists');
+    assert.equal(await row.locator('.stage [data-alt-badge]').getAttribute('aria-hidden'), 'true', 'the badge is silent — the <img> alt already speaks');
+    assert.equal(await row.locator('[data-alt-text]').count(), 0, 'the caption stays off until the reader switches it on');
+    const noAlt = page.locator('.postrow', { has: page.locator('.stage img.stage-fore[alt=""]') }).first();
+    assert.equal(await noAlt.locator('.stage [data-alt-badge]').count(), 0, 'a picture nobody described gets no badge');
+  }
   // The no-alt image post (tp4): its media renders, so the '[image]'
   // placeholder title must NOT print above it — the image is the content.
   assert.ok(await page.locator('.stage img.stage-fore').count() >= 2,
@@ -739,6 +826,11 @@ export async function run() {
   await page.waitForSelector('.stage img.stage-fore');
   assert.equal(await page.locator('h1', { hasText: '[image]' }).count(), 0,
     'the thread head never prints the literal [image] above the rendered image');
+  // alt-title: the alt-derived stand-in drops at the head the same way
+  await page.goto(`${s.origin}/p?uri=${encodeURIComponent('at://did:plc:cc/app.bsky.feed.post/tp3')}`);
+  await page.waitForSelector('.stage img[alt="a test image post"]');
+  assert.equal(await page.locator('h1.posttext').count(), 0, 'the thread head prints no alt-derived heading above the picture');
+  assert.equal(await page.locator('.stage [data-alt-badge]').count(), 1, 'the head\'s picture carries the ALT badge');
 
   // 3v: a SHARED feed link, opened COLD — a fresh navigation with no prior
   // in-app state, exactly like pasting the URL to someone else. The failure

@@ -28,6 +28,46 @@ below are the landings of that month, and everything earlier is in `git log`.
   behind its label and never plays; with the switch off nothing is downloaded until you
   press. The memory sandbox has no reel yet (its posts carry no media). (plan
   2026-09-14-plan-clips; mock `plans/mocks/clips.html` v4, every Proposed frame a capture)
+- 2026-09-16 **A picture-only post is its picture.** On a Bluesky board a post with no
+  text used to print its picture's alt description above the picture as if the author had
+  written it, in link blue, whether or not *Show alt text under pictures* was on. Now the
+  picture stands alone, on the board and at the head of its thread, the way bsky.app shows
+  it. A picture its author described carries a small *ALT* badge in its corner, as on
+  bsky.app; the description itself is the picture's name for a screen reader and, if you
+  switch the setting on, the caption under it. Real links, tags and mentions in a post's
+  text keep their blue. (owner, from the phone)
+- 2026-09-16 **A GIF is the picture alone unless you ask for its words.** A GIF card printed
+  its title and site under the animation even with *Show alt text under pictures* off, and for
+  nearly every GIF posted from Bluesky the title IS the alt text, so the setting was hiding one
+  copy and printing the other. Off, the GIF now shows nothing under it, the way bsky.app draws
+  it. On, the title, the alt and the site come back under the picture, each once: where the alt
+  is the title it is printed as one line, and an alt the author actually wrote is its own line
+  under the title. Screen readers are unaffected in both states; the name they read never
+  depended on the setting. (owner, from the phone)
+- 2026-09-16 **Save keeps your place.** Choosing *Save* (or *Unsave*) from a post's ⋯ menu
+  used to repaint the whole board under the sheet, so the stream you were reading jumped
+  and you lost where you were. The bookmark is written the same way as before; the page
+  simply stays put now, and the next press of ⋯ reads *Unsave* as it always did. Nothing
+  on the row shows saved state, so there was never anything to repaint. (owner, from the
+  phone)
+- 2026-09-16 **Delete lives in the ⋯ menu.** Deleting your own post or reply used to be a
+  button in the action row, the one control there that was not about answering the post.
+  It is now the last item of the post's or reply's ⋯ menu, named for what it takes
+  (*Delete post*, *Delete reply*, *Delete part 2*), and only ever there when the record is
+  yours. Choosing it opens a sheet that says once more what deleting does and asks; Cancel,
+  Esc and a tap outside all keep it, only the red button takes it. A part's delete, which was
+  a one-tap menu item, asks the same way now. Your own posts can be deleted from their row
+  in a feed too, from the same menu. (owner, from the phone)
+- 2026-09-16 **The like's buzz is one you can feel.** The vibration on a like or promote
+  was 12 ms, a length the owner's phone did not register on posts or on comments; it is
+  30 ms now, the shortest pulse that reads as a vibration rather than nothing. Off is still
+  off, un-liking is still silent, and the Buzz on like setting now shows a 🔇 *silenced*
+  chip when On would buzz nothing and why: a device with no vibration, or your reduced-motion
+  setting. It updates as the setting changes. The one gate it cannot show is the phone on
+  mute; the browser gives no way to see that switch, so the hint says so in words. For a
+  phone that still feels nothing,
+  `scripts/probe-haptics.html` opened on that phone says which of the four gates is shut.
+  (owner, from the phone; plan 2026-08-29-plan-post-and-thread Phase 7's owed device run)
 - 2026-09-14 **Follow everyone in a jumpstart — from Forage.** A jumpstart's page used to
   send you to bsky.app to follow its people; now *Follow everyone in it* leads to a confirm
   page that reads the list live and says what will happen first: how many follow records
