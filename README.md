@@ -333,12 +333,20 @@ active):
 
 - **Bluesky view** (the domain default): live network content, topic-first,
   readable with no account at all. Signed in (OAuth — you authorize on your own
-  server and no credentials touch Forage), the **ring dial** chooses how far out
-  your world goes — World / Following / Mutuals / Mutuals +1 (capped at 25 with
-  honest overflow) — boosts are real likes, threads continue through replies
-  AND quotes, your account's own moderation posture applies everywhere, `#tags`
-  open `/h/` boards, and the trending rail opens topics as feed streams. What it
-  writes is listed under *Writing*, and it writes only to your own repo.
+  server and no credentials touch Forage), the **ring pill** in the left nav
+  chooses how close a post has to come from — Mutuals / Follows / World, with
+  *+1* (your follows one hop out) addable — as a scope over every board, never a
+  destination; the **View dropdown** in the top bar chooses how a board is shown
+  — **Forum** (rows), **Clip** (its videos, one per screen, playing muted and
+  looping) or **Gram** (its pictures) — with a *Default view* on your account page
+  and the dropdown's choice lasting the visit; at a people stop a Clip or Gram
+  reel is the people themselves, asked a few at a time as you reach the end, and
+  with *Direct social tree PDS query* on it reads their clips and pictures from
+  their own data servers (counts and labels from Bluesky's view when it answers,
+  said unknown when it does not). Boosts are real likes, threads continue through
+  replies AND quotes, your account's own moderation posture applies everywhere,
+  `#tags` open `/h/` boards, and the trending rail opens topics as feed streams.
+  What it writes is listed under *Writing*, and it writes only to your own repo.
 - **Memory sandbox**: the local, seeded instrument — in-memory reducers,
   deterministic seeds, a persona switcher per seat, and nothing leaving the
   device. It is where the behavioral contract is defined and the baseline every
@@ -399,10 +407,11 @@ Real paths, not hash fragments: `forage.fyi/h/gardening`,
 
 **`/` is a rule, not a page.** Logged out it falls through to the directory; a
 returning reader is sent to the board they left; a first sign-in lands on
-`/r/fol`. Which is why the directory has its own address at `/trending` — a page
+`/m/home`. Which is why the directory has its own address at `/trending` — a page
 reachable only from `/` would be unreachable for exactly the readers `/`
-redirects. Rings are addresses too, one per rung (`/r/mut`, `/r/world`), so a
-ring board can be reloaded and linked like anything else.
+redirects. Rings are not addresses (the `/r/<rung>` boards were retired on
+2026-09-03 when the ring became a display scope), and neither is a view mode:
+both are the reader's own dials over whatever board they are on.
 
 GitHub Pages has no rewrite rules, so `404.html` is a copy of `index.html` (a test
 asserts they stay identical) and serves every deep link; the service worker answers
