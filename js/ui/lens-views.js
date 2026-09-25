@@ -732,8 +732,12 @@ function nativeHlsFirst(video) {
   return 'ManagedMediaSource' in window || !mseHlsSupported();
 }
 
-function mountVideo(node, { playlist, poster, fallback, muted = false }) {
+function mountVideo(node, { playlist, poster, fallback, muted = false, loop = false }) {
   const video = el('video', { class: 'stage-video', controls: '', autoplay: '', playsinline: '', poster: poster || '', 'data-playlist': playlist, preload: 'metadata' });
+  // The reel's clip LOOPS while it is the frame on screen (owner, 2026-09-25, on the
+  // device finding "an ended clip sits at its last frame": loop, not advance — the
+  // reader moves the reel, nothing moves the reader). A row's clip plays once.
+  if (loop) { video.loop = true; video.setAttribute('loop', ''); }
   // The reel's autoplay (D3): muted is the only way a browser starts a video
   // nobody pressed, and the property must be set before play() is asked for —
   // the attribute alone is not honoured everywhere (js/ui/stage.js, GIFs).
@@ -890,7 +894,7 @@ function renderBoard(card, posts, { wholeCorpus = false, reelOrigin = null, onNe
         const settled = manager === 'unavailable' || (auth && auth !== 'unknown' && (auth !== 'signed-in' || !!session));
         if (!settled) return;
         const st = item.querySelector('.reel-stage .stage[data-stage="video"]');
-        if (st && !st.querySelector('video')) mountVideo(st, { playlist: p.media.playlist, poster: p.media.thumb, fallback: link(p), muted: true });
+        if (st && !st.querySelector('video')) mountVideo(st, { playlist: p.media.playlist, poster: p.media.thumb, fallback: link(p), muted: true, loop: true });
         else st?.querySelector('video')?.play?.()?.catch?.(() => {});
       },
       rest: (p, item) => { item.querySelector('video')?.pause(); },

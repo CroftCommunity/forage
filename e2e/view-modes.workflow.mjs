@@ -160,6 +160,13 @@ export async function run() {
   await a.page.waitForSelector('.reel-item[data-active="1"] video[data-muted="1"]', { timeout: 5000 });
   assert.equal(await a.page.locator('.reel-item video').count(), 1, 'exactly one player on the page');
   assert.equal(await a.page.evaluate(() => document.querySelector('.reel-item[data-active="1"] video').muted), true, 'muted');
+  // 2026-09-25 device findings (owner: "fix both"): an ended clip LOOPS while it is the
+  // frame on screen — never advances, the reader moves the reel — and the count line
+  // stands on its own chip so it reads over a bright frame, not only over a dark one
+  assert.equal(await a.page.evaluate(() => document.querySelector('.reel-item[data-active="1"] video').loop), true, 'the active clip loops');
+  const chip = await a.page.evaluate(() => { const c = getComputedStyle(document.querySelector('.reel-count')); return { bg: c.backgroundColor, shadow: c.textShadow }; });
+  assert.match(chip.bg, /rgba\(0, 0, 0, 0\.[5-9]\d*\)|rgb\(0, 0, 0\)/, `the count line has a dark chip behind it (${chip.bg})`);
+  assert.notEqual(chip.shadow, 'none', 'and a text shadow');
   assert.deepEqual(await a.page.evaluate(() => window.__hlsSources.length), 1, 'the active frame\u2019s playlist, and no other');
   // the labeled frame is veiled and does not play when it becomes active
   const veilIndex = FOL_WAVE_ONE.indexOf(LABELED.uri);
