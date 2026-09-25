@@ -529,6 +529,15 @@ than here.
 
 ## Review Log
 
+- 2026-09-25 — **the two device findings fixed** (owner: "fix both"). The count line stands
+  on a dark chip with a text shadow; the reel's active clip LOOPS (loop, not advance — the
+  reader moves the reel, nothing moves the reader; a row's clip still plays once). RED first
+  in the journey's people-scope section. Verified on the Samsung against the branch served
+  over `adb reverse` (the test account, real OAuth): the chip legible over the bright
+  screenshot-clip (`plans/mocks/snaps/clips/device/samsung.fol-clip-chip.png`), and a 17.4 s
+  clip wrapping from 16.3 s to 0.4 s, still playing, muted, never `ended`. Mock v6 re-captured
+  every Proposed frame. Rig traps (an expired authorization request, the 127.0.0.1 origin, a
+  preview server dying with the shell) kept in session memory.
 - 2026-09-25 — **the device look, both phones** (the owner: "phones are connected and
   available"; claims `testbed--samsung` / `testbed--pixel` filed and released). Driven over
   adb-forwarded CDP against **forage.fyi as deployed** (`f45f6a0`); screencaps in

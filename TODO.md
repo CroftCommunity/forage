@@ -12,16 +12,6 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
 
 ## Needs the owner
 
-- **The reel's count line over a bright frame.** The sticky bar's gradient
-  (`.reel-bar`, `rgba(0,0,0,.72)` → 0) is too light under white text when the frame behind it is
-  bright: on the Samsung, Home at Follows in Clip, "10 clips from 4 people you follow" sat over a
-  white phone-screenshot clip and was barely legible (`plans/mocks/snaps/clips/device/samsung.fol-clip.png`,
-  2026-09-25). A text shadow or a denser scrim; re-capture `view-clip-fol`. (plan
-  2026-09-14-plan-clips, the device look)
-- **An ended clip sits at its last frame.** In Clip mode a clip that reaches its end stays at
-  0:29/0:29 until the reader swipes (Pixel, 2026-09-25). Loop it, advance to the next frame, or
-  leave it — the plan scoped no auto-advance on purpose (no algorithm), so this is the owner's
-  call, not a defect. (plan 2026-09-14-plan-clips)
 - [x] **Phone feed: posts edge to edge, and rows that read as rows** — _shipped 2026-09-14_
   as board-cards Phase 8 / decision 11 (mock `plans/mocks/phone-feed-edge.html`, approved on
   v2 the same day; `e2e/phone-feed-edge.workflow.mjs` holds the frame's claims). Still owed

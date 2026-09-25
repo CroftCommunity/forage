@@ -8,6 +8,12 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-25 **Clip mode: the clip on screen loops, and the count line reads over any frame.**
+  A clip that reached its end used to sit at its last frame until you swiped; now it starts
+  again while it is the one on screen (nothing moves you to the next — that is your swipe).
+  And the line saying how many clips the reel holds, and from whom, sits on its own dark chip,
+  so it reads over a bright frame as well as a dark one. Both found on the phones on
+  2026-09-25 and checked there again. (plan 2026-09-14-plan-clips)
 - 2026-09-21 **View modes: Forum, Clip, Gram.** In the top bar, beside the skin toggle, there
   is a dropdown, *View*: **Forum** is the rows you have today; **Clip** shows the board you are
   on as its clips, one per screen; **Gram** shows its picture posts (and GIF cards) the same
