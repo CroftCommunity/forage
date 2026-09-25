@@ -65,7 +65,10 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
   `forage.pds-walker` and are not cleared on sign-out (a warm start is the point — revisit on
   a shared device); `hop` (+1) is the mutuals' follows from the same walk. Re-pin with
   `npm install croft-pwa@github:CroftCommunity/croft-pwa#<sha> && npm run vendor:sync`
-  (test/vendor.test.js refuses a pin the tree was not synced from).
+  (test/vendor.test.js refuses a pin the tree was not synced from). **Widened 2026-09-25
+  (owner):** the same switch now serves a people-scope reel's CONTENT from the data servers
+  too (plan 2026-09-14-plan-clips Phase 6, `js/substrates/pds-posts.js`; ADR 0006) — counts
+  and labels hydrated from the AppView, said unknown when it is down.
 
 - ~~**When should the refresh check run on its own?**~~ **DECIDED 2026-09-02 by the owner: on
   return to a board.** Coming back to a board you were reading checks page one and says what
