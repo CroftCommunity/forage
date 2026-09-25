@@ -732,12 +732,16 @@ function nativeHlsFirst(video) {
   return 'ManagedMediaSource' in window || !mseHlsSupported();
 }
 
-function mountVideo(node, { playlist, poster, fallback, muted = false }) {
+function mountVideo(node, { playlist, poster, fallback, muted = false, loop = false }) {
   const video = el('video', { class: 'stage-video', controls: '', autoplay: '', playsinline: '', poster: poster || '', 'data-playlist': playlist, preload: 'metadata' });
   // The reel's autoplay (D3): muted is the only way a browser starts a video
   // nobody pressed, and the property must be set before play() is asked for —
   // the attribute alone is not honoured everywhere (js/ui/stage.js, GIFs).
   if (muted) { video.muted = true; video.setAttribute('muted', ''); video.setAttribute('data-muted', '1'); }
+  // The reel's clip loops (owner, 2026-09-25 — the device look found an ended
+  // clip sitting at its last frame): the browser's own loop, no timer of ours,
+  // and a row's clip still plays once as it always did.
+  if (loop) { video.loop = true; video.setAttribute('loop', ''); }
   node.replaceChildren(video);
   const viaHls = () => loadHls().then((Hls) => {
     if (!Hls.isSupported()) throw new Error('this browser cannot play HLS video');
@@ -890,7 +894,7 @@ function renderBoard(card, posts, { wholeCorpus = false, reelOrigin = null, onNe
         const settled = manager === 'unavailable' || (auth && auth !== 'unknown' && (auth !== 'signed-in' || !!session));
         if (!settled) return;
         const st = item.querySelector('.reel-stage .stage[data-stage="video"]');
-        if (st && !st.querySelector('video')) mountVideo(st, { playlist: p.media.playlist, poster: p.media.thumb, fallback: link(p), muted: true });
+        if (st && !st.querySelector('video')) mountVideo(st, { playlist: p.media.playlist, poster: p.media.thumb, fallback: link(p), muted: true, loop: true });
         else st?.querySelector('video')?.play?.()?.catch?.(() => {});
       },
       rest: (p, item) => { item.querySelector('video')?.pause(); },

@@ -10,7 +10,8 @@
 //   4. exactly one frame is active as the reel scrolls
 //   5. choosing Forum on the dropdown returns to the rows and the choice is remembered (the key)
 //   6. a board with none of the kind is an honest empty reel with the way back
-//   7. with autoplay off, nothing leaves the page for a frame that a row would
+//   7. with autoplay off, nothing leaves the page (and a mounted player LOOPS — an ended
+//      clip starts again, owner 2026-09-25) for a frame that a row would
 //      not have fetched; with it on (the default), the frame on screen mounts a
 //      MUTED player and only that frame does; a labeled frame is veiled and
 //      never plays
@@ -160,6 +161,9 @@ export async function run() {
   await a.page.waitForSelector('.reel-item[data-active="1"] video[data-muted="1"]', { timeout: 5000 });
   assert.equal(await a.page.locator('.reel-item video').count(), 1, 'exactly one player on the page');
   assert.equal(await a.page.evaluate(() => document.querySelector('.reel-item[data-active="1"] video').muted), true, 'muted');
+  // owner, 2026-09-25 (after the device look found an ended clip sitting at its last frame):
+  // in Clip mode a clip that ends starts again — the browser's own loop, no timer of ours
+  assert.equal(await a.page.evaluate(() => document.querySelector('.reel-item[data-active="1"] video').loop), true, 'the reel\u2019s player loops');
   assert.deepEqual(await a.page.evaluate(() => window.__hlsSources.length), 1, 'the active frame\u2019s playlist, and no other');
   // the labeled frame is veiled and does not play when it becomes active
   const veilIndex = FOL_WAVE_ONE.indexOf(LABELED.uri);

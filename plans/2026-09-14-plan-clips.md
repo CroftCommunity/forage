@@ -529,6 +529,12 @@ than here.
 
 ## Review Log
 
+- 2026-09-25 — **the device look's two findings closed** (owner: "loop"): the reel's player
+  mounts with `loop` (held by the journey); the count bar's scrim is denser and the words carry
+  a shadow (`view-clip-fol` re-captured). **Phase 6 decided the same day** (owner: "we want
+  the pds walker path to be viable for all content and formats — I'm not sure why it would
+  even be different here"): it was held apart only because the Beta switch shipped promising
+  membership-only; that promise is now widened by the owner's word. Queued after the +1 cap.
 - 2026-09-25 — **the device look, both phones** (the owner: "phones are connected and
   available"; claims `testbed--samsung` / `testbed--pixel` filed and released). Driven over
   adb-forwarded CDP against **forage.fyi as deployed** (`f45f6a0`); screencaps in
