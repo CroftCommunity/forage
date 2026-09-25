@@ -10,7 +10,7 @@ measured (below). Mock **v5** — every Proposed frame a capture — is `plans/m
 Owner's word 2026-09-21: "finish building everything that was scoped", the open decisions
 taken the way the plan proposed. **D7 DECIDED 2026-09-21 (owner, on mock v4):** a dropdown in
 the top bar — the view is a content-type choice, one at a time, not a gradient like the ring;
-built as v5 (`viewSelect()` in the masthead, the nav's pill and the reel's exit gone). Still
+built as v5 (`viewSelect()` in the masthead, the nav's pill and the reel's exit gone). Phase 6 BUILT 2026-09-25 (below). Still
 open: the phone look
 `[device done 2026-09-25: samsung, pixel]` (Phase 4's second half, 0e), and Phase 6 (the pds-walker path, its own
 decision). The research half (§ Prior art) is done and sourced.
@@ -512,11 +512,46 @@ surfaces paragraph (a presentation flag, not a route; **no new writes** — the 
 table is untouched, like/repost/reply reuse the existing calls); `docs/DEVICE-LOCAL.md`
 rows; this plan's Status. PR, ask to merge.
 
-### Phase 6 (later, its own decision) — Clips on the pds-walker path
+### Phase 6 — the data servers as the source (DECIDED 2026-09-25, BUILT the same day)
 
-`listRecords` over `app.bsky.feed.post` per member, local `app.bsky.embed.video` test,
-playlist derived per V3, no counts and the count line says so. Rides the Beta switch and
-widens it from membership to content — argue for it in the Beta plan before building.
+**Owner:** "we want the pds walker path to be viable for all content and formats — I'm not
+sure why it would even be different here." It was held apart only because the Beta switch
+shipped promising membership-only (plan 2026-09-08-plan-beta-pds-walker: "the switch changes
+how the rings are computed and nothing else"); the owner's word widens that promise.
+
+**What it is.** With the Beta switch on, a people-scope reel asks each member of a wave
+through `js/substrates/pds-posts.js` instead of the AppView's author feed:
+`com.atproto.repo.listRecords` over `app.bsky.feed.post` on the member's own PDS (100 a
+page, at most 3 pages an ask), filtered the way the author-feed filter would
+(`js/pds-posts.js` `matchesFilter`: video → `embed.video`; media → pictures AND clips;
+replies excluded), and translated to the post VIEW the lens already shapes (`recordToView`)
+with **every URL derived from the record's own blob cids**. The lens then **hydrates counts
+and labels from the AppView** (`getPosts`, 25 uris a call) and, when it does not answer,
+says so on the count line — *no counts or labels: the network's view did not answer* —
+and the row shows its counts as unknown, never zero. The seam is `createLens({ postsSource })`,
+the sibling of `graphSource`; `null` for a member falls through to the AppView for that
+member alone (`via: 'pds' | 'appview' | 'mixed'`). The count line says *from their data
+servers*.
+
+**Probed 2026-09-25 (the URL patterns are the network's own, pinned by `test/pds-posts.test.js`):**
+
+| # | fact | evidence |
+|---|---|---|
+| V9 | a picture's `thumb` / `fullsize` are `https://cdn.bsky.app/img/feed_thumbnail|feed_fullsize/plain/<did>/<blob cid>` — no suffix; the avatar is `…/img/avatar/plain/<did>/<cid>` | a Discover picture post, its view against its raw record on `getRecord` |
+| V10 | the handle is the DID document's `at://` alias; displayName and avatar cid are the `app.bsky.actor.profile/self` record | the same account's doc and profile |
+| V11 | `listRecords` over `app.bsky.feed.post` is 100 a page with a cursor; that account's last 100 were 93 picture posts, 6 externals, 1 text | its PDS |
+| V12 | `getPosts` unauthenticated with 25 uris answers 25 views carrying `likeCount`, `replyCount`, `repostCount`, `quoteCount`, `labels`, `author` | `public.api.bsky.app` |
+| V3 (2026-09-14) | the playlist and thumbnail derive from the video blob cid on `video.bsky.app` | the plan's V3 |
+
+**What a repo cannot say, and how it is said.** Counts and labels. Hydration answers both
+when the AppView is up; when it is down the reel still frames every clip — that is the
+point of the path — and the row's counts read as unknown, the labeled-frame veil cannot
+fire (no labels are known), and the count line says so. Blocks and mutes still apply (dids).
+
+**Tests:** `test/pds-posts.test.js` (the translation, pure), `test/lens-reel.test.js` (the
+seam: the AppView author feed never asked; hydration and its failure; `null` falls
+through), `e2e/view-modes.workflow.mjs` claim 11 (a faked data server with raw records,
+both with the AppView answering and with it down; the press mounts the derived playlist).
 
 ## Documentation impact
 
@@ -529,6 +564,13 @@ than here.
 
 ## Review Log
 
+- 2026-09-25 — **Phase 6 built** (owner: the walker path for all content and formats).
+  `js/pds-posts.js` (pure: record → view, URLs from blob cids, the filters), `js/substrates/pds-posts.js`
+  (the source: DID → PDS via the vendored walker's `resolvePds`, identity cached per did,
+  `listRecords` paged and bounded), `createLens({ postsSource })` + `hydrateFromAppView`
+  (`getPosts`, 25 a call; `get()` now repeats array params), the count line's *from their data
+  servers* and its no-counts caveat, the same Beta switch composed in `main.js`. RED first
+  throughout; the journey's claim 11 runs both with the AppView answering and with it down.
 - 2026-09-25 — **the +1 cap built** (Phase 0's follow-up): `HOP_CAP = 300` in
   `js/reel-plan.js` (`poolFor`), applied after the known-posters ordering so a poster the
   device has seen survives the bound; `lens.reel()` returns `members` (the whole scope) and

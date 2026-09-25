@@ -81,8 +81,13 @@ const persistHidden = () => { try { localStorage.setItem(HIDDEN_KEY, JSON.string
 let graphSource = null;
 const betaGraphSource = (args) => (graphSource ? graphSource(args) : null);
 export function setGraphSource(fn) { graphSource = fn; lens.forgetRings(); }
+// Phase 6 (plan 2026-09-14-plan-clips): the people-scope reel's content seam, the same
+// shape — consulted at call time, so the Beta switch applies to the next wave
+let postsSource = null;
+const betaPostsSource = (args) => (postsSource ? postsSource(args) : null);
+export function setPostsSource(fn) { postsSource = fn; }
 export function forgetRings() { lens.forgetRings(); }
-let lens = createLens({ hiddenUris, graphSource: betaGraphSource });
+let lens = createLens({ hiddenUris, graphSource: betaGraphSource, postsSource: betaPostsSource });
 // feed-index Phase 2: the index that ships with the app, read once per page
 // load and then from memory (js/feed-index-store.js). D-own: the forager's
 // own file folds in through js/index-prefs.js; the settings page reloads it.
@@ -376,7 +381,7 @@ async function adoptSession(s) {
     if (r.ok) handle = (await r.json()).handle ?? s.did;
   } catch { /* keep the did */ }
   session = { did: s.did, handle, fetchHandler: (p, i) => manager.fetch(p, i) };
-  lens = createLens({ session, hiddenUris, graphSource: betaGraphSource });
+  lens = createLens({ session, hiddenUris, graphSource: betaGraphSource, postsSource: betaPostsSource });
   sessionAvatarUrl = null;
   lens.profile(s.did).then((p) => { if (session?.did === s.did) { sessionAvatarUrl = p.avatar; rerender(); } })
     .catch((e) => console.warn('forage: could not load your profile picture', e));
@@ -1281,7 +1286,14 @@ function reelScopeFor(feedKind) {
   return { mode, scope };
 }
 // the count line's source sentence is js/reel-plan.js's originWords — pure,
-// unit-tested, and the one place the +1 cap is said out loud
+// unit-tested, and the one place the +1 cap is said out loud. Phase 6 adds where
+// the frames were READ from and whether their counts are known: a page from the
+// data servers says so, and says when the network's view did not answer.
+function reelOriginLine(rs, m) {
+  const via = m.via === 'pds' || m.via === 'mixed' ? ' · from their data servers' : '';
+  const counts = m.via && m.via !== 'appview' && m.hydrated === false ? ' · no counts or labels: the network\u2019s view did not answer' : '';
+  return originWords({ scope: rs.scope, total: m.total, pool: m.pool }) + via + counts;
+}
 // One fetch shape for both roads: a page of the board, or a wave of the reel.
 function reelPage(rs, { cursor = null, title = null } = {}) {
   return lens.reel(rs.mode, rs.scope, { cursor, known: [...mediaPosters.known(rs.mode)], title })
@@ -1311,7 +1323,7 @@ function feedBoardView(entry, preInfo) {
   // read off the RESULT (and kept in the record), never set in a fetch's .then:
   // render() can rebuild this view while the first fetch is in flight, and the
   // rebuilt view shares the promise but not the closure that would have set it
-  const takeMembers = (r) => { if (rs && Number.isInteger(r?.members)) reelMembers = { total: r.members, pool: r.pool ?? r.members }; };
+  const takeMembers = (r) => { if (rs && Number.isInteger(r?.members)) reelMembers = { total: r.members, pool: r.pool ?? r.members, via: r.via, hydrated: r.hydrated }; };
   reelMembers = cached?.members ?? { total: 0, pool: 0 };
   const remember = () => boardCache.write(cacheKey,
     { posts: allPosts.slice(), cursor: nextCursor, info: lastInfo, at: Date.now(), ...(rs ? { members: reelMembers } : {}) });
@@ -1319,7 +1331,7 @@ function feedBoardView(entry, preInfo) {
   const moreHost = el('div', {});
   let fetchingMore = false;
   const repaint = () => {
-    renderBoard(card, allPosts, { reelOrigin: rs ? originWords({ scope: rs.scope, ...reelMembers }) : null,
+    renderBoard(card, allPosts, { reelOrigin: rs ? reelOriginLine(rs, reelMembers) : null,
       // backpressure: reaching the last frame is the ask for the next wave
       onNearEnd: () => moreHost.querySelector('button')?.click() });
     moreHost.replaceChildren();
@@ -1585,7 +1597,7 @@ export function lensMixView(params) {
       allPosts = [...allPosts, ...r.posts];
       cursors = r.cursor ? { reel: r.cursor } : {};
       failures = r.failures.map((f) => ({ id: f.did, title: f.did, error: f.error }));
-      reelMembers = { total: r.members, pool: r.pool ?? r.members };
+      reelMembers = { total: r.members, pool: r.pool ?? r.members, via: r.via, hydrated: r.hydrated };
       return;
     }
     for (const src of r.sources) {
@@ -1603,7 +1615,7 @@ export function lensMixView(params) {
   const fetchNext = () => (rs ? reelPage(rs, { cursor: cursors.reel || null, title: meta.name }) : lens.mix(rows, { slug, name: meta.name, cursors }));
   let fetchingMore = false;
   const repaint = () => {
-    renderBoard(card, allPosts, { reelOrigin: rs ? originWords({ scope: rs.scope, ...reelMembers }) : null,
+    renderBoard(card, allPosts, { reelOrigin: rs ? reelOriginLine(rs, reelMembers) : null,
       onNearEnd: () => moreHost.querySelector('button')?.click() });
     infoHost.replaceChildren(rs ? '' : mixInfoLine({ sourceCount: rows.length, failures, sort: boardSort }));
     moreHost.replaceChildren();

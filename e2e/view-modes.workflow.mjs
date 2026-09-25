@@ -18,12 +18,16 @@
 //      member with the mode's filter, a wave at a time, the count line naming
 //      the source; reaching the last frame asks for the next wave
 //   9. gram shows the alt text a person wrote as the caption
+//  11. Phase 6: with the Beta switch on, a people-scope reel reads its members' clips
+//      from their DATA SERVERS (listRecords, raw records, URLs derived from blob cids),
+//      never the AppView's author feed; counts and labels are hydrated from the AppView
+//      when it answers, and the count line says so when it does not
 //  10. a Default view setting on the account page, forum unless chosen; a fresh
 //      visit opens in the default and the dropdown's choice lasts the visit
 import assert from 'node:assert/strict';
 import { scenario } from './harness/scenario.mjs';
 import { FAKE_SIGNED_IN } from './harness/mock-thread.mjs';
-import { RESPONSES, PEOPLE_RESPONSES, BOARD_PATH, CLIP_URIS, GRAM_URIS, FOL_WAVE_ONE, FOL_WAVE_TWO, LABELED, GRAPH, inMode, defaultMode, inScope, autoplay, HLS_DOUBLE } from './harness/mock-reel.mjs';
+import { RESPONSES, PEOPLE_RESPONSES, PDS_RESPONSES, PDS_RESPONSES_DOWN, PDS_CLIP_URIS, PDS_PLAYLIST, BETA_ON, BOARD_PATH, CLIP_URIS, GRAM_URIS, FOL_WAVE_ONE, FOL_WAVE_TWO, LABELED, GRAPH, inMode, defaultMode, inScope, autoplay, HLS_DOUBLE } from './harness/mock-reel.mjs';
 
 const frames = (page) => page.evaluate(() => [...document.querySelectorAll('.reel-item')].map((s) => s.dataset.post));
 const active = (page) => page.evaluate(() => [...document.querySelectorAll('.reel-item')].map((s) => s.dataset.active));
@@ -200,4 +204,37 @@ export async function run() {
   await f.page.locator('select[data-view-default]').waitFor({ timeout: 15000 });
   assert.equal(await f.page.locator('select[data-view-default]').evaluate((x) => x.value), 'forum', 'forum by default');
   await f.close();
+
+  // ---- 11. Phase 6: the data servers as the source (owner, 2026-09-25) ----
+  const unexempt2 = `try { localStorage.setItem('forage.ringexempt', '0'); } catch {}`;
+  for (const [label, responses] of [['hydrated', PDS_RESPONSES], ['appview down', PDS_RESPONSES_DOWN]]) {
+    const b = await scenario('first-visit', { mode: 'bluesky', initScripts: [FAKE_SIGNED_IN, inMode('clip'), inScope('fol'), unexempt2, BETA_ON, HLS_DOUBLE, autoplay(false)], responses });
+    await b.page.setViewportSize({ width: 390, height: 844 });
+    await b.page.goto(`${b.origin}${BOARD_PATH}`);
+    await b.page.waitForSelector('.reel[data-reel="clip"]', { timeout: 20000 });
+    await b.page.waitForFunction(() => document.querySelectorAll('.reel-item').length >= 2, null, { timeout: 15000 });
+    const hits = await b.page.evaluate(() => window.__shimHits.map((h) => h.url));
+    assert.ok(hits.some((u) => u.includes('listRecords') && u.includes('collection=app.bsky.feed.post')), `${label}: the members' posts were listed on their data servers`);
+    assert.ok(!hits.some((u) => u.includes('getAuthorFeed')), `${label}: the AppView's author feed was never asked`);
+    assert.deepEqual((await frames(b.page)).sort(), [...PDS_CLIP_URIS].sort(), `${label}: exactly the members' clips, the text and picture posts dropped by the filter`);
+    const pl = await b.page.evaluate((uri) => document.querySelector(`.reel-item[data-post="${uri}"] .stage[data-stage="video"]`)?.closest('.reel-item') ? 'stage' : 'none', PDS_CLIP_URIS[0]);
+    assert.equal(pl, 'stage', `${label}: the derived clip has its stage`);
+    const line = await b.page.locator('.reel-count').textContent();
+    assert.match(line, /from their data servers/, `${label}: the count line says where the frames were read (${line})`);
+    if (label === 'hydrated') {
+      assert.ok(hits.some((u) => u.includes('getPosts')), 'counts were asked of the AppView');
+      assert.ok(!/no counts/.test(line), `hydrated: no caveat on the line (${line})`);
+      const likes = await b.page.locator(`.reel-item[data-post="${PDS_CLIP_URIS[0]}"] .reel-row .actions`).textContent();
+      assert.match(likes, /42/, `hydrated: the AppView's like count reached the row (${likes.replace(/\s+/g, ' ')})`);
+    } else {
+      assert.match(line, /no counts or labels: the network.s view did not answer/, `down: the line says the counts are unknown (${line})`);
+      const acts = await b.page.locator(`.reel-item[data-post="${PDS_CLIP_URIS[0]}"] .reel-row .actions`).textContent();
+      assert.ok(/\u2013/.test(acts) && !/\b0\b/.test(acts), `down: the row's counts read as unknown, never zero (${acts.replace(/\s+/g, ' ')})`);
+    }
+    // the press mounts the DERIVED playlist — the record's blob cid on the network's video host
+    await b.page.locator(`.reel-item[data-post="${PDS_CLIP_URIS[0]}"] [data-play]`).click();
+    await b.page.waitForSelector(`.reel-item[data-post="${PDS_CLIP_URIS[0]}"] video`, { timeout: 5000 });
+    assert.deepEqual(await b.page.evaluate(() => window.__hlsSources), [PDS_PLAYLIST], `${label}: the playlist is derived from the blob cid`);
+    await b.close();
+  }
 }

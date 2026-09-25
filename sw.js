@@ -7,7 +7,7 @@
 // Bump CACHE whenever you want to force a clean re-cache on the very next load
 // (asset URLs are hashless, so the name is the version).
 
-const CACHE = 'forage-v86';
+const CACHE = 'forage-v87';
 const SHELL = [
   // pds-walker (vendored ESM tree; plan 2026-09-08-plan-beta-pds-walker) — the rings-from-the-
   // data-servers beta; every runtime file listed, per test/shell.test.js.
@@ -43,7 +43,7 @@ const SHELL = [
   '/js/reducers.js', '/js/selectors.js', '/js/personas.js', '/js/actions.js', '/js/util.js',
   '/js/board-density.js', '/js/last-board.js', '/js/share-target.js', '/js/rings.js', '/js/ring-scope.js', '/js/view-mode.js', '/js/ui/reel.js', '/js/reel-plan.js', '/js/media-posters.js', '/js/clip-autoplay.js', '/js/beta.js', '/js/mixes.js', '/js/mixes-pds.js', '/js/mix-deal.js', '/js/tagsubs.js', '/js/tagsubs-pds.js', '/js/lexicon.js', '/js/lexicons.js', '/js/tag-stats.js', '/js/trending-tags.js', '/js/hashtag-prefs.js', '/js/prng.js', '/js/devbar.js', '/js/engines/rank.js',
   '/js/engines/limits.js', '/js/config/routing.js', '/js/substrates/memory.js',
-  '/js/substrates/atproto.js', '/js/substrates/lens.js', '/js/substrates/pds-graph.js', '/js/ui/components.js', '/js/ui/menu.js', '/js/ui/sortbar.js', '/js/ui/refresh-control.js', '/js/haptics.js', '/js/ui/nav.js',
+  '/js/substrates/atproto.js', '/js/substrates/lens.js', '/js/substrates/pds-graph.js', '/js/substrates/pds-posts.js', '/js/pds-posts.js', '/js/ui/components.js', '/js/ui/menu.js', '/js/ui/sortbar.js', '/js/ui/refresh-control.js', '/js/haptics.js', '/js/ui/nav.js',
   '/js/ui/views.js', '/js/ui/lens-views.js', '/data/seed.js', '/scenarios/ban-readonly.js',
   '/scenarios/comment-tree-collapse.js', '/scenarios/demo-extras.js',
   '/scenarios/feed-lifecycle.js', '/scenarios/format.js', '/scenarios/index.js',

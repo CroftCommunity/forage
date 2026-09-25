@@ -1276,7 +1276,12 @@ export const REPORT_REASONS = Object.freeze({
 // The shape is the same `{ me, follows, followers, hopFollows }`, so rings.js's chain and
 // every filter are untouched. A source that can only say who follows BACK supplies those as
 // `followers`; mut = follows ∩ followers is unchanged by that (test/lens-rings.test.js).
-export function createLens({ session = null, transport = fetch, hiddenUris = new Set(), graphSource = null } = {}) {
+// postsSource (plan 2026-09-14-plan-clips, Phase 6): the people-scope reel's content seam.
+// When given, each member of a wave is asked through it — the data servers — and the
+// AppView's author feed is not called; `null` for a member falls through to the AppView
+// for that member alone. The lens hydrates counts and labels from the AppView afterwards
+// (getPosts) and says `hydrated: false` when it could not.
+export function createLens({ session = null, transport = fetch, hiddenUris = new Set(), graphSource = null, postsSource = null } = {}) {
   // hiddenUris rides on the posture so the shape layer applies it like a mute;
   // the caller owns persisting it (a substrate never reaches for localStorage).
   let posture = { ...EMPTY_POSTURE, hiddenUris };
@@ -1322,9 +1327,33 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
     if (!res.ok) throw new Error(`lens: ${verb} failed HTTP ${res.status}`);
   }
 
+  // Phase 6: a page from the data servers carries no counts and no labels (a repo cannot
+  // know how the network answered a post). Ask the AppView for exactly those, 25 uris a
+  // call, and merge; if it does not answer, the page says so (`hydrated: false`) and the
+  // frames render with their counts unknown rather than zero.
+  async function hydrateFromAppView(data) {
+    const views = (data.feed || []).map((it) => it.post).filter((p) => p?.viaPds);
+    if (!views.length) { data.hydrated = true; return; }
+    try {
+      const byUri = new Map();
+      for (let i = 0; i < views.length; i += 25) {
+        const got = await get('app.bsky.feed.getPosts', { uris: views.slice(i, i + 25).map((p) => p.uri) });
+        for (const p of got.posts || []) byUri.set(p.uri, p);
+      }
+      for (const v of views) {
+        const h = byUri.get(v.uri);
+        if (!h) continue;
+        Object.assign(v, { likeCount: h.likeCount, replyCount: h.replyCount, repostCount: h.repostCount, quoteCount: h.quoteCount, labels: h.labels || [], viewer: h.viewer || {},
+          author: { ...v.author, ...(h.author || {}) }, indexedAt: h.indexedAt || v.indexedAt });
+      }
+      data.hydrated = true;
+    } catch { data.hydrated = false; }
+  }
+
   async function get(path, params = {}) {
     const qs = new URLSearchParams();
-    for (const [k, v] of Object.entries(params)) if (v !== undefined) qs.set(k, v);
+    // an array repeats the key (`uris=…&uris=…`), which is how getPosts takes its batch
+    for (const [k, v] of Object.entries(params)) { if (v === undefined) continue; if (Array.isArray(v)) v.forEach((x) => qs.append(k, x)); else qs.set(k, v); }
     const suffix = qs.toString() ? `?${qs}` : '';
     const res = session
       ? await session.fetchHandler(`/xrpc/${path}${suffix}`)
@@ -1503,13 +1532,20 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
       const src = { feedId: `lens:reel:${scope}`, feedSlug: `reel:${scope}`, feedTitle: title || `Reel · ${scope}`, feedKind: 'reel' };
       const answers = await Promise.all(wave.asks.map(async (ask) => {
         try {
-          const data = await withTimeout(get('app.bsky.feed.getAuthorFeed', { actor: ask.did, filter, limit: 25, ...(ask.cursor ? { cursor: ask.cursor } : {}) }), timeoutMs);
+          // Phase 6: the data servers first, when a source is wired; the AppView otherwise
+          const fromPds = postsSource ? await withTimeout(postsSource({ did: ask.did, filter, cursor: ask.cursor || null, limit: 25 }), timeoutMs) : null;
+          const data = fromPds || await withTimeout(get('app.bsky.feed.getAuthorFeed', { actor: ask.did, filter, limit: 25, ...(ask.cursor ? { cursor: ask.cursor } : {}) }), timeoutMs);
+          if (fromPds) await hydrateFromAppView(data);
           const shaped = shapeLensFeed(data, src, {}, posture);
-          return { did: ask.did, ok: true, posts: ofKind(shaped.posts, mode), cursor: data.cursor || null };
+          const posts = ofKind(shaped.posts, mode).map((p) => (fromPds ? { ...p, viaPds: true, countsKnown: !!data.hydrated } : p));
+          return { did: ask.did, ok: true, posts, cursor: data.cursor || null, via: fromPds ? 'pds' : 'appview', hydrated: fromPds ? !!data.hydrated : true };
         } catch (e) {
           return { did: ask.did, ok: false, error: e.message, posts: [], cursor: null };
         }
       }));
+      const vias = new Set(answers.filter((a) => a.ok).map((a) => a.via));
+      const via = vias.size === 0 ? 'appview' : vias.size === 1 ? [...vias][0] : 'mixed';
+      const hydrated = answers.filter((a) => a.ok && a.via === 'pds').every((a) => a.hydrated);
       // one frame per person per round, in the order they were asked
       const queues = answers.map((a) => ({ id: a.did, posts: a.posts }));
       const nextCursors = Object.fromEntries(answers.filter((a) => a.ok && a.posts.length && a.cursor).map((a) => [a.did, a.cursor]));
@@ -1519,6 +1555,7 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
         posts: roundRobin(queues),
         cursor: more ? encodeCursor({ order: state.order, at: wave.at, cursors: nextCursors, total: state.total ?? members.length }) : null,
         members: state.total ?? members.length, pool: state.order.length, asked: wave.asks.length,
+        via, hydrated,
         posters: answers.filter((a) => a.posts.length).map((a) => a.did),
         failures: answers.filter((a) => !a.ok).map((a) => ({ did: a.did, error: a.error })),
       };

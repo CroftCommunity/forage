@@ -70,7 +70,7 @@ export const guestGate = () => toast('Log in to vote.', 'err'); // the sandbox's
 // column stack ('avvote') is gone: the like sits on the comment's action row
 // before share, like a post row's and the thread head's.
 export function vote(subjectType, id, data, canVote, { onVote = null, onGuest = null } = {}) {
-  const n = el('span', { class: 'n' }, fmtScore(data.likes));
+  const n = el('span', { class: 'n' }, data.countsKnown === false ? '\u2013' : fmtScore(data.likes));
   const arrow = el('span', { class: 'arrow', 'aria-hidden': 'true' }); // the glyph is painted from --like-glyph (v13 decision 27)
   const cls = 'vote';
   if (!canVote && onGuest) {
@@ -345,14 +345,18 @@ export function postRow(p, viewerCanVote, opts = {}) {
   // screen reader and a hover still get the words. `.actions` is NOT
   // `.postmeta`, on purpose — mobile-fit exempts .postmeta as prose, and a tap
   // target must be measured.
-  const repliesWords = `${plural(p.commentCount, 'comment')} \u2014 open the thread`;
+  // Phase 6 (plan 2026-09-14-plan-clips): a post read from its author's own data server
+  // carries no counts until the AppView hydrates them; when it did not answer the row
+  // says UNKNOWN (an en dash, and the words for a screen reader) — never a zero.
+  const unknown = p.countsKnown === false;
+  const repliesWords = unknown ? 'comments \u2014 count unknown \u2014 open the thread' : `${plural(p.commentCount, 'comment')} \u2014 open the thread`;
   const replies = el('a', { class: 'cbtn replies', href: link, title: repliesWords, 'aria-label': repliesWords },
-    el('span', { 'aria-hidden': 'true' }, '\u{1F4AC}'), el('span', { class: 'n' }, fmtScore(p.commentCount)));
+    el('span', { 'aria-hidden': 'true' }, '\u{1F4AC}'), el('span', { class: 'n' }, unknown ? '\u2013' : fmtScore(p.commentCount)));
   // a repost COUNT, never a write on a row (post-and-thread O2); the sandbox
   // has no reposts and draws nothing
   const reposts = p.repostCount == null ? null
     : el('span', { class: 'cbtn', 'data-repost': '1', 'data-readonly': '1', role: 'img',
-      'aria-label': plural(p.repostCount, 'repost') }, el('span', { 'aria-hidden': 'true' }, '\u27F3'), el('span', { class: 'n' }, fmtScore(p.repostCount)));
+      'aria-label': unknown ? 'reposts \u2014 count unknown' : plural(p.repostCount, 'repost') }, el('span', { 'aria-hidden': 'true' }, '\u27F3'), el('span', { class: 'n' }, unknown ? '\u2013' : fmtScore(p.repostCount)));
   right.append(el('div', { class: 'actions' },
     replies, reposts,
     vote('post', p.id, p, viewerCanVote, { onVote: opts.onVote,

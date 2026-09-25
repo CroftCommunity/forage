@@ -5,6 +5,7 @@ import * as ringScope from './ring-scope.js';
 import * as viewMode from './view-mode.js';
 import * as beta from './beta.js';
 import { createPdsGraphSource } from './substrates/pds-graph.js';
+import { createPdsPostsSource } from './substrates/pds-posts.js';
 import * as router from './router.js';
 import * as sel from './selectors.js';
 import * as actions from './actions.js';
@@ -307,6 +308,11 @@ viewMode.onChange(() => render());
 // per lens, so forget it and re-walk under the same scope before repainting.
 const pdsGraph = createPdsGraphSource();
 lensViews.setGraphSource((args) => (beta.pdsWalker() ? pdsGraph(args) : null));
+// Phase 6 (plan 2026-09-14-plan-clips, owner 2026-09-25): the same switch serves the
+// people-scope reel's CONTENT from the data servers — clips and pictures read from the
+// members' own repos, counts and labels hydrated from the AppView when it answers.
+const pdsPosts = createPdsPostsSource();
+lensViews.setPostsSource((args) => (beta.pdsWalker() ? pdsPosts(args) : null));
 beta.onChange(() => {
   lensViews.forgetRings();
   lensViews.syncRingScope().then(() => render()).catch((e) => {

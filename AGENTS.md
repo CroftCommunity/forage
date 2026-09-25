@@ -169,6 +169,11 @@ the members with `getAuthorFeed?filter=posts_with_video|posts_with_media` (a REA
 write), eight a wave, the next wave only when the reader reaches the end (`js/reel-plan.js`;
 the device remembers who answered, `js/media-posters.js`). Autoplay in Clip mode is muted, in
 view only, never a labeled frame, never before the session has settled (`js/clip-autoplay.js`).
+**With the Beta switch on the reel's content comes from the DATA SERVERS** (Phase 6, owner
+2026-09-25): `createLens({ postsSource })` → `js/substrates/pds-posts.js` (`listRecords` over
+`app.bsky.feed.post` on each member's PDS, translated by the pure `js/pds-posts.js` — every
+URL derived from the record's blob cids, the patterns pinned by its test), counts and labels
+hydrated from the AppView (`getPosts`) and said unknown when it is down. Reads only.
 
 **Everything in the nav is a BOARD**, and boards differ only in where the posts
 come from: a feed generator, a hashtag, your own graph, or a MIX of those (the

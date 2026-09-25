@@ -117,3 +117,51 @@ export const HLS_DOUBLE = `(() => {
     destroy() {}
   };
 })();`;
+
+// ---- Phase 6 (owner, 2026-09-25): the same members, read from their DATA SERVERS. With
+// the Beta switch on, a people-scope reel lists each member's posts on their own PDS
+// (`listRecords` over `app.bsky.feed.post`, RAW records: blob refs, no counts, no labels),
+// derives every URL from the blob cids, and asks the AppView only to hydrate counts and
+// labels (`getPosts`, 25 a call). Two members here: one with a clip and a picture post and
+// a text post (the filter drops it), one with a clip. The fixture keys carry the
+// COLLECTION, because the walker's follow lists ride the same xrpc method.
+const PDS = 'https://pds.host.bsky.network';
+const P1 = MEMBERS[0], P2 = MEMBERS[1];
+const didDoc = (did) => ({ id: did, alsoKnownAs: [`at://${did.split(':').pop()}.member.test`], service: [{ id: '#atproto_pds', type: 'AtprotoPersonalDataServer', serviceEndpoint: PDS }] });
+const followRecs = (subjects) => ({ records: subjects.map((subject, i) => ({ uri: `at://x/app.bsky.graph.follow/${i}`, cid: 'c', value: { $type: 'app.bsky.graph.follow', subject, createdAt: '2026-09-01T00:00:00Z' } })) });
+const blob = (cid, mimeType) => ({ $type: 'blob', ref: { $link: cid }, mimeType, size: 1000 });
+export const PDS_VIDEO_CID = 'bafkreiehaaivlu2c5kf3f7vtiqe3uakfzriza7yonznxvd2cpxe5p6vp3m';
+const rawPost = (did, rkey, text, embed) => ({ uri: `at://${did}/app.bsky.feed.post/${rkey}`, cid: `cid-${did}-${rkey}`,
+  value: { $type: 'app.bsky.feed.post', text, createdAt: '2026-09-20T10:00:00Z', ...(embed ? { embed } : {}) } });
+const P1_POSTS = { records: [
+  rawPost(P1, 'v1', 'first light on the sphagnum — from my own server', { $type: 'app.bsky.embed.video', video: blob(PDS_VIDEO_CID, 'video/mp4'), aspectRatio: { width: 1080, height: 1920 } }),
+  rawPost(P1, 'p1', 'a picture', { $type: 'app.bsky.embed.images', images: [{ image: blob('bafkreicwoexxnnkdskoixxylvjjystgqohm4kpxddsyshsqmxia5mmsvii', 'image/jpeg'), alt: 'a bog', aspectRatio: { width: 4, height: 3 } }] }),
+  rawPost(P1, 't1', 'just words'),
+] };
+const P2_POSTS = { records: [rawPost(P2, 'v1', 'sundew, four seconds a frame — from my own server', { $type: 'app.bsky.embed.video', video: blob('bafkreidx6rdzqdljq3ju3pah5drxzxqa5xmidtyr3r2ve5nofhttoar6cm', 'video/mp4'), aspectRatio: { width: 1080, height: 1080 } })] };
+export const PDS_CLIP_URIS = [`at://${P1}/app.bsky.feed.post/v1`, `at://${P2}/app.bsky.feed.post/v1`];
+export const PDS_PLAYLIST = `https://video.bsky.app/watch/${encodeURIComponent(P1)}/${PDS_VIDEO_CID}/playlist.m3u8`;
+const pdsBase = {
+  [`plc.directory/did%3Aplc%3Ame`]: didDoc('did:plc:me'), [`plc.directory/did:plc:me`]: didDoc('did:plc:me'),
+  [`plc.directory/${P1}`]: didDoc(P1), [`plc.directory/${P2}`]: didDoc(P2),
+  'getLatestCommit?did=did%3Aplc%3Ame': { cid: 'c', rev: '3muzvzlycuh2v' },
+  [`getLatestCommit?did=${encodeURIComponent(P1)}`]: { cid: 'c', rev: '3muzvzlycuh2a' },
+  [`getLatestCommit?did=${encodeURIComponent(P2)}`]: { cid: 'c', rev: '3muzvzlycuh2b' },
+  // the walker: me follows P1 and P2; both follow me back
+  'listRecords?repo=did%3Aplc%3Ame&collection=app.bsky.graph.follow': followRecs([P1, P2]),
+  [`listRecords?repo=${encodeURIComponent(P1)}&collection=app.bsky.graph.follow`]: followRecs(['did:plc:me']),
+  [`listRecords?repo=${encodeURIComponent(P2)}&collection=app.bsky.graph.follow`]: followRecs(['did:plc:me']),
+  // the reel: each member's posts, raw
+  'listRecords?repo=did%3Aplc%3Ame&collection=app.bsky.feed.post': { records: [] },
+  [`listRecords?repo=${encodeURIComponent(P1)}&collection=app.bsky.feed.post`]: P1_POSTS,
+  [`listRecords?repo=${encodeURIComponent(P2)}&collection=app.bsky.feed.post`]: P2_POSTS,
+  // profiles (a name; no avatar blob → the row falls back to initials)
+  [`getRecord?repo=${encodeURIComponent(P1)}&collection=app.bsky.actor.profile`]: { uri: `at://${P1}/app.bsky.actor.profile/self`, value: { $type: 'app.bsky.actor.profile', displayName: 'Member One' } },
+  [`getRecord?repo=${encodeURIComponent(P2)}&collection=app.bsky.actor.profile`]: { uri: `at://${P2}/app.bsky.actor.profile/self`, value: { $type: 'app.bsky.actor.profile', displayName: 'Member Two' } },
+  'getRecord?repo=did%3Aplc%3Ame&collection=app.bsky.actor.profile': { uri: 'at://did:plc:me/app.bsky.actor.profile/self', value: { $type: 'app.bsky.actor.profile' } },
+};
+// the AppView hydrates counts (and the author's avatar) for whatever uris it is asked for
+const hydration = { posts: PDS_CLIP_URIS.map((uri) => ({ uri, cid: 'x', likeCount: 42, replyCount: 3, repostCount: 1, labels: [], indexedAt: '2026-09-20T10:00:00Z', author: { did: uri.slice(5, uri.indexOf('/app.')), handle: 'hydrated.test' }, record: { text: '' } })) };
+export const PDS_RESPONSES = { ...pdsBase, 'getPosts?uris=': hydration, ...Object.fromEntries(Object.entries(RESPONSES).filter(([k]) => !(k in pdsBase))) };
+export const PDS_RESPONSES_DOWN = { ...pdsBase, 'getPosts?uris=': { __status: 502 }, ...Object.fromEntries(Object.entries(RESPONSES).filter(([k]) => !(k in pdsBase))) };
+export const BETA_ON = `try { localStorage.setItem('forage.beta.pdswalker', '1'); } catch {}`;

@@ -179,3 +179,67 @@ test('hop: the reel asks at most HOP_CAP people across every wave, and reports t
   assert.equal(last.pool, 300, 'the pool is the cap');
   assert.equal(asked, 300, 'and no more people than the cap were ever asked');
 });
+// Phase 6 (owner, 2026-09-25): the seam. `createLens({ postsSource })` — when given, each
+// member of a wave is asked through it (the data servers) and the AppView's author feed is
+// not called; `null` from it falls through to the AppView, member by member.
+const pdsView = (did, rkey) => ({
+  uri: `at://${did}/app.bsky.feed.post/${rkey}`, cid: `cid-${rkey}`, viaPds: true,
+  author: { did, handle: `${did.split(':').pop()}.member.test`, displayName: null, avatar: null },
+  record: { text: `pds clip ${rkey}`, createdAt: '2026-09-08T10:00:00Z' }, indexedAt: '2026-09-08T10:00:00Z',
+  embed: { $type: 'app.bsky.embed.video#view', cid: `v-${rkey}`, playlist: `https://video.bsky.app/watch/${did}/v-${rkey}/playlist.m3u8`, thumbnail: `https://video.bsky.app/watch/${did}/v-${rkey}/thumbnail.jpg` },
+});
+
+test('a postsSource answers the wave from the data servers; the AppView author feed is not asked; the result says via pds and whether counts were hydrated', async () => {
+  const { session, calls } = reelSession({}, { follows: ['did:plc:a', 'did:plc:b'], followers: [] });
+  const asked = [];
+  const postsSource = async ({ did, filter, cursor, limit }) => {
+    asked.push({ did, filter, cursor, limit });
+    if (did === ME) return { feed: [], cursor: null };
+    return { feed: [{ post: pdsView(did, `${did.slice(-1)}1`) }], cursor: null };
+  };
+  const lens = createLens({ session, postsSource });
+  const r = await lens.reel('clip', 'fol');
+  assert.deepEqual(asked.map((a) => a.did).sort(), [ME, 'did:plc:a', 'did:plc:b'].sort());
+  assert.ok(asked.every((a) => a.filter === 'posts_with_video'));
+  assert.equal(calls.filter((c) => c.name === 'app.bsky.feed.getAuthorFeed').length, 0, 'the AppView author feed was never asked');
+  assert.deepEqual(r.posts.map((p) => p.id.split('/').pop()), ['a1', 'b1']);
+  assert.equal(r.via, 'pds');
+  assert.equal(typeof r.hydrated, 'boolean');
+  assert.equal(r.posts[0].media.kind, 'video', 'the derived playlist shapes like any other clip');
+  assert.equal(r.posts[0].media.playlist, 'https://video.bsky.app/watch/did:plc:a/v-a1/playlist.m3u8');
+});
+
+test('counts and labels are hydrated from the AppView when it answers (getPosts, 25 a call); when it does not, hydrated is false and nothing is invented', async () => {
+  const { session, calls } = reelSession({}, { follows: ['did:plc:a'], followers: [] });
+  const postsSource = async ({ did }) => (did === ME ? { feed: [], cursor: null } : { feed: [{ post: pdsView(did, 'a1') }], cursor: null });
+  // the shim answers getPosts with counts + a label
+  const withPosts = (routes) => ({ ...session, fetchHandler: async (path) => {
+    if (path.includes('app.bsky.feed.getPosts')) {
+      const u = new URL('http://x' + path); const uris = u.searchParams.getAll('uris');
+      calls.push({ name: 'app.bsky.feed.getPosts', q: { uris } });
+      if (routes.fail) return { ok: false, status: 502, json: async () => ({ error: 'down' }) };
+      return { ok: true, status: 200, json: async () => ({ posts: uris.map((uri) => ({ ...pdsView('did:plc:a', 'a1'), uri, likeCount: 42, replyCount: 3, repostCount: 1, labels: [{ val: 'test-label', src: 'did:plc:l', uri, cts: '2026-09-01T00:00:00Z' }] })) }) };
+    }
+    return session.fetchHandler(path);
+  } });
+  const r = await createLens({ session: withPosts({}), postsSource }).reel('clip', 'fol');
+  assert.equal(r.hydrated, true);
+  assert.deepEqual(calls.filter((c) => c.name === 'app.bsky.feed.getPosts').map((c) => c.q.uris), [['at://did:plc:a/app.bsky.feed.post/a1']]);
+  assert.equal(r.posts[0].likes, 42);
+  assert.equal(r.posts[0].commentCount, 3);
+  calls.length = 0;
+  const down = await createLens({ session: withPosts({ fail: true }), postsSource }).reel('clip', 'fol');
+  assert.equal(down.hydrated, false);
+  assert.equal(down.posts.length, 1, 'the frame is still there');
+  assert.equal(down.posts[0].countsKnown, false, 'and says its counts are not known');
+});
+
+test('a postsSource answering null for a member falls through to the AppView for that member alone', async () => {
+  const feeds = { 'did:plc:b': page([clipPost('did:plc:b', 'b1')]) };
+  const { session, calls } = reelSession(feeds, { follows: ['did:plc:a', 'did:plc:b'], followers: [] });
+  const postsSource = async ({ did }) => (did === 'did:plc:a' ? { feed: [{ post: pdsView(did, 'a1') }], cursor: null } : null);
+  const r = await createLens({ session, postsSource }).reel('clip', 'fol');
+  assert.deepEqual(calls.filter((c) => c.name === 'app.bsky.feed.getAuthorFeed').map((c) => c.q.actor).sort(), [ME, 'did:plc:b'].sort());
+  assert.deepEqual(r.posts.map((p) => p.id.split('/').pop()).sort(), ['a1', 'b1']);
+  assert.equal(r.via, 'mixed');
+});

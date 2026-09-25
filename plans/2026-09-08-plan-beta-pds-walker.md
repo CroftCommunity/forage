@@ -148,6 +148,10 @@ RED: the switch is absent (`#pref-pdswalker` not found).
   start is the point). Revisit if a device is shared.
 
 ## Review Log
+
+- 2026-09-25 — the switch's promise WIDENED by the owner's word: it now also serves the
+  people-scope reel's CONTENT from the data servers (plan 2026-09-14-plan-clips, Phase 6;
+  `js/substrates/pds-posts.js`). The rings half is unchanged.
 - 2026-09-08 — Pass 1+2+3 in one context: V1–V10 from a read of the code (the Explore
   sweep + direct reads); the harness's `FENCED` gap found in Pass 2 and folded into P5;
   Pass 3's gates: every phase has a RED named, the equivalence row (`followers :=
