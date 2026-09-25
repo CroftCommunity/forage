@@ -1,19 +1,15 @@
 # Plan: View modes — clip and gram, a media-centred showing of any board, from your ring out to World
 
 date: 2026-09-14
-**Status:** **BUILT 2026-09-21 — everything scoped except Phase 6 and the phone.** Phases 1–3
-and 5: `js/view-mode.js`, `js/ui/reel.js`, the pill under the ring pill, `js/reel-plan.js` +
-`lens.reel()` (D1 (a), the people-scope fan-out under backpressure), `js/media-posters.js`,
-`js/clip-autoplay.js` + the switch on /me (D3), the veil for a labeled frame, GIF cards in Gram
-(D9), alt text as Gram's caption (D10); `e2e/view-modes.workflow.mjs` holds nine claims; Phase 0
-measured (below). Mock **v5** — every Proposed frame a capture — is `plans/mocks/clips.html`.
-Owner's word 2026-09-21: "finish building everything that was scoped", the open decisions
-taken the way the plan proposed. **D7 DECIDED 2026-09-21 (owner, on mock v4):** a dropdown in
-the top bar — the view is a content-type choice, one at a time, not a gradient like the ring;
-built as v5 (`viewSelect()` in the masthead, the nav's pill and the reel's exit gone). Phase 6 BUILT 2026-09-25 (below). Still
-open: the phone look
-`[device done 2026-09-25: samsung, pixel]` (Phase 4's second half, 0e), and Phase 6 (the pds-walker path, its own
-decision). The research half (§ Prior art) is done and sourced.
+**Status:** **BUILT IN FULL — 2026-09-25.** Phases 0–6 and the phone look. Phases 1–3 and 5
+landed 2026-09-22 (#78: the modes, the reel, the people-scope fan-out, autoplay, the veil,
+Gram's GIFs and alt captions; D7 a dropdown in the top bar, D11 a Default view setting); the
+device look 2026-09-25 (#86, both phones); the loop and the count bar's scrim (#87); the +1
+cap (#88); **Phase 6** (this branch): with the Beta switch on, a people-scope reel reads its
+members' clips and pictures from their own data servers, counts and labels hydrated from
+the AppView and said unknown when it is down — the owner's word that "the pds walker path
+is viable for all content and formats". The research half (§ Prior art) is done and sourced.
+Nothing is open on this plan; follow-ups live in `TODO.md` and the device queue.
 repo: `CroftCommunity/forage`
 baseline: `main` @ `c3a4abe` (follow-all landed, #77)
 branch: `claude/video-view`
