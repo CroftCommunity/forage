@@ -119,30 +119,31 @@ function masthead() {
       el('div', { class: 'who' },
         viewMode.viewSelect(el, { onPicked: (id) => viewMode.set(id) }),
         themeBtn0,
+        // Owner, 2026-09-25 (the 320px look on the phones): signed out, the ONE account
+        // control is the sign-in door. The "··" stand-in meant nobody, led only to
+        // Preferences, and was the 44px that pushed a guest's bar to two rows at 320px.
+        // Preferences for a guest is a row in the drawer (js/ui/nav.js). 3i's rule holds:
+        // one press to the authorize screen, no local form between.
         (() => {
-          const name = who && who !== 'connecting' ? String(who).replace(/^@/, '') : null;
-          const initials = name
-            ? name.split('.')[0].slice(0, 2).toLowerCase()
-            : '\u00b7\u00b7';
+          if (who === 'connecting') return el('span', { class: 'accountbtn', 'aria-hidden': 'true', title: 'Connecting sign-in\u2026' }, '\u2026');
+          if (!who) {
+            const b = el('a', { class: 'accountbtn signin', href: '/', role: 'button', 'data-signin': '1',
+              'aria-label': 'Sign in', title: 'Sign in with your atmo provider' }, 'Sign in');
+            b.addEventListener('click', (e) => { e.preventDefault(); lensViews.startDirectSignIn(); });
+            return b;
+          }
+          const name = String(who).replace(/^@/, '');
+          const initials = name.split('.')[0].slice(0, 2).toLowerCase();
           // Decision 8 (plan 2026-08-29 post-and-thread): the picture, when
           // the account has one — initials stay underneath as the
           // not-yet-loaded state, so nothing flashes and nothing shifts.
           const avatar = lensViews.sessionAvatar();
           return el('a', {
             class: 'accountbtn', href: '/me', 'data-account': '1',
-            'aria-label': name ? `${name} — your account and preferences` : 'Your account and preferences',
-            title: name ? `${name} — account and preferences` : 'Account and preferences',
+            'aria-label': `${name} \u2014 your account and preferences`,
+            title: `${name} \u2014 account and preferences`,
           }, initials, avatar ? el('img', { src: avatar, alt: '' }) : null);
-        })(),
-        who === 'connecting' ? el('span', { class: 'small muted' }, '\u2026')
-          : who ? null
-          : (() => {
-              // 3i (owner): launch OAuth DIRECTLY — the entryway collects the
-              // handle; no local form between you and the authorize screen.
-              const b = el('a', { class: 'small', href: '/', role: 'button' }, 'Sign in');
-              b.addEventListener('click', (e) => { e.preventDefault(); lensViews.startDirectSignIn(); });
-              return b;
-            })()));
+        })()));
   }
   const viewer = store.getPersonaId();
   const unread = sel.unreadCount(store.getState(), viewer);

@@ -142,22 +142,36 @@ export async function run() {
     assert.ok(s.page.url().endsWith('/me'), 'the old address redirects rather than forking');
   } finally { await s.close(); }
 
-  // ---- signed OUT: a stand-in, and Preferences still reachable ----
+  // ---- signed OUT: ONE control, Sign in, and Preferences in the drawer ----
+  // Owner, 2026-09-25 (option 1, the 320px look on the phones): the "··" stand-in meant
+  // nobody and only led to Preferences, and it was the 44px that pushed a guest's bar to two
+  // rows at 320. So a guest's one account control IS the sign-in door — a 44px button
+  // straight to the authorize screen (3i's one press, kept) — and Preferences, which a
+  // guest CAN use, is a row in the drawer.
   const out = await scenario('first-visit', { mode: 'bluesky', responses: RESPONSES });
   try {
     await out.page.setViewportSize({ width: 320, height: 800 });
     await out.page.goto(`${out.origin}/`);
-    await out.page.waitForSelector('[data-account="1"]');
-    const label = await out.page.locator('[data-account="1"]').getAttribute('aria-label');
-    assert.match(label || '', /account|preference/i,
-      `a guest gets a stand-in that says what it opens: ${JSON.stringify(label)}`);
-    // The direct-OAuth entry the owner asked for (3i) is NOT collapsed away.
+    await out.page.waitForSelector('.masthead [data-signin="1"]');
+    assert.equal(await out.page.locator('.masthead [data-account="1"]').count(), 0, 'no stand-in for nobody');
     assert.equal(await out.page.locator('.masthead a:has-text("Sign in")').count(), 1,
-      'signing in is still one press from the bar');
+      'signing in is one press from the bar (3i), and it is the one account control');
+    const box = await out.page.locator('.masthead [data-signin="1"]').boundingBox();
+    assert.ok(box.width >= 44 && box.height >= 44, `the door clears the tap floor: ${Math.round(box.width)}x${Math.round(box.height)}`);
+    const small = (await widthsOf(out.page, '.masthead a, .masthead button, .masthead select'))
+      .filter(({ w, h }) => w > 0 && h > 0 && (w < 44 || h < 44));
+    assert.deepEqual(small, [], 'every masthead control clears 44px at 320, signed out');
+    const h = await out.page.evaluate(() => Math.round(document.querySelector('.masthead').getBoundingClientRect().height));
+    assert.ok(h <= 66, `the guest's bar is ONE row at 320px: ${h}px`);
+    assert.ok(await out.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'and nothing overflows sideways');
 
-    await out.page.click('[data-account="1"]');
+    // Preferences: the drawer's row, and the skin is still a guest's to change
+    await out.page.click('.navburger');
+    await out.page.waitForSelector('nav.nav [data-nav-item="preferences"]');
+    await out.page.click('nav.nav [data-nav-item="preferences"]');
     await out.page.waitForSelector('#pref-skin');
     assert.ok(await out.page.locator('#pref-skin').count() > 0,
       'a guest can still change the skin — hiding a control they CAN use is the opposite rule');
+    assert.equal(new URL(out.page.url()).pathname, '/me');
   } finally { await out.close(); }
 }

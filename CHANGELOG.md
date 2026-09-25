@@ -8,6 +8,13 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-25 **Signed out, the top bar is one row on the narrowest phones.** The bar used to
+  show a grey stand-in for an account you did not have beside the *Sign in* link, and on a
+  320px phone that was the button that pushed the bar onto two rows. Now *Sign in* is the one
+  account control — a full-size button, one press to your atmo provider's authorize screen —
+  and *Preferences* has its own row in the menu for anyone not signed in (the skin, the card
+  size and the languages were always yours to change). Signed in, nothing changes. (found
+  on the phones 2026-09-25; owner's decision)
 - 2026-09-25 **With the data-servers beta on, Clip and Gram read from your people's own
   servers.** *Beta features › Direct social tree PDS query* used to change only how your
   ring is computed. Now, at Me, Mutuals, Follows or +1, a reel reads each person's clips or
