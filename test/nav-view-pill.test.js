@@ -33,3 +33,21 @@ test('the nav carries the ring pill and no view control, signed in and signed ou
     });
   }
 });
+
+// The guest's Preferences door (owner, 2026-09-25, option 1): signed out the top bar's one
+// account control is "Sign in" straight to the authorize screen, so Preferences — which a
+// guest can use — moves to a row in the drawer. Signed in the account button covers it and
+// the row is not drawn (one door, not two).
+test('a guest gets a Preferences row under the rule; a signed-in reader does not', () => {
+  withStorage({}, () => {
+    const guest = walk(navTree({ el: fakeEl, session: null, feeds: [], tags: [], current: null }));
+    const row = guest.find((n) => n.attrs['data-nav-item'] === 'preferences');
+    assert.ok(row, 'the guest has a Preferences row');
+    assert.equal(row.attrs.href, '/me');
+    assert.match(row.kids.join(''), /Preferences/);
+    const rule = guest.findIndex((n) => n.tag === 'hr');
+    assert.ok(guest.indexOf(row) > rule, 'it sits with the browse surfaces under the rule');
+    const signedIn = walk(navTree({ el: fakeEl, session: { did: 'did:plc:me' }, feeds: [], tags: [], current: null }));
+    assert.ok(!signedIn.some((n) => n.attrs['data-nav-item'] === 'preferences'), 'signed in, the account button is the door');
+  });
+});

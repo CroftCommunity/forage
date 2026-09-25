@@ -108,6 +108,10 @@ export function navTree({ el, session, feeds, tags, current, mixes = [] }) {
   // feeds. A door to new boards, so it sits below the rule with the others.
   item('jumpstarts', 'Browse jumpstarts', '✦', '/jumpstarts');
   item('hashtags', 'Browse hashtags', '#', '/hashtags');
+  // Owner, 2026-09-25: signed out, the bar's one account control is the sign-in door, so
+  // a guest's Preferences — the skin, the card size, the languages, all theirs to change —
+  // is this row. Signed in the account button is the door, and one door is enough.
+  if (!session) item('preferences', 'Preferences', '\u2699', '/me');
 
   if (!session) {
     nav.append(el('div', { class: 'navnote' },

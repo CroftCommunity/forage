@@ -52,7 +52,11 @@ export async function run() {
   // Preferences moved onto /me. The property under test is unchanged — an
   // in-app click navigates without a page load and Back returns — so it now
   // drives the control that actually exists.
-  await cp.page.locator('[data-account="1"]').first().click();
+  // 2026-09-25 (option 1): signed out the bar's one account control is the sign-in door,
+  // so a guest's Preferences is the drawer's row — the property under test is the same
+  // (at this width the nav is the sidebar, so the row is on the page without the burger)
+  await cp.page.waitForSelector('nav.nav [data-nav-item="preferences"]');
+  await cp.page.locator('nav.nav [data-nav-item="preferences"]').click();
   await cp.page.waitForSelector('#pref-skin');
   assert.equal(new URL(cp.page.url()).pathname, '/me', 'a click navigated without a page load');
   await cp.page.goBack();

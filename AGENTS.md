@@ -150,7 +150,10 @@ routes gate with words.
 is a row with exactly one job — the two-half strip it replaced died of a control
 that was a tab AND a menu opener, so switching always opened a menu. On a phone
 the nav is a drawer, which costs no vertical space until opened. The masthead
-carries a hamburger, the skin toggle and ONE account control: a 44px avatar —
+carries a hamburger, the skin toggle and ONE account control — **signed out that control is
+the sign-in door**, a 44px *Sign in* straight to the authorize screen with no stand-in for
+nobody, and a guest's Preferences is a row in the drawer (owner 2026-09-25: on the phones the
+stand-in was the 44px that wrapped a guest's bar to two rows at 320) — signed in a 44px avatar —
 the account's own picture, initials underneath as the not-yet-loaded state (plan
 2026-08-29 post-and-thread, decision 8) — because the bar fits a single row at
 320px only just.
