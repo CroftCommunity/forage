@@ -162,6 +162,13 @@ const pdsBase = {
 };
 // the AppView hydrates counts (and the author's avatar) for whatever uris it is asked for
 const hydration = { posts: PDS_CLIP_URIS.map((uri) => ({ uri, cid: 'x', likeCount: 42, replyCount: 3, repostCount: 1, labels: [], indexedAt: '2026-09-20T10:00:00Z', author: { did: uri.slice(5, uri.indexOf('/app.')), handle: 'hydrated.test' }, record: { text: '' } })) };
+// Current on main: the beta changes only the ring there, so the reel is read from the
+// AppView — the same two clips as author-feed items, so the frame is like for like
+const asFeed = (did, recs) => ({ feed: recs.records.filter((r) => r.value.embed?.$type === 'app.bsky.embed.video').map((r) => ({ post: { uri: r.uri, cid: r.cid, author: { did, handle: `${did.split(':').pop()}.member.test`, avatar: AV }, record: r.value, indexedAt: r.value.createdAt, likeCount: 42, replyCount: 3, repostCount: 1,
+  embed: { $type: 'app.bsky.embed.video#view', cid: r.value.embed.video.ref.$link, playlist: `https://video.bsky.app/watch/${encodeURIComponent(did)}/${r.value.embed.video.ref.$link}/playlist.m3u8`, thumbnail: base.embed.thumbnail, aspectRatio: r.value.embed.aspectRatio } } })) });
+pdsBase[`getAuthorFeed?actor=${encodeURIComponent(P1)}&`] = asFeed(P1, P1_POSTS);
+pdsBase[`getAuthorFeed?actor=${encodeURIComponent(P2)}&`] = asFeed(P2, P2_POSTS);
+pdsBase['getAuthorFeed?actor=did%3Aplc%3Ame&'] = { feed: [] };
 export const PDS_RESPONSES = { ...pdsBase, 'getPosts?uris=': hydration, ...Object.fromEntries(Object.entries(RESPONSES).filter(([k]) => !(k in pdsBase))) };
 export const PDS_RESPONSES_DOWN = { ...pdsBase, 'getPosts?uris=': { __status: 502 }, ...Object.fromEntries(Object.entries(RESPONSES).filter(([k]) => !(k in pdsBase))) };
 export const BETA_ON = `try { localStorage.setItem('forage.beta.pdswalker', '1'); } catch {}`;

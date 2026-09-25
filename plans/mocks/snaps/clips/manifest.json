@@ -198,6 +198,42 @@
       "height": 900,
       "baseline": "forage@c3a4abe",
       "population": "lens:mock-reel"
+    },
+    {
+      "file": "view-clip-pds.phone.proposed.png",
+      "route": "view-clip-pds",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@d479fee",
+      "population": "lens:mock-reel"
+    },
+    {
+      "file": "view-clip-pds.desktop.proposed.png",
+      "route": "view-clip-pds",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@d479fee",
+      "population": "lens:mock-reel"
+    },
+    {
+      "file": "view-clip-pds.phone.current.png",
+      "route": "view-clip-pds",
+      "viewport": "phone",
+      "width": 390,
+      "height": 844,
+      "baseline": "forage@9239f9e",
+      "population": "lens:mock-reel"
+    },
+    {
+      "file": "view-clip-pds.desktop.current.png",
+      "route": "view-clip-pds",
+      "viewport": "desktop",
+      "width": 1280,
+      "height": 900,
+      "baseline": "forage@9239f9e",
+      "population": "lens:mock-reel"
     }
   ]
 }

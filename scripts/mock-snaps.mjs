@@ -794,7 +794,7 @@ for (const [name, vp] of Object.entries(VIEWPORTS)) {
       responses: pds ? REEL_PDS : people ? REEL_PEOPLE : REEL });
     await vx.page.setViewportSize({ width: vp.width, height: vp.height });
     await vx.page.goto(`${vx.origin}${REEL_BOARD}`);
-    await vx.page.waitForSelector(AS === 'current' || mode === 'forum' ? '.postrow' : `.reel[data-reel="${mode}"]`, { timeout: 15000 });
+    await vx.page.waitForSelector((AS === 'current' && !people) || mode === 'forum' ? '.postrow' : `.reel[data-reel="${mode}"]`, { timeout: 15000 });
     await vx.page.evaluate(() => document.fonts?.ready);
     // view-nav: the control in the top bar (D7 v5) — the board's head, no drawer
     if (route !== 'view-nav' && AS !== 'current') {

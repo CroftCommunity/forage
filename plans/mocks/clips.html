@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forage Clips v6</title>
-<meta name="mock-version" content="6">
+<title>Forage Clips v7</title>
+<meta name="mock-version" content="7">
 <meta name="mock-baseline" content="forage@c3a4abe">
-<meta name="mock-proposal" content="forage@8f230fe">
+<meta name="mock-proposal" content="forage@d479fee">
 <style>
 :root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
   --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
@@ -44,10 +44,10 @@ code{font-size:.92em}
 <div class="wrap">
 
 <header style="display:flex;flex-direction:column;gap:10px">
-  <span class="eyebrow">Mock · v6 · 2026-09-25 · plan 2026-09-14-plan-clips</span>
+  <span class="eyebrow">Mock · v7 · 2026-09-25 · plan 2026-09-14-plan-clips</span>
   <h1>View modes — Forum, Clip, Gram: a dropdown in the top bar, the reel, and the people behind it</h1>
   <p class="sub">Five proposals, twenty-two frames, <b>every one a capture of the engine</b> (MOCKS.md P1). <b>Current</b> is
-  <code>main</code> at <code>c3a4abe</code>; <b>Proposed</b> is <code>claude/clip-loop</code> at <code>8f230fe</code> (v6: the device look's two findings closed — the reel's clip loops, the count bar reads over a bright frame; landed as v5 at <code>f45f6a0</code>) — v5 moved the
+  <code>main</code> at <code>c3a4abe</code>; <b>Proposed</b> is <code>claude/pds-clips</code> at <code>d479fee</code> (v7: Phase 6 — the Follows reel read from the members' data servers, section 6; v6: the device look's two findings closed — the reel's clip loops, the count bar reads over a bright frame; landed as v5 at <code>f45f6a0</code>) — v5 moved the
   control: a <b>dropdown in the top bar</b> (D7, decided on v4), the reel's own exit gone with it. v4 built the whole scope: the
   people-scope reel (D1), autoplay (D3), the veil, GIFs and alt text in Gram (D9, D10). Both captured by <code>scripts/mock-snaps.mjs</code> against the same
   hermetic population, in the default skin, at 390×844 and 1280×900. The population (<code>e2e/harness/mock-reel.mjs</code>) is the
@@ -164,6 +164,23 @@ code{font-size:.92em}
 </section>
 
 <section>
+  <h2>6 · Phase 6 — the same reel, read from the people's own data servers</h2>
+  <p class="sub">The Beta switch (<i>Direct social tree PDS query</i>) on, Follows, Clip. Current: on <code>main</code> the switch changes
+  only the ring's membership, so the frame is the same reel read from the AppView's author feed. Proposed: each member's posts are
+  listed on <b>their own data server</b> as raw records — no counts, no labels, no URLs — and every playlist and picture address is
+  worked out from the record's blob cids; the AppView is asked only to hydrate counts and labels, which it did here (the 42 likes
+  on the row). The count line says <i>from their data servers</i>. When the AppView does not answer, the reel still frames every clip
+  and the line says <i>no counts or labels: the network's view did not answer</i>, with the row's counts as dashes — held by the
+  journey, not framed.</p>
+  <div class="pair">
+    <div class="device"><span class="device-label">Current · phone</span><img class="shot phone" src="snaps/clips/view-clip-pds.phone.current.png" alt="the Follows reel on main with the beta on: read from the AppView"></div>
+    <div class="device"><span class="device-label">Proposed · phone</span><img class="shot phone" src="snaps/clips/view-clip-pds.phone.proposed.png" alt="the Follows reel on the branch: read from the members' data servers, the count line saying so"></div>
+    <div class="device"><span class="device-label">Current · desktop</span><img class="shot desk" src="snaps/clips/view-clip-pds.desktop.current.png" alt="main, desktop"></div>
+    <div class="device"><span class="device-label">Proposed · desktop</span><img class="shot desk" src="snaps/clips/view-clip-pds.desktop.proposed.png" alt="the branch, desktop"></div>
+  </div>
+</section>
+
+<section>
   <h2>Reference · the board as it ships, with a clip in it</h2>
   <p class="sub">The v1 baseline frames, re-captured at <code>c3a4abe</code>: Home on <code>main</code> scrolled to the quoted clip, the row a clip is today.</p>
   <div class="pair">
@@ -209,6 +226,8 @@ code{font-size:.92em}
 <section class="callout">
   <h3>Revisions</h3>
   <ul>
+    <li><b>v7 — 2026-09-25.</b> Phase 6 (owner: the walker path for all content and formats): section 6, the Follows reel read
+      from the members' data servers, captured at <code>d479fee</code>; Current for that route from <code>main</code>.</li>
     <li><b>v6 — 2026-09-25.</b> After the phones: the reel's player loops (owner's decision) and the count bar's scrim is denser
       with a shadow on the words — every Proposed frame re-captured at <code>8f230fe</code>; the Follows frame (section 4) is the one to
       compare. v5 landed on <code>main</code> as <code>f45f6a0</code> (#78); the device screencaps are in <code>snaps/clips/device/</code>.</li>
