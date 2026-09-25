@@ -10,7 +10,7 @@
 // never dead buttons — the UI renders these as deferred, invariant 7).
 import { buildPost, withTag, IMAGE_LIMITS } from '../compose.js';
 import { RUNG_IDS, scopeMembers } from '../rings.js';
-import { FILTER as REEL_FILTER, orderMembers, nextWave, encodeCursor, decodeCursor, roundRobin } from '../reel-plan.js';
+import { FILTER as REEL_FILTER, orderMembers, nextWave, encodeCursor, decodeCursor, roundRobin, poolFor } from '../reel-plan.js';
 import { ofKind } from '../view-mode.js';
 import { sortItems, mixWeight } from '../engines/rank.js';
 import { deal } from '../mix-deal.js';
@@ -1495,7 +1495,10 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
       if (!filter) throw new Error(`lens: ${mode} is not a reel mode`);
       if (scope === 'world') throw new Error('lens: at world the board is the reel — nothing to fan out over');
       const { members } = await this.scopeMembersFor(scope);
-      const state = cursor ? decodeCursor(cursor) : { order: orderMembers(members, new Set(known)), at: 0, cursors: {} };
+      // known posters first, THEN the cap: a poster the device has seen answer
+      // survives the bound at hop, which is what the register is for
+      const pool = poolFor(orderMembers(members, new Set(known)), scope);
+      const state = cursor ? decodeCursor(cursor) : { order: pool.order, at: 0, cursors: {}, total: pool.total };
       const wave = nextWave(state, waveSize);
       const src = { feedId: `lens:reel:${scope}`, feedSlug: `reel:${scope}`, feedTitle: title || `Reel · ${scope}`, feedKind: 'reel' };
       const answers = await Promise.all(wave.asks.map(async (ask) => {
@@ -1514,8 +1517,8 @@ export function createLens({ session = null, transport = fetch, hiddenUris = new
       return {
         ...src, scope: `lens:reel:${scope}`, sort: 'lens', timeframe: 'all', perms: LENS_PERMS,
         posts: roundRobin(queues),
-        cursor: more ? encodeCursor({ order: state.order, at: wave.at, cursors: nextCursors }) : null,
-        members: members.length, asked: wave.asks.length,
+        cursor: more ? encodeCursor({ order: state.order, at: wave.at, cursors: nextCursors, total: state.total ?? members.length }) : null,
+        members: state.total ?? members.length, pool: state.order.length, asked: wave.asks.length,
         posters: answers.filter((a) => a.posts.length).map((a) => a.did),
         failures: answers.filter((a) => !a.ok).map((a) => ({ did: a.did, error: a.error })),
       };

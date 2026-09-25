@@ -529,6 +529,13 @@ than here.
 
 ## Review Log
 
+- 2026-09-25 — **the +1 cap built** (Phase 0's follow-up): `HOP_CAP = 300` in
+  `js/reel-plan.js` (`poolFor`), applied after the known-posters ordering so a poster the
+  device has seen survives the bound; `lens.reel()` returns `members` (the whole scope) and
+  `pool` (what it will ask), the cursor carries the total; `originWords` moved into
+  `reel-plan.js` as a pure function and says *from the first 300 of 4,812 people one hop out*.
+  RED first (`test/reel-plan.test.js`, `test/lens-reel.test.js`: 600 hop members, 300 asked
+  across every wave).
 - 2026-09-25 — **the device look, both phones** (the owner: "phones are connected and
   available"; claims `testbed--samsung` / `testbed--pixel` filed and released). Driven over
   adb-forwarded CDP against **forage.fyi as deployed** (`f45f6a0`); screencaps in

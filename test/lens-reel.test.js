@@ -146,3 +146,36 @@ test('mut narrows to the mutuals; me is just me', async () => {
   await lens.reel('clip', 'me');
   assert.deepEqual(calls.filter((c) => c.name === 'app.bsky.feed.getAuthorFeed').map((c) => c.q.actor), [ME]);
 });
+
+test('hop: the reel asks at most HOP_CAP people across every wave, and reports the pool beside the whole', async () => {
+  // 2 mutuals whose follows are 300 people each (600 hop members + the follows + me)
+  const hopA = Array.from({ length: 300 }, (_, i) => `did:plc:ha${i}`);
+  const hopB = Array.from({ length: 300 }, (_, i) => `did:plc:hb${i}`);
+  const feeds = {};
+  const calls = [];
+  const fetchHandler = async (path) => {
+    const u = new URL('http://x' + path); const name = u.pathname.split('/').pop(); const q = Object.fromEntries(u.searchParams);
+    calls.push({ name, q });
+    const ok = (body) => ({ ok: true, status: 200, json: async () => body });
+    if (name === 'app.bsky.graph.getFollows') {
+      if (q.actor === ME) return ok({ follows: [{ did: 'did:plc:a' }, { did: 'did:plc:b' }] });
+      if (q.actor === 'did:plc:a') return ok({ follows: hopA.map((did) => ({ did })) });
+      if (q.actor === 'did:plc:b') return ok({ follows: hopB.map((did) => ({ did })) });
+      return ok({ follows: [] });
+    }
+    if (name === 'app.bsky.graph.getFollowers') return ok({ followers: [{ did: 'did:plc:a' }, { did: 'did:plc:b' }] });
+    if (name === 'app.bsky.feed.getAuthorFeed') return ok(page([]));
+    if (MOD[name]) return ok(MOD[name]);
+    return { ok: false, status: 404, json: async () => ({ error: 'NotFound' }) };
+  };
+  const lens = createLens({ session: { did: ME, handle: 'me.test', fetchHandler } });
+  let cursor = null; let asked = 0; let last = null;
+  for (let i = 0; i < 200; i++) {
+    const r = await lens.reel('clip', 'hop', { waveSize: 8, cursor });
+    asked += r.asked; last = r; cursor = r.cursor;
+    if (!cursor) break;
+  }
+  assert.ok(last.members > 600, `the whole scope is counted (${last.members})`);
+  assert.equal(last.pool, 300, 'the pool is the cap');
+  assert.equal(asked, 300, 'and no more people than the cap were ever asked');
+});

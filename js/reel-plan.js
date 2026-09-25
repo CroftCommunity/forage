@@ -48,7 +48,29 @@ export function decodeCursor(str) {
   if (!s || !Array.isArray(s.order) || !Number.isInteger(s.at) || typeof s.cursors !== 'object' || s.cursors === null) {
     throw new Error('reel cursor: not a reel cursor');
   }
+  if (s.total !== undefined && !Number.isInteger(s.total)) throw new Error('reel cursor: not a reel cursor');
   return s;
+}
+
+// THE +1 CAP. Phase 0 (2026-09-21) measured one hop out at ~262,000 edges for a
+// 46-mutual account, against 701 follows that a wave of eight walks in under a
+// second. So `hop` alone is bounded: the reel asks the first HOP_CAP people of
+// the ordered pool — known posters first, then the scope's order — and the
+// count line says how far it looked (originWords), which is what makes the
+// bound honest rather than silent (DL-016's rule). Every other scope is whole.
+export const HOP_CAP = 300;
+export function poolFor(members, scope) {
+  const total = members.length;
+  return { order: scope === 'hop' ? members.slice(0, HOP_CAP) : members.slice(), total };
+}
+
+// Where a people-scope reel's frames came from, as the count line says it.
+const n = (x) => Number(x).toLocaleString('en-US');
+export function originWords({ scope, total, pool }) {
+  if (scope === 'me') return 'from you';
+  if (scope === 'mut') return `from your ${n(total)} mutuals`;
+  if (scope === 'hop') return pool < total ? `from the first ${n(pool)} of ${n(total)} people one hop out` : `from ${n(total)} people, one hop out`;
+  return `from ${n(total)} people you follow`;
 }
 
 // The deal for a reel: one frame per person per round, in the order the

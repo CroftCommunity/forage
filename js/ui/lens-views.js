@@ -40,6 +40,7 @@ import * as viewMode from '../view-mode.js';
 import { reel } from './reel.js';
 import * as clipAutoplay from '../clip-autoplay.js';
 import * as mediaPosters from '../media-posters.js';
+import { originWords } from '../reel-plan.js';
 import { refreshControl } from './refresh-control.js';
 import * as boardCache from '../board-cache.js';
 import { planFollows, planUnfollows, CHUNK_SIZE } from '../follow-all.js';
@@ -1279,8 +1280,8 @@ function reelScopeFor(feedKind) {
   if (ringScope.exemptsFeeds() && ringScope.EXEMPT_KINDS.includes(feedKind)) return null;
   return { mode, scope };
 }
-const originWords = ({ scope }, n) => (scope === 'me' ? 'from you'
-  : scope === 'mut' ? `from your ${n} mutuals` : scope === 'hop' ? `from ${n} people, one hop out` : `from ${n} people you follow`);
+// the count line's source sentence is js/reel-plan.js's originWords — pure,
+// unit-tested, and the one place the +1 cap is said out loud
 // One fetch shape for both roads: a page of the board, or a wave of the reel.
 function reelPage(rs, { cursor = null, title = null } = {}) {
   return lens.reel(rs.mode, rs.scope, { cursor, known: [...mediaPosters.known(rs.mode)], title })
@@ -1290,7 +1291,7 @@ function reelPage(rs, { cursor = null, title = null } = {}) {
 function feedBoardView(entry, preInfo) {
   const main = el('div', {});
   const rs = reelScopeFor(entry.source.kind);
-  let reelMembers = 0;
+  let reelMembers = { total: 0, pool: 0 };
   // Remember this board as the one to come back to. The only writer of the
   // last-board memory left with the ring boards on 2026-09-03, so `/` has
   // landed on Following for everyone since; a mix board remembers itself the
@@ -1310,15 +1311,15 @@ function feedBoardView(entry, preInfo) {
   // read off the RESULT (and kept in the record), never set in a fetch's .then:
   // render() can rebuild this view while the first fetch is in flight, and the
   // rebuilt view shares the promise but not the closure that would have set it
-  const takeMembers = (r) => { if (rs && Number.isInteger(r?.members)) reelMembers = r.members; };
-  reelMembers = cached?.members ?? 0;
+  const takeMembers = (r) => { if (rs && Number.isInteger(r?.members)) reelMembers = { total: r.members, pool: r.pool ?? r.members }; };
+  reelMembers = cached?.members ?? { total: 0, pool: 0 };
   const remember = () => boardCache.write(cacheKey,
     { posts: allPosts.slice(), cursor: nextCursor, info: lastInfo, at: Date.now(), ...(rs ? { members: reelMembers } : {}) });
   const card = el('div', { class: 'card' });
   const moreHost = el('div', {});
   let fetchingMore = false;
   const repaint = () => {
-    renderBoard(card, allPosts, { reelOrigin: rs ? originWords(rs, reelMembers) : null,
+    renderBoard(card, allPosts, { reelOrigin: rs ? originWords({ scope: rs.scope, ...reelMembers }) : null,
       // backpressure: reaching the last frame is the ask for the next wave
       onNearEnd: () => moreHost.querySelector('button')?.click() });
     moreHost.replaceChildren();
@@ -1566,7 +1567,7 @@ export function lensMixView(params) {
   // a mix is never exempt from the ring (E159), so at a people-scope a mix's
   // reel is the scope's people (plan 2026-09-14-plan-clips, D1 (a))
   const rs = reelScopeFor('mix');
-  let reelMembers = 0;
+  let reelMembers = { total: 0, pool: 0 };
   const cacheKey = rs ? `mix:${slug}:reel:${rs.mode}:${rs.scope}` : `mix:${slug}`;
   const cached = boardCache.read(cacheKey);
   // per-source queues, so More can refill one and the deal re-runs over all
@@ -1584,7 +1585,7 @@ export function lensMixView(params) {
       allPosts = [...allPosts, ...r.posts];
       cursors = r.cursor ? { reel: r.cursor } : {};
       failures = r.failures.map((f) => ({ id: f.did, title: f.did, error: f.error }));
-      reelMembers = r.members;
+      reelMembers = { total: r.members, pool: r.pool ?? r.members };
       return;
     }
     for (const src of r.sources) {
@@ -1602,7 +1603,7 @@ export function lensMixView(params) {
   const fetchNext = () => (rs ? reelPage(rs, { cursor: cursors.reel || null, title: meta.name }) : lens.mix(rows, { slug, name: meta.name, cursors }));
   let fetchingMore = false;
   const repaint = () => {
-    renderBoard(card, allPosts, { reelOrigin: rs ? originWords(rs, reelMembers) : null,
+    renderBoard(card, allPosts, { reelOrigin: rs ? originWords({ scope: rs.scope, ...reelMembers }) : null,
       onNearEnd: () => moreHost.querySelector('button')?.click() });
     infoHost.replaceChildren(rs ? '' : mixInfoLine({ sourceCount: rows.length, failures, sort: boardSort }));
     moreHost.replaceChildren();
@@ -1645,7 +1646,7 @@ export function lensMixView(params) {
     cursors = cached.cursor || {};
     failures = cached.info?.failures || [];
     rows = { length: cached.info?.rowCount || queues.size };
-    reelMembers = cached.info?.members || 0;
+    reelMembers = cached.info?.members || { total: 0, pool: 0 };
     allPosts = cached.posts;
     paint();
     // the rows are needed for More; resolve them quietly

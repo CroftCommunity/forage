@@ -8,6 +8,12 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-25 **A reel one hop out looks at the first 300 people, and says so.** At the *+1*
+  ring stop the people a reel could ask number in the hundreds of thousands for an ordinary
+  account, so Clip and Gram there now ask the first 300 — anyone this device has seen answer
+  with a clip or a picture first — and the count line says *from the first 300 of 4,812 people
+  one hop out* rather than looking as if it had asked everyone. Every other stop is whole, as
+  before. (plan 2026-09-14-plan-clips, Phase 0's number)
 - 2026-09-21 **View modes: Forum, Clip, Gram.** In the top bar, beside the skin toggle, there
   is a dropdown, *View*: **Forum** is the rows you have today; **Clip** shows the board you are
   on as its clips, one per screen; **Gram** shows its picture posts (and GIF cards) the same
