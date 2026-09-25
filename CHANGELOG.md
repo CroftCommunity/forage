@@ -8,6 +8,27 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-25 **With the data-servers beta on, Clip and Gram read from your people's own
+  servers.** *Beta features › Direct social tree PDS query* used to change only how your
+  ring is computed. Now, at Me, Mutuals, Follows or +1, a reel reads each person's clips or
+  pictures straight from their own data server — the same posts, every picture and playlist
+  address worked out from the record itself — and asks Bluesky's view only for the like and
+  reply counts and the labels. The count line says *from their data servers*; if Bluesky's
+  view does not answer, the reel still shows every clip and says *no counts or labels: the
+  network's view did not answer* rather than printing zeros. (plan 2026-09-14-plan-clips
+  Phase 6; owner's decision)
+- 2026-09-25 **A reel one hop out looks at the first 300 people, and says so.** At the *+1*
+  ring stop the people a reel could ask number in the hundreds of thousands for an ordinary
+  account, so Clip and Gram there now ask the first 300 — anyone this device has seen answer
+  with a clip or a picture first — and the count line says *from the first 300 of 4,812 people
+  one hop out* rather than looking as if it had asked everyone. Every other stop is whole, as
+  before. (plan 2026-09-14-plan-clips, Phase 0's number)
+- 2026-09-25 **A clip in Clip mode loops, and the count line reads over any frame.** From
+  the first look on the phones: a clip that reached its end sat at its last frame until you
+  swiped — it starts again now, muted as before (a clip on a row still plays once). And the
+  line at the top of the reel that says how many clips there are was hard to read over a
+  bright clip; its shade is denser and the words carry a shadow. (plan 2026-09-14-plan-clips,
+  the device look; owner's decision)
 - 2026-09-21 **View modes: Forum, Clip, Gram.** In the top bar, beside the skin toggle, there
   is a dropdown, *View*: **Forum** is the rows you have today; **Clip** shows the board you are
   on as its clips, one per screen; **Gram** shows its picture posts (and GIF cards) the same
