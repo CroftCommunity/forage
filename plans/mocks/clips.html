@@ -191,8 +191,11 @@ code{font-size:.92em}
       later sibling wins). Fixed — the bar sits above a playing frame — and re-captured.</li>
     <li><b>Not framed:</b> the empty reel (held by the journey); the active frame moving with the scroll and resting (held); the
       next wave arriving at the last frame (held); autoplay off (held: no player, no playlist); a GIF card in Gram (unit-held);
-      reduced motion (snap and autoplay off, otherwise identical); the account-page switch. Not on a phone yet:
-      <code>[device: android x2]</code> for the snap, the drawer and muted autoplay on a real screen.</li>
+      reduced motion (snap and autoplay off, otherwise identical); the account-page switch. <b>On the phones, 2026-09-25</b> <code>[device done 2026-09-25: samsung, pixel]</code>: the snap, the drawer, the
+      dropdown and muted autoplay all held on the Samsung (test account) and the Pixel (the owner's session, read-only) against
+      forage.fyi as deployed — screencaps and their README in <code>snaps/clips/device/</code>, the measurements in the plan's
+      Review Log. Two findings: an ended clip sits at its last frame (no loop, no advance — a decision), and the count line is
+      hard to read over a bright frame (a TODO).</li>
     <li><b>Mapping to code:</b> the pill and the key → <code>js/view-mode.js</code>, drawn in <code>js/ui/nav.js</code>; the reel →
       <code>js/ui/reel.js</code>, mounted by <code>renderBoard</code> in <code>js/ui/lens-views.js</code>; the people-scope fan-out →
       <code>js/reel-plan.js</code> and <code>lens.reel()</code> in <code>js/substrates/lens.js</code>, the register

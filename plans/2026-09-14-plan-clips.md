@@ -12,7 +12,7 @@ taken the way the plan proposed. **D7 DECIDED 2026-09-21 (owner, on mock v4):** 
 the top bar — the view is a content-type choice, one at a time, not a gradient like the ring;
 built as v5 (`viewSelect()` in the masthead, the nav's pill and the reel's exit gone). Still
 open: the phone look
-`[device: android x2]` (Phase 4's second half, 0e), and Phase 6 (the pds-walker path, its own
+`[device done 2026-09-25: samsung, pixel]` (Phase 4's second half, 0e), and Phase 6 (the pds-walker path, its own
 decision). The research half (§ Prior art) is done and sourced.
 repo: `CroftCommunity/forage`
 baseline: `main` @ `c3a4abe` (follow-all landed, #77)
@@ -419,7 +419,7 @@ with 909 follows stood in for the reader — the test account follows nobody rea
 | hop | mutuals of that account: 46; the sum of their follow counts | **≈ 262,000 edges** — `+1` is not a fan-out any reel can make; it needs its own cap with words, or the walker's stored graph (Phase 6) |
 | 0c | 60 clip records read from their PDSes | **none carried `captions`**; whether the master playlist declares a subtitle track is still unmeasured |
 | 0d | bsky.app's *Video* feed, unauthenticated | **HTTP 502**, a week after the first probe |
-| 0e | device autoplay | **owed** `[device: android x2]` — the phones were not on the bench |
+| 0e | device autoplay | **owed** `[device done 2026-09-25: samsung, pixel]` — the phones were not on the bench |
 
 What the numbers decide: **D1 (a) is cheap at Follows** — a wave of eight members is under a
 second and yields dozens of frames — and `hop` is out of reach without an index (the reel
@@ -444,7 +444,7 @@ record every number in the Review Log. These decide D1's cost and the wave bound
 - **0e. Device autoplay.** A throwaway page with three muted `playsinline` HLS clips in a
   scroll-snap stack on the Samsung and the Pixel (claim `testbed--samsung` /
   `testbed--pixel` first; seat the device queue): does in-view autoplay start without a
-  gesture after the first press, and does hls.js keep up at 2 Mbit? `[device: android x2]`.
+  gesture after the first press, and does hls.js keep up at 2 Mbit? `[device done 2026-09-25: samsung, pixel]`.
 
 Disposition: throwaway, numbers into this plan. Exit: D1 and the wave bound decided.
 
@@ -501,7 +501,7 @@ segment leaves the page (V7). Reduced-motion variant: no `play()` call.
 Proposed (the reel, `mock-proposal`), both `forage@<sha>`, 390×844 and 1280×900, one
 skin, a population built to stress it — a portrait clip, a landscape clip, a clip with
 alt and a long post text, a labeled clip, a clip whose author has no avatar. Handed over
-as its full path on disk. Then one look on the Samsung and the Pixel `[device: android x2]`
+as its full path on disk. Then one look on the Samsung and the Pixel `[device done 2026-09-25: samsung, pixel]`
 — 0e's page was a throwaway; this is the engine.
 
 ### Phase 5 — Gate and the record
@@ -529,6 +529,37 @@ than here.
 
 ## Review Log
 
+- 2026-09-25 — **the device look, both phones** (the owner: "phones are connected and
+  available"; claims `testbed--samsung` / `testbed--pixel` filed and released). Driven over
+  adb-forwarded CDP against **forage.fyi as deployed** (`f45f6a0`); screencaps in
+  `plans/mocks/snaps/clips/device/` with their README. Samsung = the standing test account,
+  signed in through the real OAuth form (step 0); Pixel = the owner's own signed-in session,
+  read-only, left as found (Forum, nothing persisted). What held, measured through CDP:
+  - **Clip on Discover (Samsung):** 8 clips of 23 loaded; on arrival the first frame active
+    with a muted HLS player playing (`muted:true, paused:false`); one real swipe → the second
+    frame active and playing, the first paused; a second swipe the same. Snap exact: the active
+    frame's top at the reel's top (61px), the extra 35px above frame 1 is the sticky count bar.
+  - **Clip on the owner's Home (Pixel, 384 CSS px, bluesky-dark):** 11 clips of 133 loaded;
+    the first clip played to its end, muted (`ended:true`, 29.6 s); the swipe moved the active
+    frame and mounted the next player at 4 s. **Finding:** an ended clip sits at 0:29/0:29 —
+    no loop, no advance. Not scoped (no algorithm, no auto-advance); a decision for the owner.
+  - **The people-scope reel (Samsung, Home at Follows):** "10 clips from 4 people you follow ·
+    10 loaded posts" — the test account's four follows include one who posts clips. **Finding
+    (cosmetic):** over a bright frame the white count line is hard to read; the bar's gradient
+    is too light. Filed in `TODO.md`.
+  - **The drawer (both):** Your ring alone, no View section; the dropdown in the bar.
+  - **Gram (both):** Samsung 8 picture posts of 23 (the fifth with its alt caption); Pixel 40
+    of 127 with carousels and alt captions; two `<video>` elements in Gram are GIF cards'
+    players (D9, expected).
+  - **The bar at 320, signed in:** EMULATED (CDP device metrics on the Samsung and the Pixel):
+    61px, one row, no horizontal overflow; the emblem 44px. The phones are 384 wide, so the
+    real 320 remains a laptop-viewport claim.
+  - **The account page (Samsung):** Default view (Forum) and Play clips automatically rows
+    render with their words.
+  - **Rig notes, kept in memory not here:** the Samsung's keyboard autofill panel eats a real
+    tap on the OAuth submit; the Pixel runs TWO Chrome instances (the suffixed debug socket is
+    the one with forage), its browser endpoint hangs Playwright (raw page-websocket CDP works),
+    and a phone call mid-run backgrounds Chrome and stalls every command.
 - 2026-09-21 — **the dropdown wrapped the phone's top bar** (v5 capture, 390px: 113px, two
   rows). Fixed at ≤480px (emblem only, tighter gaps, an 84px select), measured 61px signed in
   at 320/360/390 and pinned in the journey. Found in passing: a GUEST at 320 wraps on main
