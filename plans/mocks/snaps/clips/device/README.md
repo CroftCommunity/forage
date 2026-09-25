@@ -14,6 +14,7 @@ sha; these are the same build under a real network, a real account and a real th
 | `samsung.gram1` | Samsung | Discover in Gram |
 | `samsung.fol-clip` | Samsung | Home at Follows in Clip: the people-scope reel, "10 clips from 4 people you follow" |
 | `samsung.me-default` | Samsung | the account page: Default view and Play clips automatically |
+| `samsung.fol-clip-fixed` | Samsung (test account), **main at `98afe7d`** served to the phone over `adb reverse` (the worker's caches dropped first, so the load is main's shell `forage-v87`) | Home at Follows in Clip after #87/#89: the count line legible over the same bright screenshot-clip; the player looping — a 17.4 s clip wrapped from 16.3 s to 0.8 s through CDP, still playing, muted, never `ended` |
 | `samsung.320` | Samsung, **emulated** 320 CSS px (CDP device metrics; the phone is 384) | the bar one row, 61px, signed in |
 | `pixel.clip1` | Pixel 9 Pro (the owner's own session, read-only) | the owner's Home in Clip, bluesky-dark skin: 11 clips of 133; the first clip played to its end, muted |
 | `pixel.drawer` · `pixel.gram` | Pixel | the drawer; Home in Gram, 40 picture posts of 127 |

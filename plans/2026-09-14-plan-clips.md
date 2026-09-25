@@ -576,7 +576,13 @@ than here.
   across every wave).
 - 2026-09-25 — **the device look's two findings closed** (owner: "loop"): the reel's player
   mounts with `loop` (held by the journey); the count bar's scrim is denser and the words carry
-  a shadow (`view-clip-fol` re-captured). **Phase 6 decided the same day** (owner: "we want
+  a shadow (`view-clip-fol` re-captured). **Verified on the Samsung 2026-09-25, 19:09** (a
+  second session, main at `98afe7d` served to the phone, the test account signed in through
+  the real OAuth form): the count line legible over the bright screenshot-clip
+  (`plans/mocks/snaps/clips/device/samsung.fol-clip-fixed.png`), and the loop measured — a
+  17.4 s clip wrapped from 16.3 s to 0.8 s, still playing, muted, never `ended`. A duplicate
+  branch that had built the same two fixes with a chip instead of a scrim was closed unmerged
+  (#91). **Phase 6 decided the same day** (owner: "we want
   the pds walker path to be viable for all content and formats — I'm not sure why it would
   even be different here"): it was held apart only because the Beta switch shipped promising
   membership-only; that promise is now widened by the owner's word. Queued after the +1 cap.
