@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forage Clips v5</title>
-<meta name="mock-version" content="5">
+<title>Forage Clips v6</title>
+<meta name="mock-version" content="6">
 <meta name="mock-baseline" content="forage@c3a4abe">
-<meta name="mock-proposal" content="forage@1d6ff4f">
+<meta name="mock-proposal" content="forage@8f230fe">
 <style>
 :root{--page-bg:#EFE9DE;--page-card:#F8F4EC;--page-ink:#2B251C;--page-muted:#6B6252;--page-line:#DED5C4;--page-accent:#33623A;
   --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-display:ui-serif,Georgia,"Times New Roman",serif}
@@ -44,10 +44,10 @@ code{font-size:.92em}
 <div class="wrap">
 
 <header style="display:flex;flex-direction:column;gap:10px">
-  <span class="eyebrow">Mock · v5 · 2026-09-21 · plan 2026-09-14-plan-clips</span>
+  <span class="eyebrow">Mock · v6 · 2026-09-25 · plan 2026-09-14-plan-clips</span>
   <h1>View modes — Forum, Clip, Gram: a dropdown in the top bar, the reel, and the people behind it</h1>
   <p class="sub">Five proposals, twenty-two frames, <b>every one a capture of the engine</b> (MOCKS.md P1). <b>Current</b> is
-  <code>main</code> at <code>c3a4abe</code>; <b>Proposed</b> is <code>claude/video-view</code> at <code>1d6ff4f</code> — v5 moves the
+  <code>main</code> at <code>c3a4abe</code>; <b>Proposed</b> is <code>claude/clip-loop</code> at <code>8f230fe</code> (v6: the device look's two findings closed — the reel's clip loops, the count bar reads over a bright frame; landed as v5 at <code>f45f6a0</code>) — v5 moved the
   control: a <b>dropdown in the top bar</b> (D7, decided on v4), the reel's own exit gone with it. v4 built the whole scope: the
   people-scope reel (D1), autoplay (D3), the veil, GIFs and alt text in Gram (D9, D10). Both captured by <code>scripts/mock-snaps.mjs</code> against the same
   hermetic population, in the default skin, at 390×844 and 1280×900. The population (<code>e2e/harness/mock-reel.mjs</code>) is the
@@ -209,6 +209,9 @@ code{font-size:.92em}
 <section class="callout">
   <h3>Revisions</h3>
   <ul>
+    <li><b>v6 — 2026-09-25.</b> After the phones: the reel's player loops (owner's decision) and the count bar's scrim is denser
+      with a shadow on the words — every Proposed frame re-captured at <code>8f230fe</code>; the Follows frame (section 4) is the one to
+      compare. v5 landed on <code>main</code> as <code>f45f6a0</code> (#78); the device screencaps are in <code>snaps/clips/device/</code>.</li>
     <li><b>v5 — 2026-09-21.</b> D7 decided on v4: the control is a dropdown in the top bar; the pill under the ring and the reel's
       exit are gone. D11: a Default view setting, forum unless chosen; the dropdown's choice lasts the visit. Every Proposed frame re-captured at <code>1d6ff4f</code>; the top-bar route's Current re-captured too (it no
       longer opens the drawer).</li>
