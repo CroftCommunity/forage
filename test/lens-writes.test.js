@@ -857,3 +857,76 @@ test('fetchIndexUrl is bounded by the ceiling — by content-length before readi
   assert.ok(pulled <= Math.ceil(INDEX_BYTES_MAX / 100_000) + 2, `stopped reading soon after the ceiling (${pulled} chunks)`);
   assert.equal(cancelled, true, 'the stream was cancelled, not merely abandoned');
 });
+
+// The rest of the index doors, from the post-rebase mutation round (2026-09-28): a
+// stream that ENDS under the ceiling, the ceiling itself allowed, every failure
+// answered in its own words, and the RecordNotFound test kept narrow.
+const exactly = (n) => {
+  const head = '{"v":1,"feeds":[],"jumpstarts":[],"edges":[],"providers":[],"pad":"';
+  return head + 'x'.repeat(n - head.length - 2) + '"}';
+};
+const streamOf = (chunks) => async () => ({ ok: true, status: 200, headers: { get: () => null },
+  body: new ReadableStream({ start(c) { for (const k of chunks) c.enqueue(new TextEncoder().encode(k)); c.close(); } }) });
+
+test('fetchIndexUrl reads a stream that ends under the ceiling, in however many chunks it comes', async () => {
+  const obj = await createLens({ transport: streamOf([SMALL_INDEX.slice(0, 20), SMALL_INDEX.slice(20)]) }).fetchIndexUrl('https://x.example/i.json');
+  assert.deepEqual(obj, JSON.parse(SMALL_INDEX));
+});
+
+test('the ceiling is a ceiling, not a floor: exactly INDEX_BYTES_MAX bytes is allowed on every door', async () => {
+  const text = exactly(INDEX_BYTES_MAX);
+  assert.equal(new TextEncoder().encode(text).length, INDEX_BYTES_MAX);
+  const declared = async () => textResponse(text, { headers: { 'content-length': String(INDEX_BYTES_MAX) } });
+  assert.equal((await createLens({ transport: declared }).fetchIndexUrl('https://x.example/i.json')).v, 1, 'declared length at the ceiling');
+  assert.equal((await createLens({ transport: streamOf([text.slice(0, 1000), text.slice(1000)]) }).fetchIndexUrl('https://x.example/i.json')).v, 1, 'streamed to the ceiling');
+  const bare = indexSession({ blobText: text });
+  assert.equal((await createLens({ session: bare.session }).fetchIndexBlob('bafkreiabc')).v, 1, 'a text body at the ceiling');
+  const up = indexSession();
+  await createLens({ session: up.session }).uploadIndex(text);
+  assert.equal(up.calls.filter((c) => c.path.includes('uploadBlob')).length, 1, 'an upload at the ceiling is spent');
+});
+
+test('indexRecord: only a 400 that SAYS RecordNotFound is "no record" — any other answer is an error with its status', async () => {
+  const answering = (status, text) => ({ did: 'did:plc:me', fetchHandler: async () => textResponse(text, { status }) });
+  await assert.rejects(() => createLens({ session: answering(500, '{"error":"RecordNotFound"}') }).indexRecord(), /HTTP 500/);
+  await assert.rejects(() => createLens({ session: answering(400, '{"error":"InvalidRequest"}') }).indexRecord(), /HTTP 400/);
+  await assert.rejects(() => createLens({ session: answering(400, '<html>') }).indexRecord(), /reading your saved index failed HTTP 400/);
+});
+
+test('saveIndexRecord puts a well-formed LINK record', async () => {
+  const { session, calls } = indexSession();
+  const link = { $type: 'fyi.forage.feedindex', kind: 'url', url: 'https://gardeners.example/index.json', mode: 'replace',
+    createdAt: '2026-09-21T00:00:00.000Z', updatedAt: '2026-09-21T00:00:00.000Z' };
+  await createLens({ session }).saveIndexRecord(link);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].body.record.url, 'https://gardeners.example/index.json');
+});
+
+test('the index doors refuse a guest in words, and every failed request is named for what it was doing', async () => {
+  const guest = createLens({});
+  await assert.rejects(() => guest.indexRecord(), /reading your saved index needs a session — sign in/);
+  await assert.rejects(() => guest.saveIndexRecord(INDEX_RECORD), /saving your index needs a session — sign in/);
+  await assert.rejects(() => guest.removeIndexRecord(), /removing your saved index needs a session — sign in/);
+  const failing = indexSession({ failWith: 500 }).session;
+  await assert.rejects(() => createLens({ session: failing }).saveIndexRecord(INDEX_RECORD), /save index failed HTTP 500/);
+  await assert.rejects(() => createLens({ session: failing }).removeIndexRecord(), /remove index failed HTTP 500/);
+  await assert.rejects(() => createLens({ session: failing }).uploadIndex(SMALL_INDEX), /index upload failed HTTP 500/);
+  await assert.rejects(() => createLens({ session: indexSession({ failWith: 404 }).session }).fetchIndexBlob('bafkreiabc'),
+    /your index file could not be read HTTP 404/, 'a failed read is never parsed as the index');
+  const noBlob = { did: 'did:plc:me', fetchHandler: async () => textResponse('{}') };
+  await assert.rejects(() => createLens({ session: noBlob }).uploadIndex(SMALL_INDEX), /returned no blob/);
+  await assert.rejects(() => createLens({ session: indexSession().session }).saveIndexRecord({ ...INDEX_RECORD, mode: 'off', name: 7 }), /; /,
+    'several problems are listed, separated');
+});
+
+test('uploadIndex is a POST; the ceiling and JSON refusals name which file they mean', async () => {
+  const { session, calls } = indexSession();
+  await createLens({ session }).uploadIndex(SMALL_INDEX);
+  assert.equal(calls.find((c) => c.path.includes('uploadBlob')).method, 'POST');
+  const big = indexSession({ blobText: 'x'.repeat(INDEX_BYTES_MAX + 1) }).session;
+  await assert.rejects(() => createLens({ session: big }).fetchIndexBlob('bafkreiabc'), /^Error: your index file is \d+ bytes; the ceiling/);
+  await assert.rejects(() => createLens({ session: indexSession({ blobText: 'nope' }).session }).fetchIndexBlob('bafkreiabc'), /your index file is not JSON/);
+  const declared = async () => textResponse('{}', { headers: { 'content-length': String(INDEX_BYTES_MAX + 1) } });
+  await assert.rejects(() => createLens({ transport: declared }).fetchIndexUrl('https://x.example/i.json'), /the file at x\.example is \d+ bytes/);
+  await assert.rejects(() => createLens({ transport: async () => textResponse('nope') }).fetchIndexUrl('https://x.example/i.json'), /the file at x\.example is not JSON/);
+});
