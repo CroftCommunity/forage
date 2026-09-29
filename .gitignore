@@ -1,3 +1,5 @@
 node_modules/
 .stryker-tmp/
 reports/
+# a worktree-local note (CroftC/.claude/COORDINATION.md) — never tracked
+FEATURE.md
