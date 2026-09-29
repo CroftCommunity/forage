@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-09-21",
+  "capturedAt": "2026-09-28",
   "files": [
     {
       "file": "own-index-browser.phone.proposed.png",
@@ -7,7 +7,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@cb3897f",
+      "baseline": "forage@c201607",
       "population": "lens:own-index"
     },
     {
@@ -16,7 +16,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@cb3897f",
+      "baseline": "forage@c201607",
       "population": "lens:own-index"
     },
     {
@@ -25,7 +25,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@cb3897f",
+      "baseline": "forage@c201607",
       "population": "lens:own-index"
     },
     {
@@ -34,7 +34,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@cb3897f",
+      "baseline": "forage@c201607",
       "population": "lens:own-index"
     },
     {
@@ -43,7 +43,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@cb3897f",
+      "baseline": "forage@c201607",
       "population": "lens:own-index"
     },
     {
@@ -52,7 +52,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@cb3897f",
+      "baseline": "forage@c201607",
       "population": "lens:own-index"
     },
     {
@@ -61,7 +61,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@cb3897f",
+      "baseline": "forage@c201607",
       "population": "lens:own-index"
     },
     {
@@ -70,7 +70,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@cb3897f",
+      "baseline": "forage@c201607",
       "population": "lens:own-index"
     },
     {
@@ -79,7 +79,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@cdc1da1",
+      "baseline": "forage@d7623d6",
       "population": "lens:own-index"
     },
     {
@@ -88,7 +88,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@cdc1da1",
+      "baseline": "forage@d7623d6",
       "population": "lens:own-index"
     },
     {
@@ -97,7 +97,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@cdc1da1",
+      "baseline": "forage@d7623d6",
       "population": "lens:own-index"
     },
     {
@@ -106,7 +106,7 @@
       "viewport": "phone",
       "width": 390,
       "height": 844,
-      "baseline": "forage@cdc1da1",
+      "baseline": "forage@d7623d6",
       "population": "lens:own-index"
     },
     {
@@ -115,7 +115,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@cdc1da1",
+      "baseline": "forage@d7623d6",
       "population": "lens:own-index"
     },
     {
@@ -124,7 +124,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@cdc1da1",
+      "baseline": "forage@d7623d6",
       "population": "lens:own-index"
     },
     {
@@ -133,7 +133,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@cdc1da1",
+      "baseline": "forage@d7623d6",
       "population": "lens:own-index"
     },
     {
@@ -142,7 +142,7 @@
       "viewport": "desktop",
       "width": 1280,
       "height": 900,
-      "baseline": "forage@cdc1da1",
+      "baseline": "forage@d7623d6",
       "population": "lens:own-index"
     }
   ]
