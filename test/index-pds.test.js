@@ -121,8 +121,19 @@ test('index-pds: no record on the account is KNOWN as no record — effective() 
   const c = await pds.refresh(fakeLens({ record: null }), ME);
   assert.equal(c.record, null);
   assert.equal(c.known, true);
+  assert.equal(c.error, null, 'no record is not a broken record — there is nothing to report');
   assert.deepEqual(pds.effective(ME), prefs.current());
   assert.equal(pds.effective(ME).mode, 'add');
+});
+
+test('index-pds: the fallback words drop the lens\' own prefix and keep what the lens said', async () => {
+  fresh();
+  const lens = fakeLens({ record: fileRecord(), blobs: {} });
+  lens.fetchIndexBlob = async () => { throw new Error('lens: your index file could not be read HTTP 404'); };
+  await pds.refresh(lens, ME);
+  const e = pds.effective(ME);
+  assert.match(e.fallback, /\(your index file could not be read HTTP 404\)/);
+  assert.doesNotMatch(e.fallback, /lens:/);
 });
 
 test('index-pds: offline, the last known state stays and is labelled stale — "cannot reach" is never "no record"', async () => {
