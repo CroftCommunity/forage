@@ -163,6 +163,19 @@ export async function run() {
     assert.deepEqual(small, [], 'every masthead control clears 44px at 320, signed out');
     const h = await out.page.evaluate(() => Math.round(document.querySelector('.masthead').getBoundingClientRect().height));
     assert.ok(h <= 66, `the guest's bar is ONE row at 320px: ${h}px`);
+    // The same row under a WIDE font. The runner's fallback font decides how wide
+    // "Sign in" and the View dropdown's word are: macOS measured 61px here while
+    // CI's Linux fonts measured 111px (#90, 2026-09-25) — a check whose answer
+    // depends on the machine grades a different page per runner. DejaVu Sans is
+    // CI's fallback; Verdana shares its metrics (both are Bitstream Vera) and
+    // stands in for it on a Mac, so every runner measures the wide case.
+    const wide = await out.page.addStyleTag({ content: '*{font-family:"DejaVu Sans",Verdana,sans-serif !important}' });
+    const hw = await out.page.evaluate(() => Math.round(document.querySelector('.masthead').getBoundingClientRect().height));
+    assert.ok(hw <= 66, `the guest's bar is ONE row at 320px under a wide font too: ${hw}px`);
+    const smallWide = (await widthsOf(out.page, '.masthead a, .masthead button, .masthead select'))
+      .filter(({ w, h: ht }) => w > 0 && ht > 0 && (w < 44 || ht < 44));
+    assert.deepEqual(smallWide, [], 'every masthead control still clears 44px at 320 under a wide font');
+    await wide.evaluate((el) => el.remove());
     assert.ok(await out.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'and nothing overflows sideways');
 
     // Preferences: the drawer's row, and the skin is still a guest's to change

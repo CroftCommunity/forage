@@ -1313,6 +1313,18 @@ dialog.authsheet::backdrop, dialog.sheet::backdrop { background: var(--scrim); }
   .masthead .wordmark { font-size: 0; display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; }
   .masthead .wordmark-glyph { margin-right: 0; }
   .masthead .viewsel { max-width: 84px; padding-left: 8px; padding-right: 22px; }
+  /* The sum above is a macOS-font sum: Linux's fallback font is wider and CI
+     measured two rows (111px) at 320. So the one row is a rule, not a budget:
+     the bar never wraps here, and the width a wide font takes comes out of
+     the dropdown's word (it clips; its arrow stays) — never the sign-in door.
+     Only the burger bar (js/main.js, the bluesky population): the memory
+     population's masthead carries a nav row and a search and is BUILT to wrap
+     (mobile-fit measures it overflowing to 407px if forced onto one row). */
+  .masthead:has(> .navburger) { flex-wrap: nowrap; }
+  .masthead:has(> .navburger) .who { min-width: 0; }
+  .masthead:has(> .navburger) .viewsel { min-width: 0; flex: 0 1 auto; text-overflow: ellipsis; }
+  .masthead:has(> .navburger) .who > :not(.viewsel) { flex: none; }
+  .masthead:has(> .navburger) .accountbtn.signin { white-space: nowrap; }
 }
 /* The reel is the board's card shown as a snapping stack: the container is the
    scroller (snap needs the scroller to be the thing with the items), sized to

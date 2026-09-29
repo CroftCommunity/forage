@@ -8,6 +8,12 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-09
 
+- 2026-09-28 **The one-row top bar holds whatever font your phone draws with.** The 09-25
+  change fitted the signed-out bar into a 320px phone with 9px to spare, measured in one
+  font; a phone whose font draws *Sign in* and the View word a little wider still got two
+  rows. Now the bar never wraps there: if the words need more room, the View dropdown's
+  label is clipped (its arrow stays), and *Sign in* keeps its full size. (found by CI,
+  whose Linux font measured the bar at two rows)
 - 2026-09-25 **Signed out, the top bar is one row on the narrowest phones.** The bar used to
   show a grey stand-in for an account you did not have beside the *Sign in* link, and on a
   320px phone that was the button that pushed the bar onto two rows. Now *Sign in* is the one
