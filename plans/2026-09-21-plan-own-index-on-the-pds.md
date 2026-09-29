@@ -1,7 +1,7 @@
 # Plan: your discovery index on the PDS — the file, or a link to it, follows you
 
 date: 2026-09-21
-**Status:** BUILT 2026-09-21 (Phases 0–7; RED-first throughout, the journey written before the surface). Hermetic journey green (`e2e/own-index-pds.workflow.mjs`); the live proof (`e2e/own-index-pds-live.workflow.mjs`, `LIVE=1`) — see the Review Log for its run; mock `plans/mocks/own-index-pds.html` (v2, re-captured 2026-09-28 after the rebase onto main `d7623d6`) captured both sides. Re-proven after the rebase (Pass 4). Open on the mock: the mode dial's clipped words at 390 (pre-existing), whether the paste box hides while kept on the account.
+**Status:** LANDED 2026-09-28 (#85), built 2026-09-21 (Phases 0–7; RED-first throughout, the journey written before the surface). Hermetic journey green (`e2e/own-index-pds.workflow.mjs`); the live proof (`e2e/own-index-pds-live.workflow.mjs`, `LIVE=1`) — see the Review Log for its run; mock `plans/mocks/own-index-pds.html` (v2, re-captured 2026-09-28 after the rebase onto main `d7623d6`) captured both sides. Re-proven after the rebase (Pass 4). Open on the mock: the mode dial's clipped words at 390 (pre-existing), whether the paste box hides while kept on the account.
 The evidence below was probed against the real lexicons, the PDS source, and a live write
 to the standing test account (undone), so the decisions rest on measurements rather than
 on readings.
