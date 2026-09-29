@@ -121,12 +121,33 @@ forager finds first. So it is yours to dump. Under **Advanced** on your account 
 - **Off** — the live list, nothing prepopulated.
 
 Your file goes through the same validator; a refused one leaves the previous good one in
-place and tells you which row and why. Every row on `/feeds` says whose it is. This is
-device-local today, like the card size; a record on your PDS that follows you between
-devices is the named follow-up (`TODO.md` — shape decided 2026-09-14: local by default, a
-whole-file or a pointer record when you choose, Forage's index always available and never
-retaking a choice made away from it; the register of every browser-only store and its
-account half is `docs/DEVICE-LOCAL.md`).
+place and tells you which row and why. Every row on `/feeds` says whose it is.
+
+**Where it is kept** (plan `plans/2026-09-21-plan-own-index-on-the-pds.md`, 2026-09-21).
+On this browser by default, like the card size. Signed in, a second dial under the mode
+offers two more places, and either one makes the choice follow you to every browser you
+sign in on:
+
+- **on your atmo provider account — the file**: the file goes into your repo as a blob
+  (JSON, at most 2,000,000 bytes) and one record, `fyi.forage.feedindex` at the key `self`,
+  names it along with the mode (add or replace) and a name. A record cannot carry the file
+  itself — the reference PDS caps a record write at 150 KiB and the protocol says a
+  megabyte belongs in a blob — so the record points and the blob holds. Nothing of
+  Forage's index goes into anyone's repo.
+- **on your atmo provider account — a link**: the record holds an https link instead.
+  Forage fetches it when you keep it and whenever you press *Refresh*, never on its own;
+  the host has to allow cross-origin reads, and a link that does not answer is never
+  published.
+
+Publishing moves the file out of this browser: the copy here becomes the cache of what your
+account holds, and *on this browser only* brings it back (confirmed fresh, never from the
+cache) with the mode you had. A new browser reads the record at sign-in, fetches the file it
+names, and browse starts from yours. A fetch that fails changes nothing: Forage's index is
+shown for that load and the section says why, in the words the PDS gave; the next visit
+tries again. *Off* is a choice about one browser and stays on it. Choosing Forage's index
+back is one press, which brings your file back here first so nothing is lost. The register
+of every browser-only store and its account half is `docs/DEVICE-LOCAL.md`; the lexicon is
+`lexicons/fyi.forage.feedindex.json` and its entry in `docs/LEXICON-REGISTER.md`.
 
 To build your own from your own list: `npm run harvest -- --providers my-providers.json
 --out my-index.json` (and `--queries` to sweep different terms). The file format, not our

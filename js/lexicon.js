@@ -21,10 +21,10 @@ import { graphemes, byteLength } from './compose.js';
 // What this validator knows how to check. The test reads this and compares it
 // against what the lexicon tree actually declares.
 export const ENFORCED = Object.freeze({
-  types: new Set(['string', 'integer', 'boolean', 'array', 'object', 'unknown', 'ref']),
+  types: new Set(['string', 'integer', 'boolean', 'array', 'object', 'unknown', 'ref', 'blob']),
   formats: new Set(['datetime', 'did', 'at-uri', 'uri']),
   keywords: new Set(['type', 'required', 'properties', 'items', 'enum',
-    'minLength', 'maxLength', 'maxGraphemes', 'format', 'ref']),
+    'minLength', 'maxLength', 'maxGraphemes', 'format', 'ref', 'accept', 'maxSize']),
   // Keywords that carry no constraint, named rather than skipped so the set
   // above stays honest about what it is silent on.
   ignored: new Set([
@@ -45,6 +45,11 @@ const FORMAT = {
 };
 
 const typeName = (v) => (v === null ? 'null' : Array.isArray(v) ? 'array' : typeof v);
+
+// A lexicon `accept` entry is an exact type or a glob ending in `*` (`image/*`,
+// `*/*`); partial globs are not in the spec and are not matched here.
+const mimeMatches = (pattern, mime) => (pattern === '*/*' ? true
+  : pattern.endsWith('/*') ? mime.startsWith(pattern.slice(0, -1)) : pattern === mime);
 
 function checkValue(prop, value, field, errors, ctx = {}) {
   const fail = (message) => errors.push({ field, message });
@@ -97,6 +102,26 @@ function checkValue(prop, value, field, errors, ctx = {}) {
       const target = ctx.defs?.[ref.slice(1)];
       if (!target) throw new Error(`lexicon: ref ${ref} names no def in this document`);
       return checkValue(target, value, field, errors, ctx);
+    }
+    case 'blob': {
+      // The PDS's own shape for a blob reference (specs/data-model): $type
+      // "blob", ref.$link (the CID), mimeType, a positive integer size. Learned
+      // for fyi.forage.feedindex (2026-09-21), whose index file rides as a blob
+      // because a record cannot carry a megabyte. `accept` and `maxSize` are
+      // checked HERE because nobody else will: the PDS enforces a lexicon's
+      // blob limits only for schemas it bundles, and @atproto/lexicon 0.7 checks
+      // that a value is a BlobRef and nothing more (tools/lexicon-reference-gate.mjs
+      // asserts that non-enforcement so the reason cannot expire).
+      if (typeName(value) !== 'object') return fail(`expected a blob reference, got ${typeName(value)}`);
+      if (value.$type !== 'blob') return fail('a blob reference carries $type "blob"');
+      if (typeName(value.ref) !== 'object' || typeof value.ref.$link !== 'string' || !value.ref.$link) return fail('a blob reference needs ref.$link');
+      if (typeof value.mimeType !== 'string' || !value.mimeType) return fail('a blob reference needs a mimeType');
+      if (typeof value.size !== 'number' || !Number.isInteger(value.size) || value.size <= 0) return fail(`a blob's size is a positive integer, got ${JSON.stringify(value.size)}`);
+      if (prop.accept && !prop.accept.some((pattern) => mimeMatches(pattern, value.mimeType))) {
+        return fail(`accepts ${prop.accept.join(', ')}, got ${value.mimeType}`);
+      }
+      if (prop.maxSize !== undefined && value.size > prop.maxSize) return fail(`${value.size} bytes is over the ${prop.maxSize} byte ceiling`);
+      return;
     }
     default:
       // Unreachable while the ENFORCED-vs-declared test passes, and loud rather

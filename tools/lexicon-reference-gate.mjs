@@ -28,7 +28,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Lexicons } from '@atproto/lexicon';
+import { Lexicons, jsonToLex } from '@atproto/lexicon';
 import { validateRecord } from '../js/lexicon.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -40,7 +40,10 @@ for (const doc of DOCS) reference.add(doc);
 
 const mirrorOk = (id, value) => validateRecord(
   DOCS.find((d) => d.id === id).defs.main.record, value).ok;
-const referenceOk = (id, value) => reference.validate(id, { $type: id, ...value }).success;
+// The reference validates the LEX form — a blob reference is a BlobRef instance there,
+// not the JSON `{ $type: "blob", … }` a PDS hands back — so the JSON side goes through
+// jsonToLex first, exactly as the PDS does before validating a write.
+const referenceOk = (id, value) => reference.validate(id, jsonToLex({ $type: id, ...value })).success;
 
 // The corpus is built FROM the schemas rather than hand-listed, so a lexicon added
 // tomorrow is covered without anyone remembering to extend this file. Each case is a
@@ -95,6 +98,11 @@ function sampleFor(prop) {
     case 'boolean': return true;
     case 'array': return [];
     case 'object': return {};
+    // A blob reference in the shape a PDS returns from uploadBlob (a real CID from the
+    // 2026-09-21 probe); its type is the first the schema accepts, its size well under
+    // any ceiling.
+    case 'blob': return { $type: 'blob', ref: { $link: 'bafkreickuvtsju23dhiawuufk2e5pk3kqsyhvxfzqasdjxagnuwbj4ua6i' },
+      mimeType: (prop.accept || ['application/octet-stream'])[0].replace('/*', '/x').replace('*/x', 'x/x'), size: 60 };
     default: return {};
   }
 }
@@ -119,4 +127,24 @@ test('both validators accept every lexicon document itself as well-formed', asyn
   for (const doc of DOCS) {
     assert.equal(isValidLexiconDoc(doc), true, `${doc.id} is not a valid lexicon document`);
   }
+});
+
+// The mirror is STRICTER than the reference on two blob constraints, on purpose, and this
+// test is what keeps that a fact rather than a memory. @atproto/lexicon's blob validator
+// checks that a value is a BlobRef and nothing else — a lexicon's `accept` and `maxSize`
+// are enforced by the PDS at record creation, and only for schemas it bundles (ours are
+// unpublished, so never). If the mirror did not check them, nobody would. The day the
+// reference starts refusing these, this fails and the mirror's comment gets rewritten.
+test('the reference does NOT enforce blob accept/maxSize (measured), so the mirror must', () => {
+  const doc = DOCS.find((d) => d.id === 'fyi.forage.feedindex');
+  const good = {};
+  for (const [name, prop] of Object.entries(doc.defs.main.record.properties)) good[name] = sampleFor(prop);
+  const { file } = good;
+  const wrongType = { ...good, file: { ...file, mimeType: 'text/plain' } };
+  const tooBig = { ...good, file: { ...file, size: doc.defs.main.record.properties.file.maxSize + 1 } };
+  assert.equal(referenceOk(doc.id, good), true, 'the well-formed record passes the reference');
+  assert.equal(referenceOk(doc.id, wrongType), true, 'reference: a mime outside accept passes (not enforced)');
+  assert.equal(referenceOk(doc.id, tooBig), true, 'reference: a size over maxSize passes (not enforced)');
+  assert.equal(mirrorOk(doc.id, wrongType), false, 'mirror: refused');
+  assert.equal(mirrorOk(doc.id, tooBig), false, 'mirror: refused');
 });
