@@ -32,7 +32,7 @@ Deferred work surfaced by `plans/2026-08-24-1-plan-behavior-scale-scaffolding.md
   `plans/mocks/jumpstart-follow.html` (v2: every member a row with its own button — flip all
   or flip any, owner on the mock). Left open on the plan: O3 (the buttons' words).
 
-- [x] **Your discovery index on the PDS** — _shipped 2026-09-21_ as
+- [x] **Your discovery index on the PDS** — _built 2026-09-21, landed 2026-09-28 (#85)_ as
   `plans/2026-09-21-plan-own-index-on-the-pds.md` (Phases 0–7; owner-reviewed: the noun is
   *your atmo provider account*, Off stays per device, the ceiling is 2 MB): `fyi.forage.feedindex`
   at `self` — the file as a blob in the repo or an https link, plus add/replace — the account
