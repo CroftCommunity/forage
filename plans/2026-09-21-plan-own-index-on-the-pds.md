@@ -1,7 +1,7 @@
 # Plan: your discovery index on the PDS — the file, or a link to it, follows you
 
 date: 2026-09-21
-**Status:** BUILT 2026-09-21 (Phases 0–7; RED-first throughout, the journey written before the surface). Hermetic journey green (`e2e/own-index-pds.workflow.mjs`); the live proof (`e2e/own-index-pds-live.workflow.mjs`, `LIVE=1`) — see the Review Log for its run; mock `plans/mocks/own-index-pds.html` (v1) captured both sides. Open on the mock: the mode dial's clipped words at 390 (pre-existing), whether the paste box hides while kept on the account.
+**Status:** BUILT 2026-09-21 (Phases 0–7; RED-first throughout, the journey written before the surface). Hermetic journey green (`e2e/own-index-pds.workflow.mjs`); the live proof (`e2e/own-index-pds-live.workflow.mjs`, `LIVE=1`) — see the Review Log for its run; mock `plans/mocks/own-index-pds.html` (v2, re-captured 2026-09-28 after the rebase onto main `d7623d6`) captured both sides. Re-proven after the rebase (Pass 4). Open on the mock: the mode dial's clipped words at 390 (pre-existing), whether the paste box hides while kept on the account.
 The evidence below was probed against the real lexicons, the PDS source, and a live write
 to the standing test account (undone), so the decisions rest on measurements rather than
 on readings.
@@ -494,6 +494,31 @@ a record — not a preference — the right carrier, and only opening `putPrefer
   Named in Not doing; a yes here becomes its own plan after this one lands.
 
 ## Review Log
+
+### Pass 4 — the rebase and the re-proof (2026-09-28, session croftc-15, adopted from the ended build session)
+
+The branch sat 34 commits behind main (view modes and clips #87–#93, the masthead #90/#94,
+ADR 0006). **Rebased, not merged.** Conflicts: `sw.js` (the cache name — main's v88, re-bumped
+to v89), `CHANGELOG.md` (the entry re-dated to its landing and set above main's), and two
+real ones, both resolved by keeping both intents: `js/ui/lens-views.js` `adoptSession` — main
+passed the Phase 6 `postsSource` into `createLens`, the branch read the index record right
+after the same call; the lens is created with both seams and the read follows it — and
+`scripts/mock-snaps.mjs`, where main's view-modes routes and this plan's own-index routes are
+independent blocks at the same place. `js/substrates/lens.js` merged cleanly: Phase 6 added a
+constructor seam and a reel method, this plan a helper pair and six methods, in different
+places. **Gate, re-run on the rebased tree:** `npm test` 1083/1083, `npm run conformance`
+86/86, `npm run reference-gate` 3/3, `npm run workflows` 51 found, 0 failed. **Mutation,
+re-run** on the lens' new code (never run before), `js/index-pds.js` and
+`js/feed-index-record.js`: the lens' new code was 72.9% — no test streamed a body that ENDS
+under the ceiling, a failed `getBlob` could have been parsed as the index, a link record's
+save and the RecordNotFound test were unpinned, and the ceiling itself was never tried. Tests
+added; 97.9% / 96.6% / 98.8%. Survivors, triaged: all equivalent (the `headers?.get?.` chains
+on a real Response; `{ headers: {} }` vs `{}` to fetch; the ones Pass 3 named) but one —
+`index-pds.js` `p.known !== true`, reachable only by a cache this code never wrote: a real
+gap, low value, left. **The live proof, re-run** against bsky.social under the claim:
+uploadIndex 1,074,757 bytes in 1.0 s, the record at `self`, the blob read back unauthenticated
+with an Origin (200, ACAO `*`, byte-equal), switched to a link, the old blob HTTP 400, removed,
+read-back empty. **Mock v2**: Current re-captured from main `d7623d6`, Proposed from `c201607`.
 
 ### Pass 3 — the build (2026-09-21, in progress)
 
