@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-10-20T10:46:26.397Z",
+  "generatedAt": "2026-10-27T11:18:06.411Z",
   "counts": {
     "feeds": 1778,
-    "jumpstarts": 1356,
+    "jumpstarts": 1358,
     "edges": 439,
     "providers": 122
   },
-  "requests": 3276,
+  "requests": 3286,
   "retries": 0,
-  "seconds": 2170,
+  "seconds": 2195,
   "inputs": {
     "providers": 122,
     "pins": 0,
