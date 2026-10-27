@@ -1,7 +1,7 @@
 # Plan: your discovery index on the PDS — the file, or a link to it, follows you
 
 date: 2026-09-21
-**Status:** LANDED 2026-09-28 (#85), built 2026-09-21 (Phases 0–7; RED-first throughout, the journey written before the surface). Hermetic journey green (`e2e/own-index-pds.workflow.mjs`); the live proof (`e2e/own-index-pds-live.workflow.mjs`, `LIVE=1`) — see the Review Log for its run; mock `plans/mocks/own-index-pds.html` (v2, re-captured 2026-09-28 after the rebase onto main `d7623d6`) captured both sides. Re-proven after the rebase (Pass 4). Open on the mock: the mode dial's clipped words at 390 (pre-existing), whether the paste box hides while kept on the account.
+**Status:** LANDED 2026-10-27 (#85), built 2026-09-21 (Phases 0–7; RED-first throughout, the journey written before the surface). Hermetic journey green (`e2e/own-index-pds.workflow.mjs`); the live proof (`e2e/own-index-pds-live.workflow.mjs`, `LIVE=1`) — see the Review Log for its run; mock `plans/mocks/own-index-pds.html` (v2, re-captured 2026-09-28 after the rebase onto main `d7623d6`) captured both sides. Re-proven after the rebase (Pass 4). The mock's two open questions were answered by the owner 2026-10-27 (Review Log, Pass 5): the paste box stays as built; the dial's clipped words at 390 are pre-existing and filed in `TODO.md` § Small.
 The evidence below was probed against the real lexicons, the PDS source, and a live write
 to the standing test account (undone), so the decisions rest on measurements rather than
 on readings.
@@ -494,6 +494,15 @@ a record — not a preference — the right carrier, and only opening `putPrefer
   Named in Not doing; a yes here becomes its own plan after this one lands.
 
 ## Review Log
+
+### Pass 5 — the owner's look at the mock, and the landing (2026-10-27, session croftc-1b)
+
+The owner reviewed `plans/mocks/own-index-pds.html` (v2) and answered its two open
+questions: **the paste box stays while the index is kept on the account** — a paste replaces
+the file wherever it is kept, one gesture with one meaning, as built and tested; **the mode
+dial's words clipping at 390 is pre-existing** and filed in `TODO.md` § Small rather than
+widening this change. Rebased over seven commits (five feed-index regenerations and the
+FEATURE.md removal, #95), no conflicts; the changelog entry re-dated to its landing.
 
 ### Pass 4 — the rebase and the re-proof (2026-09-28, session croftc-15, adopted from the ended build session)
 

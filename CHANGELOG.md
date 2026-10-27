@@ -6,9 +6,9 @@ by its landing. Per `CroftC/.claude/CHANGELOGS.md`, the branch that changes some
 reader runs adds its entry here before it lands. Started 2026-08-29; the August entries
 below are the landings of that month, and everything earlier is in `git log`.
 
-## 2026-09
+## 2026-10
 
-- 2026-09-28 **Your discovery index can follow you.** Under *Advanced → Discovery index* a
+- 2026-10-27 **Your discovery index can follow you.** Under *Advanced → Discovery index* a
   second dial says where your own index is kept: on this browser (the default, as before), or
   on your atmo provider account — as the file itself, or as a link Forage fetches when you ask.
   Kept on your account, every browser you sign in on reads it and browse starts from yours, with
@@ -20,6 +20,9 @@ below are the landings of that month, and everything earlier is in `git log`.
   *Stored* while nothing was stored; the mode dial was wider than a phone and scrolled the
   account page sideways. (plan 2026-09-21-plan-own-index-on-the-pds; record
   `fyi.forage.feedindex`, one per reader, keyed `self`)
+
+## 2026-09
+
 - 2026-09-28 **The one-row top bar holds whatever font your phone draws with.** The 09-25
   change fitted the signed-out bar into a 320px phone with 9px to spare, measured in one
   font; a phone whose font draws *Sign in* and the View word a little wider still got two

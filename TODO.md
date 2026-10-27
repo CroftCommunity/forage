@@ -363,6 +363,12 @@ Found by capturing the engine beside the drawing (`plans/mocks/post-and-thread.h
   header and the panels sit outside any landmark). Structural, not this plan's; the fix is the
   page's, once.
 
+- **The Discovery index mode dial's words clip at 390** (pre-existing; seen on
+  `plans/mocks/own-index-pds.html` v2, owner 2026-10-27, filed rather than fixed in #85). The
+  dial under *Advanced → Discovery index* (Forage's · Add mine · Replace with mine · Off) clips
+  its labels at a 390px viewport; #85 already fixed it scrolling the page sideways. Fix is
+  the dial's layout; re-capture the mock's 390 frame with it (`CroftC/.claude/MOCKS.md`).
+
 - Wrong-node `engine-strict` refusal recorded untested (only v22.23.2 + broken system
   node installed locally).
 - One trivial mutation-audit residual: the rising-dispatch fixture's input order
