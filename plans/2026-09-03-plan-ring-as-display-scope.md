@@ -1,6 +1,7 @@
 # Plan: the ring as a display scope — one composable pill, every surface
 
-**Status:** **PHASES A–E COMPLETE (2026-09-03)** on `claude/ring-scope`; gate green on all
+**Status:** **LANDED 2026-09-03 (#55, `0d5e744`)** — the history below is the build record.
+Build-time status: **PHASES A–E COMPLETE (2026-09-03)** on `claude/ring-scope`; gate green on all
 four CI steps (npm test 780/780, conformance 86/86, workflows 38/38, reference-gate 2/2).
 Not merged. Phase F (mock captures) outstanding. All four decisions closed by the owner
 the same day — see *Open decisions*, kept with their answers rather than deleted, because

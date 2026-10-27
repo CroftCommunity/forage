@@ -1,7 +1,7 @@
 # Plan: forum-chrome tokens, the phpBB skin, and a phpBB style importer
 
 date: 2026-08-26
-status: COMPLETE (2026-08-26) — all phases executed on branch `claude/skin-chrome`. 347 unit tests + 5/5 browser workflows green. Not pushed; not merged to main.
+status: **LANDED 2026-08-26 (no PR; the close-out `343fcfe` is on main)** — the history below is the build record. Build-time status: COMPLETE (2026-08-26) — all phases executed on branch `claude/skin-chrome`. 347 unit tests + 5/5 browser workflows green.
 Execution in `worktrees/forage/skin-chrome` (branch `claude/skin-chrome`)
 repo: `CroftCommunity/forage`, local checkout `CroftC/forage`
 baseline: `main` @ `f08fa9d` (rebased 2026-08-26 from `f6012bf`; main moved when
