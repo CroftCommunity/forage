@@ -8,6 +8,14 @@ below are the landings of that month, and everything earlier is in `git log`.
 
 ## 2026-10
 
+- 2026-10-27 **A mix's rows line up.** On *Tune this mix* a source with a long name — *Stand
+  Up Comedy*, *Bluesky Team* — pushed its own switch and weight dial onto a second line while
+  the rows above and below kept theirs on the first, so the dials in one card sat at three
+  different places and no column ran down the page. The name now wraps within its own block
+  and the controls keep their column: every row in a card breaks the same way at the same
+  width, so the switches line up and the dials line up, whatever the sources are called. The
+  switch also reserves the same width for *On* as for *Off*, which it did not before. (owner,
+  from the phone, 2026-09-16)
 - 2026-10-27 **Your discovery index can follow you.** Under *Advanced → Discovery index* a
   second dial says where your own index is kept: on this browser (the default, as before), or
   on your atmo provider account — as the file itself, or as a link Forage fetches when you ask.

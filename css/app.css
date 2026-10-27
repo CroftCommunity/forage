@@ -560,6 +560,35 @@ dialog.menu::backdrop { background: transparent; }
      in and takes the touch floor like everything else in there. */
   .ringpill-block .ringseg { min-height: 44px; }
 }
+
+/* ---- a mix's rows (/mixes/:slug) ----------------------------------------
+   Two blocks per row: the source's name, then its switch and its weight dial.
+   The name is the part that varies, so the name is the part that gives — it
+   takes whatever line is left and wraps INSIDE its own block. The controls
+   never wrap and never shrink.
+
+   The name's width is a flex BASIS rather than its text, and that is the whole
+   point. Sized by content (`.row.spread.wrap`, what this replaced) a long
+   title pushed its OWN controls onto a second line while its neighbours kept
+   theirs on the first, so a single long name left every dial in the card at a
+   different x. Measured on the Home rows at 390px before this rule: Science's
+   controls at x=98 on a 62px row, the other three at x=25 on 94px rows. With a
+   fixed basis every row in a card breaks at the same width, so they are all
+   inline or all stacked — and the column edge is the same one either way.
+
+   10em is the basis because the controls are ~273px wide at the phone tap
+   floor: a row goes inline once the card's content box can hold 10em + that,
+   so the crossover is around 440px of card — measured stacked at a 480px
+   viewport and inline at 700. A phone gets the stack, and gets it on every
+   row at once, which is the property being bought. */
+.mixrow { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); padding: var(--s2) 0; }
+.mixrow-name { flex: 1 1 10em; min-width: 0; display: flex; flex-wrap: wrap; align-items: center;
+  gap: var(--s2); overflow-wrap: anywhere; }
+/* Right-aligned in both states — beside the name, or alone on the line under
+   it. That is the edge the eye follows down the card, and it is also why the
+   switch carries `.switch-state`: "Off" is wider than "On", and without the
+   2em floor the dial beside it sat a few px left on the rows that were off. */
+.mixrow-controls { flex: 0 0 auto; margin-left: auto; display: flex; align-items: center; gap: var(--s2); }
 .tabs { background: var(--nav-fill); display: flex; gap: var(--s1); border-bottom: 1px solid var(--border); margin-bottom: var(--s3); flex-wrap: wrap; }
 .tab { padding: 6px 12px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; font-size: var(--t-sm); background: none; border-top: 0; border-left: 0; border-right: 0; }
 .tab.active { color: var(--brand); border-bottom-color: var(--brand); font-weight: 600; }
