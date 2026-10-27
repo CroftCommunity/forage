@@ -1,7 +1,7 @@
 # Plan: a GIF should play like a GIF — and the reader decides whether it starts on its own
 
 date: 2026-09-02
-status: **Phases 0–5 planned, none started.**
+status: **LANDED 2026-09-02 (#52, `60ee9b7`)** — the history below is the build record. Status as drafted: Phases 0–5 planned, none started.
 repo: `CroftCommunity/forage`
 baseline: `main` @ `05101a9` (the refresh check on return to a board, #51)
 related: `TODO.md` "GIF search on the reply box (feed-row O9)" — the COMPOSE half, still

@@ -1,7 +1,7 @@
 # Plan: the feed row and the thread head under a pointer — lit rows, Reply at the bottom, the quote's own bar, repost-or-quote, and Browse hiding its dead
 
 date: 2026-08-30
-status: Phases A–D LANDED (forage `f32efa1`, mock v12). E–K BUILT on `claude/feed-row-next` (worktree `worktrees/feed-row-next/forage`; mock v13) — E as option 1 with the row-press (decision 33); G's non-Bluesky providers probed 2026-08-30 and found app-less (recorded in `js/auth/hosts.js`). Landing via PR — the owner merges.
+status: **LANDED 2026-08-30 — A–D in feed-row v10–v12 (`f32efa1`), E–K in feed-row v13 (`b3a9e8e`)** — the history below is the build record. Build-time status: Phases A–D LANDED (forage `f32efa1`, mock v12). E–K BUILT on `claude/feed-row-next` (worktree `worktrees/feed-row-next/forage`; mock v13) — E as option 1 with the row-press (decision 33); G's non-Bluesky providers probed 2026-08-30 and found app-less (recorded in `js/auth/hosts.js`). Landing via PR — the owner merges.
 repo: `CroftCommunity/forage`
 baseline: `main` @ `ad29be5` (feed-row v9 landed)
 mock: `plans/mocks/feed-row.html` v10 → v12 (decisions 22–26, O12); F–K are decisions 27–32, drawn when built. The mock is the record (MOCKS.md P3); this file is the order the promises get kept in.

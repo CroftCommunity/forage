@@ -1,6 +1,6 @@
 # Composing, proved and completed: live proof → delete → images
 
-**Status:** ✅ **COMPLETE — phases 1, 2 and 3 all executed 2026-08-26**, each live-proved against the real network. Not yet landed on main.
+**Status:** ✅ **COMPLETE — phases 1, 2 and 3 all executed 2026-08-26**, each live-proved against the real network. LANDED on main 2026-08-26 (no PR; phase 3 `b7a580c` is on main) — the history below is the build record.
 **Repo:** `forage` (CroftCommunity/forage) · worktree `worktrees/forage/modes-bbs`
 **Predecessor:** `plans/2026-08-25-1-plan-backend-modes-bsky-writes.md` (3w shipped composing)
 

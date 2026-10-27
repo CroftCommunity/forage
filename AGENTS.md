@@ -278,8 +278,9 @@ procedure underdetermines the choice. Never invent a convention.
 ## Concurrent sessions (workspace norm)
 
 Multiple agent sessions share the `CroftC/` workspace. Do multi-turn work in a dedicated
-worktree — `git -C forage worktree add ../worktrees/forage/<slug> -b claude/<slug>` — never in
-this checkout (peer sessions stage with `git add -A`; loose files get swept into unrelated
-commits). Contested surfaces here — claim in `CroftC/.coordination/claims/` before
+worktree — `git -C forage worktree add ../worktrees/<feature>/forage -b claude/<feature>` — never in
+this checkout (stage by path, never `git add -A`; loose files in a shared checkout get swept into
+unrelated commits). Commit on a `claude/*` branch, push and open the PR without asking; ask
+before merging (`CroftC/.claude/COORDINATION.md`). Contested surfaces here — claim in `CroftC/.coordination/claims/` before
 touching: **landing on `main`** (the Pages deploy at forage.fyi follows it). Full protocol
 and the reasons behind it: `CroftC/.claude/COORDINATION.md`.

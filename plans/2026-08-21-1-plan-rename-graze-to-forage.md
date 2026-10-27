@@ -1,7 +1,7 @@
 # Plan: rename Graze → Forage and move graze.ing → forage.fyi
 
 date: 2026-08-21
-status: READY — for an executing agent in a fresh session
+status: **LANDED 2026-08-23 (#4, `ec0bd00` the rename; #5, `3ec2959` the CNAME)** — the history below is the build record. Status as drafted: READY — for an executing agent in a fresh session
 repo: `CroftCommunity/graze` (to become `CroftCommunity/forage`), local checkout `CroftC/graze`
 baseline: `main` @ `3c14ae5` (== origin/main, re-verified 2026-08-23). Tree carries two
 untracked items: `plans/` (this plan) and `assets/rook_banner.png` (5.0MB PNG, appeared

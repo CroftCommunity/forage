@@ -1,7 +1,7 @@
 # Plan: the warm set — five skin families with a lighter and a darker side, and the first graphical skins
 
 date: 2026-08-30
-status: BUILT on `claude/warm-skins` (worktree `worktrees/warm-skins/forage`); landing via PR — the owner merges. Unit gate 646/646; skins workflow green; captures in `plans/mocks/warm-skins.html`.
+status: **LANDED 2026-08-30 (`7a701c3`)** — the history below is the build record. Build-time status: BUILT on `claude/warm-skins` (worktree `worktrees/warm-skins/forage`); landing via PR — the owner merges. Unit gate 646/646; skins workflow green; captures in `plans/mocks/warm-skins.html`.
 repo: `CroftCommunity/forage`
 baseline: `main` @ `fe2b77b`
 parent: ADR-003 (`docs/adr/0003-skins-subsume-themes.md`) and plan `2026-08-26-1-plan-skin-chrome-and-phpbb-import.md`, which built the vocabulary this plan only fills.

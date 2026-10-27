@@ -1,8 +1,9 @@
 # Plan: Mixes — a Home board made of everything you subscribed to, and the page that tunes it
 
 date: 2026-09-08
-**Status:** PHASES 0–9 BUILT (2026-09-08, one day; owner: "do full plan") on `claude/mixes`,
-PR #62 open by the owner's choice. ALL NINE DECISIONS CLOSED by the owner (D1 reshaped what a
+**Status:** LANDED 2026-09-08 (#62, `d8ff6a9`) — the history below is the build record.
+Build-time status: PHASES 0–9 BUILT (2026-09-08, one day; owner: "do full plan") on `claude/mixes`,
+PR #62 opened by the owner's choice. ALL NINE DECISIONS CLOSED by the owner (D1 reshaped what a
 weight is — see *Decisions* and the Review Log). D6 is final once the cellular timing in the
 device queue (the tagged bullet at the end of the Review Log) has run. D4's second half — mixes as a PDS record — is
 BUILT the same day (`plans/2026-09-08-plan-mixes-on-the-pds.md`, live-proven). E159 marked

@@ -1,7 +1,7 @@
 # Plan: share a Bluesky post to Forage and read it here
 
 date: 2026-09-04
-status: **Phases 0–5 planned.**
+status: **LANDED 2026-09-04 (#59, `7e82458`)** — the history below is the build record. Status as drafted: Phases 0–5 planned.
 repo: `CroftCommunity/forage`
 baseline: `main` @ `0d5e744` (the ring pill, #55)
 branch: `claude/bluesky-share-forage-pwa-1r74go`
