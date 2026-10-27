@@ -35,6 +35,11 @@ const COLLECTIONS = [
   // for the same reason tagsub was — an edit now, a migration later. The
   // record key is the mix's SLUG (D1), so publishing twice is one record.
   'fyi.forage.mix',        // one composed board; delete = the mix forgotten
+  // Plan 2026-09-21 own-index-on-the-pds: where the reader's OWN discovery
+  // index comes from — the file itself as a blob in their repo, or an https
+  // link to one — and whether it lays over Forage's or replaces it. Keyed
+  // `self` (D3): one choice per reader. Forage's shipped index is never in it.
+  'fyi.forage.feedindex',  // the reader's own index source; delete = back to this browser
 ];
 
 // Event types that DELIBERATELY have no wire collection at this tier.
@@ -88,6 +93,18 @@ test('mod lexicon enumerates exactly the mod.* action suffixes', async () => {
   const doc = JSON.parse(readFileSync(join(root, 'lexicons', 'fyi.forage.mod.json'), 'utf8'));
   const actions = doc.defs.main.record.properties.action.enum;
   assert.deepStrictEqual([...actions].sort(), [...MOD_TYPES].map((t) => t.slice(4)).sort());
+});
+
+test('feedindex is a self-keyed singleton whose file is JSON under the 2 MB ceiling (D3, D7)', () => {
+  const doc = JSON.parse(readFileSync(join(root, 'lexicons', 'fyi.forage.feedindex.json'), 'utf8'));
+  assert.equal(doc.defs.main.key, 'literal:self');
+  const { file, url, kind, mode } = doc.defs.main.record.properties;
+  assert.equal(file.type, 'blob');
+  assert.deepEqual(file.accept, ['application/json']);
+  assert.equal(file.maxSize, 2_000_000, 'the one ceiling (owner 2026-09-21: "2MB should be fine")');
+  assert.equal(url.format, 'uri');
+  assert.deepEqual(kind.enum, ['file', 'url']);
+  assert.deepEqual(mode.enum, ['add', 'replace'], 'Off stays on the device (D4)');
 });
 
 test('roster is a self-keyed singleton', () => {
@@ -152,7 +169,8 @@ test('every runtime schema copy in js/lexicons.js is identical to its file', asy
   const runtime = await import('../js/lexicons.js');
   // A pin is defs.main.record, or — when the record refs a sibling def — the
   // whole defs block, because a ref without its target is half a schema.
-  const pairs = [['TAGSUB_RECORD', 'fyi.forage.tagsub', 'record'], ['MIX_DEFS', 'fyi.forage.mix', 'defs']];
+  const pairs = [['TAGSUB_RECORD', 'fyi.forage.tagsub', 'record'], ['MIX_DEFS', 'fyi.forage.mix', 'defs'],
+    ['FEEDINDEX_RECORD', 'fyi.forage.feedindex', 'record']];
   for (const [exportName, id, scope] of pairs) {
     const doc = JSON.parse(readFileSync(join(root, 'lexicons', `${id}.json`), 'utf8'));
     const fromFile = scope === 'defs' ? doc.defs : doc.defs.main.record;

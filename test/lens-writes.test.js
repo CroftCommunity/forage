@@ -723,3 +723,210 @@ test('unfollowAll: a failed chunk stops and counts, like followAll', async () =>
   await assert.rejects(() => createLens({ session }).unfollowAll(uris), /50 of 120/);
   assert.equal(calls.length, 2);
 });
+
+// ---- Your discovery index on the atmo provider account (plan 2026-09-21 own-index-on-the-pds, Phase 2) ----
+// Three writes and three reads, all in MY repo. The SECOND uploadBlob caller (the
+// index file, JSON, bounded by the one ceiling BEFORE the upload — the PDS accepts
+// an oversized blob with a 200 and refuses only at the record, the image lesson),
+// the SECOND putRecord (fyi.forage.feedindex at `self`), the eighth deleteRecord;
+// getRecord at `self`, getBlob from MY PDS, and a plain cross-origin fetch of a
+// link — every read bounded by the same ceiling, every refusal in words.
+import { INDEX_BYTES_MAX } from '../js/feed-index-record.js';
+const INDEX_BLOB = { $type: 'blob', ref: { $link: 'bafkreickuvtsju23dhiawuufk2e5pk3kqsyhvxfzqasdjxagnuwbj4ua6i' }, mimeType: 'application/json', size: 60 };
+const INDEX_RECORD = { $type: 'fyi.forage.feedindex', kind: 'file', file: INDEX_BLOB, mode: 'add', name: 'mine',
+  createdAt: '2026-09-21T00:00:00.000Z', updatedAt: '2026-09-21T00:00:00.000Z' };
+const SMALL_INDEX = '{"v":1,"feeds":[],"jumpstarts":[],"edges":[],"providers":[]}';
+const textResponse = (text, { status = 200, headers = {} } = {}) => ({
+  ok: status >= 200 && status < 300, status, headers: { get: (h) => headers[h.toLowerCase()] ?? null },
+  text: async () => text, json: async () => JSON.parse(text),
+});
+function indexSession({ record = INDEX_RECORD, blobText = SMALL_INDEX, failWith = null } = {}) {
+  const calls = [];
+  const fetchHandler = async (path, init = {}) => {
+    calls.push({ path, method: init.method || 'GET', ctype: init.headers?.['content-type'],
+      body: init.body && typeof init.body === 'string' ? JSON.parse(init.body) : init.body || null });
+    if (failWith) return { ok: false, status: failWith, json: async () => ({ error: 'Boom' }), text: async () => '{"error":"Boom"}' };
+    if (path.includes('getRecord')) {
+      return record ? textResponse(JSON.stringify({ uri: 'at://did:plc:me/fyi.forage.feedindex/self', cid: 'reccid', value: record }))
+        : textResponse('{"error":"RecordNotFound","message":"Could not locate record"}', { status: 400 });
+    }
+    if (path.includes('getBlob')) return textResponse(blobText, { headers: { 'content-type': 'application/json' } });
+    if (path.includes('uploadBlob')) return textResponse(JSON.stringify({ blob: INDEX_BLOB }));
+    return textResponse(JSON.stringify({ uri: 'at://did:plc:me/fyi.forage.feedindex/self', cid: 'reccid' }));
+  };
+  return { session: { did: 'did:plc:me', handle: 'me.test', fetchHandler }, calls };
+}
+
+test('indexRecord reads MY record at self; a missing one is null, a broken read throws', async () => {
+  const a = indexSession();
+  const got = await createLens({ session: a.session }).indexRecord();
+  assert.equal(a.calls.length, 1);
+  assert.ok(a.calls[0].path.startsWith('/xrpc/com.atproto.repo.getRecord?'));
+  const qs = new URLSearchParams(a.calls[0].path.split('?')[1]);
+  assert.deepEqual([qs.get('repo'), qs.get('collection'), qs.get('rkey')], ['did:plc:me', 'fyi.forage.feedindex', 'self']);
+  assert.deepEqual(got, { value: INDEX_RECORD, cid: 'reccid' });
+  const none = indexSession({ record: null });
+  assert.equal(await createLens({ session: none.session }).indexRecord(), null, 'RecordNotFound is "no choice on the account", not an error');
+  const broken = indexSession({ failWith: 500 });
+  await assert.rejects(() => createLens({ session: broken.session }).indexRecord(), /500/);
+});
+
+test('saveIndexRecord puts at self in MY repo, bound to the collection, and refuses a malformed record before any request', async () => {
+  const { session, calls } = indexSession();
+  const lens = createLens({ session });
+  await lens.saveIndexRecord(INDEX_RECORD);
+  assert.equal(calls.length, 1);
+  assert.ok(calls[0].path.startsWith('/xrpc/com.atproto.repo.putRecord'));
+  assert.deepEqual([calls[0].body.repo, calls[0].body.collection, calls[0].body.rkey], ['did:plc:me', 'fyi.forage.feedindex', 'self']);
+  assert.deepEqual(calls[0].body.record, INDEX_RECORD);
+  await assert.rejects(() => lens.saveIndexRecord({ ...INDEX_RECORD, mode: 'off' }), /mode/);
+  await assert.rejects(() => lens.saveIndexRecord({ ...INDEX_RECORD, kind: 'url', url: 'http://x.example/i.json' }), /https/);
+  assert.equal(calls.length, 1, 'the refusals cost no request');
+});
+
+test('removeIndexRecord deletes exactly self from my feedindex collection', async () => {
+  const { session, calls } = indexSession();
+  await createLens({ session }).removeIndexRecord();
+  assert.ok(calls[0].path.startsWith('/xrpc/com.atproto.repo.deleteRecord'));
+  assert.deepEqual(calls[0].body, { repo: 'did:plc:me', collection: 'fyi.forage.feedindex', rkey: 'self' });
+});
+
+test('uploadIndex sends the JSON bytes as application/json and returns the PDS\'s blob object untouched', async () => {
+  const { session, calls } = indexSession();
+  const blob = await createLens({ session }).uploadIndex(SMALL_INDEX);
+  assert.deepEqual(blob, INDEX_BLOB, 'verbatim — a ref whose size or type disagrees with the store is refused at the record (probe: InvalidSize)');
+  const up = calls.find((c) => c.path.includes('uploadBlob'));
+  assert.ok(up);
+  assert.equal(up.ctype, 'application/json');
+  assert.ok(up.body instanceof Blob || ArrayBuffer.isView(up.body), 'the raw bytes go up, not a JSON envelope');
+  assert.equal(new TextDecoder().decode(ArrayBuffer.isView(up.body) ? up.body : new Uint8Array(await up.body.arrayBuffer())), SMALL_INDEX);
+});
+
+test('uploadIndex refuses a file over the ceiling BEFORE spending the upload, naming both numbers', async () => {
+  const { session, calls } = indexSession();
+  const big = '{"v":1,"feeds":[],"jumpstarts":[],"edges":[],"providers":[],"pad":"' + 'x'.repeat(INDEX_BYTES_MAX) + '"}';
+  await assert.rejects(() => createLens({ session }).uploadIndex(big), (e) => new RegExp(`${INDEX_BYTES_MAX}`).test(e.message) && /bytes/.test(e.message));
+  assert.equal(calls.length, 0);
+  await assert.rejects(() => createLens({}).uploadIndex(SMALL_INDEX), /sign in/i);
+});
+
+test('fetchIndexBlob reads the blob from MY PDS by cid and parses it; the ceiling and non-JSON are refused in words', async () => {
+  const { session, calls } = indexSession({ blobText: SMALL_INDEX });
+  const obj = await createLens({ session }).fetchIndexBlob('bafkreiabc');
+  assert.deepEqual(obj, JSON.parse(SMALL_INDEX));
+  const qs = new URLSearchParams(calls[0].path.split('?')[1]);
+  assert.ok(calls[0].path.startsWith('/xrpc/com.atproto.sync.getBlob?'));
+  assert.deepEqual([qs.get('did'), qs.get('cid')], ['did:plc:me', 'bafkreiabc']);
+  const big = indexSession({ blobText: 'x'.repeat(INDEX_BYTES_MAX + 1) });
+  await assert.rejects(() => createLens({ session: big.session }).fetchIndexBlob('bafkreiabc'), new RegExp(`${INDEX_BYTES_MAX}`));
+  const junk = indexSession({ blobText: 'not json' });
+  await assert.rejects(() => createLens({ session: junk.session }).fetchIndexBlob('bafkreiabc'), /not JSON|JSON/);
+  await assert.rejects(() => createLens({}).fetchIndexBlob('bafkreiabc'), /sign in/i);
+});
+
+test('fetchIndexUrl goes through the plain transport (never the DPoP session fetch), https only, CORS failure named', async () => {
+  const seen = [];
+  const transport = async (url, init) => { seen.push({ url, init }); return textResponse(SMALL_INDEX, { headers: { 'content-type': 'application/json' } }); };
+  const { session, calls } = indexSession();
+  const obj = await createLens({ session, transport }).fetchIndexUrl('https://gardeners.example/index.json');
+  assert.deepEqual(obj, JSON.parse(SMALL_INDEX));
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0].url, 'https://gardeners.example/index.json');
+  assert.equal(calls.length, 0, 'the session fetch is not used for a third-party host');
+  await assert.rejects(() => createLens({ transport }).fetchIndexUrl('http://gardeners.example/index.json'), /https/);
+  assert.equal(seen.length, 1, 'an http link is refused before any fetch');
+  const cors = async () => { throw new TypeError('Failed to fetch'); };
+  await assert.rejects(() => createLens({ transport: cors }).fetchIndexUrl('https://closed.example/i.json'),
+    (e) => /closed\.example/.test(e.message) && /cross-origin|CORS/.test(e.message));
+  const gone = async () => textResponse('', { status: 404 });
+  await assert.rejects(() => createLens({ transport: gone }).fetchIndexUrl('https://gardeners.example/i.json'), /404/);
+});
+
+test('fetchIndexUrl is bounded by the ceiling — by content-length before reading, and by a byte counter mid-stream', async () => {
+  const declared = async () => textResponse('{}', { headers: { 'content-length': String(INDEX_BYTES_MAX + 1) } });
+  await assert.rejects(() => createLens({ transport: declared }).fetchIndexUrl('https://x.example/i.json'), new RegExp(`${INDEX_BYTES_MAX}`));
+  // a stream that never says its length and never ends: the counter must stop it
+  let pulled = 0;
+  let cancelled = false;
+  const endless = async () => ({ ok: true, status: 200, headers: { get: () => null },
+    body: new ReadableStream({
+      pull(controller) { pulled += 1; controller.enqueue(new Uint8Array(100_000)); },
+      cancel() { cancelled = true; },
+    }) });
+  await assert.rejects(() => createLens({ transport: endless }).fetchIndexUrl('https://x.example/i.json'), new RegExp(`${INDEX_BYTES_MAX}`));
+  assert.ok(pulled <= Math.ceil(INDEX_BYTES_MAX / 100_000) + 2, `stopped reading soon after the ceiling (${pulled} chunks)`);
+  assert.equal(cancelled, true, 'the stream was cancelled, not merely abandoned');
+});
+
+// The rest of the index doors, from the post-rebase mutation round (2026-09-28): a
+// stream that ENDS under the ceiling, the ceiling itself allowed, every failure
+// answered in its own words, and the RecordNotFound test kept narrow.
+const exactly = (n) => {
+  const head = '{"v":1,"feeds":[],"jumpstarts":[],"edges":[],"providers":[],"pad":"';
+  return head + 'x'.repeat(n - head.length - 2) + '"}';
+};
+const streamOf = (chunks) => async () => ({ ok: true, status: 200, headers: { get: () => null },
+  body: new ReadableStream({ start(c) { for (const k of chunks) c.enqueue(new TextEncoder().encode(k)); c.close(); } }) });
+
+test('fetchIndexUrl reads a stream that ends under the ceiling, in however many chunks it comes', async () => {
+  const obj = await createLens({ transport: streamOf([SMALL_INDEX.slice(0, 20), SMALL_INDEX.slice(20)]) }).fetchIndexUrl('https://x.example/i.json');
+  assert.deepEqual(obj, JSON.parse(SMALL_INDEX));
+});
+
+test('the ceiling is a ceiling, not a floor: exactly INDEX_BYTES_MAX bytes is allowed on every door', async () => {
+  const text = exactly(INDEX_BYTES_MAX);
+  assert.equal(new TextEncoder().encode(text).length, INDEX_BYTES_MAX);
+  const declared = async () => textResponse(text, { headers: { 'content-length': String(INDEX_BYTES_MAX) } });
+  assert.equal((await createLens({ transport: declared }).fetchIndexUrl('https://x.example/i.json')).v, 1, 'declared length at the ceiling');
+  assert.equal((await createLens({ transport: streamOf([text.slice(0, 1000), text.slice(1000)]) }).fetchIndexUrl('https://x.example/i.json')).v, 1, 'streamed to the ceiling');
+  const bare = indexSession({ blobText: text });
+  assert.equal((await createLens({ session: bare.session }).fetchIndexBlob('bafkreiabc')).v, 1, 'a text body at the ceiling');
+  const up = indexSession();
+  await createLens({ session: up.session }).uploadIndex(text);
+  assert.equal(up.calls.filter((c) => c.path.includes('uploadBlob')).length, 1, 'an upload at the ceiling is spent');
+});
+
+test('indexRecord: only a 400 that SAYS RecordNotFound is "no record" — any other answer is an error with its status', async () => {
+  const answering = (status, text) => ({ did: 'did:plc:me', fetchHandler: async () => textResponse(text, { status }) });
+  await assert.rejects(() => createLens({ session: answering(500, '{"error":"RecordNotFound"}') }).indexRecord(), /HTTP 500/);
+  await assert.rejects(() => createLens({ session: answering(400, '{"error":"InvalidRequest"}') }).indexRecord(), /HTTP 400/);
+  await assert.rejects(() => createLens({ session: answering(400, '<html>') }).indexRecord(), /reading your saved index failed HTTP 400/);
+});
+
+test('saveIndexRecord puts a well-formed LINK record', async () => {
+  const { session, calls } = indexSession();
+  const link = { $type: 'fyi.forage.feedindex', kind: 'url', url: 'https://gardeners.example/index.json', mode: 'replace',
+    createdAt: '2026-09-21T00:00:00.000Z', updatedAt: '2026-09-21T00:00:00.000Z' };
+  await createLens({ session }).saveIndexRecord(link);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].body.record.url, 'https://gardeners.example/index.json');
+});
+
+test('the index doors refuse a guest in words, and every failed request is named for what it was doing', async () => {
+  const guest = createLens({});
+  await assert.rejects(() => guest.indexRecord(), /reading your saved index needs a session — sign in/);
+  await assert.rejects(() => guest.saveIndexRecord(INDEX_RECORD), /saving your index needs a session — sign in/);
+  await assert.rejects(() => guest.removeIndexRecord(), /removing your saved index needs a session — sign in/);
+  const failing = indexSession({ failWith: 500 }).session;
+  await assert.rejects(() => createLens({ session: failing }).saveIndexRecord(INDEX_RECORD), /save index failed HTTP 500/);
+  await assert.rejects(() => createLens({ session: failing }).removeIndexRecord(), /remove index failed HTTP 500/);
+  await assert.rejects(() => createLens({ session: failing }).uploadIndex(SMALL_INDEX), /index upload failed HTTP 500/);
+  await assert.rejects(() => createLens({ session: indexSession({ failWith: 404 }).session }).fetchIndexBlob('bafkreiabc'),
+    /your index file could not be read HTTP 404/, 'a failed read is never parsed as the index');
+  const noBlob = { did: 'did:plc:me', fetchHandler: async () => textResponse('{}') };
+  await assert.rejects(() => createLens({ session: noBlob }).uploadIndex(SMALL_INDEX), /returned no blob/);
+  await assert.rejects(() => createLens({ session: indexSession().session }).saveIndexRecord({ ...INDEX_RECORD, mode: 'off', name: 7 }), /; /,
+    'several problems are listed, separated');
+});
+
+test('uploadIndex is a POST; the ceiling and JSON refusals name which file they mean', async () => {
+  const { session, calls } = indexSession();
+  await createLens({ session }).uploadIndex(SMALL_INDEX);
+  assert.equal(calls.find((c) => c.path.includes('uploadBlob')).method, 'POST');
+  const big = indexSession({ blobText: 'x'.repeat(INDEX_BYTES_MAX + 1) }).session;
+  await assert.rejects(() => createLens({ session: big }).fetchIndexBlob('bafkreiabc'), /^Error: your index file is \d+ bytes; the ceiling/);
+  await assert.rejects(() => createLens({ session: indexSession({ blobText: 'nope' }).session }).fetchIndexBlob('bafkreiabc'), /your index file is not JSON/);
+  const declared = async () => textResponse('{}', { headers: { 'content-length': String(INDEX_BYTES_MAX + 1) } });
+  await assert.rejects(() => createLens({ transport: declared }).fetchIndexUrl('https://x.example/i.json'), /the file at x\.example is \d+ bytes/);
+  await assert.rejects(() => createLens({ transport: async () => textResponse('nope') }).fetchIndexUrl('https://x.example/i.json'), /the file at x\.example is not JSON/);
+});
