@@ -369,6 +369,15 @@ Found by capturing the engine beside the drawing (`plans/mocks/post-and-thread.h
   its labels at a 390px viewport; #85 already fixed it scrolling the page sideways. Fix is
   the dial's layout; re-capture the mock's 390 frame with it (`CroftC/.claude/MOCKS.md`).
 
+- **A repaint while the reel mounts loads a second playlist** (measured 2026-10-27 while
+  landing #85). `e2e/view-modes.workflow.mjs` "the active frame's playlist, and no other"
+  fails when a late `rerender()` lands during the reel's mount: 1/45 runs on main, where
+  the sign-in profile-picture fetch (`adoptSession`, `js/ui/lens-views.js`) is the late
+  repaint. #85 added a second one (the account's index) and the rate rose to 9/45; #85
+  now repaints only when the index in force changes (`indexStore.holds`), back to 0/45.
+  The root is the reel: its player mount is not idempotent across a repaint. Fix there,
+  RED-first — a test that repaints mid-mount and asserts one `loadSource`.
+
 - Wrong-node `engine-strict` refusal recorded untested (only v22.23.2 + broken system
   node installed locally).
 - One trivial mutation-audit residual: the rising-dispatch fixture's input order

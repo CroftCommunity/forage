@@ -125,6 +125,22 @@ test('createIndexStore: ready() is idempotent and reload() takes a new own-index
   assert.equal(store.feeds().length, 1);
 });
 
+// Sign-in reads the account's index and reloads only when that changes what is
+// shown: a reload repaints the page, and a repaint while the reel mounts loads a
+// second playlist (forage#85, e2e view-modes). An account with no record changes
+// nothing, so it must cost no repaint.
+test('createIndexStore: holds() says whether an own-index is the one already in force — same content, not the same object', async () => {
+  const mine = () => ({ mode: 'replace', index: { ...emptyIndex(), feeds: [F(7)] }, generatedAt: null, name: 'Gardeners' });
+  const forage = () => ({ mode: 'forage', index: null, generatedAt: null, name: null });
+  const store = createIndexStore({ fetchImpl: served(), own: forage() });
+  assert.equal(store.holds(forage()), true, 'the device half it was built with, read again');
+  assert.equal(store.holds(mine()), false, 'an index from the account');
+  await store.reload(mine());
+  assert.equal(store.holds(mine()), true, 'after the reload it is the one in force');
+  assert.equal(store.holds({ ...mine(), mode: 'add' }), false, 'the same file in another mode is a change');
+  assert.equal(store.holds({ ...forage(), fallback: 'your index could not be fetched' }), false, 'fallback words are a change');
+});
+
 // Plan 2026-09-21 own-index-on-the-pds, § E.1 — pinned before anything else moves:
 // a newer shipped index NEVER changes what the reader chose. "Forage's index is
 // always available as long as they keep upgrading, but once selected away from it

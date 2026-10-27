@@ -83,6 +83,8 @@ export function createIndexStore({ fetchImpl = (u) => fetch(u), own = null } = {
   return {
     ready() { if (!pending) pending = load(); return pending; },
     reload(nextOwn) { currentOwn = nextOwn === undefined ? currentOwn : nextOwn; pending = load(); return pending; },
+    // by content: effective() builds a fresh object on every read
+    holds(own) { return JSON.stringify(own ?? null) === JSON.stringify(currentOwn ?? null); },
     status() { return { status: state.status, generatedAt: state.generatedAt, errors: state.errors,
       counts: { feeds: state.index.feeds.length, jumpstarts: state.index.jumpstarts.length, edges: state.index.edges.length } }; },
     feeds() { return state.index.feeds; },

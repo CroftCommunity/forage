@@ -387,8 +387,16 @@ async function adoptSession(s) {
   // the file it names, then the store starts from HER index with HER mode.
   // Fire-and-forget for the same reason the ring warm-up is: a failure here
   // must never break sign-in — it leaves the words on the settings page.
+  // A reload repaints, so it waits for a change: no record on the account (the
+  // usual case) is the index already shown, and a repaint while the reel mounts
+  // loads a second playlist.
   indexPds.refresh(lens, s.did)
-    .then(() => { if (session?.did === s.did) return indexStore.reload(indexPds.effective(s.did)).then(() => rerender()); })
+    .then(() => {
+      if (session?.did !== s.did) return;
+      const next = indexPds.effective(s.did);
+      if (indexStore.holds(next)) return;
+      return indexStore.reload(next).then(() => rerender());
+    })
     .catch((e) => console.warn('forage: your discovery index on your account did not load', e));
   sessionAvatarUrl = null;
   lens.profile(s.did).then((p) => { if (session?.did === s.did) { sessionAvatarUrl = p.avatar; rerender(); } })
